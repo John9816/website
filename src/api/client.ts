@@ -1,6 +1,8 @@
 import type { ApiEnvelope } from '../types'
 
-const BASE = (import.meta.env.VITE_API_BASE as string | undefined) ?? ''
+const BASE = ((import.meta.env.VITE_API_BASE as string | undefined) ?? '')
+  .trim()
+  .replace(/\/+$/, '')
 
 const TOKEN_KEY = 'nav.token'
 
