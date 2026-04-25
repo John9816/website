@@ -1,0 +1,283 @@
+- generic [ref=e3]:
+  - generic [ref=e452]:
+    - complementary [ref=e453]:
+      - generic [ref=e456]: 我的导航
+      - generic "站点快捷入口" [ref=e457]:
+        - button "切换到深色模式" [ref=e458] [cursor=pointer]:
+          - img [ref=e459]
+          - generic [ref=e461]: 深色
+        - link "登录" [ref=e462] [cursor=pointer]:
+          - /url: /login
+          - img [ref=e463]
+          - generic [ref=e466]: 登录
+        - link "音乐" [ref=e467] [cursor=pointer]:
+          - /url: /music
+          - img [ref=e468]
+          - generic [ref=e471]: 音乐
+        - link "管理" [ref=e472] [cursor=pointer]:
+          - /url: /admin
+          - img [ref=e473]
+          - generic [ref=e476]: 管理
+      - navigation "分类导航" [ref=e477]:
+        - button "快捷" [ref=e478] [cursor=pointer]:
+          - img [ref=e480]
+          - generic [ref=e482]: 快捷
+        - button "好软" [ref=e483] [cursor=pointer]:
+          - img [ref=e485]
+          - generic [ref=e487]: 好软
+        - button "兴趣" [ref=e488] [cursor=pointer]:
+          - img [ref=e490]
+          - generic [ref=e492]: 兴趣
+        - button "社区" [ref=e493] [cursor=pointer]:
+          - img [ref=e495]
+          - generic [ref=e498]: 社区
+        - button "导航" [ref=e499] [cursor=pointer]:
+          - img [ref=e501]
+          - generic [ref=e504]: 导航
+    - main [ref=e505]:
+      - generic [ref=e506]:
+        - generic [ref=e507]:
+          - heading "Hello 👋" [level=1] [ref=e508]:
+            - text: Hello
+            - generic [ref=e509]: 👋
+          - paragraph [ref=e510]:
+            - text: 收藏的资源与工具，一键直达
+            - generic [ref=e511]: · 5 个分类 / 12 个链接
+        - generic [ref=e512]:
+          - img [ref=e513]
+          - searchbox "搜索链接" [ref=e516]
+      - generic [ref=e517]:
+        - heading "快捷" [level=2] [ref=e518]:
+          - img [ref=e520]
+          - generic [ref=e522]: 快捷
+        - generic [ref=e523]:
+          - link "Z-Library Z-Library 全球最大的电子书库之一" [ref=e524] [cursor=pointer]:
+            - /url: https://zlib.li/
+            - img "Z-Library" [ref=e527]
+            - generic [ref=e528]:
+              - generic [ref=e529]: Z-Library
+              - generic [ref=e530]: 全球最大的电子书库之一
+          - link "Java全栈知识体系 Java全栈知识体系 Java 全栈知识体系" [ref=e531] [cursor=pointer]:
+            - /url: https://pdai.tech/
+            - img "Java全栈知识体系" [ref=e534]
+            - generic [ref=e535]:
+              - generic [ref=e536]: Java全栈知识体系
+              - generic [ref=e537]: Java 全栈知识体系
+      - generic [ref=e538]:
+        - heading "好软" [level=2] [ref=e539]:
+          - img [ref=e541]
+          - generic [ref=e543]: 好软
+        - generic [ref=e544]:
+          - link "Clipy Clipy MacOS开源剪贴板" [ref=e545] [cursor=pointer]:
+            - /url: https://github.com/Clipy/Clipy/releases
+            - img "Clipy" [ref=e548]
+            - generic [ref=e549]:
+              - generic [ref=e550]: Clipy
+              - generic [ref=e551]: MacOS开源剪贴板
+          - link "Snipaste Snipaste 截图与贴图工具" [ref=e552] [cursor=pointer]:
+            - /url: https://zh.snipaste.com/download.html
+            - img "Snipaste" [ref=e555]
+            - generic [ref=e556]:
+              - generic [ref=e557]: Snipaste
+              - generic [ref=e558]: 截图与贴图工具
+      - generic [ref=e559]:
+        - heading "兴趣" [level=2] [ref=e560]:
+          - img [ref=e562]
+          - generic [ref=e564]: 兴趣
+        - generic [ref=e565]:
+          - link "赔钱机场 赔钱机场 - 超便宜低价高速机场" [ref=e566] [cursor=pointer]:
+            - /url: https://dash.pqjc.site/#/register?code=Q6CDOi7f
+            - img [ref=e569]
+            - generic [ref=e574]:
+              - generic [ref=e575]: 赔钱机场
+              - generic [ref=e576]: 赔钱机场 - 超便宜低价高速机场
+          - link "Apple-ID Apple-ID 【免费】2026 小火箭共享账号 | 美区ID / 苹果ID共享 (已购Shadowrocket) - 翻墙男" [ref=e577] [cursor=pointer]:
+            - /url: https://fanqiangnan.com/appleid.html
+            - img "Apple-ID" [ref=e580]
+            - generic [ref=e581]:
+              - generic [ref=e582]: Apple-ID
+              - generic [ref=e583]: 【免费】2026 小火箭共享账号 | 美区ID / 苹果ID共享 (已购Shadowrocket) - 翻墙男
+          - link "宝可梦加速器 宝可梦加速器" [ref=e584] [cursor=pointer]:
+            - /url: https://love.p6m6.com/#/register?code=TjYl79mr
+            - img [ref=e587]
+            - generic [ref=e592]:
+              - generic [ref=e593]: 宝可梦加速器
+              - generic [ref=e594]: 宝可梦加速器
+      - generic [ref=e595]:
+        - heading "社区" [level=2] [ref=e596]:
+          - img [ref=e598]
+          - generic [ref=e601]: 社区
+        - generic [ref=e602]:
+          - link "小众软件 小众软件 讨论有趣的互联网、AI、软件、应用" [ref=e603] [cursor=pointer]:
+            - /url: https://meta.appinn.net/
+            - img "小众软件" [ref=e606]
+            - generic [ref=e607]:
+              - generic [ref=e608]: 小众软件
+              - generic [ref=e609]: 讨论有趣的互联网、AI、软件、应用
+          - link "TopsTip TopsTip TopsTip｜互联网新鲜见闻" [ref=e610] [cursor=pointer]:
+            - /url: https://topstip.com/
+            - img "TopsTip" [ref=e613]
+            - generic [ref=e614]:
+              - generic [ref=e615]: TopsTip
+              - generic [ref=e616]: TopsTip｜互联网新鲜见闻
+          - link "NodeLoc NodeLoc 自由、平等、友好、开放、有趣的互联网交流社区" [ref=e617] [cursor=pointer]:
+            - /url: https://www.nodeloc.com/
+            - img "NodeLoc" [ref=e620]
+            - generic [ref=e621]:
+              - generic [ref=e622]: NodeLoc
+              - generic [ref=e623]: 自由、平等、友好、开放、有趣的互联网交流社区
+      - generic [ref=e624]:
+        - heading "导航" [level=2] [ref=e625]:
+          - img [ref=e627]
+          - generic [ref=e630]: 导航
+        - generic [ref=e631]:
+          - link "硬核指南 硬核指南 硬核指南 - 够高清才是真硬核！" [ref=e632] [cursor=pointer]:
+            - /url: https://yinghezhinan.com/
+            - img "硬核指南" [ref=e635]
+            - generic [ref=e636]:
+              - generic [ref=e637]: 硬核指南
+              - generic [ref=e638]: 硬核指南 - 够高清才是真硬核！
+          - link "小帅同学的储物间 小帅同学的储物间 小帅同学的储物间" [ref=e639] [cursor=pointer]:
+            - /url: https://xiaoshuai.site/xiaoshuai
+            - img "小帅同学的储物间" [ref=e642]
+            - generic [ref=e643]:
+              - generic [ref=e644]: 小帅同学的储物间
+              - generic [ref=e645]: 小帅同学的储物间
+    - button "返回顶部":
+      - img
+  - generic [ref=e646]:
+    - generic [ref=e647]:
+      - generic [ref=e649]:
+        - generic "Apple And Cinnamon" [ref=e650]
+        - generic "宇多田ヒカル" [ref=e651]
+        - generic [ref=e652]:
+          - generic [ref=e653]: flac
+          - generic [ref=e654]: 网易云
+      - generic [ref=e655]:
+        - button "切换歌词面板" [ref=e656] [cursor=pointer]: 词
+        - button "切换播放列表面板" [active] [ref=e657] [cursor=pointer]: 单
+        - generic "拖动播放器" [ref=e658]:
+          - img [ref=e659]
+        - link "打开音乐页" [ref=e666] [cursor=pointer]:
+          - /url: /music
+          - img [ref=e667]
+    - generic [ref=e669]:
+      - generic [ref=e670]: 1:01
+      - generic [ref=e673]: 4:38
+    - generic "简单而天真" [ref=e695]:
+      - generic [ref=e696]: 简单而天真
+    - generic [ref=e676]:
+      - generic [ref=e677]:
+        - button "上一首" [disabled] [ref=e678]:
+          - img [ref=e679]
+        - button "暂停" [ref=e681] [cursor=pointer]:
+          - img [ref=e682]
+        - button "下一首" [ref=e685] [cursor=pointer]:
+          - img [ref=e686]
+      - button "静音" [ref=e688] [cursor=pointer]:
+        - img [ref=e689]
+    - generic [ref=e697]:
+      - generic [ref=e698]:
+        - button "歌词" [ref=e699] [cursor=pointer]
+        - button "列表" [ref=e700] [cursor=pointer]
+      - generic [ref=e701]:
+        - button "1 Apple And Cinnamon 宇多田ヒカル" [ref=e702] [cursor=pointer]:
+          - generic [ref=e703]: "1"
+          - generic [ref=e704]:
+            - generic [ref=e705]: Apple And Cinnamon
+            - generic [ref=e706]: 宇多田ヒカル
+        - button "2 モノクローム 具島直子" [ref=e707] [cursor=pointer]:
+          - generic [ref=e708]: "2"
+          - generic [ref=e709]:
+            - generic [ref=e710]: モノクローム
+            - generic [ref=e711]: 具島直子
+        - button "3 まどろみ 具島直子" [ref=e712] [cursor=pointer]:
+          - generic [ref=e713]: "3"
+          - generic [ref=e714]:
+            - generic [ref=e715]: まどろみ
+            - generic [ref=e716]: 具島直子
+        - button "4 FRAGILE 山下達郎" [ref=e717] [cursor=pointer]:
+          - generic [ref=e718]: "4"
+          - generic [ref=e719]:
+            - generic [ref=e720]: FRAGILE
+            - generic [ref=e721]: 山下達郎
+        - button "5 Merry Christmas Mr. Lawrence -fyi 宇多田ヒカル" [ref=e722] [cursor=pointer]:
+          - generic [ref=e723]: "5"
+          - generic [ref=e724]:
+            - generic [ref=e725]: Merry Christmas Mr. Lawrence -fyi
+            - generic [ref=e726]: 宇多田ヒカル
+        - button "6 Come Back To Me 宇多田ヒカル" [ref=e727] [cursor=pointer]:
+          - generic [ref=e728]: "6"
+          - generic [ref=e729]:
+            - generic [ref=e730]: Come Back To Me
+            - generic [ref=e731]: 宇多田ヒカル
+        - button "7 気分じゃないの (Not In The Mood) 宇多田ヒカル" [ref=e732] [cursor=pointer]:
+          - generic [ref=e733]: "7"
+          - generic [ref=e734]:
+            - generic [ref=e735]: 気分じゃないの (Not In The Mood)
+            - generic [ref=e736]: 宇多田ヒカル
+        - button "8 Never Let Go 宇多田ヒカル" [ref=e737] [cursor=pointer]:
+          - generic [ref=e738]: "8"
+          - generic [ref=e739]:
+            - generic [ref=e740]: Never Let Go
+            - generic [ref=e741]: 宇多田ヒカル
+        - button "9 Fly Me To The Moon(In Other Words) 宇多田ヒカル" [ref=e742] [cursor=pointer]:
+          - generic [ref=e743]: "9"
+          - generic [ref=e744]:
+            - generic [ref=e745]: Fly Me To The Moon(In Other Words)
+            - generic [ref=e746]: 宇多田ヒカル
+        - button "10 道 宇多田ヒカル" [ref=e747] [cursor=pointer]:
+          - generic [ref=e748]: "10"
+          - generic [ref=e749]:
+            - generic [ref=e750]: 道
+            - generic [ref=e751]: 宇多田ヒカル
+        - button "11 Time Will Tell 宇多田ヒカル" [ref=e752] [cursor=pointer]:
+          - generic [ref=e753]: "11"
+          - generic [ref=e754]:
+            - generic [ref=e755]: Time Will Tell
+            - generic [ref=e756]: 宇多田ヒカル
+        - button "12 Apple And Cinnamon 宇多田ヒカル" [ref=e757] [cursor=pointer]:
+          - generic [ref=e758]: "12"
+          - generic [ref=e759]:
+            - generic [ref=e760]: Apple And Cinnamon
+            - generic [ref=e761]: 宇多田ヒカル
+        - button "13 Distance 宇多田ヒカル" [ref=e762] [cursor=pointer]:
+          - generic [ref=e763]: "13"
+          - generic [ref=e764]:
+            - generic [ref=e765]: Distance
+            - generic [ref=e766]: 宇多田ヒカル
+        - button "14 Stay Gold 宇多田ヒカル" [ref=e767] [cursor=pointer]:
+          - generic [ref=e768]: "14"
+          - generic [ref=e769]:
+            - generic [ref=e770]: Stay Gold
+            - generic [ref=e771]: 宇多田ヒカル
+        - button "15 二時間だけのバカンス 宇多田ヒカル / 椎名林檎" [ref=e772] [cursor=pointer]:
+          - generic [ref=e773]: "15"
+          - generic [ref=e774]:
+            - generic [ref=e775]: 二時間だけのバカンス
+            - generic [ref=e776]: 宇多田ヒカル / 椎名林檎
+        - button "16 Prisoner Of Love 宇多田ヒカル" [ref=e777] [cursor=pointer]:
+          - generic [ref=e778]: "16"
+          - generic [ref=e779]:
+            - generic [ref=e780]: Prisoner Of Love
+            - generic [ref=e781]: 宇多田ヒカル
+        - button "17 君に夢中 宇多田ヒカル" [ref=e782] [cursor=pointer]:
+          - generic [ref=e783]: "17"
+          - generic [ref=e784]:
+            - generic [ref=e785]: 君に夢中
+            - generic [ref=e786]: 宇多田ヒカル
+        - button "18 This One (Crying Like A Child) 宇多田ヒカル" [ref=e787] [cursor=pointer]:
+          - generic [ref=e788]: "18"
+          - generic [ref=e789]:
+            - generic [ref=e790]: This One (Crying Like A Child)
+            - generic [ref=e791]: 宇多田ヒカル
+        - button "19 Automatic 宇多田ヒカル" [ref=e792] [cursor=pointer]:
+          - generic [ref=e793]: "19"
+          - generic [ref=e794]:
+            - generic [ref=e795]: Automatic
+            - generic [ref=e796]: 宇多田ヒカル
+        - button "20 Merry Christmas Mr. Lawrence - FYI 宇多田ヒカル" [ref=e797] [cursor=pointer]:
+          - generic [ref=e798]: "20"
+          - generic [ref=e799]:
+            - generic [ref=e800]: Merry Christmas Mr. Lawrence - FYI
+            - generic [ref=e801]: 宇多田ヒカル
