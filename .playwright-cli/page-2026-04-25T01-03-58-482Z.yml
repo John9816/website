@@ -1,0 +1,311 @@
+- generic [ref=e4]:
+  - banner [ref=e5]:
+    - heading "音乐中心" [level=1] [ref=e6]:
+      - img [ref=e8]
+      - text: 音乐中心
+    - generic [ref=e11]:
+      - button "切换到深色模式" [ref=e12] [cursor=pointer]:
+        - img [ref=e13]
+        - generic [ref=e15]: 深色
+      - link "管理" [ref=e16] [cursor=pointer]:
+        - /url: /admin
+        - img [ref=e17]
+        - generic [ref=e20]: 管理
+      - link "返回首页" [ref=e21] [cursor=pointer]:
+        - /url: /
+        - img [ref=e22]
+        - generic [ref=e25]: 返回首页
+  - generic [ref=e149]:
+    - generic [ref=e150]:
+      - link "返回歌单" [ref=e151] [cursor=pointer]:
+        - /url: /music?view=playlist
+        - img [ref=e152]
+        - generic [ref=e154]: 返回歌单
+      - generic [ref=e155]:
+        - button "播放全部" [active] [ref=e156] [cursor=pointer]:
+          - img [ref=e158]
+          - generic [ref=e160]: 播放全部
+        - button "刷新" [ref=e161] [cursor=pointer]:
+          - img [ref=e163]
+          - generic [ref=e168]: 刷新
+    - generic [ref=e170]:
+      - generic [ref=e171]: 歌单详情
+      - heading "日系R&B·温柔暧昧｜宇多田光·松下优也" [level=2] [ref=e172]
+      - paragraph [ref=e173]: 日系R&B，简单来说，就是源自美国黑人音乐（节奏布鲁斯）的种子，漂洋过海后在日本的土壤里生根发芽，长出的那朵独一无二的花。它既有R&B标志性的律动和转音，又融入了东方独特的细腻情感与审美。 说起日系R&B，你会想到谁… 一起来感受日系R&B带来的温柔！
+      - generic [ref=e174]:
+        - generic [ref=e175]: Javen__Q · 20 首 · 播放 2.3 万
+        - generic [ref=e176]: "1774508673403"
+    - table [ref=e183]:
+      - rowgroup [ref=e190]:
+        - row "# 歌曲 来源 时长" [ref=e191]:
+          - columnheader "#" [ref=e192]
+          - columnheader "歌曲" [ref=e193]
+          - columnheader "来源" [ref=e194]
+          - columnheader "时长" [ref=e195]
+          - columnheader [ref=e196]
+      - rowgroup [ref=e197]:
+        - row "1 Apple And Cinnamon 宇多田ヒカル · This Is The One 网易云 4:38 暂停" [ref=e520] [cursor=pointer]:
+          - cell "1" [ref=e199]
+          - cell "Apple And Cinnamon 宇多田ヒカル · This Is The One" [ref=e200]:
+            - generic [ref=e204]:
+              - generic [ref=e205]: Apple And Cinnamon
+              - generic [ref=e206]: 宇多田ヒカル · This Is The One
+          - cell "网易云" [ref=e207]
+          - cell "4:38" [ref=e208]
+          - cell "暂停" [ref=e521]:
+            - button "暂停" [ref=e522]:
+              - img [ref=e523]
+        - row "2 モノクローム 具島直子 · miss. G 网易云 5:37 播放" [ref=e213] [cursor=pointer]:
+          - cell "2" [ref=e214]
+          - cell "モノクローム 具島直子 · miss. G" [ref=e215]:
+            - generic [ref=e219]:
+              - generic [ref=e220]: モノクローム
+              - generic [ref=e221]: 具島直子 · miss. G
+          - cell "网易云" [ref=e222]
+          - cell "5:37" [ref=e223]
+          - cell "播放" [ref=e224]:
+            - button "播放" [ref=e225]:
+              - img [ref=e226]
+        - row "3 まどろみ 具島直子 · Quiet Emotion 网易云 4:13 播放" [ref=e228] [cursor=pointer]:
+          - cell "3" [ref=e229]
+          - cell "まどろみ 具島直子 · Quiet Emotion" [ref=e230]:
+            - generic [ref=e234]:
+              - generic [ref=e235]: まどろみ
+              - generic [ref=e236]: 具島直子 · Quiet Emotion
+          - cell "网易云" [ref=e237]
+          - cell "4:13" [ref=e238]
+          - cell "播放" [ref=e239]:
+            - button "播放" [ref=e240]:
+              - img [ref=e241]
+        - row "4 FRAGILE 山下達郎 · COZY 网易云 5:28 播放" [ref=e243] [cursor=pointer]:
+          - cell "4" [ref=e244]
+          - cell "FRAGILE 山下達郎 · COZY" [ref=e245]:
+            - generic [ref=e249]:
+              - generic [ref=e250]: FRAGILE
+              - generic [ref=e251]: 山下達郎 · COZY
+          - cell "网易云" [ref=e252]
+          - cell "5:28" [ref=e253]
+          - cell "播放" [ref=e254]:
+            - button "播放" [ref=e255]:
+              - img [ref=e256]
+        - row "5 Merry Christmas Mr. Lawrence -fyi 宇多田ヒカル · This Is The One 网易云 3:49 播放" [ref=e258] [cursor=pointer]:
+          - cell "5" [ref=e259]
+          - cell "Merry Christmas Mr. Lawrence -fyi 宇多田ヒカル · This Is The One" [ref=e260]:
+            - generic [ref=e264]:
+              - generic [ref=e265]: Merry Christmas Mr. Lawrence -fyi
+              - generic [ref=e266]: 宇多田ヒカル · This Is The One
+          - cell "网易云" [ref=e267]
+          - cell "3:49" [ref=e268]
+          - cell "播放" [ref=e269]:
+            - button "播放" [ref=e270]:
+              - img [ref=e271]
+        - row "6 Come Back To Me 宇多田ヒカル · This Is The One 网易云 3:58 播放" [ref=e273] [cursor=pointer]:
+          - cell "6" [ref=e274]
+          - cell "Come Back To Me 宇多田ヒカル · This Is The One" [ref=e275]:
+            - generic [ref=e279]:
+              - generic [ref=e280]: Come Back To Me
+              - generic [ref=e281]: 宇多田ヒカル · This Is The One
+          - cell "网易云" [ref=e282]
+          - cell "3:58" [ref=e283]
+          - cell "播放" [ref=e284]:
+            - button "播放" [ref=e285]:
+              - img [ref=e286]
+        - row "7 気分じゃないの (Not In The Mood) 宇多田ヒカル · BADモード 网易云 7:28 播放" [ref=e288] [cursor=pointer]:
+          - cell "7" [ref=e289]
+          - cell "気分じゃないの (Not In The Mood) 宇多田ヒカル · BADモード" [ref=e290]:
+            - generic [ref=e294]:
+              - generic [ref=e295]: 気分じゃないの (Not In The Mood)
+              - generic [ref=e296]: 宇多田ヒカル · BADモード
+          - cell "网易云" [ref=e297]
+          - cell "7:28" [ref=e298]
+          - cell "播放" [ref=e299]:
+            - button "播放" [ref=e300]:
+              - img [ref=e301]
+        - row "8 Never Let Go 宇多田ヒカル · First Love 网易云 3:57 播放" [ref=e303] [cursor=pointer]:
+          - cell "8" [ref=e304]
+          - cell "Never Let Go 宇多田ヒカル · First Love" [ref=e305]:
+            - generic [ref=e309]:
+              - generic [ref=e310]: Never Let Go
+              - generic [ref=e311]: 宇多田ヒカル · First Love
+          - cell "网易云" [ref=e312]
+          - cell "3:57" [ref=e313]
+          - cell "播放" [ref=e314]:
+            - button "播放" [ref=e315]:
+              - img [ref=e316]
+        - row "9 Fly Me To The Moon(In Other Words) 宇多田ヒカル · Beautiful World / Kiss & Cry 网易云 3:25 播放" [ref=e318] [cursor=pointer]:
+          - cell "9" [ref=e319]
+          - cell "Fly Me To The Moon(In Other Words) 宇多田ヒカル · Beautiful World / Kiss & Cry" [ref=e320]:
+            - generic [ref=e324]:
+              - generic [ref=e325]: Fly Me To The Moon(In Other Words)
+              - generic [ref=e326]: 宇多田ヒカル · Beautiful World / Kiss & Cry
+          - cell "网易云" [ref=e327]
+          - cell "3:25" [ref=e328]
+          - cell "播放" [ref=e329]:
+            - button "播放" [ref=e330]:
+              - img [ref=e331]
+        - row "10 道 宇多田ヒカル · Fantôme 网易云 3:36 播放" [ref=e333] [cursor=pointer]:
+          - cell "10" [ref=e334]
+          - cell "道 宇多田ヒカル · Fantôme" [ref=e335]:
+            - generic [ref=e339]:
+              - generic [ref=e340]: 道
+              - generic [ref=e341]: 宇多田ヒカル · Fantôme
+          - cell "网易云" [ref=e342]
+          - cell "3:36" [ref=e343]
+          - cell "播放" [ref=e344]:
+            - button "播放" [ref=e345]:
+              - img [ref=e346]
+        - row "11 Time Will Tell 宇多田ヒカル · First Love 网易云 5:27 播放" [ref=e348] [cursor=pointer]:
+          - cell "11" [ref=e349]
+          - cell "Time Will Tell 宇多田ヒカル · First Love" [ref=e350]:
+            - generic [ref=e354]:
+              - generic [ref=e355]: Time Will Tell
+              - generic [ref=e356]: 宇多田ヒカル · First Love
+          - cell "网易云" [ref=e357]
+          - cell "5:27" [ref=e358]
+          - cell "播放" [ref=e359]:
+            - button "播放" [ref=e360]:
+              - img [ref=e361]
+        - row "12 Apple And Cinnamon 宇多田ヒカル · Utada The Best 网易云 4:38 播放" [ref=e363] [cursor=pointer]:
+          - cell "12" [ref=e364]
+          - cell "Apple And Cinnamon 宇多田ヒカル · Utada The Best" [ref=e365]:
+            - generic [ref=e369]:
+              - generic [ref=e370]: Apple And Cinnamon
+              - generic [ref=e371]: 宇多田ヒカル · Utada The Best
+          - cell "网易云" [ref=e372]
+          - cell "4:38" [ref=e373]
+          - cell "播放" [ref=e374]:
+            - button "播放" [ref=e375]:
+              - img [ref=e376]
+        - row "13 Distance 宇多田ヒカル · Distance 网易云 5:30 播放" [ref=e378] [cursor=pointer]:
+          - cell "13" [ref=e379]
+          - cell "Distance 宇多田ヒカル · Distance" [ref=e380]:
+            - generic [ref=e384]:
+              - generic [ref=e385]: Distance
+              - generic [ref=e386]: 宇多田ヒカル · Distance
+          - cell "网易云" [ref=e387]
+          - cell "5:30" [ref=e388]
+          - cell "播放" [ref=e389]:
+            - button "播放" [ref=e390]:
+              - img [ref=e391]
+        - row "14 Stay Gold 宇多田ヒカル · HEART STATION 网易云 5:14 播放" [ref=e393] [cursor=pointer]:
+          - cell "14" [ref=e394]
+          - cell "Stay Gold 宇多田ヒカル · HEART STATION" [ref=e395]:
+            - generic [ref=e399]:
+              - generic [ref=e400]: Stay Gold
+              - generic [ref=e401]: 宇多田ヒカル · HEART STATION
+          - cell "网易云" [ref=e402]
+          - cell "5:14" [ref=e403]
+          - cell "播放" [ref=e404]:
+            - button "播放" [ref=e405]:
+              - img [ref=e406]
+        - row "15 二時間だけのバカンス 宇多田ヒカル / 椎名林檎 · Fantôme 网易云 4:42 播放" [ref=e408] [cursor=pointer]:
+          - cell "15" [ref=e409]
+          - cell "二時間だけのバカンス 宇多田ヒカル / 椎名林檎 · Fantôme" [ref=e410]:
+            - generic [ref=e414]:
+              - generic [ref=e415]: 二時間だけのバカンス
+              - generic [ref=e416]: 宇多田ヒカル / 椎名林檎 · Fantôme
+          - cell "网易云" [ref=e417]
+          - cell "4:42" [ref=e418]
+          - cell "播放" [ref=e419]:
+            - button "播放" [ref=e420]:
+              - img [ref=e421]
+        - row "16 Prisoner Of Love 宇多田ヒカル · HEART STATION 网易云 4:46 播放" [ref=e423] [cursor=pointer]:
+          - cell "16" [ref=e424]
+          - cell "Prisoner Of Love 宇多田ヒカル · HEART STATION" [ref=e425]:
+            - generic [ref=e429]:
+              - generic [ref=e430]: Prisoner Of Love
+              - generic [ref=e431]: 宇多田ヒカル · HEART STATION
+          - cell "网易云" [ref=e432]
+          - cell "4:46" [ref=e433]
+          - cell "播放" [ref=e434]:
+            - button "播放" [ref=e435]:
+              - img [ref=e436]
+        - row "17 君に夢中 宇多田ヒカル · 君に夢中 网易云 4:18 播放" [ref=e438] [cursor=pointer]:
+          - cell "17" [ref=e439]
+          - cell "君に夢中 宇多田ヒカル · 君に夢中" [ref=e440]:
+            - generic [ref=e444]:
+              - generic [ref=e445]: 君に夢中
+              - generic [ref=e446]: 宇多田ヒカル · 君に夢中
+          - cell "网易云" [ref=e447]
+          - cell "4:18" [ref=e448]
+          - cell "播放" [ref=e449]:
+            - button "播放" [ref=e450]:
+              - img [ref=e451]
+        - row "18 This One (Crying Like A Child) 宇多田ヒカル · This Is The One 网易云 4:30 播放" [ref=e453] [cursor=pointer]:
+          - cell "18" [ref=e454]
+          - cell "This One (Crying Like A Child) 宇多田ヒカル · This Is The One" [ref=e455]:
+            - generic [ref=e459]:
+              - generic [ref=e460]: This One (Crying Like A Child)
+              - generic [ref=e461]: 宇多田ヒカル · This Is The One
+          - cell "网易云" [ref=e462]
+          - cell "4:30" [ref=e463]
+          - cell "播放" [ref=e464]:
+            - button "播放" [ref=e465]:
+              - img [ref=e466]
+        - row "19 Automatic 宇多田ヒカル · Automatic / Time Will Tell 网易云 5:12 播放" [ref=e468] [cursor=pointer]:
+          - cell "19" [ref=e469]
+          - cell "Automatic 宇多田ヒカル · Automatic / Time Will Tell" [ref=e470]:
+            - generic [ref=e474]:
+              - generic [ref=e475]: Automatic
+              - generic [ref=e476]: 宇多田ヒカル · Automatic / Time Will Tell
+          - cell "网易云" [ref=e477]
+          - cell "5:12" [ref=e478]
+          - cell "播放" [ref=e479]:
+            - button "播放" [ref=e480]:
+              - img [ref=e481]
+        - row "20 Merry Christmas Mr. Lawrence - FYI 宇多田ヒカル · This Is The One 网易云 3:49 播放" [ref=e483] [cursor=pointer]:
+          - cell "20" [ref=e484]
+          - cell "Merry Christmas Mr. Lawrence - FYI 宇多田ヒカル · This Is The One" [ref=e485]:
+            - generic [ref=e489]:
+              - generic [ref=e490]: Merry Christmas Mr. Lawrence - FYI
+              - generic [ref=e491]: 宇多田ヒカル · This Is The One
+          - cell "网易云" [ref=e492]
+          - cell "3:49" [ref=e493]
+          - cell "播放" [ref=e494]:
+            - button "播放" [ref=e495]:
+              - img [ref=e496]
+    - list [ref=e499]:
+      - listitem "上一页" [ref=e500]:
+        - button "left" [disabled] [ref=e501]:
+          - img "left" [ref=e502]:
+            - img [ref=e503]
+      - listitem "1/4" [ref=e505]:
+        - textbox "跳至" [ref=e506]: "1"
+        - generic [ref=e507]: /
+        - text: "4"
+      - listitem "下一页" [ref=e508] [cursor=pointer]:
+        - button "right" [ref=e509]:
+          - img "right" [ref=e510]:
+            - img [ref=e511]
+      - listitem [ref=e513]:
+        - generic "页码" [ref=e514] [cursor=pointer]:
+          - generic [ref=e516]:
+            - combobox "页码" [ref=e518]
+            - generic "20 条/页" [ref=e519]
+          - generic:
+            - img:
+              - img
+  - generic [ref=e527]:
+    - generic [ref=e528]:
+      - button "打开全屏播放器" [ref=e529] [cursor=pointer]
+      - generic [ref=e530]:
+        - generic "Apple And Cinnamon" [ref=e531]
+        - generic "宇多田ヒカル" [ref=e532]: 宇多田ヒカル · This Is The One
+        - generic [ref=e533]:
+          - generic [ref=e534]: flac
+          - generic [ref=e535]: 网易云
+    - generic [ref=e536]:
+      - generic [ref=e537]:
+        - button "上一首" [disabled] [ref=e538]:
+          - img [ref=e539]
+        - button "暂停" [ref=e541] [cursor=pointer]:
+          - img [ref=e542]
+        - button "下一首" [ref=e545] [cursor=pointer]:
+          - img [ref=e546]
+      - generic [ref=e548]:
+        - generic [ref=e549]: 0:01
+        - generic [ref=e553]: 4:38
+    - generic [ref=e554]:
+      - button "静音" [ref=e555] [cursor=pointer]:
+        - img [ref=e556]
+      - slider "音量" [ref=e560] [cursor=pointer]: "1"

@@ -7,6 +7,7 @@ import { ThemeProvider, useTheme } from './context/ThemeContext'
 import GlobalMusicDock from './components/GlobalMusicDock'
 import HomePage from './pages/HomePage'
 import LoginPage from './pages/LoginPage'
+import RegisterPage from './pages/RegisterPage'
 import MusicLayout from './pages/MusicLayout'
 import MusicPage from './pages/MusicPage'
 import MusicPlaylistDetailPage from './pages/MusicPlaylistDetailPage'
@@ -47,6 +48,8 @@ export default function App() {
                   <Route path="toplist/:source/:id" element={<MusicToplistDetailPage />} />
                   <Route path="playlist/:source/:id" element={<MusicPlaylistDetailPage />} />
                 </Route>
+                <Route path="/login" element={<LoginPage />} />
+                <Route path="/register" element={<RegisterPage />} />
                 <Route path="/admin/login" element={<LoginPage />} />
                 <Route path="/admin" element={<AdminLayout />}>
                   <Route index element={<Navigate to="categories" replace />} />

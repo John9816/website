@@ -1,0 +1,142 @@
+- generic [ref=e4]:
+  - banner [ref=e5]:
+    - heading "音乐中心" [level=1] [ref=e6]:
+      - img [ref=e8]
+      - text: 音乐中心
+    - generic [ref=e11]:
+      - button "切换到深色模式" [ref=e12] [cursor=pointer]:
+        - img [ref=e13]
+        - generic [ref=e15]: 深色
+      - link "管理" [ref=e16] [cursor=pointer]:
+        - /url: /admin
+        - img [ref=e17]
+        - generic [ref=e20]: 管理
+      - link "返回首页" [ref=e21] [cursor=pointer]:
+        - /url: /
+        - img [ref=e22]
+        - generic [ref=e25]: 返回首页
+  - generic [ref=e28]:
+    - generic [ref=e29]:
+      - radiogroup "segmented control" [ref=e30]:
+        - generic [ref=e31]:
+          - generic [ref=e32] [cursor=pointer]:
+            - radio "搜索"
+            - generic "搜索" [ref=e33]
+          - generic [ref=e34] [cursor=pointer]:
+            - radio "榜单"
+            - generic "榜单" [ref=e35]
+          - generic [ref=e36] [cursor=pointer]:
+            - radio "歌单" [checked]
+            - generic "歌单" [ref=e37]
+          - generic [ref=e38] [cursor=pointer]:
+            - radio "新歌"
+            - generic "新歌" [ref=e39]
+      - generic [ref=e40]:
+        - generic [ref=e41]: 音质
+        - generic [ref=e42] [cursor=pointer]:
+          - generic [ref=e44]:
+            - combobox [ref=e46]
+            - generic "FLAC" [ref=e47]
+          - generic:
+            - img:
+              - img
+    - generic [ref=e48]:
+      - generic [ref=e50]:
+        - generic [ref=e51]: 歌单
+        - heading "推荐歌单" [level=2] [ref=e52]
+        - paragraph [ref=e53]: 网易云 · 12 个歌单
+      - generic [ref=e54]:
+        - radiogroup "segmented control" [ref=e55]:
+          - generic [ref=e56]:
+            - generic [ref=e57] [cursor=pointer]:
+              - radio "网易云" [checked]
+              - generic "网易云" [ref=e58]
+            - generic [ref=e59] [cursor=pointer]:
+              - radio "酷我"
+              - generic "酷我" [ref=e60]
+        - generic [ref=e61]:
+          - textbox "分类" [ref=e62]: 全部
+          - button "应 用" [ref=e63] [cursor=pointer]:
+            - generic [ref=e64]: 应 用
+      - generic [ref=e66]:
+        - button "春日轻小调 | 享受春天的清新与阳光！ 心语馆 74 首 · 6491" [ref=e149] [cursor=pointer]:
+          - generic [ref=e150]:
+            - generic [ref=e151]: 春日轻小调 | 享受春天的清新与阳光！
+            - generic [ref=e152]: 心语馆
+            - generic [ref=e153]: 74 首 · 6491
+        - button "戴上耳机『用日系旋律|逃离这个世界吧~』 留下你的真心 136 首 · 1.9 万" [ref=e154] [cursor=pointer]:
+          - generic [ref=e155]:
+            - generic [ref=e156]: 戴上耳机『用日系旋律|逃离这个世界吧~』
+            - generic [ref=e157]: 留下你的真心
+            - generic [ref=e158]: 136 首 · 1.9 万
+        - button "【R&B】最适合洗澡休息放松睡觉的 听说民谣今天写了首新歌 53 首 · 69.0 万" [ref=e159] [cursor=pointer]:
+          - generic [ref=e160]:
+            - generic [ref=e161]: 【R&B】最适合洗澡休息放松睡觉的
+            - generic [ref=e162]: 听说民谣今天写了首新歌
+            - generic [ref=e163]: 53 首 · 69.0 万
+        - button "全球精选英文金曲 好听到心跳加速 请叫我快乐冠军 58 首 · 11.1 万" [ref=e164] [cursor=pointer]:
+          - generic [ref=e165]:
+            - generic [ref=e166]: 全球精选英文金曲 好听到心跳加速
+            - generic [ref=e167]: 请叫我快乐冠军
+            - generic [ref=e168]: 58 首 · 11.1 万
+        - button "【高级感纯音】坠入春潮 万物生机的梦境 心语馆 81 首 · 12.7 万" [ref=e169] [cursor=pointer]:
+          - generic [ref=e170]:
+            - generic [ref=e171]: 【高级感纯音】坠入春潮 万物生机的梦境
+            - generic [ref=e172]: 心语馆
+            - generic [ref=e173]: 81 首 · 12.7 万
+        - button "连麻Swimming | 内心挣扎的街头叙事报告 说唱王小明 92 首 · 2.9 万" [ref=e174] [cursor=pointer]:
+          - generic [ref=e175]:
+            - generic [ref=e176]: 连麻Swimming | 内心挣扎的街头叙事报告
+            - generic [ref=e177]: 说唱王小明
+            - generic [ref=e178]: 92 首 · 2.9 万
+        - button "郑润泽精选 | 漩涡人生 旷野 演唱会必听歌 心语馆 88 首 · 1796" [ref=e179] [cursor=pointer]:
+          - generic [ref=e180]:
+            - generic [ref=e181]: 郑润泽精选 | 漩涡人生 旷野 演唱会必听歌
+            - generic [ref=e182]: 心语馆
+            - generic [ref=e183]: 88 首 · 1796
+        - button "JinJiBeWater隼 | 独特声线织就的疼痛光谱 说唱王小明 75 首 · 1.9 万" [ref=e184] [cursor=pointer]:
+          - generic [ref=e185]:
+            - generic [ref=e186]: JinJiBeWater隼 | 独特声线织就的疼痛光谱
+            - generic [ref=e187]: 说唱王小明
+            - generic [ref=e188]: 75 首 · 1.9 万
+        - button "魔力歌先生：魔性音浪已就位，等你一起摇 网易云音乐 66 首 · 10.3 万" [ref=e189] [cursor=pointer]:
+          - generic [ref=e190]:
+            - generic [ref=e191]: 魔力歌先生：魔性音浪已就位，等你一起摇
+            - generic [ref=e192]: 网易云音乐
+            - generic [ref=e193]: 66 首 · 10.3 万
+        - button "她频·声核｜女性电子创作人的柔频荡漾 我为电狂 58 首 · 1.7 万" [ref=e194] [cursor=pointer]:
+          - generic [ref=e195]:
+            - generic [ref=e196]: 她频·声核｜女性电子创作人的柔频荡漾
+            - generic [ref=e197]: 我为电狂
+            - generic [ref=e198]: 58 首 · 1.7 万
+        - button "原来天下无双是从此一个人 生长痛是发炎的耳骨钉 83 首 · 3.0 万" [ref=e199] [cursor=pointer]:
+          - generic [ref=e200]:
+            - generic [ref=e201]: 原来天下无双是从此一个人
+            - generic [ref=e202]: 生长痛是发炎的耳骨钉
+            - generic [ref=e203]: 83 首 · 3.0 万
+        - button "【高质量轻音】享受宁静 沉浸自然 心语馆 77 首 · 21.8 万" [ref=e204] [cursor=pointer]:
+          - generic [ref=e205]:
+            - generic [ref=e206]: 【高质量轻音】享受宁静 沉浸自然
+            - generic [ref=e207]: 心语馆
+            - generic [ref=e208]: 77 首 · 21.8 万
+      - list [ref=e128]:
+        - listitem "上一页" [ref=e129] [cursor=pointer]:
+          - button "left" [ref=e130]:
+            - img "left" [ref=e131]:
+              - img [ref=e132]
+        - listitem "2/60" [ref=e209]:
+          - textbox "跳至" [ref=e135]: "2"
+          - generic [ref=e136]: /
+          - text: "60"
+        - listitem "下一页" [ref=e137] [cursor=pointer]:
+          - button "right" [active] [ref=e138]:
+            - img "right" [ref=e139]:
+              - img [ref=e140]
+        - listitem [ref=e142]:
+          - generic "页码" [ref=e143] [cursor=pointer]:
+            - generic [ref=e145]:
+              - combobox "页码" [ref=e147]
+              - generic "12 条/页" [ref=e148]
+            - generic:
+              - img:
+                - img

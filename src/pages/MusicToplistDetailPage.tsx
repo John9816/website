@@ -1,7 +1,7 @@
-import { useEffect, useMemo, useState } from 'react'
+import { useEffect, useMemo, useRef, useState } from 'react'
 import { App as AntApp, Button } from 'antd'
 import { Link, useParams } from 'react-router-dom'
-import { ChevronLeft, RefreshCcw } from 'lucide-react'
+import { ChevronLeft, Play, RefreshCcw } from 'lucide-react'
 import { musicToplistDetail } from '../api/music'
 import MusicCover from '../components/MusicCover'
 import MusicSongTable from '../components/MusicSongTable'
@@ -28,25 +28,34 @@ const PAGE_SIZE = 20
 export default function MusicToplistDetailPage() {
   const { message } = AntApp.useApp()
   const { source, id } = useParams()
-  const { setPlaylist } = useMusicPlayer()
+  const { playPlaylist, setPlaylist } = useMusicPlayer()
   const [page, setPage] = useState(1)
   const [loading, setLoading] = useState(false)
   const [detail, setDetail] = useState<ToplistDetailView | null>(null)
+  const requestIdRef = useRef(0)
 
   const validSource = isMusicSourceId(source) ? source : null
 
   useEffect(() => {
     if (!validSource || !id) return
+
+    const requestId = ++requestIdRef.current
     setLoading(true)
+
     musicToplistDetail(validSource, id, page, PAGE_SIZE)
       .then((data) => {
+        if (requestId !== requestIdRef.current) return
         setDetail(data)
         setPlaylist(data.list)
       })
       .catch((error) => {
+        if (requestId !== requestIdRef.current) return
         message.error((error as Error).message)
       })
-      .finally(() => setLoading(false))
+      .finally(() => {
+        if (requestId !== requestIdRef.current) return
+        setLoading(false)
+      })
   }, [id, message, page, setPlaylist, validSource])
 
   const metaText = useMemo(() => {
@@ -65,18 +74,32 @@ export default function MusicToplistDetailPage() {
   return (
     <div className="music-detail-shell">
       <div className="music-detail-actions">
-        <Link to={`/music?view=toplist`} className="music-back-link">
+        <Link to="/music?view=toplist" className="music-back-link">
           <ChevronLeft size={16} />
           <span>返回榜单</span>
         </Link>
-        <Button
-          icon={<RefreshCcw size={14} />}
-          onClick={() => {
-            setPage(1)
-          }}
-        >
-          刷新
-        </Button>
+
+        <div className="music-detail-actions-group">
+          <Button
+            type="primary"
+            icon={<Play size={14} />}
+            disabled={!detail?.list?.length}
+            onClick={() => {
+              if (!detail?.list?.length) return
+              void playPlaylist(detail.list)
+            }}
+          >
+            播放全部
+          </Button>
+          <Button
+            icon={<RefreshCcw size={14} />}
+            onClick={() => {
+              setPage(1)
+            }}
+          >
+            刷新
+          </Button>
+        </div>
       </div>
 
       <div className="music-detail-hero">
@@ -96,7 +119,7 @@ export default function MusicToplistDetailPage() {
         songs={detail?.list ?? []}
         loading={loading}
         emptyText="暂无榜单歌曲"
-        page={detail?.page ?? page}
+        page={page}
         pageSize={detail?.pageSize ?? PAGE_SIZE}
         total={detail?.total}
         onPageChange={(nextPage) => setPage(nextPage)}

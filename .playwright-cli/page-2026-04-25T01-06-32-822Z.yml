@@ -1,0 +1,146 @@
+- generic [ref=e63]:
+  - complementary [ref=e64]:
+    - generic [ref=e67]: 我的导航
+    - generic "站点快捷入口" [ref=e68]:
+      - button "切换到深色模式" [ref=e69] [cursor=pointer]:
+        - img [ref=e70]
+        - generic [ref=e72]: 深色
+      - link "登录" [ref=e73] [cursor=pointer]:
+        - /url: /login
+        - img [ref=e74]
+        - generic [ref=e77]: 登录
+      - link "音乐" [ref=e78] [cursor=pointer]:
+        - /url: /music
+        - img [ref=e79]
+        - generic [ref=e82]: 音乐
+      - link "管理" [ref=e83] [cursor=pointer]:
+        - /url: /admin
+        - img [ref=e84]
+        - generic [ref=e87]: 管理
+    - navigation "分类导航" [ref=e88]:
+      - button "快捷" [ref=e89] [cursor=pointer]:
+        - img [ref=e91]
+        - generic [ref=e93]: 快捷
+      - button "好软" [ref=e94] [cursor=pointer]:
+        - img [ref=e96]
+        - generic [ref=e98]: 好软
+      - button "兴趣" [ref=e99] [cursor=pointer]:
+        - img [ref=e101]
+        - generic [ref=e103]: 兴趣
+      - button "社区" [ref=e104] [cursor=pointer]:
+        - img [ref=e106]
+        - generic [ref=e109]: 社区
+      - button "导航" [ref=e110] [cursor=pointer]:
+        - img [ref=e112]
+        - generic [ref=e115]: 导航
+  - main [ref=e116]:
+    - generic [ref=e117]:
+      - generic [ref=e118]:
+        - heading "Hello 👋" [level=1] [ref=e119]:
+          - text: Hello
+          - generic [ref=e120]: 👋
+        - paragraph [ref=e121]:
+          - text: 收藏的资源与工具，一键直达
+          - generic [ref=e122]: · 5 个分类 / 12 个链接
+      - generic [ref=e123]:
+        - img [ref=e124]
+        - searchbox "搜索链接" [ref=e127]
+    - generic [ref=e128]:
+      - heading "快捷" [level=2] [ref=e129]:
+        - img [ref=e131]
+        - generic [ref=e133]: 快捷
+      - generic [ref=e134]:
+        - link "Z-Library Z-Library 全球最大的电子书库之一" [ref=e135] [cursor=pointer]:
+          - /url: https://zlib.li/
+          - img "Z-Library" [ref=e138]
+          - generic [ref=e139]:
+            - generic [ref=e140]: Z-Library
+            - generic [ref=e141]: 全球最大的电子书库之一
+        - link "Java全栈知识体系 Java全栈知识体系 Java 全栈知识体系" [ref=e142] [cursor=pointer]:
+          - /url: https://pdai.tech/
+          - img "Java全栈知识体系" [ref=e145]
+          - generic [ref=e146]:
+            - generic [ref=e147]: Java全栈知识体系
+            - generic [ref=e148]: Java 全栈知识体系
+    - generic [ref=e149]:
+      - heading "好软" [level=2] [ref=e150]:
+        - img [ref=e152]
+        - generic [ref=e154]: 好软
+      - generic [ref=e155]:
+        - link "Clipy Clipy MacOS开源剪贴板" [ref=e156] [cursor=pointer]:
+          - /url: https://github.com/Clipy/Clipy/releases
+          - img "Clipy" [ref=e159]
+          - generic [ref=e160]:
+            - generic [ref=e161]: Clipy
+            - generic [ref=e162]: MacOS开源剪贴板
+        - link "Snipaste Snipaste 截图与贴图工具" [ref=e163] [cursor=pointer]:
+          - /url: https://zh.snipaste.com/download.html
+          - img "Snipaste" [ref=e166]
+          - generic [ref=e167]:
+            - generic [ref=e168]: Snipaste
+            - generic [ref=e169]: 截图与贴图工具
+    - generic [ref=e170]:
+      - heading "兴趣" [level=2] [ref=e171]:
+        - img [ref=e173]
+        - generic [ref=e175]: 兴趣
+      - generic [ref=e176]:
+        - link "赔钱机场 赔钱机场 - 超便宜低价高速机场" [ref=e177] [cursor=pointer]:
+          - /url: https://dash.pqjc.site/#/register?code=Q6CDOi7f
+          - img [ref=e180]
+          - generic [ref=e185]:
+            - generic [ref=e186]: 赔钱机场
+            - generic [ref=e187]: 赔钱机场 - 超便宜低价高速机场
+        - link "Apple-ID Apple-ID 【免费】2026 小火箭共享账号 | 美区ID / 苹果ID共享 (已购Shadowrocket) - 翻墙男" [ref=e188] [cursor=pointer]:
+          - /url: https://fanqiangnan.com/appleid.html
+          - img "Apple-ID" [ref=e191]
+          - generic [ref=e192]:
+            - generic [ref=e193]: Apple-ID
+            - generic [ref=e194]: 【免费】2026 小火箭共享账号 | 美区ID / 苹果ID共享 (已购Shadowrocket) - 翻墙男
+        - link "宝可梦加速器 宝可梦加速器" [ref=e195] [cursor=pointer]:
+          - /url: https://love.p6m6.com/#/register?code=TjYl79mr
+          - img [ref=e198]
+          - generic [ref=e203]:
+            - generic [ref=e204]: 宝可梦加速器
+            - generic [ref=e205]: 宝可梦加速器
+    - generic [ref=e206]:
+      - heading "社区" [level=2] [ref=e207]:
+        - img [ref=e209]
+        - generic [ref=e212]: 社区
+      - generic [ref=e213]:
+        - link "小众软件 小众软件 讨论有趣的互联网、AI、软件、应用" [ref=e214] [cursor=pointer]:
+          - /url: https://meta.appinn.net/
+          - img "小众软件" [ref=e217]
+          - generic [ref=e218]:
+            - generic [ref=e219]: 小众软件
+            - generic [ref=e220]: 讨论有趣的互联网、AI、软件、应用
+        - link "TopsTip TopsTip TopsTip｜互联网新鲜见闻" [ref=e221] [cursor=pointer]:
+          - /url: https://topstip.com/
+          - img "TopsTip" [ref=e224]
+          - generic [ref=e225]:
+            - generic [ref=e226]: TopsTip
+            - generic [ref=e227]: TopsTip｜互联网新鲜见闻
+        - link "NodeLoc NodeLoc 自由、平等、友好、开放、有趣的互联网交流社区" [ref=e228] [cursor=pointer]:
+          - /url: https://www.nodeloc.com/
+          - img "NodeLoc" [ref=e231]
+          - generic [ref=e232]:
+            - generic [ref=e233]: NodeLoc
+            - generic [ref=e234]: 自由、平等、友好、开放、有趣的互联网交流社区
+    - generic [ref=e235]:
+      - heading "导航" [level=2] [ref=e236]:
+        - img [ref=e238]
+        - generic [ref=e241]: 导航
+      - generic [ref=e242]:
+        - link "硬核指南 硬核指南 硬核指南 - 够高清才是真硬核！" [ref=e243] [cursor=pointer]:
+          - /url: https://yinghezhinan.com/
+          - img "硬核指南" [ref=e246]
+          - generic [ref=e247]:
+            - generic [ref=e248]: 硬核指南
+            - generic [ref=e249]: 硬核指南 - 够高清才是真硬核！
+        - link "小帅同学的储物间 小帅同学的储物间 小帅同学的储物间" [ref=e250] [cursor=pointer]:
+          - /url: https://xiaoshuai.site/xiaoshuai
+          - img "小帅同学的储物间" [ref=e253]
+          - generic [ref=e254]:
+            - generic [ref=e255]: 小帅同学的储物间
+            - generic [ref=e256]: 小帅同学的储物间
+  - button "返回顶部":
+    - img

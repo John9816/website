@@ -1,0 +1,142 @@
+- generic [ref=e4]:
+  - banner [ref=e5]:
+    - heading "音乐中心" [level=1] [ref=e6]:
+      - img [ref=e8]
+      - text: 音乐中心
+    - generic [ref=e11]:
+      - button "切换到深色模式" [ref=e12] [cursor=pointer]:
+        - img [ref=e13]
+        - generic [ref=e15]: 深色
+      - link "管理" [ref=e16] [cursor=pointer]:
+        - /url: /admin
+        - img [ref=e17]
+        - generic [ref=e20]: 管理
+      - link "返回首页" [ref=e21] [cursor=pointer]:
+        - /url: /
+        - img [ref=e22]
+        - generic [ref=e25]: 返回首页
+  - generic [ref=e28]:
+    - generic [ref=e29]:
+      - radiogroup "segmented control" [ref=e30]:
+        - generic [ref=e31]:
+          - generic [ref=e32] [cursor=pointer]:
+            - radio "搜索"
+            - generic "搜索" [ref=e33]
+          - generic [ref=e34] [cursor=pointer]:
+            - radio "榜单"
+            - generic "榜单" [ref=e35]
+          - generic [ref=e36] [cursor=pointer]:
+            - radio "歌单" [checked]
+            - generic "歌单" [ref=e37]
+          - generic [ref=e38] [cursor=pointer]:
+            - radio "新歌"
+            - generic "新歌" [ref=e39]
+      - generic [ref=e40]:
+        - generic [ref=e41]: 音质
+        - generic [ref=e42] [cursor=pointer]:
+          - generic [ref=e44]:
+            - combobox [ref=e46]
+            - generic "FLAC" [ref=e47]
+          - generic:
+            - img:
+              - img
+    - generic [ref=e48]:
+      - generic [ref=e50]:
+        - generic [ref=e51]: 歌单
+        - heading "推荐歌单" [level=2] [ref=e52]
+        - paragraph [ref=e53]: 网易云 · 12 个歌单
+      - generic [ref=e54]:
+        - radiogroup "segmented control" [ref=e55]:
+          - generic [ref=e56]:
+            - generic [ref=e57] [cursor=pointer]:
+              - radio "网易云" [checked]
+              - generic "网易云" [ref=e58]
+            - generic [ref=e59] [cursor=pointer]:
+              - radio "酷我"
+              - generic "酷我" [ref=e60]
+        - generic [ref=e61]:
+          - textbox "分类" [ref=e62]: 全部
+          - button "应 用" [ref=e63] [cursor=pointer]:
+            - generic [ref=e64]: 应 用
+      - generic [ref=e66]:
+        - button "高甜预警｜一些听了就想恋爱的歌 是你的顾柒柒_cc 127 首 · 4433" [ref=e210] [cursor=pointer]:
+          - generic [ref=e211]:
+            - generic [ref=e212]: 高甜预警｜一些听了就想恋爱的歌
+            - generic [ref=e213]: 是你的顾柒柒_cc
+            - generic [ref=e214]: 127 首 · 4433
+        - button "「新海诚原声集」梦里，我终于记起你的名字 HUMAN00 55 首 · 1271" [ref=e215] [cursor=pointer]:
+          - generic [ref=e216]:
+            - generic [ref=e217]: 「新海诚原声集」梦里，我终于记起你的名字
+            - generic [ref=e218]: HUMAN00
+            - generic [ref=e219]: 55 首 · 1271
+        - button "听见林俊杰：做时间的乐行者，与你逐光相伴 网易云音乐 45 首 · 7.2 万" [ref=e220] [cursor=pointer]:
+          - generic [ref=e221]:
+            - generic [ref=e222]: 听见林俊杰：做时间的乐行者，与你逐光相伴
+            - generic [ref=e223]: 网易云音乐
+            - generic [ref=e224]: 45 首 · 7.2 万
+        - button "光影情书，写给初恋的二十次悸动 蝶影丛虫 20 首 · 2.1 万" [ref=e225] [cursor=pointer]:
+          - generic [ref=e226]:
+            - generic [ref=e227]: 光影情书，写给初恋的二十次悸动
+            - generic [ref=e228]: 蝶影丛虫
+            - generic [ref=e229]: 20 首 · 2.1 万
+        - button "古风｜少年感／节奏感／宿命感／惊艳 小松奈Nami 87 首 · 3677" [ref=e230] [cursor=pointer]:
+          - generic [ref=e231]:
+            - generic [ref=e232]: 古风｜少年感／节奏感／宿命感／惊艳
+            - generic [ref=e233]: 小松奈Nami
+            - generic [ref=e234]: 87 首 · 3677
+        - button "【旺盛生命力】春和景明 万物与生机 心语馆 77 首 · 17.0 万" [ref=e235] [cursor=pointer]:
+          - generic [ref=e236]:
+            - generic [ref=e237]: 【旺盛生命力】春和景明 万物与生机
+            - generic [ref=e238]: 心语馆
+            - generic [ref=e239]: 77 首 · 17.0 万
+        - button "Mac Ova Seas | 氛围说唱与旋律的先锋实验 说唱王小明 125 首 · 1.8 万" [ref=e240] [cursor=pointer]:
+          - generic [ref=e241]:
+            - generic [ref=e242]: Mac Ova Seas | 氛围说唱与旋律的先锋实验
+            - generic [ref=e243]: 说唱王小明
+            - generic [ref=e244]: 125 首 · 1.8 万
+        - button "R&B 情绪读本｜每一页都写着不同的心情 JJAckers 81 首 · 3753" [ref=e245] [cursor=pointer]:
+          - generic [ref=e246]:
+            - generic [ref=e247]: R&B 情绪读本｜每一页都写着不同的心情
+            - generic [ref=e248]: JJAckers
+            - generic [ref=e249]: 81 首 · 3753
+        - button "马思唯乐透人生演唱会上海站歌单（顺序版） D1zzyL1u0nTheTrack- 38 首 · 3.1 万" [ref=e250] [cursor=pointer]:
+          - generic [ref=e251]:
+            - generic [ref=e252]: 马思唯乐透人生演唱会上海站歌单（顺序版）
+            - generic [ref=e253]: D1zzyL1u0nTheTrack-
+            - generic [ref=e254]: 38 首 · 3.1 万
+        - button "春日氛围曲 | 前奏一响 春天登场 心语馆 80 首 · 1435" [ref=e255] [cursor=pointer]:
+          - generic [ref=e256]:
+            - generic [ref=e257]: 春日氛围曲 | 前奏一响 春天登场
+            - generic [ref=e258]: 心语馆
+            - generic [ref=e259]: 80 首 · 1435
+        - button "欧美R&B精选｜节奏与柔情 江雪31616 39 首 · 112.3 万" [ref=e260] [cursor=pointer]:
+          - generic [ref=e261]:
+            - generic [ref=e262]: 欧美R&B精选｜节奏与柔情
+            - generic [ref=e263]: 江雪31616
+            - generic [ref=e264]: 39 首 · 112.3 万
+        - button "惊喜家的小众歌单分享（更新中） 惊喜家aob 66 首 · 11.6 万" [ref=e265] [cursor=pointer]:
+          - generic [ref=e266]:
+            - generic [ref=e267]: 惊喜家的小众歌单分享（更新中）
+            - generic [ref=e268]: 惊喜家aob
+            - generic [ref=e269]: 66 首 · 11.6 万
+      - list [ref=e128]:
+        - listitem "上一页" [ref=e129] [cursor=pointer]:
+          - button "left" [ref=e130]:
+            - img "left" [ref=e131]:
+              - img [ref=e132]
+        - listitem "4/60" [ref=e270]:
+          - textbox "跳至" [active] [ref=e135]: "4"
+          - generic [ref=e136]: /
+          - text: "60"
+        - listitem "下一页" [ref=e137] [cursor=pointer]:
+          - button "right" [ref=e138]:
+            - img "right" [ref=e139]:
+              - img [ref=e140]
+        - listitem [ref=e142]:
+          - generic "页码" [ref=e143] [cursor=pointer]:
+            - generic [ref=e145]:
+              - combobox "页码" [ref=e147]
+              - generic "12 条/页" [ref=e148]
+            - generic:
+              - img:
+                - img

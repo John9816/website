@@ -19,6 +19,8 @@ import {
 
 type MusicPlayerContextValue = {
   current: PlayInfo | null
+  playlist: SongSearchItem[]
+  currentIndex: number
   isPlaying: boolean
   currentTime: number
   duration: number
@@ -30,6 +32,12 @@ type MusicPlayerContextValue = {
   canPrev: boolean
   canNext: boolean
   setPlaylist: (items: SongSearchItem[]) => void
+  playPlaylist: (
+    items: SongSearchItem[],
+    startIndex?: number,
+    quality?: MusicQuality,
+  ) => Promise<void>
+  playFromQueue: (index: number, quality?: MusicQuality) => Promise<void>
   setPreferredQuality: (quality: MusicQuality) => void
   playSong: (row: SongSearchItem, quality?: MusicQuality) => Promise<void>
   togglePlay: () => void
@@ -105,6 +113,28 @@ export function MusicPlayerProvider({ children }: { children: ReactNode }) {
     [message, preferredQuality],
   )
 
+  const playPlaylist = useCallback(
+    async (
+      items: SongSearchItem[],
+      startIndex = 0,
+      quality = preferredQuality,
+    ) => {
+      if (!items.length) return
+      const nextIndex = Math.min(items.length - 1, Math.max(0, startIndex))
+      setPlaylistState(items)
+      await playSong(items[nextIndex], quality)
+    },
+    [playSong, preferredQuality],
+  )
+
+  const playFromQueue = useCallback(
+    async (index: number, quality = preferredQuality) => {
+      if (index < 0 || index >= playlist.length) return
+      await playSong(playlist[index], quality)
+    },
+    [playSong, playlist, preferredQuality],
+  )
+
   const playPrev = useCallback(() => {
     if (!canPrev) return
     void playSong(playlist[currentIndex - 1], preferredQuality)
@@ -174,6 +204,8 @@ export function MusicPlayerProvider({ children }: { children: ReactNode }) {
   const value = useMemo<MusicPlayerContextValue>(
     () => ({
       current,
+      playlist,
+      currentIndex,
       isPlaying,
       currentTime,
       duration,
@@ -185,6 +217,8 @@ export function MusicPlayerProvider({ children }: { children: ReactNode }) {
       canPrev,
       canNext,
       setPlaylist,
+      playPlaylist,
+      playFromQueue,
       setPreferredQuality,
       playSong,
       togglePlay,
@@ -198,14 +232,18 @@ export function MusicPlayerProvider({ children }: { children: ReactNode }) {
       canNext,
       canPrev,
       current,
+      currentIndex,
       currentTime,
       duration,
       isPlaying,
       muted,
       playLoading,
       playNext,
+      playFromQueue,
       playPrev,
+      playPlaylist,
       playSong,
+      playlist,
       preferredQuality,
       seekToTime,
       setPlaylist,

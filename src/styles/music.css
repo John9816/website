@@ -238,6 +238,13 @@
   flex-wrap: wrap;
 }
 
+.music-detail-actions-group {
+  display: inline-flex;
+  align-items: center;
+  gap: 10px;
+  flex-wrap: wrap;
+}
+
 .music-back-link {
   display: inline-flex;
   align-items: center;

@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useMemo, useState } from 'react'
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import {
   App as AntApp,
   Button,
@@ -106,15 +106,18 @@ export default function MusicExplorer() {
     useState<MusicPlaylistSourceId>('netease')
   const [playlistCategoryDraft, setPlaylistCategoryDraft] = useState('全部')
   const [playlistCategory, setPlaylistCategory] = useState('全部')
-  const [playlistOrder, setPlaylistOrder] = useState('hot')
   const [playlistPage, setPlaylistPage] = useState(1)
   const [playlists, setPlaylists] = useState<PlaylistItem[]>([])
   const [playlistTotal, setPlaylistTotal] = useState<number | null>(null)
   const [playlistLoading, setPlaylistLoading] = useState(false)
 
   const [newSource, setNewSource] = useState<MusicSourceId>('qq')
+  const [newSongsPage, setNewSongsPage] = useState(1)
   const [newSongsLoading, setNewSongsLoading] = useState(false)
   const [newSongsDetail, setNewSongsDetail] = useState<ToplistDetailView | null>(null)
+
+  const playlistRequestIdRef = useRef(0)
+  const newSongsRequestIdRef = useRef(0)
 
   const view = isMusicView(searchParams.get('view')) ? searchParams.get('view') : 'search'
 
@@ -165,6 +168,7 @@ export default function MusicExplorer() {
   }, [message, toplistSource])
 
   const loadPlaylists = useCallback(async () => {
+    const requestId = ++playlistRequestIdRef.current
     setPlaylistLoading(true)
     try {
       const data = await musicPlaylist(
@@ -172,30 +176,36 @@ export default function MusicExplorer() {
         playlistPage,
         PLAYLIST_PAGE_SIZE,
         playlistSource === 'netease' ? playlistCategory : undefined,
-        playlistSource === 'netease' ? playlistOrder : undefined,
+        playlistSource === 'netease' ? 'hot' : undefined,
       )
+      if (requestId !== playlistRequestIdRef.current) return
       setPlaylists(data.list)
       setPlaylistTotal(data.total)
-      setPlaylistPage(data.page)
     } catch (error) {
+      if (requestId !== playlistRequestIdRef.current) return
       message.error((error as Error).message)
     } finally {
+      if (requestId !== playlistRequestIdRef.current) return
       setPlaylistLoading(false)
     }
-  }, [message, playlistCategory, playlistOrder, playlistPage, playlistSource])
+  }, [message, playlistCategory, playlistPage, playlistSource])
 
-  const loadNewSongs = useCallback(async (page = newSongsDetail?.page ?? 1) => {
+  const loadNewSongs = useCallback(async () => {
+    const requestId = ++newSongsRequestIdRef.current
     setNewSongsLoading(true)
     try {
-      const data = await musicNewSongs(newSource, page, DETAIL_PAGE_SIZE)
+      const data = await musicNewSongs(newSource, newSongsPage, DETAIL_PAGE_SIZE)
+      if (requestId !== newSongsRequestIdRef.current) return
       setNewSongsDetail(data)
       setPlaylist(data.list)
     } catch (error) {
+      if (requestId !== newSongsRequestIdRef.current) return
       message.error((error as Error).message)
     } finally {
+      if (requestId !== newSongsRequestIdRef.current) return
       setNewSongsLoading(false)
     }
-  }, [message, newSongsDetail?.page, newSource, setPlaylist])
+  }, [message, newSongsPage, newSource, setPlaylist])
 
   useEffect(() => {
     if (view === 'toplist') void loadToplists()
@@ -236,6 +246,7 @@ export default function MusicExplorer() {
         return `${sourceLabel(newSource)} · ${newSongsDetail?.list.length ?? 0} 首`
     }
   }, [
+    lastKeyword,
     newSongsDetail?.list.length,
     newSource,
     playlistSource,
@@ -245,7 +256,6 @@ export default function MusicExplorer() {
     toplistSource,
     toplists.length,
     view,
-    lastKeyword,
   ])
 
   return (
@@ -386,17 +396,6 @@ export default function MusicExplorer() {
                     }}
                     placeholder="分类"
                   />
-                  <Segmented
-                    options={[
-                      { label: '最热', value: 'hot' },
-                      { label: '最新', value: 'new' },
-                    ]}
-                    value={playlistOrder}
-                    onChange={(value) => {
-                      setPlaylistOrder(String(value))
-                      setPlaylistPage(1)
-                    }}
-                  />
                   <Button
                     onClick={() => {
                       setPlaylistCategory(playlistCategoryDraft.trim() || '全部')
@@ -470,7 +469,10 @@ export default function MusicExplorer() {
               <Segmented
                 options={SOURCE_OPTIONS}
                 value={newSource}
-                onChange={(value) => setNewSource(value as MusicSourceId)}
+                onChange={(value) => {
+                  setNewSource(value as MusicSourceId)
+                  setNewSongsPage(1)
+                }}
               />
               <Button
                 icon={<RefreshCcw size={14} />}
@@ -485,11 +487,11 @@ export default function MusicExplorer() {
               songs={newSongsDetail?.list ?? []}
               loading={newSongsLoading}
               emptyText="暂无新歌"
-              page={newSongsDetail?.page ?? 1}
+              page={newSongsPage}
               pageSize={newSongsDetail?.pageSize ?? DETAIL_PAGE_SIZE}
               total={newSongsDetail?.total}
               onPageChange={(nextPage) => {
-                void loadNewSongs(nextPage)
+                setNewSongsPage(nextPage)
               }}
             />
           </>

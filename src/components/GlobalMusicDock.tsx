@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState } from 'react'
+import { useEffect, useMemo, useRef, useState } from 'react'
 import { Link as RouterLink, useLocation } from 'react-router-dom'
 import {
   ChevronRight,
@@ -12,7 +12,7 @@ import {
 } from 'lucide-react'
 import MusicCover from './MusicCover'
 import { useMusicPlayer } from '../context/MusicPlayerContext'
-import { formatDuration } from '../utils/musicPlayer'
+import { formatDuration, parseLrc } from '../utils/musicPlayer'
 import '../styles/music-dock.css'
 
 type DockPosition = {
@@ -27,6 +27,8 @@ type DragState = {
   width: number
   height: number
 }
+
+type DockPanel = 'lyrics' | 'queue' | null
 
 function clampDockPosition(
   x: number,
@@ -44,15 +46,32 @@ function clampDockPosition(
   }
 }
 
+function sourceLabel(source: 'qq' | 'netease' | 'kuwo') {
+  switch (source) {
+    case 'qq':
+      return 'QQ'
+    case 'netease':
+      return '网易云'
+    case 'kuwo':
+      return '酷我'
+  }
+}
+
 export default function GlobalMusicDock() {
   const location = useLocation()
   const dockRef = useRef<HTMLDivElement | null>(null)
   const dragRef = useRef<DragState | null>(null)
+  const lyricScrollRef = useRef<HTMLDivElement | null>(null)
+  const queueScrollRef = useRef<HTMLDivElement | null>(null)
+
   const [position, setPosition] = useState<DockPosition | null>(null)
   const [dragging, setDragging] = useState(false)
+  const [panel, setPanel] = useState<DockPanel>(null)
 
   const {
     current,
+    playlist,
+    currentIndex,
     isPlaying,
     currentTime,
     duration,
@@ -65,7 +84,44 @@ export default function GlobalMusicDock() {
     playPrev,
     playNext,
     toggleMuted,
+    playFromQueue,
   } = useMusicPlayer()
+
+  const lrcLines = useMemo(
+    () => parseLrc(current?.lyric?.lineLyrics),
+    [current?.lyric?.lineLyrics],
+  )
+
+  const activeLrcIndex = useMemo(() => {
+    if (!lrcLines.length) return -1
+
+    let index = -1
+    for (let i = 0; i < lrcLines.length; i += 1) {
+      if (lrcLines[i].time <= currentTime) {
+        index = i
+      } else {
+        break
+      }
+    }
+
+    return index
+  }, [currentTime, lrcLines])
+
+  const currentLrcText = useMemo(() => {
+    if (activeLrcIndex >= 0) {
+      return lrcLines[activeLrcIndex]?.text || '...'
+    }
+
+    if (current?.lyric?.lineLyrics) {
+      const firstLine = current.lyric.lineLyrics
+        .split(/\r?\n/)
+        .map((line) => line.trim())
+        .find(Boolean)
+      return firstLine || '暂无歌词'
+    }
+
+    return '暂无歌词'
+  }, [activeLrcIndex, current?.lyric?.lineLyrics, lrcLines])
 
   useEffect(() => {
     if (!dragging) return
@@ -102,6 +158,36 @@ export default function GlobalMusicDock() {
       window.removeEventListener('resize', onResize)
     }
   }, [position])
+
+  useEffect(() => {
+    if (panel !== 'lyrics') return
+    const container = lyricScrollRef.current
+    if (!container || activeLrcIndex < 0) return
+
+    const activeLine = container.querySelector<HTMLElement>(
+      `[data-dock-lrc-idx="${activeLrcIndex}"]`,
+    )
+    if (!activeLine) return
+
+    const top =
+      activeLine.offsetTop - container.clientHeight / 2 + activeLine.clientHeight / 2
+    container.scrollTo({ top, behavior: 'smooth' })
+  }, [activeLrcIndex, panel])
+
+  useEffect(() => {
+    if (panel !== 'queue') return
+    const container = queueScrollRef.current
+    if (!container || currentIndex < 0) return
+
+    const activeItem = container.querySelector<HTMLElement>(
+      `[data-dock-queue-idx="${currentIndex}"]`,
+    )
+    if (!activeItem) return
+
+    const top =
+      activeItem.offsetTop - container.clientHeight / 2 + activeItem.clientHeight / 2
+    container.scrollTo({ top, behavior: 'smooth' })
+  }, [currentIndex, panel])
 
   if (!current || location.pathname.startsWith('/music')) return null
 
@@ -169,10 +255,14 @@ export default function GlobalMusicDock() {
     setDragging(false)
   }
 
+  const togglePanel = (nextPanel: Exclude<DockPanel, null>) => {
+    setPanel((currentPanel) => (currentPanel === nextPanel ? null : nextPanel))
+  }
+
   return (
     <div
       ref={dockRef}
-      className={`music-dock${dragging ? ' is-dragging' : ''}`}
+      className={`music-dock${dragging ? ' is-dragging' : ''}${panel ? ' is-expanded' : ''}`}
       style={dockStyle}
       onPointerDown={startDrag}
       onPointerMove={onDragMove}
@@ -191,19 +281,31 @@ export default function GlobalMusicDock() {
             </div>
             <div className="music-dock__badges">
               <span>{current.actualQuality || current.requestedQuality}</span>
-              <span>
-                {current.source === 'qq'
-                  ? 'QQ'
-                  : current.source === 'netease'
-                  ? '网易云'
-                  : '酷我'}
-              </span>
+              <span>{sourceLabel(current.actualSource || current.source)}</span>
               {unsupportedFormat && <span>{unsupportedFormat}</span>}
             </div>
           </div>
         </div>
 
         <div className="music-dock__tools">
+          <button
+            type="button"
+            className={`music-dock__icon-btn${panel === 'lyrics' ? ' is-active' : ''}`}
+            onClick={() => togglePanel('lyrics')}
+            aria-label="切换歌词面板"
+            title="歌词"
+          >
+            词
+          </button>
+          <button
+            type="button"
+            className={`music-dock__icon-btn${panel === 'queue' ? ' is-active' : ''}`}
+            onClick={() => togglePanel('queue')}
+            aria-label="切换播放列表面板"
+            title="列表"
+          >
+            单
+          </button>
           <span className="music-dock__grabber" title="拖动播放器">
             <GripVertical size={14} />
           </span>
@@ -229,6 +331,10 @@ export default function GlobalMusicDock() {
         <span className="music-dock__time music-dock__time--right">
           {formatDuration(duration)}
         </span>
+      </div>
+
+      <div className="music-dock__lyric-preview" title={currentLrcText}>
+        <span key={`${activeLrcIndex}:${currentLrcText}`}>{currentLrcText}</span>
       </div>
 
       <div className="music-dock__controls">
@@ -279,6 +385,77 @@ export default function GlobalMusicDock() {
           )}
         </button>
       </div>
+
+      {panel && (
+        <div className="music-dock__panel">
+          <div className="music-dock__panel-tabs">
+            <button
+              type="button"
+              className={`music-dock__panel-tab${panel === 'lyrics' ? ' is-active' : ''}`}
+              onClick={() => setPanel('lyrics')}
+            >
+              歌词
+            </button>
+            <button
+              type="button"
+              className={`music-dock__panel-tab${panel === 'queue' ? ' is-active' : ''}`}
+              onClick={() => setPanel('queue')}
+            >
+              列表
+            </button>
+          </div>
+
+          {panel === 'lyrics' ? (
+            <div ref={lyricScrollRef} className="music-dock__panel-body music-dock__lyrics">
+              {lrcLines.length === 0 ? (
+                current.lyric?.lineLyrics ? (
+                  <pre className="music-dock__lyrics-plain">{current.lyric.lineLyrics}</pre>
+                ) : (
+                  <div className="music-dock__empty">暂无歌词</div>
+                )
+              ) : (
+                lrcLines.map((line, index) => (
+                  <div
+                    key={`${line.time}-${index}`}
+                    data-dock-lrc-idx={index}
+                    className={`music-dock__lyrics-line${
+                      index === activeLrcIndex ? ' is-active' : ''
+                    }`}
+                  >
+                    {line.text || '\u00A0'}
+                  </div>
+                ))
+              )}
+            </div>
+          ) : (
+            <div ref={queueScrollRef} className="music-dock__panel-body music-dock__queue">
+              {playlist.length === 0 ? (
+                <div className="music-dock__empty">暂无播放列表</div>
+              ) : (
+                playlist.map((item, index) => (
+                  <button
+                    key={`${item.source}:${item.id}`}
+                    type="button"
+                    data-dock-queue-idx={index}
+                    className={`music-dock__queue-item${
+                      index === currentIndex ? ' is-active' : ''
+                    }`}
+                    onClick={() => {
+                      void playFromQueue(index)
+                    }}
+                  >
+                    <span className="music-dock__queue-index">{index + 1}</span>
+                    <span className="music-dock__queue-copy">
+                      <span className="music-dock__queue-title">{item.name}</span>
+                      <span className="music-dock__queue-artist">{item.artist}</span>
+                    </span>
+                  </button>
+                ))
+              )}
+            </div>
+          )}
+        </div>
+      )}
     </div>
   )
 }

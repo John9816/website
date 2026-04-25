@@ -14,6 +14,22 @@ export default defineConfig(({ mode }) => {
         '/api': {
           target,
           changeOrigin: true,
+          secure: false,
+          xfwd: true,
+          configure(proxy) {
+            proxy.on('proxyReq', (proxyReq, req) => {
+              // Strip browser origin metadata in local development so the backend
+              // treats proxied requests as same-site requests from the dev server.
+              proxyReq.removeHeader('origin')
+              proxyReq.removeHeader('referer')
+
+              if (req.headers.host) {
+                proxyReq.setHeader('x-forwarded-host', req.headers.host)
+              }
+
+              proxyReq.setHeader('x-forwarded-proto', 'http')
+            })
+          },
         },
       },
     },

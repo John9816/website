@@ -1,0 +1,61 @@
+- generic [ref=e4]:
+  - banner [ref=e5]:
+    - heading "音乐中心" [level=1] [ref=e6]:
+      - img [ref=e8]
+      - text: 音乐中心
+    - generic [ref=e11]:
+      - button "切换到深色模式" [ref=e12] [cursor=pointer]:
+        - img [ref=e13]
+        - generic [ref=e15]: 深色
+      - link "管理" [ref=e16] [cursor=pointer]:
+        - /url: /admin
+        - img [ref=e17]
+        - generic [ref=e20]: 管理
+      - link "返回首页" [ref=e21] [cursor=pointer]:
+        - /url: /
+        - img [ref=e22]
+        - generic [ref=e25]: 返回首页
+  - generic [ref=e28]:
+    - generic [ref=e29]:
+      - radiogroup "segmented control" [ref=e30]:
+        - generic [ref=e31]:
+          - generic [ref=e32] [cursor=pointer]:
+            - radio "搜索"
+            - generic "搜索" [ref=e33]
+          - generic [ref=e34] [cursor=pointer]:
+            - radio "榜单"
+            - generic "榜单" [ref=e35]
+          - generic [ref=e36] [cursor=pointer]:
+            - radio "歌单" [checked]
+            - generic "歌单" [ref=e37]
+          - generic [ref=e38] [cursor=pointer]:
+            - radio "新歌"
+            - generic "新歌" [ref=e39]
+      - generic [ref=e40]:
+        - generic [ref=e41]: 音质
+        - generic [ref=e42] [cursor=pointer]:
+          - generic [ref=e44]:
+            - combobox [ref=e46]
+            - generic "FLAC" [ref=e47]
+          - generic:
+            - img:
+              - img
+    - generic [ref=e48]:
+      - generic [ref=e50]:
+        - generic [ref=e51]: 歌单
+        - heading "推荐歌单" [level=2] [ref=e52]
+        - paragraph [ref=e53]: 网易云 · 0 个歌单
+      - generic [ref=e54]:
+        - radiogroup "segmented control" [ref=e55]:
+          - generic [ref=e56]:
+            - generic [ref=e57] [cursor=pointer]:
+              - radio "网易云" [checked]
+              - generic "网易云" [ref=e58]
+            - generic [ref=e59] [cursor=pointer]:
+              - radio "酷我"
+              - generic "酷我" [ref=e60]
+        - generic [ref=e61]:
+          - textbox "分类" [ref=e62]: 全部
+          - button "应 用" [ref=e63] [cursor=pointer]:
+            - generic [ref=e64]: 应 用
+      - generic [ref=e65]: 正在加载歌单...

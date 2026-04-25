@@ -1,7 +1,7 @@
-import { useEffect, useMemo, useState } from 'react'
+import { useEffect, useMemo, useRef, useState } from 'react'
 import { App as AntApp, Button } from 'antd'
 import { Link, useParams } from 'react-router-dom'
-import { ChevronLeft, RefreshCcw } from 'lucide-react'
+import { ChevronLeft, Play, RefreshCcw } from 'lucide-react'
 import { musicPlaylistDetail } from '../api/music'
 import MusicCover from '../components/MusicCover'
 import MusicSongTable from '../components/MusicSongTable'
@@ -23,41 +23,55 @@ function sourceLabel(source: MusicSourceId) {
   }
 }
 
+function formatPlayCount(value?: number) {
+  if (!value || value <= 0) return '0'
+  if (value >= 100000000) return `${(value / 100000000).toFixed(1)} 亿`
+  if (value >= 10000) return `${(value / 10000).toFixed(1)} 万`
+  return String(value)
+}
+
 const PAGE_SIZE = 20
 
 export default function MusicPlaylistDetailPage() {
   const { message } = AntApp.useApp()
   const { source, id } = useParams()
-  const { setPlaylist } = useMusicPlayer()
+  const { playPlaylist, setPlaylist } = useMusicPlayer()
   const [page, setPage] = useState(1)
   const [loading, setLoading] = useState(false)
   const [detail, setDetail] = useState<PlaylistDetailView | null>(null)
+  const requestIdRef = useRef(0)
 
   const validSource = isMusicSourceId(source) ? source : null
 
   useEffect(() => {
     if (!validSource || !id) return
+
+    const requestId = ++requestIdRef.current
     setLoading(true)
+
     musicPlaylistDetail(validSource, id, page, PAGE_SIZE)
       .then((data) => {
+        if (requestId !== requestIdRef.current) return
         setDetail(data)
         setPlaylist(data.list)
       })
       .catch((error) => {
+        if (requestId !== requestIdRef.current) return
         message.error((error as Error).message)
       })
-      .finally(() => setLoading(false))
+      .finally(() => {
+        if (requestId !== requestIdRef.current) return
+        setLoading(false)
+      })
   }, [id, message, page, setPlaylist, validSource])
 
   const metaText = useMemo(() => {
     if (!validSource) return ''
-    return `${detail?.creatorName || sourceLabel(validSource)} · ${
-      detail?.list.length ?? 0
-    } 首${
-      detail?.playCount
-        ? ` · 播放 ${detail.playCount >= 10000 ? `${(detail.playCount / 10000).toFixed(1)} 万` : detail.playCount}`
-        : ''
-    }`
+
+    const creator = detail?.creatorName || sourceLabel(validSource)
+    const count = `${detail?.list.length ?? 0} 首`
+    const playCount = detail?.playCount ? ` · 播放 ${formatPlayCount(detail.playCount)}` : ''
+    return `${creator} · ${count}${playCount}`
   }, [detail?.creatorName, detail?.list.length, detail?.playCount, validSource])
 
   if (!validSource || !id) {
@@ -71,18 +85,32 @@ export default function MusicPlaylistDetailPage() {
   return (
     <div className="music-detail-shell">
       <div className="music-detail-actions">
-        <Link to={`/music?view=playlist`} className="music-back-link">
+        <Link to="/music?view=playlist" className="music-back-link">
           <ChevronLeft size={16} />
           <span>返回歌单</span>
         </Link>
-        <Button
-          icon={<RefreshCcw size={14} />}
-          onClick={() => {
-            setPage(1)
-          }}
-        >
-          刷新
-        </Button>
+
+        <div className="music-detail-actions-group">
+          <Button
+            type="primary"
+            icon={<Play size={14} />}
+            disabled={!detail?.list?.length}
+            onClick={() => {
+              if (!detail?.list?.length) return
+              void playPlaylist(detail.list)
+            }}
+          >
+            播放全部
+          </Button>
+          <Button
+            icon={<RefreshCcw size={14} />}
+            onClick={() => {
+              setPage(1)
+            }}
+          >
+            刷新
+          </Button>
+        </div>
       </div>
 
       <div className="music-detail-hero">
@@ -102,7 +130,7 @@ export default function MusicPlaylistDetailPage() {
         songs={detail?.list ?? []}
         loading={loading}
         emptyText="暂无歌单歌曲"
-        page={detail?.page ?? page}
+        page={page}
         pageSize={detail?.pageSize ?? PAGE_SIZE}
         total={detail?.total}
         onPageChange={(nextPage) => setPage(nextPage)}

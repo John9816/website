@@ -1,5 +1,5 @@
 import { useState } from 'react'
-import { Link, useLocation, useNavigate } from 'react-router-dom'
+import { Link, useNavigate } from 'react-router-dom'
 import {
   App as AntApp,
   Button,
@@ -10,9 +10,8 @@ import {
   theme as antdTheme,
 } from 'antd'
 import { LockOutlined, UserOutlined } from '@ant-design/icons'
-import { login as apiLogin } from '../api/auth'
+import { register as apiRegister } from '../api/auth'
 import ThemeToggle from '../components/ThemeToggle'
-import { useAuth } from '../context/AuthContext'
 import { useTheme } from '../context/ThemeContext'
 
 function authBackground(mode: 'light' | 'dark') {
@@ -21,26 +20,30 @@ function authBackground(mode: 'light' | 'dark') {
     : 'linear-gradient(135deg, #eef2ff 0%, #f8fafc 50%, #ecfeff 100%)'
 }
 
-export default function LoginPage() {
+type RegisterValues = {
+  username: string
+  password: string
+  confirmPassword: string
+}
+
+export default function RegisterPage() {
   const [loading, setLoading] = useState(false)
   const nav = useNavigate()
-  const loc = useLocation()
-  const auth = useAuth()
   const { message } = AntApp.useApp()
   const { mode } = useTheme()
   const { token } = antdTheme.useToken()
 
-  const isAdminEntry = loc.pathname.startsWith('/admin')
-  const redirectTo =
-    (loc.state as { from?: string } | null)?.from ?? (isAdminEntry ? '/admin' : '/')
-
-  const onFinish = async (values: { username: string; password: string }) => {
+  const onFinish = async (values: RegisterValues) => {
     setLoading(true)
     try {
-      const data = await apiLogin(values.username, values.password)
-      auth.login(data.token, data.username)
-      message.success('登录成功')
-      nav(redirectTo, { replace: true })
+      const result = await apiRegister(values.username, values.password)
+      const successMessage =
+        typeof result === 'string'
+          ? result
+          : result?.message || '注册成功，请登录'
+
+      message.success(successMessage)
+      nav('/login', { replace: true })
     } catch (error) {
       message.error((error as Error).message)
     } finally {
@@ -64,23 +67,18 @@ export default function LoginPage() {
         <ThemeToggle bare />
       </div>
 
-      <Card style={{ width: 380, background: token.colorBgContainer }} bordered={false}>
+      <Card style={{ width: 420, background: token.colorBgContainer }} bordered={false}>
         <Typography.Title level={3} style={{ textAlign: 'center', marginBottom: 8 }}>
-          {isAdminEntry ? '后台登录' : '账号登录'}
+          用户注册
         </Typography.Title>
         <Typography.Paragraph
           type="secondary"
           style={{ textAlign: 'center', marginBottom: 28 }}
         >
-          {isAdminEntry ? '管理员登录后进入后台管理' : '登录后可继续使用你的账号'}
+          创建普通用户账号，注册完成后可前往登录
         </Typography.Paragraph>
 
-        <Form
-          size="large"
-          layout="vertical"
-          initialValues={isAdminEntry ? { username: 'admin' } : undefined}
-          onFinish={onFinish}
-        >
+        <Form<RegisterValues> size="large" layout="vertical" onFinish={onFinish}>
           <Form.Item
             name="username"
             rules={[{ required: true, message: '请输入用户名' }]}
@@ -99,22 +97,42 @@ export default function LoginPage() {
             <Input.Password
               prefix={<LockOutlined />}
               placeholder="密码"
-              autoComplete="current-password"
+              autoComplete="new-password"
+            />
+          </Form.Item>
+
+          <Form.Item
+            name="confirmPassword"
+            dependencies={['password']}
+            rules={[
+              { required: true, message: '请再次输入密码' },
+              ({ getFieldValue }) => ({
+                validator(_, value) {
+                  if (!value || getFieldValue('password') === value) {
+                    return Promise.resolve()
+                  }
+                  return Promise.reject(new Error('两次输入的密码不一致'))
+                },
+              }),
+            ]}
+          >
+            <Input.Password
+              prefix={<LockOutlined />}
+              placeholder="确认密码"
+              autoComplete="new-password"
             />
           </Form.Item>
 
           <Form.Item style={{ marginBottom: 12 }}>
             <Button type="primary" htmlType="submit" loading={loading} block>
-              登录
+              注册
             </Button>
           </Form.Item>
         </Form>
 
-        {!isAdminEntry && (
-          <Typography.Paragraph style={{ textAlign: 'center', marginBottom: 0 }}>
-            没有账号？<Link to="/register">立即注册</Link>
-          </Typography.Paragraph>
-        )}
+        <Typography.Paragraph style={{ textAlign: 'center', marginBottom: 0 }}>
+          已有账号？<Link to="/login">去登录</Link>
+        </Typography.Paragraph>
       </Card>
     </div>
   )

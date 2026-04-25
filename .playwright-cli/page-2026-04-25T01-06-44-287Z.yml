@@ -1,0 +1,58 @@
+- generic [ref=e4]:
+  - banner [ref=e5]:
+    - heading "音乐中心" [level=1] [ref=e6]:
+      - img [ref=e8]
+      - text: 音乐中心
+    - generic [ref=e11]:
+      - button "切换到深色模式" [ref=e12] [cursor=pointer]:
+        - img [ref=e13]
+        - generic [ref=e15]: 深色
+      - link "管理" [ref=e16] [cursor=pointer]:
+        - /url: /admin
+        - img [ref=e17]
+        - generic [ref=e20]: 管理
+      - link "返回首页" [ref=e21] [cursor=pointer]:
+        - /url: /
+        - img [ref=e22]
+        - generic [ref=e25]: 返回首页
+  - generic [ref=e27]:
+    - generic [ref=e28]:
+      - link "返回歌单" [ref=e29] [cursor=pointer]:
+        - /url: /music?view=playlist
+        - img [ref=e30]
+        - generic [ref=e32]: 返回歌单
+      - generic [ref=e33]:
+        - button "播放全部" [disabled] [ref=e34]:
+          - generic:
+            - img
+          - generic: 播放全部
+        - button "刷新" [ref=e35] [cursor=pointer]:
+          - img [ref=e37]
+          - generic [ref=e42]: 刷新
+    - generic [ref=e43]:
+      - img [ref=e45]
+      - generic [ref=e48]:
+        - generic [ref=e49]: 歌单详情
+        - heading "加载中..." [level=2] [ref=e50]
+        - paragraph [ref=e51]: 网易云 · 0 首
+        - generic [ref=e53]: 网易云 · 0 首
+    - generic [ref=e55]:
+      - generic:
+        - generic:
+          - generic:
+            - generic:
+              - table:
+                - rowgroup:
+                  - row "# 歌曲 来源 时长":
+                    - columnheader "#"
+                    - columnheader "歌曲"
+                    - columnheader "来源"
+                    - columnheader "时长"
+                    - columnheader
+                - rowgroup:
+                  - row "暂无数据 暂无歌单歌曲":
+                    - cell "暂无数据 暂无歌单歌曲":
+                      - generic:
+                        - generic:
+                          - img "暂无数据"
+                        - generic: 暂无歌单歌曲

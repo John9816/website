@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { Link as RouterLink } from 'react-router-dom'
-import { ArrowUp, Music2, Search, Settings, X } from 'lucide-react'
+import { ArrowUp, LogIn, Music2, Search, Settings, X } from 'lucide-react'
 import { getNav } from '../api/public'
 import type { CategoryWithLinks, NavLink } from '../types'
 import CategoryIcon from '../components/CategoryIcon'
@@ -112,6 +112,10 @@ export default function HomePage() {
         </div>
         <div className="sidebar-footer" aria-label="站点快捷入口">
           <ThemeToggle />
+          <RouterLink to="/login" className="admin-link">
+            <LogIn size={16} />
+            <span>登录</span>
+          </RouterLink>
           <RouterLink to="/music" className="admin-link">
             <Music2 size={16} />
             <span>音乐</span>
