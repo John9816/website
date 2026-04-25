@@ -1,19 +1,14 @@
+import { routes, type VercelConfig } from '@vercel/config/v1'
+
 const backendUrl = process.env.BACKEND_URL?.trim().replace(/\/+$/, '')
 
 if (!backendUrl) {
   throw new Error('BACKEND_URL is required for Vercel deploys.')
 }
 
-export const config = {
-  $schema: 'https://openapi.vercel.sh/vercel.json',
+export const config: VercelConfig = {
   rewrites: [
-    {
-      source: '/api/:path*',
-      destination: `${backendUrl}/api/:path*`,
-    },
-    {
-      source: '/(.*)',
-      destination: '/index.html',
-    },
+    routes.rewrite('/api/:path*', `${backendUrl}/api/:path*`),
+    routes.rewrite('/(.*)', '/index.html'),
   ],
 }
