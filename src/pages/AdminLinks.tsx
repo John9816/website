@@ -21,6 +21,7 @@ import {
   adminDeleteLink,
   adminListCategories,
 } from '../api/admin'
+import { DEFAULT_PAGE_SIZE, PAGE_SIZE_OPTIONS } from '../constants/pagination'
 import type { Category, NavLink } from '../types'
 import CategoryIcon from '../components/CategoryIcon'
 
@@ -128,7 +129,12 @@ export default function AdminLinks() {
         rowKey="id"
         dataSource={rows}
         loading={loading}
-        pagination={{ pageSize: 20 }}
+        pagination={{
+          defaultPageSize: DEFAULT_PAGE_SIZE,
+          showSizeChanger: true,
+          showQuickJumper: false,
+          pageSizeOptions: PAGE_SIZE_OPTIONS,
+        }}
         columns={[
           { title: 'ID', dataIndex: 'id', width: 70 },
           {

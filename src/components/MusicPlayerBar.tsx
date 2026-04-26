@@ -15,6 +15,7 @@ import {
   Volume2,
   VolumeX,
 } from 'lucide-react'
+import type { MusicQuality, SongSearchItem } from '../types'
 import MusicCover from './MusicCover'
 import { useMusicPlayer } from '../context/MusicPlayerContext'
 import {
@@ -22,6 +23,13 @@ import {
   normalizeCoverUrl,
   parseLrc,
 } from '../utils/musicPlayer'
+
+const QUALITY_OPTIONS: Array<{ value: MusicQuality; label: string }> = [
+  { value: '128k', label: '128K' },
+  { value: '320k', label: '320K' },
+  { value: 'flac', label: 'FLAC' },
+  { value: 'flac24bit', label: 'Hi-Res' },
+]
 
 function sourceLabel(source: 'qq' | 'netease' | 'kuwo') {
   switch (source) {
@@ -41,18 +49,24 @@ export default function MusicPlayerBar() {
 
   const {
     current,
+    playlist,
+    currentIndex,
     isPlaying,
     currentTime,
     duration,
     volume,
     muted,
+    playLoading,
+    preferredQuality,
     unsupportedFormat,
     canPrev,
     canNext,
+    playSong,
     togglePlay,
     playPrev,
     playNext,
     seekToTime,
+    setPreferredQuality,
     setVolume,
     toggleMuted,
   } = useMusicPlayer()
@@ -86,6 +100,44 @@ export default function MusicPlayerBar() {
 
     return index
   }, [currentTime, lrcLines])
+
+  const activeLyricText = useMemo(() => {
+    if (activeLrcIndex >= 0) {
+      return lrcLines[activeLrcIndex]?.text || ''
+    }
+    return ''
+  }, [activeLrcIndex, lrcLines])
+
+  const currentRow = useMemo<SongSearchItem | null>(() => {
+    if (!current) return null
+    if (currentIndex >= 0 && playlist[currentIndex]) {
+      return playlist[currentIndex]
+    }
+
+    return {
+      id: current.id,
+      source: current.source,
+      name: current.name || '',
+      artist: current.artist || '',
+      album: current.album,
+      coverUrl: current.coverUrl,
+      durationSec: current.durationSec,
+      availableQualities: QUALITY_OPTIONS.map((item) => item.value),
+    }
+  }, [current, currentIndex, playlist])
+
+  const availableQualities = currentRow?.availableQualities?.length
+    ? QUALITY_OPTIONS.filter((item) => currentRow.availableQualities.includes(item.value))
+    : QUALITY_OPTIONS
+
+  const switchQuality = useCallback(
+    (quality: MusicQuality) => {
+      setPreferredQuality(quality)
+      if (!currentRow) return
+      void playSong(currentRow, quality)
+    },
+    [currentRow, playSong, setPreferredQuality],
+  )
 
   useEffect(() => {
     if (!dragging) return
@@ -282,124 +334,198 @@ export default function MusicPlayerBar() {
             </div>
 
             <div className="music-player-fullscreen__body">
-              <section className="music-player-fullscreen__art-panel">
-                <div className={`music-player-fullscreen__cover ${isPlaying ? 'is-playing' : ''}`}>
-                  <MusicCover src={current.coverUrl} size={320} rounded={36} />
-                </div>
-                <div className="music-player-fullscreen__meta">
-                  <div className="music-player-fullscreen__title" title={current.name}>
-                    {current.name || '未知歌曲'}
-                  </div>
-                  <div className="music-player-fullscreen__artist" title={current.artist}>
-                    {current.artist || '未知歌手'}
-                    {current.album ? ` · ${current.album}` : ''}
-                  </div>
-                  <div className="music-player-fullscreen__badges">
-                    <span>{current.actualQuality || current.requestedQuality}</span>
-                    <span>{sourceLabel(current.actualSource || current.source)}</span>
-                    {current.fromCache && <span>缓存</span>}
-                    {unsupportedFormat && <span>{unsupportedFormat}</span>}
-                  </div>
-                </div>
-
-                <div className="music-player-fullscreen__progress">
-                  <span className="time">{formatDuration(currentTime)}</span>
-                  {renderProgressTrack('music-player-fullscreen__progress-track')}
-                  <span className="time time-right">{formatDuration(duration)}</span>
-                </div>
-
-                <div className="music-player-fullscreen__controls">
-                  <button
-                    type="button"
-                    className="ctrl-btn"
-                    disabled={!canPrev}
-                    onClick={playPrev}
-                    aria-label="上一首"
-                    title="上一首"
-                  >
-                    <SkipBack size={20} />
-                  </button>
-                  <button
-                    type="button"
-                    className="ctrl-btn primary"
-                    disabled={!!unsupportedFormat}
-                    onClick={togglePlay}
-                    aria-label={isPlaying ? '暂停' : '播放'}
-                    title={isPlaying ? '暂停' : '播放'}
-                  >
-                    {isPlaying ? (
-                      <Pause size={22} />
-                    ) : (
-                      <Play size={22} style={{ marginLeft: 2 }} />
-                    )}
-                  </button>
-                  <button
-                    type="button"
-                    className="ctrl-btn"
-                    disabled={!canNext}
-                    onClick={playNext}
-                    aria-label="下一首"
-                    title="下一首"
-                  >
-                    <SkipForward size={20} />
-                  </button>
-                </div>
-
-                <div className="music-player-fullscreen__volume">
-                  <button
-                    type="button"
-                    className="ctrl-btn"
-                    onClick={toggleMuted}
-                    aria-label={muted ? '取消静音' : '静音'}
-                    title={muted ? '取消静音' : '静音'}
-                  >
-                    {muted || volume === 0 ? (
-                      <VolumeX size={16} />
-                    ) : (
-                      <Volume2 size={16} />
-                    )}
-                  </button>
-                  <input
-                    type="range"
-                    min={0}
-                    max={1}
-                    step={0.01}
-                    value={muted ? 0 : volume}
-                    onChange={(event) => setVolume(Number(event.target.value))}
-                    style={{ '--vol': `${volumePct}%` } as CSSProperties}
-                    aria-label="音量"
+              <section className="music-player-fullscreen__turntable-panel">
+                <div className="music-player-fullscreen__turntable-stage">
+                  <div className="music-player-fullscreen__needle-base" />
+                  <div
+                    className={`music-player-fullscreen__needle ${
+                      isPlaying ? 'is-playing' : ''
+                    }`}
                   />
+                  <div
+                    className={`music-player-fullscreen__disc ${
+                      isPlaying ? 'is-playing' : ''
+                    }`}
+                  >
+                    <div className="music-player-fullscreen__disc-groove" />
+                    <div className="music-player-fullscreen__disc-core">
+                      <MusicCover src={current.coverUrl} size={238} rounded={999} />
+                    </div>
+                  </div>
+                </div>
+
+                <div className="music-player-fullscreen__turntable-copy">
+                  <span className="player-kicker player-kicker--player">Black Vinyl</span>
+                  <div className="music-player-fullscreen__turntable-note">
+                    <span>{current.album || '当前播放'}</span>
+                    <span>
+                      {sourceLabel(current.actualSource || current.source)} ·{' '}
+                      {current.actualQuality || current.requestedQuality}
+                    </span>
+                  </div>
+                  {activeLyricText && (
+                    <div className="music-player-fullscreen__turntable-lyric">
+                      {activeLyricText}
+                    </div>
+                  )}
                 </div>
               </section>
 
               <section className="music-player-fullscreen__lyrics-panel">
-                <div className="music-player-fullscreen__lyrics-head">
-                  <span className="player-kicker">Lyrics</span>
-                </div>
-                <div ref={lyricScrollRef} className="music-player-fullscreen__lyrics">
-                  {lrcLines.length === 0 ? (
-                    current.lyric?.lineLyrics ? (
-                      <pre className="music-player-fullscreen__lyrics-plain">
-                        {current.lyric.lineLyrics}
-                      </pre>
-                    ) : (
-                      <div className="music-player-fullscreen__lyrics-empty">
-                        暂无歌词
+                <div className="music-player-fullscreen__hero">
+                  <div className="music-player-fullscreen__hero-copy">
+                    <span className="player-kicker">Lyrics</span>
+                    <div className="music-player-fullscreen__meta">
+                      <div className="music-player-fullscreen__eyebrow">
+                        <span>{current.album || '单曲循环'}</span>
+                        <span>{sourceLabel(current.actualSource || current.source)}</span>
                       </div>
-                    )
-                  ) : (
-                    lrcLines.map((line, index) => (
-                      <div
-                        key={index}
-                        data-lrc-idx={index}
-                        className={`music-player-fullscreen__lyrics-line ${
-                          index === activeLrcIndex ? 'is-active' : ''
+                      <div className="music-player-fullscreen__title" title={current.name}>
+                        {current.name || '未知歌曲'}
+                      </div>
+                      <div className="music-player-fullscreen__artist" title={current.artist}>
+                        {current.artist || '未知歌手'}
+                        {current.album ? ` · ${current.album}` : ''}
+                      </div>
+                      <div className="music-player-fullscreen__badges">
+                        <span>{current.actualQuality || current.requestedQuality}</span>
+                        <span>{sourceLabel(current.actualSource || current.source)}</span>
+                        {current.fromCache && <span>缓存</span>}
+                        {unsupportedFormat && <span>{unsupportedFormat}</span>}
+                      </div>
+                    </div>
+                  </div>
+
+                  <div
+                    className="music-player-fullscreen__quality-switch"
+                    role="group"
+                    aria-label="Quality"
+                  >
+                    {availableQualities.map((item) => (
+                      <button
+                        key={item.value}
+                        type="button"
+                        className={`music-player-fullscreen__quality-btn${
+                          preferredQuality === item.value ? ' is-active' : ''
                         }`}
+                        disabled={playLoading}
+                        onClick={() => {
+                          if (preferredQuality === item.value) return
+                          switchQuality(item.value)
+                        }}
                       >
-                        {line.text || '\u00A0'}
-                      </div>
-                    ))
-                  )}
+                        {item.label}
+                      </button>
+                    ))}
+                  </div>
+                </div>
+
+                <div className="music-player-fullscreen__lyrics-shell">
+                  <div ref={lyricScrollRef} className="music-player-fullscreen__lyrics">
+                    {lrcLines.length === 0 ? (
+                      current.lyric?.lineLyrics ? (
+                        <pre className="music-player-fullscreen__lyrics-plain">
+                          {current.lyric.lineLyrics}
+                        </pre>
+                      ) : (
+                        <div className="music-player-fullscreen__lyrics-empty">
+                          暂无歌词
+                        </div>
+                      )
+                    ) : (
+                      lrcLines.map((line, index) => {
+                        const distance =
+                          activeLrcIndex >= 0 ? Math.abs(index - activeLrcIndex) : Infinity
+
+                        return (
+                          <div
+                            key={index}
+                            data-lrc-idx={index}
+                            className={`music-player-fullscreen__lyrics-line ${
+                              index === activeLrcIndex ? 'is-active' : ''
+                            }${distance === 1 ? ' is-near' : ''}${
+                              distance >= 2 && distance <= 3 ? ' is-mid' : ''
+                            }${distance >= 4 ? ' is-far' : ''}`}
+                          >
+                            {line.text || '\u00A0'}
+                          </div>
+                        )
+                      })
+                    )}
+                  </div>
+                </div>
+
+                <div className="music-player-fullscreen__footer">
+                  <div className="music-player-fullscreen__progress">
+                    <span className="time">{formatDuration(currentTime)}</span>
+                    {renderProgressTrack('music-player-fullscreen__progress-track')}
+                    <span className="time time-right">{formatDuration(duration)}</span>
+                  </div>
+
+                  <div className="music-player-fullscreen__actions-row">
+                    <div className="music-player-fullscreen__controls">
+                      <button
+                        type="button"
+                        className="ctrl-btn"
+                        disabled={!canPrev}
+                        onClick={playPrev}
+                        aria-label="上一首"
+                        title="上一首"
+                      >
+                        <SkipBack size={20} />
+                      </button>
+                      <button
+                        type="button"
+                        className="ctrl-btn primary"
+                        disabled={!!unsupportedFormat}
+                        onClick={togglePlay}
+                        aria-label={isPlaying ? '暂停' : '播放'}
+                        title={isPlaying ? '暂停' : '播放'}
+                      >
+                        {isPlaying ? (
+                          <Pause size={22} />
+                        ) : (
+                          <Play size={22} style={{ marginLeft: 2 }} />
+                        )}
+                      </button>
+                      <button
+                        type="button"
+                        className="ctrl-btn"
+                        disabled={!canNext}
+                        onClick={playNext}
+                        aria-label="下一首"
+                        title="下一首"
+                      >
+                        <SkipForward size={20} />
+                      </button>
+                    </div>
+
+                    <div className="music-player-fullscreen__volume">
+                      <button
+                        type="button"
+                        className="ctrl-btn"
+                        onClick={toggleMuted}
+                        aria-label={muted ? '取消静音' : '静音'}
+                        title={muted ? '取消静音' : '静音'}
+                      >
+                        {muted || volume === 0 ? (
+                          <VolumeX size={16} />
+                        ) : (
+                          <Volume2 size={16} />
+                        )}
+                      </button>
+                      <input
+                        type="range"
+                        min={0}
+                        max={1}
+                        step={0.01}
+                        value={muted ? 0 : volume}
+                        onChange={(event) => setVolume(Number(event.target.value))}
+                        style={{ '--vol': `${volumePct}%` } as CSSProperties}
+                        aria-label="音量"
+                      />
+                    </div>
+                  </div>
                 </div>
               </section>
             </div>

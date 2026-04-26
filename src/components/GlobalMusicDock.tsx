@@ -1,6 +1,7 @@
-import { useEffect, useMemo, useRef, useState } from 'react'
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { Link as RouterLink, useLocation } from 'react-router-dom'
 import {
+  ChevronDown,
   ChevronRight,
   GripVertical,
   Pause,
@@ -29,6 +30,9 @@ type DragState = {
 }
 
 type DockPanel = 'lyrics' | 'queue' | null
+type ProgressDragState = {
+  pointerId: number
+}
 
 function clampDockPosition(
   x: number,
@@ -61,12 +65,15 @@ export default function GlobalMusicDock() {
   const location = useLocation()
   const dockRef = useRef<HTMLDivElement | null>(null)
   const dragRef = useRef<DragState | null>(null)
+  const progressDragRef = useRef<ProgressDragState | null>(null)
   const lyricScrollRef = useRef<HTMLDivElement | null>(null)
   const queueScrollRef = useRef<HTMLDivElement | null>(null)
 
   const [position, setPosition] = useState<DockPosition | null>(null)
   const [dragging, setDragging] = useState(false)
+  const [collapsed, setCollapsed] = useState(true)
   const [panel, setPanel] = useState<DockPanel>(null)
+  const [seeking, setSeeking] = useState(false)
 
   const {
     current,
@@ -83,6 +90,7 @@ export default function GlobalMusicDock() {
     togglePlay,
     playPrev,
     playNext,
+    seekToTime,
     toggleMuted,
     playFromQueue,
   } = useMusicPlayer()
@@ -124,7 +132,7 @@ export default function GlobalMusicDock() {
   }, [activeLrcIndex, current?.lyric?.lineLyrics, lrcLines])
 
   useEffect(() => {
-    if (!dragging) return
+    if (!dragging && !seeking) return
 
     const previousUserSelect = document.body.style.userSelect
     document.body.style.userSelect = 'none'
@@ -132,7 +140,7 @@ export default function GlobalMusicDock() {
     return () => {
       document.body.style.userSelect = previousUserSelect
     }
-  }, [dragging])
+  }, [dragging, seeking])
 
   useEffect(() => {
     if (!position) return
@@ -157,7 +165,7 @@ export default function GlobalMusicDock() {
     return () => {
       window.removeEventListener('resize', onResize)
     }
-  }, [position])
+  }, [collapsed, panel, position])
 
   useEffect(() => {
     if (panel !== 'lyrics') return
@@ -189,6 +197,16 @@ export default function GlobalMusicDock() {
     container.scrollTo({ top, behavior: 'smooth' })
   }, [currentIndex, panel])
 
+  const seekTo = useCallback(
+    (clientX: number, element: HTMLDivElement) => {
+      if (!duration) return
+      const rect = element.getBoundingClientRect()
+      const ratio = Math.min(1, Math.max(0, (clientX - rect.left) / rect.width))
+      seekToTime(ratio * duration)
+    },
+    [duration, seekToTime],
+  )
+
   if (!current || location.pathname.startsWith('/music')) return null
 
   const progressPct = duration
@@ -208,6 +226,7 @@ export default function GlobalMusicDock() {
     if (event.button !== 0) return
 
     const target = event.target as HTMLElement
+    if (!target.closest('[data-dock-drag-handle="true"]')) return
     if (target.closest('button, a, input, textarea, select, label')) return
 
     const dock = dockRef.current
@@ -256,13 +275,56 @@ export default function GlobalMusicDock() {
   }
 
   const togglePanel = (nextPanel: Exclude<DockPanel, null>) => {
+    setCollapsed(false)
     setPanel((currentPanel) => (currentPanel === nextPanel ? null : nextPanel))
+  }
+
+  const toggleCollapsed = () => {
+    setCollapsed((currentValue) => {
+      const nextValue = !currentValue
+      if (nextValue) setPanel(null)
+      return nextValue
+    })
+  }
+
+  const startSeek = (event: React.PointerEvent<HTMLDivElement>) => {
+    if (event.button !== 0) return
+
+    progressDragRef.current = { pointerId: event.pointerId }
+    setSeeking(true)
+    event.currentTarget.setPointerCapture(event.pointerId)
+    seekTo(event.clientX, event.currentTarget)
+    event.preventDefault()
+    event.stopPropagation()
+  }
+
+  const moveSeek = (event: React.PointerEvent<HTMLDivElement>) => {
+    if (!progressDragRef.current) return
+    if (event.pointerId !== progressDragRef.current.pointerId) return
+
+    seekTo(event.clientX, event.currentTarget)
+    event.stopPropagation()
+  }
+
+  const stopSeek = (event: React.PointerEvent<HTMLDivElement>) => {
+    if (!progressDragRef.current) return
+    if (event.pointerId !== progressDragRef.current.pointerId) return
+
+    if (event.currentTarget.hasPointerCapture(event.pointerId)) {
+      event.currentTarget.releasePointerCapture(event.pointerId)
+    }
+
+    progressDragRef.current = null
+    setSeeking(false)
+    event.stopPropagation()
   }
 
   return (
     <div
       ref={dockRef}
-      className={`music-dock${dragging ? ' is-dragging' : ''}${panel ? ' is-expanded' : ''}`}
+      className={`music-dock${dragging ? ' is-dragging' : ''}${panel ? ' is-expanded' : ''}${
+        collapsed ? ' is-collapsed' : ''
+      }${seeking ? ' is-seeking' : ''}`}
       style={dockStyle}
       onPointerDown={startDrag}
       onPointerMove={onDragMove}
@@ -288,25 +350,44 @@ export default function GlobalMusicDock() {
         </div>
 
         <div className="music-dock__tools">
+          {!collapsed && (
+            <>
+              <button
+                type="button"
+                className={`music-dock__icon-btn${panel === 'lyrics' ? ' is-active' : ''}`}
+                onClick={() => togglePanel('lyrics')}
+                aria-label="切换歌词面板"
+                title="歌词"
+              >
+                词
+              </button>
+              <button
+                type="button"
+                className={`music-dock__icon-btn${panel === 'queue' ? ' is-active' : ''}`}
+                onClick={() => togglePanel('queue')}
+                aria-label="切换播放列表面板"
+                title="列表"
+              >
+                单
+              </button>
+            </>
+          )}
           <button
             type="button"
-            className={`music-dock__icon-btn${panel === 'lyrics' ? ' is-active' : ''}`}
-            onClick={() => togglePanel('lyrics')}
-            aria-label="切换歌词面板"
-            title="歌词"
+            className={`music-dock__icon-btn music-dock__collapse-btn${
+              collapsed ? ' is-collapsed' : ''
+            }`}
+            onClick={toggleCollapsed}
+            aria-label={collapsed ? '展开迷你播放器' : '折叠迷你播放器'}
+            title={collapsed ? '展开' : '折叠'}
           >
-            词
+            <ChevronDown size={14} />
           </button>
-          <button
-            type="button"
-            className={`music-dock__icon-btn${panel === 'queue' ? ' is-active' : ''}`}
-            onClick={() => togglePanel('queue')}
-            aria-label="切换播放列表面板"
-            title="列表"
+          <span
+            className="music-dock__grabber"
+            data-dock-drag-handle="true"
+            title="拖动播放器"
           >
-            单
-          </button>
-          <span className="music-dock__grabber" title="拖动播放器">
             <GripVertical size={14} />
           </span>
           <RouterLink
@@ -322,10 +403,34 @@ export default function GlobalMusicDock() {
 
       <div className="music-dock__progress">
         <span className="music-dock__time">{formatDuration(currentTime)}</span>
-        <div className="music-dock__progress-rail">
+        <div
+          className={`music-dock__progress-rail${seeking ? ' is-seeking' : ''}`}
+          data-dock-no-drag="true"
+          onPointerDown={startSeek}
+          onPointerMove={moveSeek}
+          onPointerUp={stopSeek}
+          onPointerCancel={stopSeek}
+          onKeyDown={(event) => {
+            if (!duration) return
+            if (event.key !== 'ArrowLeft' && event.key !== 'ArrowRight') return
+            const delta = event.key === 'ArrowRight' ? 5 : -5
+            seekToTime(currentTime + delta)
+            event.preventDefault()
+          }}
+          role="slider"
+          tabIndex={0}
+          aria-label="播放进度"
+          aria-valuemin={0}
+          aria-valuemax={Math.max(duration, 0)}
+          aria-valuenow={Math.min(currentTime, duration || currentTime)}
+        >
           <div
             className="music-dock__progress-fill"
             style={{ width: `${progressPct}%` }}
+          />
+          <div
+            className="music-dock__progress-thumb"
+            style={{ left: `calc(${progressPct}% - 6px)` }}
           />
         </div>
         <span className="music-dock__time music-dock__time--right">
@@ -333,22 +438,26 @@ export default function GlobalMusicDock() {
         </span>
       </div>
 
-      <div className="music-dock__lyric-preview" title={currentLrcText}>
-        <span key={`${activeLrcIndex}:${currentLrcText}`}>{currentLrcText}</span>
-      </div>
+      {!collapsed && (
+        <div className="music-dock__lyric-preview" title={currentLrcText}>
+          <span key={`${activeLrcIndex}:${currentLrcText}`}>{currentLrcText}</span>
+        </div>
+      )}
 
       <div className="music-dock__controls">
         <div className="music-dock__main-controls">
-          <button
-            type="button"
-            className="music-dock__btn"
-            disabled={!canPrev}
-            onClick={playPrev}
-            aria-label="上一首"
-            title="上一首"
-          >
-            <SkipBack size={15} />
-          </button>
+          {!collapsed && (
+            <button
+              type="button"
+              className="music-dock__btn"
+              disabled={!canPrev}
+              onClick={playPrev}
+              aria-label="上一首"
+              title="上一首"
+            >
+              <SkipBack size={15} />
+            </button>
+          )}
           <button
             type="button"
             className="music-dock__btn music-dock__btn--primary"
@@ -359,34 +468,38 @@ export default function GlobalMusicDock() {
           >
             {isPlaying ? <Pause size={17} /> : <Play size={17} />}
           </button>
+          {!collapsed && (
+            <button
+              type="button"
+              className="music-dock__btn"
+              disabled={!canNext}
+              onClick={playNext}
+              aria-label="下一首"
+              title="下一首"
+            >
+              <SkipForward size={15} />
+            </button>
+          )}
+        </div>
+
+        {!collapsed && (
           <button
             type="button"
             className="music-dock__btn"
-            disabled={!canNext}
-            onClick={playNext}
-            aria-label="下一首"
-            title="下一首"
+            onClick={toggleMuted}
+            aria-label={muted ? '取消静音' : '静音'}
+            title={muted ? '取消静音' : '静音'}
           >
-            <SkipForward size={15} />
+            {muted || volume === 0 ? (
+              <VolumeX size={15} />
+            ) : (
+              <Volume2 size={15} />
+            )}
           </button>
-        </div>
-
-        <button
-          type="button"
-          className="music-dock__btn"
-          onClick={toggleMuted}
-          aria-label={muted ? '取消静音' : '静音'}
-          title={muted ? '取消静音' : '静音'}
-        >
-          {muted || volume === 0 ? (
-            <VolumeX size={15} />
-          ) : (
-            <Volume2 size={15} />
-          )}
-        </button>
+        )}
       </div>
 
-      {panel && (
+      {!collapsed && panel && (
         <div className="music-dock__panel">
           <div className="music-dock__panel-tabs">
             <button

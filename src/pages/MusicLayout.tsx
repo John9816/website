@@ -1,32 +1,52 @@
-import { Link as RouterLink, Outlet } from 'react-router-dom'
-import { Home as HomeIcon, Music2, Settings } from 'lucide-react'
+import { Link as RouterLink, NavLink as RouterNavLink, Outlet } from 'react-router-dom'
+import { LogIn, Settings } from 'lucide-react'
 import ThemeToggle from '../components/ThemeToggle'
 import MusicPlayerBar from '../components/MusicPlayerBar'
+import { useAuth } from '../context/AuthContext'
 import { useMusicPlayer } from '../context/MusicPlayerContext'
 import '../styles/music.css'
 
 export default function MusicLayout() {
+  const auth = useAuth()
   const { current } = useMusicPlayer()
 
   return (
     <div className="music-page">
-      <header className="music-header">
-        <h1 className="brand-title">
-          <span className="brand-icon">
-            <Music2 size={18} />
-          </span>
-          音乐中心
-        </h1>
-        <div className="header-actions">
+      <header className="topbar">
+        <RouterLink to="/" className="topbar-brand">
+          <span className="brand-dot" />
+          <span className="brand-title">我的导航</span>
+        </RouterLink>
+
+        <nav className="topbar-nav" aria-label="主导航">
+          <RouterNavLink
+            to="/"
+            end
+            className={({ isActive }) => `topbar-nav__link${isActive ? ' is-active' : ''}`}
+          >
+            导航
+          </RouterNavLink>
+          <RouterNavLink
+            to="/music"
+            className={({ isActive }) => `topbar-nav__link${isActive ? ' is-active' : ''}`}
+          >
+            音乐
+          </RouterNavLink>
+        </nav>
+
+        <div className="topbar-actions">
+          {auth.token ? (
+            <RouterLink to="/admin" className="topbar-action">
+              <Settings size={16} />
+              <span>管理</span>
+            </RouterLink>
+          ) : (
+            <RouterLink to="/login" className="topbar-action">
+              <LogIn size={16} />
+              <span>登录</span>
+            </RouterLink>
+          )}
           <ThemeToggle />
-          <RouterLink to="/admin" className="music-back">
-            <Settings size={16} />
-            <span>管理</span>
-          </RouterLink>
-          <RouterLink to="/" className="music-back">
-            <HomeIcon size={16} />
-            <span>返回首页</span>
-          </RouterLink>
         </div>
       </header>
 

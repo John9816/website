@@ -17,8 +17,8 @@ import { useTheme } from '../context/ThemeContext'
 
 function authBackground(mode: 'light' | 'dark') {
   return mode === 'dark'
-    ? 'linear-gradient(135deg, #0b1220 0%, #0f172a 50%, #0b1220 100%)'
-    : 'linear-gradient(135deg, #eef2ff 0%, #f8fafc 50%, #ecfeff 100%)'
+    ? 'linear-gradient(135deg, #140f11 0%, #261517 52%, #100d0e 100%)'
+    : 'linear-gradient(135deg, #fff3f1 0%, #fdf8f7 50%, #f8eded 100%)'
 }
 
 export default function LoginPage() {

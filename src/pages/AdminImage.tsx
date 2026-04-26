@@ -19,9 +19,8 @@ import {
   adminGenerateImage,
   adminListImageHistory,
 } from '../api/admin'
+import { DEFAULT_PAGE_SIZE, PAGE_SIZE_OPTIONS } from '../constants/pagination'
 import type { GeneratedImageView, ImageGenerateResult } from '../types'
-
-const PAGE_SIZE = 10
 
 export default function AdminImage() {
   const [form] = Form.useForm<{ prompt: string }>()
@@ -35,14 +34,16 @@ export default function AdminImage() {
   const [historyItems, setHistoryItems] = useState<GeneratedImageView[]>([])
   const [historyTotal, setHistoryTotal] = useState(0)
   const [historyPage, setHistoryPage] = useState(1)
+  const [historyPageSize, setHistoryPageSize] = useState(DEFAULT_PAGE_SIZE)
 
-  const loadHistory = async (page = historyPage) => {
+  const loadHistory = async (page = historyPage, pageSize = historyPageSize) => {
     setHistoryLoading(true)
     try {
-      const data = await adminListImageHistory(page - 1, PAGE_SIZE)
+      const data = await adminListImageHistory(page - 1, pageSize)
       setHistoryItems(data.items)
       setHistoryTotal(data.total)
       setHistoryPage(page)
+      setHistoryPageSize(pageSize)
     } catch (e) {
       message.error((e as Error).message)
     } finally {
@@ -51,7 +52,7 @@ export default function AdminImage() {
   }
 
   useEffect(() => {
-    loadHistory(1)
+    loadHistory(1, DEFAULT_PAGE_SIZE)
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [])
 
@@ -80,7 +81,7 @@ export default function AdminImage() {
       const data = await adminGenerateImage(values.prompt, ctrl.signal)
       setResult(data)
       message.success('生成成功')
-      loadHistory(1)
+      loadHistory(1, historyPageSize)
     } catch (e) {
       const err = e as Error & { code?: number }
       if (err.code === -2) {
@@ -119,7 +120,7 @@ export default function AdminImage() {
       const remainOnPage = historyItems.length - 1
       const nextPage =
         remainOnPage === 0 && historyPage > 1 ? historyPage - 1 : historyPage
-      loadHistory(nextPage)
+      loadHistory(nextPage, historyPageSize)
     } catch (e) {
       message.error((e as Error).message)
     }
@@ -206,7 +207,7 @@ export default function AdminImage() {
         extra={
           <Button
             icon={<ReloadOutlined />}
-            onClick={() => loadHistory(historyPage)}
+            onClick={() => loadHistory(historyPage, historyPageSize)}
             loading={historyLoading}
           >
             刷新
@@ -220,10 +221,12 @@ export default function AdminImage() {
           size="middle"
           pagination={{
             current: historyPage,
-            pageSize: PAGE_SIZE,
+            pageSize: historyPageSize,
             total: historyTotal,
-            showSizeChanger: false,
-            onChange: (p) => loadHistory(p),
+            showSizeChanger: true,
+            showQuickJumper: false,
+            pageSizeOptions: PAGE_SIZE_OPTIONS,
+            onChange: (page, pageSize) => loadHistory(page, pageSize),
           }}
           scroll={{ x: 820 }}
           columns={[

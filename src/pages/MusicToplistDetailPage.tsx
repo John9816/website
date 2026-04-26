@@ -5,6 +5,7 @@ import { ChevronLeft, Play, RefreshCcw } from 'lucide-react'
 import { musicToplistDetail } from '../api/music'
 import MusicCover from '../components/MusicCover'
 import MusicSongTable from '../components/MusicSongTable'
+import { DEFAULT_PAGE_SIZE } from '../constants/pagination'
 import { useMusicPlayer } from '../context/MusicPlayerContext'
 import type { MusicSourceId, ToplistDetailView } from '../types'
 
@@ -23,13 +24,12 @@ function sourceLabel(source: MusicSourceId) {
   }
 }
 
-const PAGE_SIZE = 20
-
 export default function MusicToplistDetailPage() {
   const { message } = AntApp.useApp()
   const { source, id } = useParams()
   const { playPlaylist, setPlaylist } = useMusicPlayer()
   const [page, setPage] = useState(1)
+  const [pageSize, setPageSize] = useState(DEFAULT_PAGE_SIZE)
   const [loading, setLoading] = useState(false)
   const [detail, setDetail] = useState<ToplistDetailView | null>(null)
   const requestIdRef = useRef(0)
@@ -42,7 +42,7 @@ export default function MusicToplistDetailPage() {
     const requestId = ++requestIdRef.current
     setLoading(true)
 
-    musicToplistDetail(validSource, id, page, PAGE_SIZE)
+    musicToplistDetail(validSource, id, page, pageSize)
       .then((data) => {
         if (requestId !== requestIdRef.current) return
         setDetail(data)
@@ -56,7 +56,7 @@ export default function MusicToplistDetailPage() {
         if (requestId !== requestIdRef.current) return
         setLoading(false)
       })
-  }, [id, message, page, setPlaylist, validSource])
+  }, [id, message, page, pageSize, setPlaylist, validSource])
 
   const metaText = useMemo(() => {
     if (!validSource) return ''
@@ -103,7 +103,7 @@ export default function MusicToplistDetailPage() {
       </div>
 
       <div className="music-detail-hero">
-        <MusicCover src={detail?.coverUrl} size={120} rounded={28} />
+        <MusicCover src={detail?.coverUrl} size={148} rounded={32} />
         <div className="music-detail-hero__copy">
           <span className="music-stage-kicker">榜单详情</span>
           <h2>{detail?.name || '加载中...'}</h2>
@@ -120,9 +120,12 @@ export default function MusicToplistDetailPage() {
         loading={loading}
         emptyText="暂无榜单歌曲"
         page={page}
-        pageSize={detail?.pageSize ?? PAGE_SIZE}
+        pageSize={pageSize}
         total={detail?.total}
-        onPageChange={(nextPage) => setPage(nextPage)}
+        onPageChange={(nextPage, nextPageSize) => {
+          setPageSize(nextPageSize)
+          setPage(nextPageSize !== pageSize ? 1 : nextPage)
+        }}
       />
     </div>
   )

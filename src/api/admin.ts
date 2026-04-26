@@ -7,6 +7,7 @@ import type {
   PageView,
   SysConfig,
 } from '../types'
+import { DEFAULT_PAGE_SIZE } from '../constants/pagination'
 
 // Categories
 export const adminListCategories = () =>
@@ -49,7 +50,7 @@ export const adminGenerateImage = (prompt: string, signal?: AbortSignal) =>
     signal,
   })
 
-export const adminListImageHistory = (page = 0, size = 20) =>
+export const adminListImageHistory = (page = 0, size = DEFAULT_PAGE_SIZE) =>
   request<PageView<GeneratedImageView>>('/api/admin/image/history', {
     auth: true,
     query: { page, size },

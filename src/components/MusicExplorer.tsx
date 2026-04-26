@@ -6,7 +6,6 @@ import {
   Input,
   Pagination,
   Segmented,
-  Select,
 } from 'antd'
 import { RefreshCcw } from 'lucide-react'
 import { useNavigate, useSearchParams } from 'react-router-dom'
@@ -16,6 +15,7 @@ import {
   musicSearch,
   musicToplist,
 } from '../api/music'
+import { DEFAULT_PAGE_SIZE, PAGE_SIZE_OPTIONS } from '../constants/pagination'
 import { useMusicPlayer } from '../context/MusicPlayerContext'
 import type {
   MusicPlaylistSourceId,
@@ -48,17 +48,6 @@ const PLAYLIST_SOURCE_OPTIONS = [
   { label: '酷我', value: 'kuwo' },
 ]
 
-const QUALITY_OPTIONS = [
-  { label: '128k', value: '128k' },
-  { label: '320k', value: '320k' },
-  { label: 'FLAC', value: 'flac' },
-  { label: 'FLAC 24bit', value: 'flac24bit' },
-] as const
-
-const SEARCH_PAGE_SIZE = 10
-const DETAIL_PAGE_SIZE = 20
-const PLAYLIST_PAGE_SIZE = 12
-
 function sourceLabel(source: MusicSourceId) {
   return SOURCE_OPTIONS.find((item) => item.value === source)?.label ?? source
 }
@@ -88,13 +77,14 @@ export default function MusicExplorer() {
   const { message } = AntApp.useApp()
   const navigate = useNavigate()
   const [searchParams, setSearchParams] = useSearchParams()
-  const { preferredQuality, setPreferredQuality, setPlaylist } = useMusicPlayer()
+  const { setPlaylist } = useMusicPlayer()
 
   const [searchSource, setSearchSource] = useState<MusicSourceId>('qq')
   const [keyword, setKeyword] = useState('')
   const [searching, setSearching] = useState(false)
   const [searchResults, setSearchResults] = useState<SongSearchItem[]>([])
   const [searchPage, setSearchPage] = useState(1)
+  const [searchPageSize, setSearchPageSize] = useState(DEFAULT_PAGE_SIZE)
   const [searchHasMore, setSearchHasMore] = useState(false)
   const [lastKeyword, setLastKeyword] = useState('')
 
@@ -107,12 +97,14 @@ export default function MusicExplorer() {
   const [playlistCategoryDraft, setPlaylistCategoryDraft] = useState('全部')
   const [playlistCategory, setPlaylistCategory] = useState('全部')
   const [playlistPage, setPlaylistPage] = useState(1)
+  const [playlistPageSize, setPlaylistPageSize] = useState(DEFAULT_PAGE_SIZE)
   const [playlists, setPlaylists] = useState<PlaylistItem[]>([])
   const [playlistTotal, setPlaylistTotal] = useState<number | null>(null)
   const [playlistLoading, setPlaylistLoading] = useState(false)
 
   const [newSource, setNewSource] = useState<MusicSourceId>('qq')
   const [newSongsPage, setNewSongsPage] = useState(1)
+  const [newSongsPageSize, setNewSongsPageSize] = useState(DEFAULT_PAGE_SIZE)
   const [newSongsLoading, setNewSongsLoading] = useState(false)
   const [newSongsDetail, setNewSongsDetail] = useState<ToplistDetailView | null>(null)
 
@@ -131,7 +123,7 @@ export default function MusicExplorer() {
   )
 
   const searchSongs = useCallback(
-    async (nextKeyword: string, nextPage: number) => {
+    async (nextKeyword: string, nextPage: number, nextPageSize = searchPageSize) => {
       const trimmed = nextKeyword.trim()
       if (!trimmed) {
         message.warning('请输入关键词')
@@ -140,10 +132,11 @@ export default function MusicExplorer() {
 
       setSearching(true)
       try {
-        const data = await musicSearch(searchSource, trimmed, nextPage, SEARCH_PAGE_SIZE)
+        const data = await musicSearch(searchSource, trimmed, nextPage, nextPageSize)
         setSearchResults(data.list)
         setSearchPage(nextPage)
-        setSearchHasMore(data.list.length >= SEARCH_PAGE_SIZE)
+        setSearchPageSize(nextPageSize)
+        setSearchHasMore(data.list.length >= nextPageSize)
         setLastKeyword(trimmed)
         setPlaylist(data.list)
       } catch (error) {
@@ -152,7 +145,7 @@ export default function MusicExplorer() {
         setSearching(false)
       }
     },
-    [message, searchSource, setPlaylist],
+    [message, searchPageSize, searchSource, setPlaylist],
   )
 
   const loadToplists = useCallback(async () => {
@@ -174,7 +167,7 @@ export default function MusicExplorer() {
       const data = await musicPlaylist(
         playlistSource,
         playlistPage,
-        PLAYLIST_PAGE_SIZE,
+        playlistPageSize,
         playlistSource === 'netease' ? playlistCategory : undefined,
         playlistSource === 'netease' ? 'hot' : undefined,
       )
@@ -188,13 +181,13 @@ export default function MusicExplorer() {
       if (requestId !== playlistRequestIdRef.current) return
       setPlaylistLoading(false)
     }
-  }, [message, playlistCategory, playlistPage, playlistSource])
+  }, [message, playlistCategory, playlistPage, playlistPageSize, playlistSource])
 
   const loadNewSongs = useCallback(async () => {
     const requestId = ++newSongsRequestIdRef.current
     setNewSongsLoading(true)
     try {
-      const data = await musicNewSongs(newSource, newSongsPage, DETAIL_PAGE_SIZE)
+      const data = await musicNewSongs(newSource, newSongsPage, newSongsPageSize)
       if (requestId !== newSongsRequestIdRef.current) return
       setNewSongsDetail(data)
       setPlaylist(data.list)
@@ -205,7 +198,7 @@ export default function MusicExplorer() {
       if (requestId !== newSongsRequestIdRef.current) return
       setNewSongsLoading(false)
     }
-  }, [message, newSongsPage, newSource, setPlaylist])
+  }, [message, newSongsPage, newSongsPageSize, newSource, setPlaylist])
 
   useEffect(() => {
     if (view === 'toplist') void loadToplists()
@@ -261,7 +254,7 @@ export default function MusicExplorer() {
   return (
     <Card
       className="music-browser"
-      style={{ borderRadius: 30 }}
+      bordered={false}
       styles={{ body: { padding: 0 } }}
     >
       <div className="music-browser__toolbar">
@@ -270,15 +263,6 @@ export default function MusicExplorer() {
           value={view}
           onChange={(value) => setView(value as MusicView)}
         />
-        <div className="music-browser__toolbar-side">
-          <span className="music-toolbar-label">音质</span>
-          <Select
-            value={preferredQuality}
-            onChange={setPreferredQuality}
-            options={QUALITY_OPTIONS as unknown as { label: string; value: string }[]}
-            style={{ width: 150 }}
-          />
-        </div>
       </div>
 
       <div className="music-browser__content">
@@ -318,10 +302,14 @@ export default function MusicExplorer() {
               loading={searching}
               emptyText="暂无结果"
               page={searchPage}
-              pageSize={SEARCH_PAGE_SIZE}
-              total={searchHasMore ? searchPage * SEARCH_PAGE_SIZE + 1 : searchPage * SEARCH_PAGE_SIZE}
-              onPageChange={(nextPage) => {
-                void searchSongs(lastKeyword || keyword, nextPage)
+              pageSize={searchPageSize}
+              total={searchHasMore ? searchPage * searchPageSize + 1 : searchPage * searchPageSize}
+              onPageChange={(nextPage, nextPageSize) => {
+                void searchSongs(
+                  lastKeyword || keyword,
+                  nextPageSize !== searchPageSize ? 1 : nextPage,
+                  nextPageSize,
+                )
               }}
             />
           </>
@@ -356,7 +344,7 @@ export default function MusicExplorer() {
                       navigate(`/music/toplist/${toplistSource}/${encodeURIComponent(item.id)}`)
                     }}
                   >
-                    <MusicCover src={item.coverUrl} size={76} rounded={20} />
+                    <MusicCover src={item.coverUrl} size={128} rounded={24} />
                     <div className="music-collection-card__body">
                       <div className="music-collection-card__title">{item.name}</div>
                       <div className="music-collection-card__meta">
@@ -422,7 +410,7 @@ export default function MusicExplorer() {
                         )
                       }}
                     >
-                      <MusicCover src={item.coverUrl} size={76} rounded={20} />
+                      <MusicCover src={item.coverUrl} size={128} rounded={24} />
                       <div className="music-collection-card__body">
                         <div className="music-collection-card__title">{item.name}</div>
                         <div className="music-collection-card__meta">
@@ -440,18 +428,23 @@ export default function MusicExplorer() {
                 </div>
                 <div className="music-pagination">
                   <Pagination
-                    simple
                     current={playlistPage}
-                    pageSize={PLAYLIST_PAGE_SIZE}
+                    pageSize={playlistPageSize}
                     total={pageTotal(
                       playlistPage,
-                      PLAYLIST_PAGE_SIZE,
+                      playlistPageSize,
                       playlists.length,
                       playlistTotal,
                     )}
-                    onChange={(nextPage) => {
-                      setPlaylistPage(nextPage)
+                    onChange={(nextPage, nextPageSize) => {
+                      setPlaylistPageSize(nextPageSize)
+                      setPlaylistPage(nextPageSize !== playlistPageSize ? 1 : nextPage)
                     }}
+                    responsive
+                    showLessItems
+                    showSizeChanger
+                    showQuickJumper={false}
+                    pageSizeOptions={PAGE_SIZE_OPTIONS}
                   />
                 </div>
               </>
@@ -488,10 +481,11 @@ export default function MusicExplorer() {
               loading={newSongsLoading}
               emptyText="暂无新歌"
               page={newSongsPage}
-              pageSize={newSongsDetail?.pageSize ?? DETAIL_PAGE_SIZE}
+              pageSize={newSongsPageSize}
               total={newSongsDetail?.total}
-              onPageChange={(nextPage) => {
-                setNewSongsPage(nextPage)
+              onPageChange={(nextPage, nextPageSize) => {
+                setNewSongsPageSize(nextPageSize)
+                setNewSongsPage(nextPageSize !== newSongsPageSize ? 1 : nextPage)
               }}
             />
           </>

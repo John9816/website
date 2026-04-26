@@ -1,19 +1,22 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
-import { Link as RouterLink } from 'react-router-dom'
-import { ArrowUp, LogIn, Music2, Search, Settings, X } from 'lucide-react'
+import { Link as RouterLink, NavLink as RouterNavLink } from 'react-router-dom'
+import { ArrowUp, LogIn, Search, Settings, X } from 'lucide-react'
 import { getNav } from '../api/public'
 import type { CategoryWithLinks, NavLink } from '../types'
+import { useAuth } from '../context/AuthContext'
 import CategoryIcon from '../components/CategoryIcon'
 import LinkCard from '../components/LinkCard'
 import ThemeToggle from '../components/ThemeToggle'
 import '../styles/home.css'
 
 export default function HomePage() {
+  const auth = useAuth()
   const [data, setData] = useState<CategoryWithLinks[] | null>(null)
   const [error, setError] = useState<string | null>(null)
   const [activeId, setActiveId] = useState<number | null>(null)
   const [query, setQuery] = useState('')
   const [showTop, setShowTop] = useState(false)
+  const [isTopbarPinned, setIsTopbarPinned] = useState(false)
   const sectionRefs = useRef<Record<number, HTMLElement | null>>({})
 
   useEffect(() => {
@@ -57,11 +60,6 @@ export default function HomePage() {
       .filter((category) => category.links.length > 0)
   }, [categories, filterLinks, normalizedQuery])
 
-  const totalLinks = useMemo(
-    () => categories.reduce((count, category) => count + (category.links?.length ?? 0), 0),
-    [categories],
-  )
-
   useEffect(() => {
     if (!visibleCategories.length) return
 
@@ -87,7 +85,18 @@ export default function HomePage() {
   }, [visibleCategories])
 
   useEffect(() => {
-    const onScroll = () => setShowTop(window.scrollY > 320)
+    if (!visibleCategories.length) return
+    if (visibleCategories.some((category) => category.id === activeId)) return
+    setActiveId(visibleCategories[0].id)
+  }, [activeId, visibleCategories])
+
+  useEffect(() => {
+    const onScroll = () => {
+      const nextY = window.scrollY
+      setShowTop(nextY > 320)
+      setIsTopbarPinned(nextY > 24)
+    }
+
     onScroll()
     window.addEventListener('scroll', onScroll, { passive: true })
     return () => window.removeEventListener('scroll', onScroll)
@@ -105,28 +114,53 @@ export default function HomePage() {
 
   return (
     <div className="home">
-      <aside className="sidebar">
-        <div className="brand">
+      <header className={`topbar${isTopbarPinned ? ' topbar--pinned' : ''}`}>
+        <RouterLink to="/" className="topbar-brand" aria-label="返回首页">
           <span className="brand-dot" />
           <span className="brand-text">我的导航</span>
-        </div>
-        <div className="sidebar-footer" aria-label="站点快捷入口">
+        </RouterLink>
+
+        <nav className="topbar-nav" aria-label="主导航">
+          <RouterNavLink
+            to="/"
+            end
+            className={({ isActive }) => `topbar-nav__link${isActive ? ' is-active' : ''}`}
+          >
+            导航
+          </RouterNavLink>
+          <RouterNavLink
+            to="/music"
+            className={({ isActive }) => `topbar-nav__link${isActive ? ' is-active' : ''}`}
+          >
+            音乐
+          </RouterNavLink>
+        </nav>
+
+        <div className="topbar-actions" aria-label="站点操作">
+          {auth.token ? (
+            <RouterLink to="/admin" className="topbar-action">
+              <Settings size={16} />
+              <span>管理</span>
+            </RouterLink>
+          ) : (
+            <RouterLink to="/login" className="topbar-action">
+              <LogIn size={16} />
+              <span>登录</span>
+            </RouterLink>
+          )}
           <ThemeToggle />
-          <RouterLink to="/login" className="admin-link">
-            <LogIn size={16} />
-            <span>登录</span>
-          </RouterLink>
-          <RouterLink to="/music" className="admin-link">
-            <Music2 size={16} />
-            <span>音乐</span>
-          </RouterLink>
-          <RouterLink to="/admin" className="admin-link">
-            <Settings size={16} />
-            <span>管理</span>
-          </RouterLink>
+        </div>
+      </header>
+
+      <aside className="sidebar">
+        <div className="sidebar-head">
+          <span className="sidebar-kicker">
+            {normalizedQuery ? '搜索结果' : '分类导航'}
+          </span>
+          <span className="sidebar-meta">{visibleCategories.length} 个分类</span>
         </div>
         <nav className="side-nav" aria-label="分类导航">
-          {categories.map((category) => (
+          {visibleCategories.map((category) => (
             <button
               key={category.id}
               type="button"
@@ -138,7 +172,9 @@ export default function HomePage() {
               <span className="side-item-name">{category.name}</span>
             </button>
           ))}
-          {!categories.length && !error && <div className="side-empty">加载中...</div>}
+          {!visibleCategories.length && !error && !normalizedQuery && (
+            <div className="side-empty">加载中...</div>
+          )}
         </nav>
       </aside>
 
@@ -149,14 +185,7 @@ export default function HomePage() {
               <span className="hero-title">Hello</span>{' '}
               <span className="hero-emoji">👋</span>
             </h1>
-            <p>
-              收藏的资源与工具，一键直达
-              {totalLinks > 0 && (
-                <span className="hero-stat">
-                  · {categories.length} 个分类 / {totalLinks} 个链接
-                </span>
-              )}
-            </p>
+            <p>收藏的资源与工具，一键直达。</p>
           </div>
           <div className="search-box">
             <Search size={18} className="search-icon" />

@@ -2,7 +2,6 @@ import { Moon, Sun } from 'lucide-react'
 import { useTheme } from '../context/ThemeContext'
 
 type Props = {
-  /** When true, renders antd-friendly bare button (for admin header). */
   bare?: boolean
 }
 
@@ -16,11 +15,14 @@ export default function ThemeToggle({ bare = false }: Props) {
       type="button"
       onClick={toggle}
       aria-label={label}
+      aria-pressed={isDark}
       title={label}
       className={bare ? 'theme-toggle theme-toggle--bare' : 'theme-toggle'}
+      data-mode={mode}
     >
-      {isDark ? <Sun size={16} /> : <Moon size={16} />}
-      {!bare && <span>{isDark ? '浅色' : '深色'}</span>}
+      <span className="theme-toggle__icon" aria-hidden="true">
+        {isDark ? <Sun size={16} /> : <Moon size={16} />}
+      </span>
     </button>
   )
 }

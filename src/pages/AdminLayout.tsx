@@ -117,16 +117,16 @@ export default function AdminLayout() {
               justifyContent: 'flex-end',
             }}
           >
-            <ThemeToggle bare />
-            <Link to="/music">
-              <Button icon={<CustomerServiceOutlined />}>音乐</Button>
-            </Link>
             <Link to="/">
               <Button icon={<HomeOutlined />}>首页</Button>
+            </Link>
+            <Link to="/music">
+              <Button icon={<CustomerServiceOutlined />}>音乐</Button>
             </Link>
             <Button icon={<LogoutOutlined />} onClick={doLogout}>
               退出
             </Button>
+            <ThemeToggle bare />
           </div>
         </Header>
         <Content style={{ padding: 24 }}>

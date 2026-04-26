@@ -1,5 +1,6 @@
 import { Empty, Pagination, Space, Table, Typography } from 'antd'
 import { Pause, Play } from 'lucide-react'
+import { PAGE_SIZE_OPTIONS } from '../constants/pagination'
 import MusicCover from './MusicCover'
 import { useMusicPlayer } from '../context/MusicPlayerContext'
 import type { SongSearchItem } from '../types'
@@ -12,7 +13,7 @@ type Props = {
   page: number
   pageSize: number
   total?: number | null
-  onPageChange?: (nextPage: number) => void
+  onPageChange?: (nextPage: number, nextPageSize: number) => void
 }
 
 function sourceLabel(source: SongSearchItem['source']) {
@@ -58,6 +59,15 @@ export default function MusicSongTable({
   const isPlayingRow = (row: SongSearchItem) =>
     current?.id === row.id && current?.source === row.source
 
+  const handleRowActivate = (row: SongSearchItem) => {
+    if (isPlayingRow(row) && !unsupportedFormat) {
+      togglePlay()
+      return
+    }
+
+    void playSong(row, preferredQuality)
+  }
+
   return (
     <>
       <Table<SongSearchItem>
@@ -78,7 +88,7 @@ export default function MusicSongTable({
             dataIndex: 'name',
             render: (name: string, row) => (
               <Space>
-                <MusicCover src={row.coverUrl} size={44} rounded={14} />
+                <MusicCover src={row.coverUrl} size={48} rounded={16} />
                 <div style={{ minWidth: 0 }}>
                   <div
                     style={{
@@ -120,7 +130,10 @@ export default function MusicSongTable({
                   type="button"
                   className="ctrl-btn"
                   style={{ width: 32, height: 32 }}
-                  onClick={togglePlay}
+                  onClick={(event) => {
+                    event.stopPropagation()
+                    togglePlay()
+                  }}
                   aria-label="暂停"
                   title="暂停"
                 >
@@ -132,12 +145,9 @@ export default function MusicSongTable({
                   className="ctrl-btn primary"
                   style={{ width: 32, height: 32, boxShadow: 'none' }}
                   disabled={playLoading && isPlayingRow(row)}
-                  onClick={() => {
-                    if (isPlayingRow(row) && !unsupportedFormat) {
-                      togglePlay()
-                      return
-                    }
-                    void playSong(row, preferredQuality)
+                  onClick={(event) => {
+                    event.stopPropagation()
+                    handleRowActivate(row)
                   }}
                   aria-label="播放"
                   title="播放"
@@ -149,8 +159,8 @@ export default function MusicSongTable({
         ]}
         rowClassName={(row) => (isPlayingRow(row) ? 'music-row-active' : '')}
         onRow={(row) => ({
-          onDoubleClick: () => {
-            void playSong(row, preferredQuality)
+          onClick: () => {
+            handleRowActivate(row)
           },
           style: { cursor: 'pointer' },
         })}
@@ -159,11 +169,15 @@ export default function MusicSongTable({
       {onPageChange && songs.length > 0 && (
         <div className="music-pagination">
           <Pagination
-            simple
             current={page}
             pageSize={pageSize}
             total={pageTotal(page, pageSize, songs.length, total)}
             onChange={onPageChange}
+            responsive
+            showLessItems
+            showSizeChanger
+            showQuickJumper={false}
+            pageSizeOptions={PAGE_SIZE_OPTIONS}
           />
         </div>
       )}

@@ -21,11 +21,12 @@ import AdminPassword from './pages/AdminPassword'
 
 function ThemedAntd({ children }: { children: React.ReactNode }) {
   const { mode } = useTheme()
+  const colorPrimary = mode === 'dark' ? '#eb645b' : '#d33a31'
   return (
     <ConfigProvider
       locale={zhCN}
       theme={{
-        token: { colorPrimary: '#2563eb' },
+        token: { colorPrimary },
         algorithm: mode === 'dark' ? antdTheme.darkAlgorithm : antdTheme.defaultAlgorithm,
       }}
     >
