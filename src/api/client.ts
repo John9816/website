@@ -5,14 +5,24 @@ const BASE = ((import.meta.env.VITE_API_BASE as string | undefined) ?? '')
   .replace(/\/+$/, '')
 
 const TOKEN_KEY = 'nav.token'
+const TOKEN_TYPE_KEY = 'nav.tokenType'
 
 export function getToken(): string | null {
   return localStorage.getItem(TOKEN_KEY)
 }
 
-export function setToken(token: string | null) {
-  if (token) localStorage.setItem(TOKEN_KEY, token)
-  else localStorage.removeItem(TOKEN_KEY)
+export function getTokenType(): string {
+  return localStorage.getItem(TOKEN_TYPE_KEY) || 'Bearer'
+}
+
+export function setToken(token: string | null, tokenType = 'Bearer') {
+  if (token) {
+    localStorage.setItem(TOKEN_KEY, token)
+    localStorage.setItem(TOKEN_TYPE_KEY, tokenType)
+  } else {
+    localStorage.removeItem(TOKEN_KEY)
+    localStorage.removeItem(TOKEN_TYPE_KEY)
+  }
 }
 
 export class ApiError extends Error {
@@ -44,7 +54,7 @@ export async function request<T>(path: string, opts: Options = {}): Promise<T> {
   if (body !== undefined) headers['Content-Type'] = 'application/json'
   if (auth) {
     const t = getToken()
-    if (t) headers['Authorization'] = `Bearer ${t}`
+    if (t) headers['Authorization'] = `${getTokenType()} ${t}`
   }
 
   let res: Response

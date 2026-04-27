@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useRef, useState } from 'react'
+import { useEffect, useMemo, useRef, useState, type CSSProperties } from 'react'
 import { App as AntApp, Button } from 'antd'
 import { Link, useParams } from 'react-router-dom'
 import { ChevronLeft, Play, RefreshCcw } from 'lucide-react'
@@ -8,6 +8,7 @@ import MusicSongTable from '../components/MusicSongTable'
 import { DEFAULT_PAGE_SIZE } from '../constants/pagination'
 import { useMusicPlayer } from '../context/MusicPlayerContext'
 import type { MusicSourceId, PlaylistDetailView } from '../types'
+import { normalizeCoverUrl } from '../utils/musicPlayer'
 
 function isMusicSourceId(value: string | undefined): value is MusicSourceId {
   return value === 'qq' || value === 'netease' || value === 'kuwo'
@@ -74,6 +75,13 @@ export default function MusicPlaylistDetailPage() {
     return `${creator} · ${count}${playCount}`
   }, [detail?.creatorName, detail?.list.length, detail?.playCount, validSource])
 
+  const heroCoverUrl = normalizeCoverUrl(detail?.coverUrl)
+  const heroStyle = heroCoverUrl
+    ? ({
+        ['--music-detail-cover' as string]: `url(${JSON.stringify(heroCoverUrl)})`,
+      } as CSSProperties)
+    : undefined
+
   if (!validSource || !id) {
     return (
       <div className="music-detail-shell">
@@ -89,7 +97,29 @@ export default function MusicPlaylistDetailPage() {
           <ChevronLeft size={16} />
           <span>返回歌单</span>
         </Link>
+      </div>
 
+      <div
+        className={`music-detail-hero${heroCoverUrl ? ' music-detail-hero--with-cover' : ''}`}
+        style={heroStyle}
+      >
+        <MusicCover src={detail?.coverUrl} size={148} rounded={32} />
+        <div className="music-detail-hero__copy">
+          <span className="music-stage-kicker">歌单详情</span>
+          <h2>{detail?.name || '加载中...'}</h2>
+          <p>{detail?.description || metaText}</p>
+          <div className="music-detail-meta">
+            <span>{metaText}</span>
+            {detail?.updateTime && <span>{detail.updateTime}</span>}
+          </div>
+        </div>
+      </div>
+
+      <div className="music-detail-list-head">
+        <div className="music-detail-list-copy">
+          <h3>歌曲列表</h3>
+          <p>{detail?.total ? `共 ${detail.total} 首` : metaText}</p>
+        </div>
         <div className="music-detail-actions-group">
           <Button
             type="primary"
@@ -110,19 +140,6 @@ export default function MusicPlaylistDetailPage() {
           >
             刷新
           </Button>
-        </div>
-      </div>
-
-      <div className="music-detail-hero">
-        <MusicCover src={detail?.coverUrl} size={148} rounded={32} />
-        <div className="music-detail-hero__copy">
-          <span className="music-stage-kicker">歌单详情</span>
-          <h2>{detail?.name || '加载中...'}</h2>
-          <p>{detail?.description || metaText}</p>
-          <div className="music-detail-meta">
-            <span>{metaText}</span>
-            {detail?.updateTime && <span>{detail.updateTime}</span>}
-          </div>
         </div>
       </div>
 

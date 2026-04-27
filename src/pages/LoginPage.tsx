@@ -38,7 +38,7 @@ export default function LoginPage() {
     setLoading(true)
     try {
       const data = await apiLogin(values.username, values.password)
-      auth.login(data.token, data.username)
+      auth.login(data.token, data.username, data.tokenType)
       message.success('登录成功')
       nav(redirectTo, { replace: true })
     } catch (error) {

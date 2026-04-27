@@ -6,7 +6,7 @@ export async function login(username: string, password: string) {
     method: 'POST',
     body: { username, password },
   })
-  setToken(data.token)
+  setToken(data.token, data.tokenType || 'Bearer')
   return data
 }
 

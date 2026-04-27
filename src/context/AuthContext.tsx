@@ -4,7 +4,7 @@ import { getToken, setToken } from '../api/client'
 interface AuthState {
   token: string | null
   username: string | null
-  login: (token: string, username: string) => void
+  login: (token: string, username: string, tokenType?: string) => void
   logout: () => void
 }
 
@@ -30,8 +30,8 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const value: AuthState = {
     token,
     username,
-    login(t, u) {
-      setToken(t)
+    login(t, u, tokenType) {
+      setToken(t, tokenType)
       localStorage.setItem(USER_KEY, u)
       setTok(t)
       setUsername(u)
