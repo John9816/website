@@ -1,18 +1,30 @@
-import { useEffect, useMemo, useRef, useState } from 'react'
+import {
+  useCallback,
+  useEffect,
+  useLayoutEffect,
+  useMemo,
+  useRef,
+  useState,
+} from 'react'
 import { App as AntApp } from 'antd'
 import {
+  ArrowDown,
   Bot,
+  Check,
+  Copy,
+  Hash,
   LoaderCircle,
   LogIn,
   MessagesSquare,
   Play,
   Plus,
   RefreshCw,
+  Search,
   SendHorizontal,
   Settings,
   Sparkles,
+  StopCircle,
   Volume2,
-  X,
 } from 'lucide-react'
 import { Link as RouterLink, NavLink as RouterNavLink } from 'react-router-dom'
 import {
@@ -24,18 +36,35 @@ import {
   sendAiMessage,
 } from '../api/ai'
 import { ApiError } from '../api/client'
+import MessageMarkdown from '../components/MessageMarkdown'
 import ThemeToggle from '../components/ThemeToggle'
 import { useAuth } from '../context/AuthContext'
 import type {
   AiChatMessageView,
   AiConversationView,
+  AiModelCapability,
   AiModelView,
 } from '../types'
+import { groupConversations } from '../utils/groupConversations'
 import '../styles/topbar.css'
 import '../styles/ai-chat.css'
 
 const CONVERSATION_PAGE_SIZE = 100
 const MESSAGE_PAGE_SIZE = 100
+const CHAR_LIMIT = 8000
+const CHAR_WARN = 7500
+const STREAM_REVEAL_MS = 700
+const STREAM_MAX_LEN = 3000
+const TEXTAREA_MIN = 56
+const TEXTAREA_MAX = 240
+const STICK_THRESHOLD = 80
+
+const CAPABILITY_LABELS: Record<AiModelCapability, string> = {
+  text_chat: '文本对话',
+  audio_input: '语音输入',
+  audio_output: '语音输出',
+  voice_customization: '音色定制',
+}
 
 function getDefaultModel(models: AiModelView[]) {
   return models.find((item) => item.defaultModel)?.model ?? models[0]?.model ?? ''
@@ -44,7 +73,7 @@ function getDefaultModel(models: AiModelView[]) {
 function modelHasCapability(
   models: Map<string, AiModelView>,
   modelId: string | null | undefined,
-  capability: AiModelView['capabilities'][number],
+  capability: AiModelCapability,
 ) {
   if (!modelId) return false
   const info = models.get(modelId)
@@ -54,6 +83,88 @@ function modelHasCapability(
 
 function getDefaultTtsModel(models: AiModelView[]) {
   return models.find((item) => item.capabilities.includes('audio_output'))?.model ?? ''
+}
+
+function upsertConversation(
+  conversations: AiConversationView[],
+  nextConversation: AiConversationView,
+) {
+  return [nextConversation, ...conversations.filter((item) => item.id !== nextConversation.id)].sort(
+    (a, b) => {
+      const left = new Date((a.lastMessageAt || a.updatedAt).replace(' ', 'T')).getTime()
+      const right = new Date((b.lastMessageAt || b.updatedAt).replace(' ', 'T')).getTime()
+      if (right !== left) return right - left
+      return b.id - a.id
+    },
+  )
+}
+
+function parseDate(value?: string | null) {
+  if (!value) return null
+  const parsed = new Date(value.replace(' ', 'T'))
+  return Number.isNaN(parsed.getTime()) ? null : parsed
+}
+
+function formatTimeLabel(value?: string | null) {
+  const date = parseDate(value)
+  if (!date) return '刚刚'
+  const now = new Date()
+  const todayStart = new Date(now.getFullYear(), now.getMonth(), now.getDate()).getTime()
+  const ts = date.getTime()
+  const hh = String(date.getHours()).padStart(2, '0')
+  const mm = String(date.getMinutes()).padStart(2, '0')
+  if (ts >= todayStart) return `${hh}:${mm}`
+  if (ts >= todayStart - 86400000) return `昨天 ${hh}:${mm}`
+  const month = String(date.getMonth() + 1).padStart(2, '0')
+  const day = String(date.getDate()).padStart(2, '0')
+  return `${month}-${day}`
+}
+
+function formatMessageTime(value?: string | null) {
+  const date = parseDate(value)
+  if (!date) return value ?? ''
+  const now = new Date()
+  const todayStart = new Date(now.getFullYear(), now.getMonth(), now.getDate()).getTime()
+  const ts = date.getTime()
+  const hh = String(date.getHours()).padStart(2, '0')
+  const mm = String(date.getMinutes()).padStart(2, '0')
+  if (ts >= todayStart) return `今天 ${hh}:${mm}`
+  if (ts >= todayStart - 86400000) return `昨天 ${hh}:${mm}`
+  const month = String(date.getMonth() + 1).padStart(2, '0')
+  const day = String(date.getDate()).padStart(2, '0')
+  return `${month}-${day} ${hh}:${mm}`
+}
+
+function formatRoleLabel(role: AiChatMessageView['role']) {
+  if (role === 'assistant') return 'AI'
+  if (role === 'system') return '系统'
+  return '我'
+}
+
+function formatTokenSum(total: number) {
+  if (total <= 0) return null
+  if (total < 1000) return `${total} tokens`
+  return `${(total / 1000).toFixed(total >= 10000 ? 0 : 1)}k tokens`
+}
+
+interface CapabilityDotsProps {
+  capabilities: AiModelCapability[]
+  size?: 'sm' | 'md'
+}
+
+function CapabilityDots({ capabilities, size = 'md' }: CapabilityDotsProps) {
+  if (!capabilities.length) return null
+  return (
+    <span className={`ai-chat__capability-dots ai-chat__capability-dots--${size}`}>
+      {capabilities.map((cap) => (
+        <span
+          key={cap}
+          className={`ai-chat__capability-dot ai-chat__capability-dot--${cap}`}
+          title={CAPABILITY_LABELS[cap] ?? cap}
+        />
+      ))}
+    </span>
+  )
 }
 
 interface MessageAudioProps {
@@ -133,34 +244,205 @@ function MessageAudio({ message, onError }: MessageAudioProps) {
   )
 }
 
-function upsertConversation(
-  conversations: AiConversationView[],
-  nextConversation: AiConversationView,
-) {
-  return [nextConversation, ...conversations.filter((item) => item.id !== nextConversation.id)].sort(
-    (a, b) => {
-      const left = new Date(a.lastMessageAt || a.updatedAt).getTime()
-      const right = new Date(b.lastMessageAt || b.updatedAt).getTime()
-      if (right !== left) return right - left
-      return b.id - a.id
-    },
+interface CopyButtonProps {
+  text: string
+  onCopied: () => void
+  onError: () => void
+}
+
+function CopyButton({ text, onCopied, onError }: CopyButtonProps) {
+  const [copied, setCopied] = useState(false)
+  const timerRef = useRef<number | null>(null)
+
+  useEffect(() => {
+    return () => {
+      if (timerRef.current) window.clearTimeout(timerRef.current)
+    }
+  }, [])
+
+  const handleClick = async () => {
+    try {
+      await navigator.clipboard.writeText(text)
+      setCopied(true)
+      onCopied()
+      if (timerRef.current) window.clearTimeout(timerRef.current)
+      timerRef.current = window.setTimeout(() => setCopied(false), 1500)
+    } catch {
+      onError()
+    }
+  }
+
+  return (
+    <button
+      type="button"
+      className="ai-chat__msg-action"
+      onClick={() => void handleClick()}
+      aria-label={copied ? '已复制' : '复制内容'}
+    >
+      {copied ? <Check size={12} /> : <Copy size={12} />}
+      <span>{copied ? '已复制' : '复制'}</span>
+    </button>
   )
 }
 
-function formatTimeLabel(value?: string | null) {
-  if (!value) return '刚刚'
-  return value.slice(5, 16)
+interface MessageBubbleProps {
+  message: AiChatMessageView
+  isStreaming: boolean
+  onAudioError: (text: string) => void
+  onCopySuccess: () => void
+  onCopyError: () => void
 }
 
-function formatRoleLabel(role: AiChatMessageView['role']) {
-  if (role === 'assistant') return 'AI'
-  if (role === 'system') return '系统'
-  return '我'
+function MessageBubble({
+  message,
+  isStreaming,
+  onAudioError,
+  onCopySuccess,
+  onCopyError,
+}: MessageBubbleProps) {
+  const isAssistant = message.role === 'assistant'
+  const sideClass = isAssistant ? 'assistant' : 'user'
+  const tokenSum = message.totalTokens ?? 0
+  const articleClass = [
+    'ai-chat__message',
+    `ai-chat__message--${sideClass}`,
+    isStreaming ? 'is-streaming' : '',
+  ]
+    .filter(Boolean)
+    .join(' ')
+
+  return (
+    <article className={articleClass}>
+      <div className="ai-chat__message-avatar" aria-hidden="true">
+        {isAssistant ? <Bot size={18} /> : '我'}
+      </div>
+      <div className="ai-chat__bubble">
+        <div className="ai-chat__message-meta">
+          <span className="ai-chat__message-role">{formatRoleLabel(message.role)}</span>
+          {message.model && <span className="ai-chat__message-model">{message.model}</span>}
+          <time
+            className="ai-chat__message-time"
+            dateTime={message.createdAt}
+            title={message.createdAt}
+          >
+            {formatMessageTime(message.createdAt)}
+          </time>
+          {message.finishReason && (
+            <span className="ai-chat__message-pill">{message.finishReason}</span>
+          )}
+          {tokenSum > 0 && (
+            <span className="ai-chat__message-pill">
+              <Hash size={11} />
+              {tokenSum}
+            </span>
+          )}
+          {message.audioAvailable && message.audioModel && (
+            <span className="ai-chat__message-pill">
+              <Volume2 size={11} />
+              {message.audioModel}
+            </span>
+          )}
+        </div>
+        <div className="ai-chat__message-content">
+          {isAssistant ? (
+            <MessageMarkdown content={message.content} />
+          ) : (
+            <div className="ai-chat__message-plain">{message.content}</div>
+          )}
+        </div>
+        {isAssistant && message.audioAvailable && message.audioUrl && (
+          <MessageAudio message={message} onError={onAudioError} />
+        )}
+        {isAssistant && message.content && (
+          <div className="ai-chat__message-actions">
+            <CopyButton
+              text={message.content}
+              onCopied={onCopySuccess}
+              onError={onCopyError}
+            />
+          </div>
+        )}
+      </div>
+    </article>
+  )
 }
 
-function formatTokenLabel(message: AiChatMessageView) {
-  if (message.totalTokens == null) return null
-  return `tokens ${message.totalTokens}`
+interface ConversationButtonProps {
+  conversation: AiConversationView
+  isActive: boolean
+  isKnownModel: boolean
+  capabilities: AiModelCapability[]
+  disabled: boolean
+  onSelect: (id: number) => void
+}
+
+function ConversationButton({
+  conversation,
+  isActive,
+  isKnownModel,
+  capabilities,
+  disabled,
+  onSelect,
+}: ConversationButtonProps) {
+  return (
+    <button
+      type="button"
+      className={`ai-chat__conversation${isActive ? ' is-active' : ''}`}
+      onClick={() => onSelect(conversation.id)}
+      disabled={disabled}
+    >
+      <div className="ai-chat__conversation-top">
+        <span className="ai-chat__conversation-title">{conversation.title}</span>
+        <time
+          className="ai-chat__conversation-time"
+          dateTime={conversation.lastMessageAt}
+          title={conversation.lastMessageAt}
+        >
+          {formatTimeLabel(conversation.lastMessageAt)}
+        </time>
+      </div>
+      <div
+        className="ai-chat__conversation-preview"
+        title={conversation.lastMessagePreview ?? '等待首条消息'}
+      >
+        {conversation.lastMessagePreview ?? '等待首条消息'}
+      </div>
+      <div className="ai-chat__conversation-footer">
+        <span className="ai-chat__tag">{conversation.model}</span>
+        {isKnownModel ? (
+          <CapabilityDots capabilities={capabilities} size="sm" />
+        ) : (
+          <span className="ai-chat__tag ai-chat__tag--warn">已移出模型池</span>
+        )}
+      </div>
+    </button>
+  )
+}
+
+function SkeletonBubble({ side, width }: { side: 'user' | 'assistant'; width: string }) {
+  return (
+    <article className={`ai-chat__message ai-chat__message--${side} is-skeleton`}>
+      <div className="ai-chat__message-avatar" aria-hidden="true" />
+      <div className="ai-chat__bubble" style={{ width }}>
+        <div className="ai-chat__skeleton-line" style={{ width: '60%' }} />
+        <div className="ai-chat__skeleton-line" style={{ width: '90%' }} />
+        <div className="ai-chat__skeleton-line" style={{ width: '70%' }} />
+      </div>
+    </article>
+  )
+}
+
+function SkeletonConversation() {
+  return (
+    <div className="ai-chat__conversation is-skeleton" aria-hidden="true">
+      <div className="ai-chat__conversation-top">
+        <div className="ai-chat__skeleton-line" style={{ width: '50%' }} />
+        <div className="ai-chat__skeleton-line" style={{ width: '20%' }} />
+      </div>
+      <div className="ai-chat__skeleton-line" style={{ width: '92%' }} />
+      <div className="ai-chat__skeleton-line" style={{ width: '40%' }} />
+    </div>
+  )
 }
 
 export default function AiChatPage() {
@@ -182,10 +464,16 @@ export default function AiChatPage() {
   const [sending, setSending] = useState(false)
   const [pendingContent, setPendingContent] = useState<string | null>(null)
   const [elapsed, setElapsed] = useState(0)
+  const [searchQuery, setSearchQuery] = useState('')
+  const [isAtBottom, setIsAtBottom] = useState(true)
+  const [streamingMessageId, setStreamingMessageId] = useState<number | null>(null)
 
   const abortRef = useRef<AbortController | null>(null)
   const messageLoadSeqRef = useRef(0)
   const messagesEndRef = useRef<HTMLDivElement | null>(null)
+  const messagesContainerRef = useRef<HTMLDivElement | null>(null)
+  const textareaRef = useRef<HTMLTextAreaElement | null>(null)
+  const streamingTimerRef = useRef<number | null>(null)
 
   const modelRegistry = useMemo(
     () => new Map(models.map((item) => [item.model, item] as const)),
@@ -237,6 +525,30 @@ export default function AiChatPage() {
       ? '当前模型未声明 text_chat 能力，无法用作主对话模型'
       : null
 
+  const filteredConversations = useMemo(() => {
+    const q = searchQuery.trim().toLowerCase()
+    if (!q) return conversations
+    return conversations.filter(
+      (item) =>
+        item.title.toLowerCase().includes(q) ||
+        (item.lastMessagePreview ?? '').toLowerCase().includes(q),
+    )
+  }, [conversations, searchQuery])
+
+  const conversationGroups = useMemo(
+    () => (searchQuery.trim() ? null : groupConversations(filteredConversations)),
+    [filteredConversations, searchQuery],
+  )
+
+  const cumulativeTokens = useMemo(
+    () => messages.reduce((sum, msg) => sum + (msg.totalTokens ?? 0), 0),
+    [messages],
+  )
+
+  const charCount = draft.length
+  const charDanger = charCount >= CHAR_LIMIT
+  const charWarn = charCount >= CHAR_WARN
+
   const mainClassName = `ai-chat__main${auth.token ? ' ai-chat__main--authenticated' : ''}`
 
   useEffect(() => {
@@ -251,6 +563,8 @@ export default function AiChatPage() {
       setTtsModel('')
       setPendingContent(null)
       setSending(false)
+      setSearchQuery('')
+      setStreamingMessageId(null)
       return
     }
 
@@ -322,23 +636,26 @@ export default function AiChatPage() {
     }
   }, [responseAudio, audioOutputModels.length])
 
-  const loadActiveConversationMessages = async (conversationId: number) => {
-    const seq = ++messageLoadSeqRef.current
-    setMessagesLoading(true)
-    try {
-      const data = await listAiMessages(conversationId, 0, MESSAGE_PAGE_SIZE)
-      if (seq !== messageLoadSeqRef.current) return
-      setMessages(data.items)
-    } catch (error) {
-      if (seq !== messageLoadSeqRef.current) return
-      setMessages([])
-      message.error((error as Error).message)
-    } finally {
-      if (seq === messageLoadSeqRef.current) {
-        setMessagesLoading(false)
+  const loadActiveConversationMessages = useCallback(
+    async (conversationId: number) => {
+      const seq = ++messageLoadSeqRef.current
+      setMessagesLoading(true)
+      try {
+        const data = await listAiMessages(conversationId, 0, MESSAGE_PAGE_SIZE)
+        if (seq !== messageLoadSeqRef.current) return
+        setMessages(data.items)
+      } catch (error) {
+        if (seq !== messageLoadSeqRef.current) return
+        setMessages([])
+        message.error((error as Error).message)
+      } finally {
+        if (seq === messageLoadSeqRef.current) {
+          setMessagesLoading(false)
+        }
       }
-    }
-  }
+    },
+    [message],
+  )
 
   useEffect(() => {
     if (!auth.token || !activeConversationId) {
@@ -348,7 +665,7 @@ export default function AiChatPage() {
     }
 
     void loadActiveConversationMessages(activeConversationId)
-  }, [activeConversationId, auth.token])
+  }, [activeConversationId, auth.token, loadActiveConversationMessages])
 
   useEffect(() => {
     if (!sending) return
@@ -362,15 +679,64 @@ export default function AiChatPage() {
     return () => window.clearInterval(timer)
   }, [sending])
 
+  // Track scroll position so we know whether to auto-stick to the bottom.
   useEffect(() => {
+    const el = messagesContainerRef.current
+    if (!el) return
+    const handler = () => {
+      const distance = el.scrollHeight - el.scrollTop - el.clientHeight
+      setIsAtBottom(distance < STICK_THRESHOLD)
+    }
+    handler()
+    el.addEventListener('scroll', handler, { passive: true })
+    return () => el.removeEventListener('scroll', handler)
+  }, [auth.token])
+
+  // Force scroll to bottom on conversation switch.
+  useLayoutEffect(() => {
+    if (!activeConversationId) return
+    setIsAtBottom(true)
+    requestAnimationFrame(() => {
+      messagesEndRef.current?.scrollIntoView({ block: 'end' })
+    })
+  }, [activeConversationId])
+
+  // Auto-stick when at bottom and content grows.
+  useEffect(() => {
+    if (!isAtBottom) return
     messagesEndRef.current?.scrollIntoView({ behavior: 'smooth', block: 'end' })
-  }, [activeConversationId, messages, pendingContent, sending])
+  }, [messages, pendingContent, sending, isAtBottom])
+
+  // Auto-resize textarea.
+  useLayoutEffect(() => {
+    const el = textareaRef.current
+    if (!el) return
+    el.style.height = 'auto'
+    const next = Math.min(TEXTAREA_MAX, Math.max(TEXTAREA_MIN, el.scrollHeight))
+    el.style.height = `${next}px`
+  }, [draft])
+
+  // Esc cancels the in-flight request.
+  useEffect(() => {
+    if (!sending) return
+    const handler = (event: KeyboardEvent) => {
+      if (event.key === 'Escape') {
+        event.preventDefault()
+        abortRef.current?.abort()
+      }
+    }
+    window.addEventListener('keydown', handler)
+    return () => window.removeEventListener('keydown', handler)
+  }, [sending])
 
   useEffect(() => {
-    return () => abortRef.current?.abort()
+    return () => {
+      abortRef.current?.abort()
+      if (streamingTimerRef.current) window.clearTimeout(streamingTimerRef.current)
+    }
   }, [])
 
-  const refreshConversations = async () => {
+  const refreshConversations = useCallback(async () => {
     if (!auth.token) return
 
     setConversationsLoading(true)
@@ -388,7 +754,7 @@ export default function AiChatPage() {
     } finally {
       setConversationsLoading(false)
     }
-  }
+  }, [auth.token, message])
 
   const handleCreateConversation = async () => {
     if (!auth.token || creatingConversation || sending) return
@@ -436,6 +802,7 @@ export default function AiChatPage() {
     setSending(true)
     setPendingContent(content)
     setDraft('')
+    setIsAtBottom(true)
 
     try {
       if (!conversationId) {
@@ -462,6 +829,15 @@ export default function AiChatPage() {
       setActiveConversationId(reply.conversation.id)
       setSelectedModel(reply.conversation.model || modelToUse || '')
       setMessages((current) => [...current, reply.userMessage, reply.assistantMessage])
+
+      if (reply.assistantMessage.content.length <= STREAM_MAX_LEN) {
+        setStreamingMessageId(reply.assistantMessage.id)
+        if (streamingTimerRef.current) window.clearTimeout(streamingTimerRef.current)
+        streamingTimerRef.current = window.setTimeout(() => {
+          setStreamingMessageId(null)
+          streamingTimerRef.current = null
+        }, STREAM_REVEAL_MS)
+      }
     } catch (error) {
       setDraft((current) => current || content)
       if (error instanceof ApiError && error.code === -2) {
@@ -481,12 +857,187 @@ export default function AiChatPage() {
     abortRef.current?.abort()
   }
 
+  const handlePrimaryClick = () => {
+    if (sending) {
+      handleCancel()
+    } else {
+      void handleSend()
+    }
+  }
+
   const handleDraftKeyDown = (event: React.KeyboardEvent<HTMLTextAreaElement>) => {
     if (event.key === 'Enter' && !event.shiftKey) {
       event.preventDefault()
       void handleSend()
     }
   }
+
+  const handleJumpToBottom = () => {
+    setIsAtBottom(true)
+    messagesEndRef.current?.scrollIntoView({ behavior: 'smooth', block: 'end' })
+  }
+
+  const renderConversationItems = (items: AiConversationView[]) =>
+    items.map((item) => {
+      const info = modelRegistry.get(item.model)
+      return (
+        <ConversationButton
+          key={item.id}
+          conversation={item}
+          isActive={item.id === activeConversationId}
+          isKnownModel={!!info}
+          capabilities={info?.capabilities ?? []}
+          disabled={sending}
+          onSelect={setActiveConversationId}
+        />
+      )
+    })
+
+  const sidebarBody = (() => {
+    if (bootstrapping && !conversations.length) {
+      return (
+        <div className="ai-chat__skeleton-list" aria-hidden="true">
+          {Array.from({ length: 5 }).map((_, idx) => (
+            <SkeletonConversation key={idx} />
+          ))}
+        </div>
+      )
+    }
+
+    if (!filteredConversations.length) {
+      return (
+        <div className="ai-chat__empty-panel">
+          {searchQuery.trim() ? (
+            <>
+              <span>没有匹配的会话</span>
+              <small>试试其他关键字，或清空搜索框查看全部历史。</small>
+            </>
+          ) : (
+            <>
+              <span>还没有任何会话</span>
+              <small>先创建一个空会话，或直接输入内容后发送。</small>
+            </>
+          )}
+        </div>
+      )
+    }
+
+    if (conversationGroups) {
+      return conversationGroups.map((group) => (
+        <div key={group.label} className="ai-chat__group">
+          <div className="ai-chat__group-head">
+            <span>{group.label}</span>
+            <small>{group.items.length}</small>
+          </div>
+          {renderConversationItems(group.items)}
+        </div>
+      ))
+    }
+
+    return renderConversationItems(filteredConversations)
+  })()
+
+  const messageArea = (() => {
+    if (bootstrapping) {
+      return (
+        <div className="ai-chat__skeleton-stack">
+          <SkeletonBubble side="user" width="62%" />
+          <SkeletonBubble side="assistant" width="78%" />
+          <SkeletonBubble side="user" width="48%" />
+        </div>
+      )
+    }
+
+    if (!activeConversation) {
+      return (
+        <div className="ai-chat__empty-stage">
+          <Bot size={22} />
+          <h3>尚未选中会话</h3>
+          <p>左侧可创建空会话，也可以在输入框里直接写下你的第一条消息。</p>
+        </div>
+      )
+    }
+
+    if (messagesLoading) {
+      return (
+        <div className="ai-chat__skeleton-stack">
+          <SkeletonBubble side="user" width="58%" />
+          <SkeletonBubble side="assistant" width="82%" />
+        </div>
+      )
+    }
+
+    return (
+      <>
+        {!messages.length && !pendingContent && (
+          <div className="ai-chat__empty-stage">
+            <MessagesSquare size={22} />
+            <h3>会话已创建</h3>
+            <p>当前还没有消息。发送第一条内容后，后端会自动补全摘要和标题。</p>
+          </div>
+        )}
+
+        {messages.map((item) => (
+          <MessageBubble
+            key={item.id}
+            message={item}
+            isStreaming={streamingMessageId === item.id}
+            onAudioError={message.error}
+            onCopySuccess={() => message.success('已复制到剪贴板')}
+            onCopyError={() => message.error('复制失败，请检查浏览器权限')}
+          />
+        ))}
+
+        {pendingContent && (
+          <article className="ai-chat__message ai-chat__message--user">
+            <div className="ai-chat__message-avatar" aria-hidden="true">
+              我
+            </div>
+            <div className="ai-chat__bubble">
+              <div className="ai-chat__message-meta">
+                <span className="ai-chat__message-role">我</span>
+                <span className="ai-chat__message-model">
+                  {nextSendModel || activeConversation?.model || '默认模型'}
+                </span>
+                <span className="ai-chat__message-pill">等待写入</span>
+              </div>
+              <div className="ai-chat__message-content">
+                <div className="ai-chat__message-plain">{pendingContent}</div>
+              </div>
+              <div className="ai-chat__pending-note">消息已发出，等待后端完成回复并落库。</div>
+            </div>
+          </article>
+        )}
+
+        {sending && (
+          <article className="ai-chat__message ai-chat__message--assistant">
+            <div className="ai-chat__message-avatar" aria-hidden="true">
+              <Bot size={18} />
+            </div>
+            <div className="ai-chat__bubble">
+              <div className="ai-chat__typing">
+                <LoaderCircle size={16} className="ai-chat__spinner" />
+                <span>模型正在回复，已等待 {elapsed}s · 按 Esc 取消</span>
+              </div>
+              <div className="ai-chat__pending-note">
+                预计 30 秒到 2 分钟。不要自动重试，避免重复扣费。
+              </div>
+            </div>
+          </article>
+        )}
+
+        <div ref={messagesEndRef} />
+      </>
+    )
+  })()
+
+  const tokenLabel = formatTokenSum(cumulativeTokens)
+  const messageCount = messages.length
+  const sendDisabled =
+    bootstrapping ||
+    creatingConversation ||
+    !!composerBlockedReason ||
+    (!sending && (!draft.trim() || charDanger))
 
   return (
     <div className="ai-chat">
@@ -544,8 +1095,8 @@ export default function AiChatPage() {
               </div>
               <h1>真实会话接口已接入</h1>
               <p>
-            当前页面已对接后端 `/api/user/ai/*`：模型列表、会话创建、会话历史、消息历史和发送消息都可直接使用。
-          </p>
+                当前页面已对接后端 `/api/user/ai/*`：模型列表、会话创建、会话历史、消息历史和发送消息都可直接使用。
+              </p>
               <div className="ai-chat__guest-points">
                 <span>登录后自动加载你的会话历史</span>
                 <span>发送期间支持取消，不做自动重试</span>
@@ -625,276 +1176,224 @@ export default function AiChatPage() {
                 </button>
               </div>
 
+              <div className="ai-chat__search">
+                <Search size={14} />
+                <input
+                  type="search"
+                  value={searchQuery}
+                  onChange={(event) => setSearchQuery(event.target.value)}
+                  placeholder="搜索会话标题或预览"
+                  aria-label="搜索会话"
+                />
+              </div>
+
               <div className="ai-chat__conversation-list" aria-label="会话历史">
-                {!conversations.length && !conversationsLoading && !bootstrapping ? (
-                  <div className="ai-chat__empty-panel">
-                    <span>还没有任何会话</span>
-                    <small>先创建一个空会话，或直接输入内容后发送。</small>
-                  </div>
-                ) : (
-                  conversations.map((item) => {
-                    const isActive = item.id === activeConversationId
-                    return (
-                      <button
-                        key={item.id}
-                        type="button"
-                        className={`ai-chat__conversation${isActive ? ' is-active' : ''}`}
-                        onClick={() => setActiveConversationId(item.id)}
-                        disabled={sending}
-                      >
-                        <div className="ai-chat__conversation-top">
-                          <span className="ai-chat__conversation-title">{item.title}</span>
-                          <time
-                            className="ai-chat__conversation-time"
-                            dateTime={item.lastMessageAt}
-                            title={item.lastMessageAt}
-                          >
-                            {formatTimeLabel(item.lastMessageAt)}
-                          </time>
-                        </div>
-                        <div
-                          className="ai-chat__conversation-preview"
-                          title={item.lastMessagePreview ?? '等待首条消息'}
-                        >
-                          {item.lastMessagePreview ?? '等待首条消息'}
-                        </div>
-                        <div className="ai-chat__conversation-footer">
-                          <span className="ai-chat__tag">{item.model}</span>
-                          {!modelRegistry.has(item.model) && (
-                            <span className="ai-chat__tag ai-chat__tag--warn">已移出模型池</span>
-                          )}
-                        </div>
-                      </button>
-                    )
-                  })
-                )}
+                {sidebarBody}
               </div>
             </aside>
 
             <section className="ai-chat__stage">
+              <div className="ai-chat__stage-head">
+                <div className="ai-chat__stage-head-main">
+                  <div className="ai-chat__stage-eyebrow">
+                    <Bot size={14} />
+                    <span>当前会话</span>
+                  </div>
+                  <h2 className="ai-chat__stage-title">
+                    {activeConversation?.title ?? '尚未选中会话'}
+                  </h2>
+                  <div className="ai-chat__stage-meta">
+                    {activeConversation ? (
+                      <>
+                        <span className="ai-chat__stage-chip">
+                          <span>{activeConversation.model}</span>
+                          <CapabilityDots
+                            capabilities={activeConversationModelInfo?.capabilities ?? []}
+                            size="sm"
+                          />
+                        </span>
+                        <span className="ai-chat__stage-meta-item">
+                          <MessagesSquare size={12} />
+                          {messageCount} 条消息
+                        </span>
+                        {tokenLabel && (
+                          <span className="ai-chat__stage-meta-item">
+                            <Hash size={12} />
+                            {tokenLabel}
+                          </span>
+                        )}
+                      </>
+                    ) : (
+                      <span className="ai-chat__stage-meta-item">
+                        新对话会自动以你的第一条消息为标题。
+                      </span>
+                    )}
+                  </div>
+                </div>
+                <div className="ai-chat__stage-actions">
+                  <button
+                    type="button"
+                    className="ai-chat__button ai-chat__button--secondary"
+                    onClick={() => void refreshConversations()}
+                    disabled={conversationsLoading || sending}
+                    aria-label="刷新当前列表"
+                  >
+                    <RefreshCw
+                      size={14}
+                      className={conversationsLoading ? 'ai-chat__spinner' : undefined}
+                    />
+                    <span>刷新</span>
+                  </button>
+                </div>
+              </div>
+
               {activeConversationModelRemoved && (
                 <div className="ai-chat__stage-alert">
                   <div className="ai-chat__warning-card">
                     <strong>当前会话模型已移出模型池</strong>
                     <span>
-                      历史会话仍保留模型 `{activeConversation?.model}`，下一次发送会回退到
-                      `{nextSendModel ?? '管理员默认模型'}`。
+                      历史会话仍保留模型 `{activeConversation?.model}`，下一次发送会回退到 `
+                      {nextSendModel ?? '管理员默认模型'}`。
                     </span>
                   </div>
                 </div>
               )}
 
-              <div className="ai-chat__messages">
-                {bootstrapping ? (
-                  <div className="ai-chat__loader">
-                    <LoaderCircle size={18} className="ai-chat__spinner" />
-                    <span>正在加载模型与会话历史...</span>
-                  </div>
-                ) : !activeConversation ? (
-                  <div className="ai-chat__empty-stage">
-                    <Bot size={22} />
-                    <h3>尚未选中会话</h3>
-                    <p>左侧可创建空会话，也可以在输入框里直接写下你的第一条消息。</p>
-                  </div>
-                ) : messagesLoading ? (
-                  <div className="ai-chat__loader">
-                    <LoaderCircle size={18} className="ai-chat__spinner" />
-                    <span>正在拉取会话消息...</span>
-                  </div>
-                ) : (
-                  <>
-                    {!messages.length && !pendingContent && (
-                      <div className="ai-chat__empty-stage">
-                        <MessagesSquare size={22} />
-                        <h3>会话已创建</h3>
-                        <p>当前还没有消息。发送第一条内容后，后端会自动补全摘要和标题。</p>
-                      </div>
-                    )}
-
-                    {messages.map((item) => (
-                      <article
-                        key={item.id}
-                        className={`ai-chat__message ai-chat__message--${item.role === 'assistant' ? 'assistant' : 'user'}`}
-                      >
-                        <div className="ai-chat__message-avatar">
-                          {item.role === 'assistant' ? 'AI' : '我'}
-                        </div>
-                        <div className="ai-chat__bubble">
-                          <div className="ai-chat__message-meta">
-                            <span className="ai-chat__message-role">
-                              {formatRoleLabel(item.role)}
-                            </span>
-                            <span>{item.model ?? '未记录模型'}</span>
-                            <time dateTime={item.createdAt} title={item.createdAt}>
-                              {item.createdAt}
-                            </time>
-                            {item.finishReason && <span>{item.finishReason}</span>}
-                            {formatTokenLabel(item) && (
-                              <span className="ai-chat__message-tokens">
-                                {formatTokenLabel(item)}
-                              </span>
-                            )}
-                            {item.audioAvailable && item.audioModel && (
-                              <span className="ai-chat__message-tokens">
-                                <Volume2 size={11} />
-                                {item.audioModel}
-                              </span>
-                            )}
-                          </div>
-                          <div className="ai-chat__message-content">{item.content}</div>
-                          {item.role === 'assistant' && item.audioAvailable && item.audioUrl && (
-                            <MessageAudio message={item} onError={message.error} />
-                          )}
-                        </div>
-                      </article>
-                    ))}
-
-                    {pendingContent && (
-                      <article className="ai-chat__message ai-chat__message--user">
-                        <div className="ai-chat__message-avatar">我</div>
-                        <div className="ai-chat__bubble">
-                          <div className="ai-chat__message-meta">
-                            <span className="ai-chat__message-role">我</span>
-                            <span>{nextSendModel || activeConversation?.model || '默认模型'}</span>
-                            <span>等待写入</span>
-                          </div>
-                          <div className="ai-chat__message-content">{pendingContent}</div>
-                          <div className="ai-chat__pending-note">消息已发出，等待后端完成回复并落库。</div>
-                        </div>
-                      </article>
-                    )}
-
-                    {sending && (
-                      <article className="ai-chat__message ai-chat__message--assistant">
-                        <div className="ai-chat__message-avatar">AI</div>
-                        <div className="ai-chat__bubble">
-                          <div className="ai-chat__typing">
-                            <LoaderCircle size={16} className="ai-chat__spinner" />
-                            <span>模型正在回复，已等待 {elapsed}s</span>
-                          </div>
-                          <div className="ai-chat__pending-note">
-                            预计 30 秒到 2 分钟，可点击取消。不要自动重试，避免重复扣费。
-                          </div>
-                        </div>
-                      </article>
-                    )}
-
-                    <div ref={messagesEndRef} />
-                  </>
+              <div className="ai-chat__messages-wrap">
+                <div ref={messagesContainerRef} className="ai-chat__messages">
+                  {messageArea}
+                </div>
+                {!isAtBottom && activeConversation && !bootstrapping && (
+                  <button
+                    type="button"
+                    className="ai-chat__jump-bottom"
+                    onClick={handleJumpToBottom}
+                    aria-label="跳到最新消息"
+                  >
+                    <ArrowDown size={14} />
+                    <span>跳到最新</span>
+                  </button>
                 )}
               </div>
 
               <div className="ai-chat__composer">
+                {composerBlockedReason && (
+                  <div className="ai-chat__composer-banner ai-chat__composer-banner--warn">
+                    {composerBlockedReason}
+                  </div>
+                )}
+                {ttsModelInvalid && (
+                  <div className="ai-chat__composer-banner">
+                    所选语音模型已被移出模型池，将回退到默认值。
+                  </div>
+                )}
+                {audioOutputModels.length === 0 && responseAudio && (
+                  <div className="ai-chat__composer-banner">
+                    当前模型池中没有 `audio_output` 模型，无法请求语音回放。
+                  </div>
+                )}
+
                 <div className="ai-chat__composer-shell">
-                  <textarea
-                    className="ai-chat__textarea"
-                    value={draft}
-                    onChange={(event) => setDraft(event.target.value)}
-                    onKeyDown={handleDraftKeyDown}
-                    placeholder={
-                      composerBlockedReason ??
-                      '输入你的问题。按 Enter 发送，Shift + Enter 换行。'
-                    }
-                    maxLength={8000}
-                    disabled={
-                      bootstrapping ||
-                      sending ||
-                      creatingConversation ||
-                      !!composerBlockedReason
-                    }
-                  />
-                  <div className="ai-chat__composer-footer">
-                  <div className="ai-chat__composer-meta">
-                    <div className="ai-chat__field ai-chat__field--compact">
-                      <label htmlFor="ai-model-select">当前请求模型</label>
-                      <select
-                        id="ai-model-select"
-                        className="ai-chat__select ai-chat__select--composer"
-                        value={selectedModel}
-                        onChange={(event) => setSelectedModel(event.target.value)}
+                  <div className="ai-chat__composer-controls">
+                    <select
+                      aria-label="主对话模型"
+                      className="ai-chat__select ai-chat__select--composer"
+                      value={selectedModel}
+                      onChange={(event) => setSelectedModel(event.target.value)}
+                      disabled={
+                        bootstrapping || sending || creatingConversation || noModelsConfigured
+                      }
+                    >
+                      {!selectedModel && <option value="">使用后端默认模型</option>}
+                      {models.map((item) => (
+                        <option key={item.model} value={item.model}>
+                          {item.model}
+                        </option>
+                      ))}
+                    </select>
+                    <label className="ai-chat__tts-toggle">
+                      <input
+                        type="checkbox"
+                        checked={responseAudio}
+                        onChange={(event) => setResponseAudio(event.target.checked)}
                         disabled={
-                          bootstrapping || sending || creatingConversation || noModelsConfigured
+                          bootstrapping ||
+                          sending ||
+                          creatingConversation ||
+                          audioOutputModels.length === 0
                         }
+                      />
+                      <Volume2 size={13} />
+                      <span>语音回放</span>
+                    </label>
+                    {responseAudio && audioOutputModels.length > 0 && (
+                      <select
+                        aria-label="语音回放模型"
+                        className="ai-chat__select ai-chat__select--composer"
+                        value={ttsModel}
+                        onChange={(event) => setTtsModel(event.target.value)}
+                        disabled={bootstrapping || sending || creatingConversation}
                       >
-                        {!selectedModel && <option value="">使用后端默认模型</option>}
-                        {models.map((item) => (
+                        <option value="">使用后端默认语音模型</option>
+                        {audioOutputModels.map((item) => (
                           <option key={item.model} value={item.model}>
                             {item.model}
                           </option>
                         ))}
                       </select>
-                    </div>
-                    <div className="ai-chat__tts-controls">
-                      <label className="ai-chat__tts-toggle">
-                        <input
-                          type="checkbox"
-                          checked={responseAudio}
-                          onChange={(event) => setResponseAudio(event.target.checked)}
-                          disabled={
-                            bootstrapping ||
-                            sending ||
-                            creatingConversation ||
-                            audioOutputModels.length === 0
-                          }
-                        />
-                        <Volume2 size={13} />
-                        <span>请求语音回放</span>
-                      </label>
-                      {responseAudio && audioOutputModels.length > 0 && (
-                        <select
-                          aria-label="语音回放模型"
-                          className="ai-chat__select ai-chat__select--composer"
-                          value={ttsModel}
-                          onChange={(event) => setTtsModel(event.target.value)}
-                          disabled={bootstrapping || sending || creatingConversation}
-                        >
-                          <option value="">使用后端默认语音模型</option>
-                          {audioOutputModels.map((item) => (
-                            <option key={item.model} value={item.model}>
-                              {item.model}
-                            </option>
-                          ))}
-                        </select>
-                      )}
-                    </div>
-                    <div className="ai-chat__composer-hint">
-                      <div>
-                        <strong>Enter</strong> 发送，<strong>Shift + Enter</strong> 换行。
-                      </div>
-                      {composerBlockedReason && <div>{composerBlockedReason}</div>}
-                      {ttsModelInvalid && <div>所选语音模型已被移出模型池，将回退到默认值。</div>}
-                      {audioOutputModels.length === 0 && responseAudio && (
-                        <div>当前模型池中没有 `audio_output` 模型，无法请求语音回放。</div>
-                      )}
+                    )}
+                  </div>
+
+                  <div className="ai-chat__composer-textarea-wrap">
+                    <textarea
+                      ref={textareaRef}
+                      className="ai-chat__textarea"
+                      value={draft}
+                      onChange={(event) => setDraft(event.target.value)}
+                      onKeyDown={handleDraftKeyDown}
+                      placeholder="输入你的问题。Enter 发送，Shift+Enter 换行。"
+                      maxLength={CHAR_LIMIT}
+                      disabled={
+                        bootstrapping ||
+                        sending ||
+                        creatingConversation ||
+                        !!composerBlockedReason
+                      }
+                      rows={1}
+                    />
+                    <div
+                      className={
+                        'ai-chat__char-counter' +
+                        (charDanger
+                          ? ' ai-chat__char-counter--danger'
+                          : charWarn
+                            ? ' ai-chat__char-counter--warn'
+                            : '')
+                      }
+                      aria-live="polite"
+                    >
+                      {charCount} / {CHAR_LIMIT}
                     </div>
                   </div>
-                    <div className="ai-chat__composer-actions">
-                      {sending && (
-                        <button
-                          type="button"
-                          className="ai-chat__button ai-chat__button--danger"
-                          onClick={handleCancel}
-                        >
-                          <X size={16} />
-                          <span>取消</span>
-                        </button>
-                      )}
-                      <button
-                        type="button"
-                        className="ai-chat__button ai-chat__button--primary"
-                        onClick={() => void handleSend()}
-                        disabled={
-                          !draft.trim() ||
-                          bootstrapping ||
-                          sending ||
-                          creatingConversation ||
-                          !!composerBlockedReason
-                        }
-                      >
-                        <SendHorizontal size={16} />
-                        <span>{sending ? `发送中 ${elapsed}s` : '发送'}</span>
-                      </button>
+
+                  <div className="ai-chat__composer-bottom">
+                    <div className="ai-chat__composer-hint">
+                      {sending
+                        ? `模型正在回复，已等待 ${elapsed}s · 按 Esc 取消`
+                        : 'Enter 发送 · Shift + Enter 换行'}
                     </div>
+                    <button
+                      type="button"
+                      className={
+                        'ai-chat__button ' +
+                        (sending ? 'ai-chat__button--danger' : 'ai-chat__button--primary')
+                      }
+                      onClick={handlePrimaryClick}
+                      disabled={sendDisabled}
+                    >
+                      {sending ? <StopCircle size={16} /> : <SendHorizontal size={16} />}
+                      <span>{sending ? `取消 ${elapsed}s` : '发送'}</span>
+                    </button>
                   </div>
                 </div>
               </div>

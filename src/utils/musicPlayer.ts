@@ -39,11 +39,7 @@ export function formatDuration(sec?: number) {
 
 export function normalizeCoverUrl(url?: string): string | undefined {
   if (!url) return undefined
-  if (
-    typeof window !== 'undefined' &&
-    window.location.protocol === 'https:' &&
-    url.startsWith('http://')
-  ) {
+  if (url.startsWith('http://')) {
     return 'https:' + url.slice(5)
   }
   return url
