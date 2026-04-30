@@ -12,6 +12,7 @@ const LoginPage = lazy(() => import('./pages/LoginPage'))
 const RegisterPage = lazy(() => import('./pages/RegisterPage'))
 const MusicLayout = lazy(() => import('./pages/MusicLayout'))
 const MusicPage = lazy(() => import('./pages/MusicPage'))
+const AiChatPage = lazy(() => import('./pages/AiChatPage'))
 const MusicPlaylistDetailPage = lazy(
   () => import('./pages/MusicPlaylistDetailPage'),
 )
@@ -63,6 +64,7 @@ export default function App() {
               <Suspense fallback={<RouteFallback />}>
                 <Routes>
                   <Route path="/" element={<HomePage />} />
+                  <Route path="/ai-chat" element={<AiChatPage />} />
                   <Route path="/music" element={<MusicLayout />}>
                     <Route index element={<MusicPage />} />
                     <Route

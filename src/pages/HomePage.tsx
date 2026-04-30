@@ -19,6 +19,7 @@ export default function HomePage() {
   const [showTop, setShowTop] = useState(false)
   const [isTopbarPinned, setIsTopbarPinned] = useState(false)
   const sectionRefs = useRef<Record<number, HTMLElement | null>>({})
+  const contentRef = useRef<HTMLElement | null>(null)
 
   useEffect(() => {
     getNav()
@@ -62,7 +63,8 @@ export default function HomePage() {
   }, [categories, filterLinks, normalizedQuery])
 
   useEffect(() => {
-    if (!visibleCategories.length) return
+    const root = contentRef.current
+    if (!root || !visibleCategories.length) return
 
     const observer = new IntersectionObserver(
       (entries) => {
@@ -75,7 +77,11 @@ export default function HomePage() {
           if (id) setActiveId(id)
         }
       },
-      { rootMargin: '-20% 0px -70% 0px', threshold: [0, 0.2, 0.6, 1] },
+      {
+        root,
+        rootMargin: '-18% 0px -68% 0px',
+        threshold: [0, 0.2, 0.6, 1],
+      },
     )
 
     Object.values(sectionRefs.current).forEach((element) => {
@@ -92,15 +98,18 @@ export default function HomePage() {
   }, [activeId, visibleCategories])
 
   useEffect(() => {
+    const root = contentRef.current
+    if (!root) return
+
     const onScroll = () => {
-      const nextY = window.scrollY
+      const nextY = root.scrollTop
       setShowTop(nextY > 320)
       setIsTopbarPinned(nextY > 24)
     }
 
     onScroll()
-    window.addEventListener('scroll', onScroll, { passive: true })
-    return () => window.removeEventListener('scroll', onScroll)
+    root.addEventListener('scroll', onScroll, { passive: true })
+    return () => root.removeEventListener('scroll', onScroll)
   }, [])
 
   const scrollTo = (id: number) => {
@@ -111,7 +120,8 @@ export default function HomePage() {
     setActiveId(id)
   }
 
-  const scrollTop = () => window.scrollTo({ top: 0, behavior: 'smooth' })
+  const scrollTop = () =>
+    contentRef.current?.scrollTo({ top: 0, behavior: 'smooth' })
 
   return (
     <div className="home">
@@ -134,6 +144,12 @@ export default function HomePage() {
             className={({ isActive }) => `topbar-nav__link${isActive ? ' is-active' : ''}`}
           >
             音乐
+          </RouterNavLink>
+          <RouterNavLink
+            to="/ai-chat"
+            className={({ isActive }) => `topbar-nav__link${isActive ? ' is-active' : ''}`}
+          >
+            AI对话
           </RouterNavLink>
         </nav>
 
@@ -179,7 +195,7 @@ export default function HomePage() {
         </nav>
       </aside>
 
-      <main className="content">
+      <main ref={contentRef} className="content">
         <header className="hero">
           <div>
             <h1>

@@ -35,6 +35,12 @@ export default function MusicLayout() {
           >
             音乐
           </RouterNavLink>
+          <RouterNavLink
+            to="/ai-chat"
+            className={({ isActive }) => `topbar-nav__link${isActive ? ' is-active' : ''}`}
+          >
+            AI对话
+          </RouterNavLink>
         </nav>
 
         <div className="topbar-actions">

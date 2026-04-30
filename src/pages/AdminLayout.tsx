@@ -60,7 +60,7 @@ export default function AdminLayout() {
 
   const doLogout = () => {
     auth.logout()
-    navigate('/admin/login', { replace: true })
+    navigate('/', { replace: true })
   }
 
   return (

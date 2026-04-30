@@ -1,5 +1,5 @@
 import { createContext, useContext, useEffect, useState, type ReactNode } from 'react'
-import { getToken, setToken } from '../api/client'
+import { AUTH_CHANGE_EVENT, getToken, setToken } from '../api/client'
 
 interface AuthState {
   token: string | null
@@ -19,12 +19,18 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   )
 
   useEffect(() => {
-    const onStorage = () => {
-      setTok(getToken())
-      setUsername(localStorage.getItem(USER_KEY))
+    const syncAuthState = () => {
+      const token = getToken()
+      setTok(token)
+      setUsername(token ? localStorage.getItem(USER_KEY) : null)
     }
-    window.addEventListener('storage', onStorage)
-    return () => window.removeEventListener('storage', onStorage)
+
+    window.addEventListener('storage', syncAuthState)
+    window.addEventListener(AUTH_CHANGE_EVENT, syncAuthState)
+    return () => {
+      window.removeEventListener('storage', syncAuthState)
+      window.removeEventListener(AUTH_CHANGE_EVENT, syncAuthState)
+    }
   }, [])
 
   const value: AuthState = {

@@ -1,16 +1,33 @@
 .music-page {
-  min-height: 100vh;
+  height: 100vh;
+  overflow: hidden;
+  display: grid;
+  grid-template-rows: auto minmax(0, 1fr);
+  grid-template-areas:
+    'topbar'
+    'body';
   position: relative;
   isolation: isolate;
 }
 
 .music-body {
+  grid-area: body;
   position: relative;
   z-index: 1;
+  min-height: 0;
+  height: 100%;
   width: 100%;
   max-width: none;
   margin: 0;
   padding: 0 0 72px;
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+}
+
+.music-body > * {
+  flex: 1;
+  min-height: 0;
 }
 
 .music-body--with-player {
@@ -20,6 +37,7 @@
 .music-browser,
 .music-browser.ant-card {
   position: relative;
+  height: 100%;
   overflow: hidden;
   border: none;
   border-radius: 0;
@@ -31,6 +49,7 @@
 
 .music-browser .ant-card-body {
   background: transparent;
+  height: 100%;
 }
 
 .music-browser__layout {
@@ -38,21 +57,23 @@
   z-index: 1;
   display: grid;
   grid-template-columns: 240px minmax(0, 1fr);
+  min-height: 0;
+  height: 100%;
   gap: 0;
   align-items: start;
   padding: 0;
 }
 
 .music-browser__layout--search {
-  min-height: 100vh;
+  min-height: 0;
 }
 
 .music-browser__sidebar {
-  position: sticky;
-  top: 92px;
-  align-self: start;
-  min-height: calc(100vh - 108px);
-  max-height: calc(100vh - 108px);
+  position: relative;
+  align-self: stretch;
+  min-height: 0;
+  height: calc(100% - 32px);
+  max-height: none;
   margin: 16px 0 16px 16px;
   display: flex;
   flex-direction: column;
@@ -64,6 +85,7 @@
   box-shadow: var(--shadow-sm);
   backdrop-filter: saturate(180%) blur(14px);
   -webkit-backdrop-filter: saturate(180%) blur(14px);
+  overflow: hidden;
 }
 
 .music-browser__sidebar-head {
@@ -212,6 +234,10 @@
 .music-browser__content {
   position: relative;
   min-width: 0;
+  min-height: 0;
+  height: 100%;
+  overflow-y: auto;
+  overscroll-behavior: contain;
   z-index: 1;
   width: 100%;
   padding: 40px 48px 100px;
@@ -410,6 +436,10 @@
   display: flex;
   flex-direction: column;
   gap: 16px;
+  min-height: 0;
+  height: 100%;
+  overflow-y: auto;
+  overscroll-behavior: contain;
   width: 100%;
   padding: 40px 48px 100px;
 }
@@ -2059,6 +2089,8 @@
 
   .music-browser__layout {
     grid-template-columns: 1fr;
+    grid-template-rows: auto minmax(0, 1fr);
+    height: 100%;
     gap: 0;
     padding: 0 0 18px;
   }
@@ -2068,9 +2100,9 @@
   }
 
   .music-browser__sidebar {
-    position: sticky;
-    top: 96px;
+    position: relative;
     min-height: 0;
+    height: auto;
     max-height: none;
     margin: 0;
     border: none;
@@ -2082,10 +2114,12 @@
   }
 
   .music-browser__content {
+    min-height: 0;
     padding: 20px 16px 80px;
   }
 
   .music-detail-shell {
+    min-height: 0;
     padding: 20px 16px 80px;
   }
 

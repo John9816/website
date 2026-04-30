@@ -6,6 +6,8 @@ const BASE = ((import.meta.env.VITE_API_BASE as string | undefined) ?? '')
 
 const TOKEN_KEY = 'nav.token'
 const TOKEN_TYPE_KEY = 'nav.tokenType'
+const USER_KEY = 'nav.username'
+export const AUTH_CHANGE_EVENT = 'nav-auth-change'
 
 export function getToken(): string | null {
   return localStorage.getItem(TOKEN_KEY)
@@ -23,6 +25,8 @@ export function setToken(token: string | null, tokenType = 'Bearer') {
     localStorage.removeItem(TOKEN_KEY)
     localStorage.removeItem(TOKEN_TYPE_KEY)
   }
+
+  window.dispatchEvent(new Event(AUTH_CHANGE_EVENT))
 }
 
 export class ApiError extends Error {
@@ -73,8 +77,9 @@ export async function request<T>(path: string, opts: Options = {}): Promise<T> {
   }
 
   if (res.status === 401) {
+    localStorage.removeItem(USER_KEY)
     setToken(null)
-    throw new ApiError(401, '未授权，请重新登录')
+    throw new ApiError(401, '登录已过期，请重新登录')
   }
 
   let json: ApiEnvelope<T>

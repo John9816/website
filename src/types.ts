@@ -43,6 +43,7 @@ export interface LoginResponse {
   tokenType: string
   expiresInMinutes: number
   username: string
+  role?: string
 }
 
 export interface ImageGenerateResult {
@@ -65,6 +66,56 @@ export interface GeneratedImageView {
   imageUrl: string
   model: string
   createdAt: string
+}
+
+export type AiModelCapability =
+  | 'text'
+  | 'audio_input'
+  | 'audio_output'
+  | 'voice_customization'
+
+export interface AiModelView {
+  model: string
+  defaultModel: boolean
+  capabilities: AiModelCapability[]
+}
+
+export interface AiConversationView {
+  id: number
+  title: string
+  model: string
+  lastMessagePreview: string | null
+  lastMessageAt: string
+  createdAt: string
+  updatedAt: string
+}
+
+export interface AiChatMessageView {
+  id: number
+  role: 'user' | 'assistant' | 'system'
+  content: string
+  model: string | null
+  finishReason: string | null
+  promptTokens: number | null
+  completionTokens: number | null
+  totalTokens: number | null
+  createdAt: string
+}
+
+export interface AiConversationCreateRequest {
+  title?: string
+  model?: string
+}
+
+export interface AiConversationSendRequest {
+  content: string
+  model?: string
+}
+
+export interface AiConversationReplyView {
+  conversation: AiConversationView
+  userMessage: AiChatMessageView
+  assistantMessage: AiChatMessageView
 }
 
 export type MusicSourceId = 'qq' | 'netease' | 'kuwo'

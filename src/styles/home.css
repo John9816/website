@@ -3,20 +3,22 @@
 .home {
   display: grid;
   grid-template-columns: 240px minmax(0, 1fr);
-  grid-template-rows: auto 1fr;
+  grid-template-rows: auto minmax(0, 1fr);
   grid-template-areas:
     'topbar topbar'
     'sidebar content';
-  min-height: 100vh;
+  height: 100vh;
+  overflow: hidden;
 }
 
 /* ---------- Sidebar ---------- */
 .sidebar {
   grid-area: sidebar;
-  position: sticky;
-  top: 92px;
-  align-self: start;
-  max-height: calc(100vh - 108px);
+  position: relative;
+  align-self: stretch;
+  height: calc(100% - 32px);
+  min-height: 0;
+  max-height: none;
   margin: 16px 0 16px 16px;
   background: var(--panel-glass);
   backdrop-filter: saturate(180%) blur(14px);
@@ -28,6 +30,7 @@
   padding: 18px 14px;
   gap: 8px;
   z-index: 5;
+  overflow: hidden;
 }
 
 .sidebar-head {
@@ -202,6 +205,10 @@
 /* ---------- Content ---------- */
 .content {
   grid-area: content;
+  min-height: 0;
+  height: 100%;
+  overflow-y: auto;
+  overscroll-behavior: contain;
   padding: 40px 48px 100px;
   max-width: 1280px;
   width: 100%;
@@ -538,8 +545,7 @@
 /* ---------- Responsive ---------- */
 @media (max-width: 1024px) {
   .sidebar {
-    top: 88px;
-    max-height: calc(100vh - 104px);
+    height: calc(100% - 32px);
   }
 
   .content {
@@ -550,18 +556,17 @@
 @media (max-width: 768px) {
   .home {
     grid-template-columns: 1fr;
-    grid-template-rows: auto auto 1fr;
+    grid-template-rows: auto auto minmax(0, 1fr);
     grid-template-areas:
       'topbar'
       'sidebar'
       'content';
   }
   .sidebar {
-    position: sticky;
-    top: 96px;
-    max-height: none;
-    margin: 0;
+    position: relative;
     height: auto;
+    min-height: 0;
+    margin: 0;
     border: none;
     border-top: 1px solid var(--border);
     border-bottom: 1px solid var(--border);
@@ -590,6 +595,7 @@
     display: none;
   }
   .content {
+    min-height: 0;
     padding: 20px 16px 80px;
   }
   .hero h1 {
