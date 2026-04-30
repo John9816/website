@@ -1,10 +1,13 @@
+import { Suspense, lazy } from 'react'
 import { Link as RouterLink, NavLink as RouterNavLink, Outlet } from 'react-router-dom'
 import { LogIn, Settings } from 'lucide-react'
 import ThemeToggle from '../components/ThemeToggle'
-import MusicPlayerBar from '../components/MusicPlayerBar'
 import { useAuth } from '../context/AuthContext'
 import { useMusicPlayer } from '../context/MusicPlayerContext'
+import '../styles/topbar.css'
 import '../styles/music.css'
+
+const MusicPlayerBar = lazy(() => import('../components/MusicPlayerBar'))
 
 export default function MusicLayout() {
   const auth = useAuth()
@@ -54,7 +57,9 @@ export default function MusicLayout() {
         <Outlet />
       </div>
 
-      <MusicPlayerBar />
+      <Suspense fallback={null}>
+        <MusicPlayerBar />
+      </Suspense>
     </div>
   )
 }

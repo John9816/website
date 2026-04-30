@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useRef, useState, type CSSProperties } from 'react'
+import { useCallback, useEffect, useMemo, useRef, useState, type CSSProperties } from 'react'
 import { App as AntApp, Button } from 'antd'
 import { Link, useParams } from 'react-router-dom'
 import { ChevronLeft, Play, RefreshCcw } from 'lucide-react'
@@ -35,36 +35,64 @@ function formatPlayCount(value?: number) {
 export default function MusicPlaylistDetailPage() {
   const { message } = AntApp.useApp()
   const { source, id } = useParams()
-  const { playPlaylist, setPlaylist } = useMusicPlayer()
+  const { playPlaylist, setPlaylist, setAutoNextHandler } = useMusicPlayer()
   const [page, setPage] = useState(1)
   const [pageSize, setPageSize] = useState(DEFAULT_PAGE_SIZE)
   const [loading, setLoading] = useState(false)
   const [detail, setDetail] = useState<PlaylistDetailView | null>(null)
   const requestIdRef = useRef(0)
+  const autoplayPendingRef = useRef(false)
 
   const validSource = isMusicSourceId(source) ? source : null
 
-  useEffect(() => {
-    if (!validSource || !id) return
-
-    const requestId = ++requestIdRef.current
-    setLoading(true)
-
-    musicPlaylistDetail(validSource, id, page, pageSize)
-      .then((data) => {
+  const loadPage = useCallback(
+    async (targetPage: number, options?: { autoplay?: boolean }) => {
+      if (!validSource || !id) return
+      const requestId = ++requestIdRef.current
+      setLoading(true)
+      try {
+        const data = await musicPlaylistDetail(validSource, id, targetPage, pageSize)
         if (requestId !== requestIdRef.current) return
         setDetail(data)
-        setPlaylist(data.list)
-      })
-      .catch((error) => {
+        if (options?.autoplay && data.list.length) {
+          void playPlaylist(data.list)
+        } else {
+          setPlaylist(data.list)
+        }
+      } catch (error) {
         if (requestId !== requestIdRef.current) return
         message.error((error as Error).message)
-      })
-      .finally(() => {
-        if (requestId !== requestIdRef.current) return
-        setLoading(false)
-      })
-  }, [id, message, page, pageSize, setPlaylist, validSource])
+      } finally {
+        if (requestId === requestIdRef.current) setLoading(false)
+      }
+    },
+    [id, message, pageSize, playPlaylist, setPlaylist, validSource],
+  )
+
+  useEffect(() => {
+    if (!validSource || !id) return
+    const wantAutoplay = autoplayPendingRef.current
+    autoplayPendingRef.current = false
+    void loadPage(page, { autoplay: wantAutoplay })
+  }, [id, loadPage, page, validSource])
+
+  useEffect(() => {
+    const total = detail?.total
+    if (!validSource || !id || typeof total !== 'number') {
+      setAutoNextHandler(null)
+      return
+    }
+    const hasNextPage = page * pageSize < total
+    if (!hasNextPage) {
+      setAutoNextHandler(null)
+      return
+    }
+    setAutoNextHandler(() => {
+      autoplayPendingRef.current = true
+      setPage((current) => current + 1)
+    })
+    return () => setAutoNextHandler(null)
+  }, [detail?.total, id, page, pageSize, setAutoNextHandler, validSource])
 
   const metaText = useMemo(() => {
     if (!validSource) return ''

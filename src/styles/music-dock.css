@@ -1,11 +1,10 @@
 .music-dock {
   position: fixed;
-  --accent: #d33a31;
-  --accent-hover: #b92d25;
   --panel-glass: rgba(29, 18, 20, 0.92);
   --panel-alt: rgba(255, 255, 255, 0.08);
   --hover: rgba(255, 255, 255, 0.12);
   --border: rgba(255, 255, 255, 0.08);
+  --border-strong: rgba(255, 255, 255, 0.14);
   --text: #f8fafc;
   --text-dim: rgba(226, 232, 240, 0.68);
   right: 16px;
@@ -19,7 +18,7 @@
     var(--panel-glass);
   backdrop-filter: saturate(180%) blur(18px);
   -webkit-backdrop-filter: saturate(180%) blur(18px);
-  box-shadow: 0 22px 46px rgba(2, 8, 23, 0.28);
+  box-shadow: var(--shadow-lg);
   z-index: 60;
   cursor: default;
   touch-action: auto;
@@ -32,11 +31,6 @@
     transform 0.22s ease;
 }
 
-[data-theme='dark'] .music-dock {
-  --accent: #eb645b;
-  --accent-hover: #d64a42;
-}
-
 .music-dock::before {
   content: '';
   position: absolute;
@@ -44,7 +38,7 @@
   width: 110px;
   height: 110px;
   border-radius: 50%;
-  background: rgba(211, 58, 49, 0.16);
+  background: color-mix(in srgb, var(--accent) 16%, transparent);
   filter: blur(16px);
   pointer-events: none;
 }
@@ -61,7 +55,7 @@
 
 .music-dock.is-dragging {
   cursor: grabbing;
-  box-shadow: 0 28px 54px rgba(2, 8, 23, 0.34);
+  box-shadow: var(--shadow-lg);
 }
 
 .music-dock__header {
@@ -243,7 +237,7 @@
   height: 12px;
   border-radius: 50%;
   background: #fff;
-  box-shadow: 0 2px 10px rgba(2, 8, 23, 0.32);
+  box-shadow: var(--shadow-md);
   transform: translateY(-50%) scale(0.92);
   transition: transform 0.12s ease;
   pointer-events: none;

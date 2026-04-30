@@ -17,6 +17,8 @@ import {
   normalizeMediaUrl,
 } from '../utils/musicPlayer'
 
+type AutoNextHandler = () => void | Promise<void>
+
 type MusicPlayerContextValue = {
   current: PlayInfo | null
   playlist: SongSearchItem[]
@@ -46,6 +48,7 @@ type MusicPlayerContextValue = {
   seekToTime: (time: number) => void
   setVolume: (value: number) => void
   toggleMuted: () => void
+  setAutoNextHandler: (handler: AutoNextHandler | null) => void
 }
 
 const MusicPlayerContext = createContext<MusicPlayerContextValue | null>(null)
@@ -53,6 +56,7 @@ const MusicPlayerContext = createContext<MusicPlayerContextValue | null>(null)
 export function MusicPlayerProvider({ children }: { children: ReactNode }) {
   const { message } = AntApp.useApp()
   const audioRef = useRef<HTMLAudioElement | null>(null)
+  const autoNextHandlerRef = useRef<AutoNextHandler | null>(null)
 
   const [current, setCurrent] = useState<PlayInfo | null>(null)
   const [isPlaying, setIsPlaying] = useState(false)
@@ -94,16 +98,9 @@ export function MusicPlayerProvider({ children }: { children: ReactNode }) {
       setPreferredQualityState(quality)
       try {
         const info = await musicPlay(row.source, row.id, quality)
-        const unsupported = detectUnsupportedFormat(info.playUrl)
         setCurrent(info)
         setCurrentTime(0)
         setDuration(info.durationSec ?? 0)
-
-        if (unsupported) {
-          message.error(
-            `当前返回的是 ${unsupported} 格式，浏览器无法直接播放，请换个音质或音源再试。`,
-          )
-        }
       } catch (error) {
         message.error((error as Error).message)
       } finally {
@@ -180,6 +177,37 @@ export function MusicPlayerProvider({ children }: { children: ReactNode }) {
     setMuted((value) => !value)
   }, [])
 
+  const setAutoNextHandler = useCallback(
+    (handler: AutoNextHandler | null) => {
+      autoNextHandlerRef.current = handler
+    },
+    [],
+  )
+
+  const advanceQueue = useCallback(() => {
+    if (canNext) {
+      void playSong(playlist[currentIndex + 1], preferredQuality)
+      return true
+    }
+    if (autoNextHandlerRef.current) {
+      void autoNextHandlerRef.current()
+      return true
+    }
+    return false
+  }, [canNext, currentIndex, playSong, playlist, preferredQuality])
+
+  useEffect(() => {
+    if (!current || !unsupportedFormat) return
+
+    setIsPlaying(false)
+    const advanced = advanceQueue()
+    message.error(
+      `当前返回的是 ${unsupportedFormat} 格式，浏览器无法直接播放${
+        advanced ? '，已自动切到下一首。' : '。请切换音质或音源后重试。'
+      }`,
+    )
+  }, [advanceQueue, current, message, unsupportedFormat])
+
   useEffect(() => {
     if (unsupportedFormat) return
 
@@ -227,6 +255,7 @@ export function MusicPlayerProvider({ children }: { children: ReactNode }) {
       seekToTime,
       setVolume,
       toggleMuted,
+      setAutoNextHandler,
     }),
     [
       canNext,
@@ -253,6 +282,7 @@ export function MusicPlayerProvider({ children }: { children: ReactNode }) {
       togglePlay,
       unsupportedFormat,
       volume,
+      setAutoNextHandler,
     ],
   )
 
@@ -277,13 +307,17 @@ export function MusicPlayerProvider({ children }: { children: ReactNode }) {
         onPause={() => setIsPlaying(false)}
         onEnded={() => {
           setIsPlaying(false)
-          if (canNext) {
-            void playSong(playlist[currentIndex + 1], preferredQuality)
-          }
+          advanceQueue()
         }}
         onError={(event) => {
           const el = event.currentTarget as HTMLAudioElement
-          message.error(`播放失败：${describeMediaError(el.error)}`)
+          setIsPlaying(false)
+          const advanced = advanceQueue()
+          message.error(
+            `播放失败：${describeMediaError(el.error)}${
+              advanced ? '，已自动切到下一首。' : ''
+            }`,
+          )
         }}
       />
     </MusicPlayerContext.Provider>

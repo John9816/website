@@ -1,0 +1,65 @@
+- generic [ref=e12]:
+  - banner [ref=e13]:
+    - link "我的导航" [ref=e14] [cursor=pointer]:
+      - /url: /
+      - text: 我的导航
+    - navigation "主导航" [ref=e15]:
+      - link "导航" [ref=e16] [cursor=pointer]:
+        - /url: /
+      - link "音乐" [ref=e17] [cursor=pointer]:
+        - /url: /music
+    - generic [ref=e18]:
+      - link "登录" [ref=e19] [cursor=pointer]:
+        - /url: /login
+        - img [ref=e20]
+        - text: 登录
+      - button "切换到深色模式" [ref=e23]:
+        - img [ref=e25]
+  - generic [ref=e30]:
+    - complementary [ref=e31]:
+      - generic [ref=e32]:
+        - generic [ref=e33]: 功能导航
+        - generic [ref=e34]: 4 个模块
+      - navigation "音乐功能导航" [ref=e35]:
+        - button "榜单" [ref=e36] [cursor=pointer]:
+          - img [ref=e38]
+          - generic [ref=e44]: 榜单
+        - button "歌单" [ref=e45] [cursor=pointer]:
+          - img [ref=e47]
+          - generic [ref=e49]: 歌单
+        - button "新歌" [ref=e50] [cursor=pointer]:
+          - img [ref=e52]
+          - generic [ref=e54]: 新歌
+        - button "搜索" [active] [pressed] [ref=e55] [cursor=pointer]:
+          - img [ref=e57]
+          - generic [ref=e60]: 搜索
+      - generic "当前模块摘要" [ref=e61]:
+        - generic [ref=e62]: 音乐中心
+        - generic [ref=e63]:
+          - img [ref=e64]
+          - generic [ref=e66]: 多入口浏览
+        - generic [ref=e67]:
+          - strong [ref=e68]: 搜索、榜单、歌单、新歌
+          - generic [ref=e69]: 左侧四个入口都是独立模块。
+          - generic [ref=e70]: 只有切到搜索模块时才会显示搜索控件。
+    - region "独立搜索" [ref=e216]:
+      - generic [ref=e217]:
+        - generic [ref=e218]: 搜索模块
+        - heading "搜索歌曲" [level=2] [ref=e219]
+        - paragraph [ref=e220]: 在这里集中搜索歌曲、歌手、专辑，搜索结果不会再混到其它浏览模块里。
+      - generic [ref=e221]:
+        - radiogroup "segmented control" [ref=e222]:
+          - generic [ref=e223]:
+            - generic [ref=e224] [cursor=pointer]:
+              - radio "QQ 音乐" [checked]
+              - generic "QQ 音乐" [ref=e225]
+            - generic [ref=e226] [cursor=pointer]:
+              - radio "网易云"
+              - generic "网易云" [ref=e227]
+            - generic [ref=e228] [cursor=pointer]:
+              - radio "酷我"
+              - generic "酷我" [ref=e229]
+        - generic [ref=e231]:
+          - searchbox "歌曲 / 歌手 / 专辑" [ref=e233]
+          - button "搜 索" [ref=e236] [cursor=pointer]:
+            - generic [ref=e237]: 搜 索

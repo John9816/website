@@ -304,7 +304,11 @@ export default function MusicExplorer() {
       bordered={false}
       styles={{ body: { padding: 0 } }}
     >
-      <div className="music-browser__layout">
+      <div
+        className={`music-browser__layout${
+          view === 'search' ? ' music-browser__layout--search' : ''
+        }`}
+      >
         <aside className="music-browser__sidebar">
           <div className="music-browser__sidebar-head">
             <span className="music-browser__sidebar-kicker">功能导航</span>

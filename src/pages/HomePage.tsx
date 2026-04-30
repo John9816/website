@@ -7,6 +7,7 @@ import { useAuth } from '../context/AuthContext'
 import CategoryIcon from '../components/CategoryIcon'
 import LinkCard from '../components/LinkCard'
 import ThemeToggle from '../components/ThemeToggle'
+import '../styles/topbar.css'
 import '../styles/home.css'
 
 export default function HomePage() {
