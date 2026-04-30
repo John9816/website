@@ -333,7 +333,7 @@ export default function GlobalMusicDock() {
     >
       <div className="music-dock__header">
         <div className="music-dock__meta">
-          <MusicCover src={current.coverUrl} size={44} rounded={10} />
+          <MusicCover src={current.coverUrl} size={44} rounded={10} loading="eager" />
           <div className="music-dock__text">
             <div className="music-dock__title" title={current.name}>
               {current.name || '未知歌曲'}

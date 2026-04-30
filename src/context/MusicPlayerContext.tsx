@@ -15,6 +15,7 @@ import {
   describeMediaError,
   detectUnsupportedFormat,
   normalizeMediaUrl,
+  resolveCoverUrl,
 } from '../utils/musicPlayer'
 
 type AutoNextHandler = () => void | Promise<void>
@@ -98,7 +99,10 @@ export function MusicPlayerProvider({ children }: { children: ReactNode }) {
       setPreferredQualityState(quality)
       try {
         const info = await musicPlay(row.source, row.id, quality)
-        setCurrent(info)
+        setCurrent({
+          ...info,
+          coverUrl: resolveCoverUrl(info.coverUrl, row.coverUrl),
+        })
         setCurrentTime(0)
         setDuration(info.durationSec ?? 0)
       } catch (error) {

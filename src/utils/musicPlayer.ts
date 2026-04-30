@@ -58,16 +58,28 @@ function buildMediaProxyUrl(url: string) {
   return `${MEDIA_PROXY_PATH}?url=${encodeURIComponent(url)}`
 }
 
-function normalizeRemoteUrl(url?: string) {
+function parseRemoteUrl(url: string) {
+  try {
+    return new URL(url)
+  } catch {
+    return null
+  }
+}
+
+function hasUsableAssetPath(target: URL) {
+  return target.pathname !== '' && target.pathname !== '/' && !target.pathname.endsWith('/')
+}
+
+function normalizeRemoteUrl(
+  url?: string,
+  options?: { requireUsableAssetPath?: boolean },
+) {
   if (!url) return undefined
   if (!/^https?:\/\//i.test(url)) return url
 
-  let target: URL
-  try {
-    target = new URL(url)
-  } catch {
-    return url
-  }
+  const target = parseRemoteUrl(url)
+  if (!target) return url
+  if (options?.requireUsableAssetPath && !hasUsableAssetPath(target)) return undefined
 
   if (isHttpsPage() && !isLocalHostname() && isKuwoHost(target.hostname)) {
     // Kuwo CDN URLs are often HTTP-only or present an invalid HTTPS certificate.
@@ -82,7 +94,47 @@ function normalizeRemoteUrl(url?: string) {
 }
 
 export function normalizeCoverUrl(url?: string): string | undefined {
-  return normalizeRemoteUrl(url)
+  return normalizeRemoteUrl(url, { requireUsableAssetPath: true })
+}
+
+export function resolveCoverUrl(
+  ...urls: Array<string | null | undefined>
+): string | undefined {
+  for (const candidate of urls) {
+    const normalized = normalizeCoverUrl(candidate ?? undefined)
+    if (normalized) return normalized
+  }
+  return undefined
+}
+
+export function fillMissingCoverUrls<T extends { coverUrl?: string }>(
+  items: T[],
+  fallbackUrl?: string,
+): T[] {
+  if (!fallbackUrl) return items
+
+  let changed = false
+  const nextItems = items.map((item) => {
+    if (normalizeCoverUrl(item.coverUrl)) return item
+    changed = true
+    return { ...item, coverUrl: fallbackUrl }
+  })
+
+  return changed ? nextItems : items
+}
+
+export function hydrateCollectionCovers<T extends { coverUrl?: string }>(
+  coverUrl: string | undefined,
+  items: T[],
+  fallbackUrl?: string,
+) {
+  const firstSongCoverUrl = items.find((item) => normalizeCoverUrl(item.coverUrl))?.coverUrl
+  const resolvedCoverUrl = resolveCoverUrl(coverUrl, fallbackUrl, firstSongCoverUrl)
+
+  return {
+    coverUrl: resolvedCoverUrl,
+    list: fillMissingCoverUrls(items, resolvedCoverUrl),
+  }
 }
 
 export function normalizeMediaUrl(url?: string): string {

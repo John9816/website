@@ -30,6 +30,7 @@ import type {
   ToplistDetailView,
   ToplistItem,
 } from '../types'
+import { hydrateCollectionCovers } from '../utils/musicPlayer'
 import MusicCover from './MusicCover'
 import MusicSongTable from './MusicSongTable'
 
@@ -219,8 +220,14 @@ export default function MusicExplorer() {
     try {
       const data = await musicNewSongs(newSource, newSongsPage, newSongsPageSize)
       if (requestId !== newSongsRequestIdRef.current) return
-      setNewSongsDetail(data)
-      setPlaylist(data.list)
+      const hydrated = hydrateCollectionCovers(data.coverUrl, data.list)
+      const nextDetail = {
+        ...data,
+        coverUrl: hydrated.coverUrl,
+        list: hydrated.list,
+      }
+      setNewSongsDetail(nextDetail)
+      setPlaylist(nextDetail.list)
     } catch (error) {
       if (requestId !== newSongsRequestIdRef.current) return
       message.error((error as Error).message)
@@ -452,7 +459,9 @@ export default function MusicExplorer() {
                       type="button"
                       className="music-collection-card"
                       onClick={() => {
-                        navigate(`/music/toplist/${toplistSource}/${encodeURIComponent(item.id)}`)
+                        navigate(`/music/toplist/${toplistSource}/${encodeURIComponent(item.id)}`, {
+                          state: { coverUrl: item.coverUrl },
+                        })
                       }}
                     >
                       <MusicCover src={item.coverUrl} size={128} rounded={24} />
@@ -510,6 +519,9 @@ export default function MusicExplorer() {
                         onClick={() => {
                           navigate(
                             `/music/playlist/${playlistSource}/${encodeURIComponent(item.id)}`,
+                            {
+                              state: { coverUrl: item.coverUrl },
+                            },
                           )
                         }}
                       >

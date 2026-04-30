@@ -1,4 +1,4 @@
-import { useState } from 'react'
+import { useEffect, useState } from 'react'
 import { Music2 } from 'lucide-react'
 import { normalizeCoverUrl } from '../utils/musicPlayer'
 
@@ -6,15 +6,21 @@ type MusicCoverProps = {
   src?: string
   size: number
   rounded?: number
+  loading?: 'lazy' | 'eager'
 }
 
 export default function MusicCover({
   src,
   size,
   rounded = 6,
+  loading = 'lazy',
 }: MusicCoverProps) {
   const [failed, setFailed] = useState(false)
   const url = normalizeCoverUrl(src)
+
+  useEffect(() => {
+    setFailed(false)
+  }, [url])
 
   if (!url || failed) {
     return (
@@ -40,6 +46,8 @@ export default function MusicCover({
     <img
       src={url}
       alt=""
+      loading={loading}
+      decoding="async"
       referrerPolicy="no-referrer"
       onError={() => setFailed(true)}
       style={{

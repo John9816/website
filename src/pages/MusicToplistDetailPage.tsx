@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useMemo, useRef, useState, type CSSProperties } from 'react'
 import { App as AntApp, Button } from 'antd'
-import { Link, useParams } from 'react-router-dom'
+import { Link, useLocation, useParams } from 'react-router-dom'
 import { ChevronLeft, Play, RefreshCcw } from 'lucide-react'
 import { musicToplistDetail } from '../api/music'
 import MusicCover from '../components/MusicCover'
@@ -8,7 +8,11 @@ import MusicSongTable from '../components/MusicSongTable'
 import { DEFAULT_PAGE_SIZE } from '../constants/pagination'
 import { useMusicPlayer } from '../context/MusicPlayerContext'
 import type { MusicSourceId, ToplistDetailView } from '../types'
-import { normalizeCoverUrl } from '../utils/musicPlayer'
+import { hydrateCollectionCovers, normalizeCoverUrl } from '../utils/musicPlayer'
+
+type MusicCollectionRouteState = {
+  coverUrl?: string
+}
 
 function isMusicSourceId(value: string | undefined): value is MusicSourceId {
   return value === 'qq' || value === 'netease' || value === 'kuwo'
@@ -27,6 +31,7 @@ function sourceLabel(source: MusicSourceId) {
 
 export default function MusicToplistDetailPage() {
   const { message } = AntApp.useApp()
+  const location = useLocation()
   const { source, id } = useParams()
   const { playPlaylist, setPlaylist, setAutoNextHandler } = useMusicPlayer()
   const [page, setPage] = useState(1)
@@ -37,6 +42,7 @@ export default function MusicToplistDetailPage() {
   const autoplayPendingRef = useRef(false)
 
   const validSource = isMusicSourceId(source) ? source : null
+  const routeCoverUrl = (location.state as MusicCollectionRouteState | null)?.coverUrl
 
   const loadPage = useCallback(
     async (targetPage: number, options?: { autoplay?: boolean }) => {
@@ -46,11 +52,17 @@ export default function MusicToplistDetailPage() {
       try {
         const data = await musicToplistDetail(validSource, id, targetPage, pageSize)
         if (requestId !== requestIdRef.current) return
-        setDetail(data)
-        if (options?.autoplay && data.list.length) {
-          void playPlaylist(data.list)
+        const hydrated = hydrateCollectionCovers(data.coverUrl, data.list, routeCoverUrl)
+        const nextDetail = {
+          ...data,
+          coverUrl: hydrated.coverUrl,
+          list: hydrated.list,
+        }
+        setDetail(nextDetail)
+        if (options?.autoplay && nextDetail.list.length) {
+          void playPlaylist(nextDetail.list)
         } else {
-          setPlaylist(data.list)
+          setPlaylist(nextDetail.list)
         }
       } catch (error) {
         if (requestId !== requestIdRef.current) return
@@ -59,7 +71,7 @@ export default function MusicToplistDetailPage() {
         if (requestId === requestIdRef.current) setLoading(false)
       }
     },
-    [id, message, pageSize, playPlaylist, setPlaylist, validSource],
+    [id, message, pageSize, playPlaylist, routeCoverUrl, setPlaylist, validSource],
   )
 
   useEffect(() => {
@@ -120,7 +132,7 @@ export default function MusicToplistDetailPage() {
         className={`music-detail-hero${heroCoverUrl ? ' music-detail-hero--with-cover' : ''}`}
         style={heroStyle}
       >
-        <MusicCover src={detail?.coverUrl} size={148} rounded={32} />
+        <MusicCover src={detail?.coverUrl} size={148} rounded={32} loading="eager" />
         <div className="music-detail-hero__copy">
           <span className="music-stage-kicker">榜单详情</span>
           <h2>{detail?.name || '加载中...'}</h2>
