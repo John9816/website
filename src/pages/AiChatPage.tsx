@@ -16,6 +16,7 @@ import {
   LoaderCircle,
   LogIn,
   MessagesSquare,
+  Mic,
   Play,
   Plus,
   RefreshCw,
@@ -24,7 +25,9 @@ import {
   Settings,
   Sparkles,
   StopCircle,
+  Upload,
   Volume2,
+  X,
 } from 'lucide-react'
 import { Link as RouterLink, NavLink as RouterNavLink } from 'react-router-dom'
 import {
@@ -34,6 +37,7 @@ import {
   listAiMessages,
   listAiModels,
   sendAiMessage,
+  sendAiMessageStream,
 } from '../api/ai'
 import { ApiError } from '../api/client'
 import MessageMarkdown from '../components/MessageMarkdown'
@@ -41,6 +45,7 @@ import ThemeToggle from '../components/ThemeToggle'
 import { useAuth } from '../context/AuthContext'
 import type {
   AiChatMessageView,
+  AiConversationReplyView,
   AiConversationView,
   AiModelCapability,
   AiModelView,
@@ -59,6 +64,8 @@ const TEXTAREA_MIN = 56
 const TEXTAREA_MAX = 240
 const STICK_THRESHOLD = 80
 
+type AudioInputMode = 'none' | 'upload' | 'url'
+
 const CAPABILITY_LABELS: Record<AiModelCapability, string> = {
   text_chat: '文本对话',
   audio_input: '语音输入',
@@ -67,7 +74,11 @@ const CAPABILITY_LABELS: Record<AiModelCapability, string> = {
 }
 
 function getDefaultModel(models: AiModelView[]) {
-  return models.find((item) => item.defaultModel)?.model ?? models[0]?.model ?? ''
+  return (
+    models.find((item) => item.defaultModel && item.capabilities.includes('text_chat'))?.model ??
+    models.find((item) => item.capabilities.includes('text_chat'))?.model ??
+    ''
+  )
 }
 
 function modelHasCapability(
@@ -83,6 +94,26 @@ function modelHasCapability(
 
 function getDefaultTtsModel(models: AiModelView[]) {
   return models.find((item) => item.capabilities.includes('audio_output'))?.model ?? ''
+}
+
+function isDirectAudioSource(value?: string | null) {
+  if (!value) return false
+  return /^https?:\/\//i.test(value) || value.startsWith('data:audio/')
+}
+
+function readFileAsDataUrl(file: File): Promise<string> {
+  return new Promise((resolve, reject) => {
+    const reader = new FileReader()
+    reader.onerror = () => reject(new Error('读取音频文件失败'))
+    reader.onload = () => {
+      if (typeof reader.result === 'string') {
+        resolve(reader.result)
+        return
+      }
+      reject(new Error('读取音频文件失败'))
+    }
+    reader.readAsDataURL(file)
+  })
 }
 
 function upsertConversation(
@@ -173,6 +204,7 @@ interface MessageAudioProps {
 }
 
 function MessageAudio({ message, onError }: MessageAudioProps) {
+  const directSrc = isDirectAudioSource(message.audioUrl) ? message.audioUrl : null
   const [objectUrl, setObjectUrl] = useState<string | null>(null)
   const [loading, setLoading] = useState(false)
   const [errored, setErrored] = useState(false)
@@ -198,7 +230,7 @@ function MessageAudio({ message, onError }: MessageAudioProps) {
   }, [message.id])
 
   const handleLoad = async () => {
-    if (loading || objectUrl) return
+    if (loading || objectUrl || directSrc) return
     setLoading(true)
     setErrored(false)
     try {
@@ -214,13 +246,13 @@ function MessageAudio({ message, onError }: MessageAudioProps) {
     }
   }
 
-  if (objectUrl) {
+  if (directSrc || objectUrl) {
     return (
       <div className="ai-chat__audio">
         <audio
           controls
           autoPlay
-          src={objectUrl}
+          src={directSrc ?? objectUrl ?? undefined}
           aria-label={`消息 ${message.id} 的语音回放`}
         />
       </div>
@@ -239,7 +271,15 @@ function MessageAudio({ message, onError }: MessageAudioProps) {
       ) : (
         <Play size={14} />
       )}
-      <span>{errored ? '重试播放语音' : loading ? '加载中…' : '播放语音回放'}</span>
+      <span>
+        {errored
+          ? '重试播放语音'
+          : loading
+            ? '加载中…'
+            : message.role === 'assistant'
+              ? '播放语音回放'
+              : '播放上传音频'}
+      </span>
     </button>
   )
 }
@@ -336,10 +376,10 @@ function MessageBubble({
               {tokenSum}
             </span>
           )}
-          {message.audioAvailable && message.audioModel && (
+          {message.audioAvailable && (message.audioModel || message.audioMimeType) && (
             <span className="ai-chat__message-pill">
               <Volume2 size={11} />
-              {message.audioModel}
+              {message.audioModel ?? message.audioMimeType}
             </span>
           )}
         </div>
@@ -350,7 +390,7 @@ function MessageBubble({
             <div className="ai-chat__message-plain">{message.content}</div>
           )}
         </div>
-        {isAssistant && message.audioAvailable && message.audioUrl && (
+        {message.audioAvailable && (
           <MessageAudio message={message} onError={onAudioError} />
         )}
         {isAssistant && message.content && (
@@ -455,18 +495,32 @@ export default function AiChatPage() {
   const [messages, setMessages] = useState<AiChatMessageView[]>([])
   const [draft, setDraft] = useState('')
   const [selectedModel, setSelectedModel] = useState('')
+  const [streamMode, setStreamMode] = useState(false)
   const [responseAudio, setResponseAudio] = useState(false)
   const [ttsModel, setTtsModel] = useState('')
+  const [ttsFormat, setTtsFormat] = useState('wav')
+  const [ttsVoice, setTtsVoice] = useState('')
+  const [ttsPrompt, setTtsPrompt] = useState('')
+  const [showTtsOptions, setShowTtsOptions] = useState(false)
+  const [audioInputMode, setAudioInputMode] = useState<AudioInputMode>('none')
+  const [audioInputUrl, setAudioInputUrl] = useState('')
+  const [audioInputFileData, setAudioInputFileData] = useState('')
+  const [audioInputFileName, setAudioInputFileName] = useState('')
   const [bootstrapping, setBootstrapping] = useState(false)
   const [conversationsLoading, setConversationsLoading] = useState(false)
   const [messagesLoading, setMessagesLoading] = useState(false)
   const [creatingConversation, setCreatingConversation] = useState(false)
   const [sending, setSending] = useState(false)
-  const [pendingContent, setPendingContent] = useState<string | null>(null)
+  const [pendingRequest, setPendingRequest] = useState<{
+    content: string
+    hasAudioInput: boolean
+  } | null>(null)
   const [elapsed, setElapsed] = useState(0)
   const [searchQuery, setSearchQuery] = useState('')
   const [isAtBottom, setIsAtBottom] = useState(true)
   const [streamingMessageId, setStreamingMessageId] = useState<number | null>(null)
+  const [streamingDraft, setStreamingDraft] = useState('')
+  const [streamingModel, setStreamingModel] = useState('')
 
   const abortRef = useRef<AbortController | null>(null)
   const messageLoadSeqRef = useRef(0)
@@ -474,6 +528,7 @@ export default function AiChatPage() {
   const messagesContainerRef = useRef<HTMLDivElement | null>(null)
   const textareaRef = useRef<HTMLTextAreaElement | null>(null)
   const streamingTimerRef = useRef<number | null>(null)
+  const audioInputRef = useRef<HTMLInputElement | null>(null)
 
   const modelRegistry = useMemo(
     () => new Map(models.map((item) => [item.model, item] as const)),
@@ -482,6 +537,10 @@ export default function AiChatPage() {
   const activeConversation = useMemo(
     () => conversations.find((item) => item.id === activeConversationId) ?? null,
     [activeConversationId, conversations],
+  )
+  const textChatModels = useMemo(
+    () => models.filter((item) => item.capabilities.includes('text_chat')),
+    [models],
   )
   const defaultModel = useMemo(() => getDefaultModel(models), [models])
   const selectedModelInfo = useMemo(
@@ -496,8 +555,6 @@ export default function AiChatPage() {
   const selectedCapabilities = selectedModelInfo?.capabilities ?? []
   const activeConversationModelRemoved =
     !!activeConversation && !!activeConversation.model && !activeConversationModelInfo
-  const supportsTextConversation =
-    selectedCapabilities.length > 0 ? selectedCapabilities.includes('text_chat') : true
   const audioOutputModels = useMemo(
     () => models.filter((item) => item.capabilities.includes('audio_output')),
     [models],
@@ -510,20 +567,41 @@ export default function AiChatPage() {
     responseAudio &&
     !!ttsModel &&
     !modelHasCapability(modelRegistry, ttsModel, 'audio_output')
-  const noModelsConfigured = !bootstrapping && models.length === 0
+  const noModelsConfigured = !bootstrapping && textChatModels.length === 0
   const nextSendModel = useMemo(() => {
-    if (selectedModel && modelRegistry.has(selectedModel)) return selectedModel
-    if (activeConversation?.model && modelRegistry.has(activeConversation.model)) {
+    if (selectedModel && modelHasCapability(modelRegistry, selectedModel, 'text_chat')) {
+      return selectedModel
+    }
+    if (
+      activeConversation?.model &&
+      modelHasCapability(modelRegistry, activeConversation.model, 'text_chat')
+    ) {
       return activeConversation.model
     }
     if (defaultModel && modelRegistry.has(defaultModel)) return defaultModel
-    return models[0]?.model ?? null
-  }, [activeConversation?.model, defaultModel, modelRegistry, models, selectedModel])
+    return textChatModels[0]?.model ?? null
+  }, [activeConversation?.model, defaultModel, modelRegistry, selectedModel, textChatModels])
+  const nextSendModelInfo = useMemo(
+    () => (nextSendModel ? modelRegistry.get(nextSendModel) ?? null : null),
+    [modelRegistry, nextSendModel],
+  )
+  const supportsTextConversation =
+    nextSendModelInfo?.capabilities.includes('text_chat') ?? selectedCapabilities.length === 0
+  const supportsAudioInput = nextSendModelInfo?.capabilities.includes('audio_input') ?? false
+  const activeAudioInputValue =
+    audioInputMode === 'upload'
+      ? audioInputFileData
+      : audioInputMode === 'url'
+        ? audioInputUrl.trim()
+        : ''
+  const hasAudioInput = activeAudioInputValue.length > 0
   const composerBlockedReason = noModelsConfigured
-    ? '管理员尚未配置可用模型'
+    ? '管理员尚未配置可用文本模型'
     : !supportsTextConversation
-      ? '当前模型未声明 text_chat 能力，无法用作主对话模型'
-      : null
+      ? '当前模型不支持文本对话，请切换到具备 text_chat 能力的模型'
+      : hasAudioInput && !supportsAudioInput
+        ? '当前模型不支持语音输入，请切换到具备 audio_input 能力的模型'
+        : null
 
   const filteredConversations = useMemo(() => {
     const q = searchQuery.trim().toLowerCase()
@@ -551,6 +629,19 @@ export default function AiChatPage() {
 
   const mainClassName = `ai-chat__main${auth.token ? ' ai-chat__main--authenticated' : ''}`
 
+  const clearAudioInput = useCallback(
+    (nextMode: AudioInputMode = 'none') => {
+      setAudioInputMode(nextMode)
+      setAudioInputUrl('')
+      setAudioInputFileData('')
+      setAudioInputFileName('')
+      if (audioInputRef.current) {
+        audioInputRef.current.value = ''
+      }
+    },
+    [],
+  )
+
   useEffect(() => {
     if (!auth.token) {
       abortRef.current?.abort()
@@ -559,12 +650,20 @@ export default function AiChatPage() {
       setActiveConversationId(null)
       setMessages([])
       setSelectedModel('')
+      setStreamMode(false)
       setResponseAudio(false)
       setTtsModel('')
-      setPendingContent(null)
+      setTtsFormat('wav')
+      setTtsVoice('')
+      setTtsPrompt('')
+      setShowTtsOptions(false)
+      clearAudioInput()
+      setPendingRequest(null)
       setSending(false)
       setSearchQuery('')
       setStreamingMessageId(null)
+      setStreamingDraft('')
+      setStreamingModel('')
       return
     }
 
@@ -580,7 +679,9 @@ export default function AiChatPage() {
         if (cancelled) return
         setModels(modelList)
         setSelectedModel((current) =>
-          modelList.some((item) => item.model === current)
+          modelList.some(
+            (item) => item.model === current && item.capabilities.includes('text_chat'),
+          )
             ? current
             : getDefaultModel(modelList),
         )
@@ -607,10 +708,13 @@ export default function AiChatPage() {
     return () => {
       cancelled = true
     }
-  }, [auth.token, message])
+  }, [auth.token, clearAudioInput, message])
 
   useEffect(() => {
-    if (activeConversation?.model && modelRegistry.has(activeConversation.model)) {
+    if (
+      activeConversation?.model &&
+      modelHasCapability(modelRegistry, activeConversation.model, 'text_chat')
+    ) {
       setSelectedModel(activeConversation.model)
       return
     }
@@ -620,8 +724,14 @@ export default function AiChatPage() {
       return
     }
 
-    setSelectedModel(models[0]?.model ?? '')
-  }, [activeConversation?.id, activeConversation?.model, defaultModel, modelRegistry, models])
+    setSelectedModel(textChatModels[0]?.model ?? '')
+  }, [
+    activeConversation?.id,
+    activeConversation?.model,
+    defaultModel,
+    modelRegistry,
+    textChatModels,
+  ])
 
   useEffect(() => {
     if (!responseAudio) return
@@ -629,6 +739,11 @@ export default function AiChatPage() {
       setTtsModel(defaultTtsModel)
     }
   }, [responseAudio, defaultTtsModel, modelRegistry, ttsModel])
+
+  useEffect(() => {
+    if (!streamMode || !responseAudio) return
+    setResponseAudio(false)
+  }, [responseAudio, streamMode])
 
   useEffect(() => {
     if (responseAudio && audioOutputModels.length === 0) {
@@ -705,7 +820,7 @@ export default function AiChatPage() {
   useEffect(() => {
     if (!isAtBottom) return
     messagesEndRef.current?.scrollIntoView({ behavior: 'smooth', block: 'end' })
-  }, [messages, pendingContent, sending, isAtBottom])
+  }, [messages, pendingRequest, sending, streamingDraft, isAtBottom])
 
   // Auto-resize textarea.
   useLayoutEffect(() => {
@@ -756,6 +871,45 @@ export default function AiChatPage() {
     }
   }, [auth.token, message])
 
+  const handleStreamModeChange = (checked: boolean) => {
+    setStreamMode(checked)
+    if (checked && responseAudio) {
+      setResponseAudio(false)
+      message.info('流式输出暂不支持语音回放，已关闭 TTS')
+    }
+  }
+
+  const handleAudioInputModeChange = (mode: AudioInputMode) => {
+    if (mode === 'none') {
+      clearAudioInput()
+      return
+    }
+    setAudioInputMode(mode)
+  }
+
+  const handleAudioFileChange = async (
+    event: React.ChangeEvent<HTMLInputElement>,
+  ) => {
+    const file = event.target.files?.[0]
+    if (!file) return
+    if (!file.type.startsWith('audio/')) {
+      message.error('请选择音频文件')
+      event.target.value = ''
+      return
+    }
+
+    try {
+      const dataUrl = await readFileAsDataUrl(file)
+      setAudioInputMode('upload')
+      setAudioInputFileData(dataUrl)
+      setAudioInputFileName(file.name)
+      message.success('已附加音频输入')
+    } catch (error) {
+      message.error((error as Error).message)
+      event.target.value = ''
+    }
+  }
+
   const handleCreateConversation = async () => {
     if (!auth.token || creatingConversation || sending) return
     if (noModelsConfigured) {
@@ -787,8 +941,10 @@ export default function AiChatPage() {
     }
 
     const content = draft.trim()
-    if (!content) {
-      message.warning('请输入消息内容')
+    const inputAudioData = activeAudioInputValue
+    const hasInputAudio = inputAudioData.length > 0
+    if (!content && !hasInputAudio) {
+      message.warning('请输入消息内容或附加音频输入')
       return
     }
 
@@ -800,7 +956,12 @@ export default function AiChatPage() {
     abortRef.current = controller
 
     setSending(true)
-    setPendingContent(content)
+    setPendingRequest({
+      content,
+      hasAudioInput: hasInputAudio,
+    })
+    setStreamingDraft('')
+    setStreamingModel(modelToUse ?? activeConversation?.model ?? defaultModel)
     setDraft('')
     setIsAtBottom(true)
 
@@ -813,22 +974,59 @@ export default function AiChatPage() {
         conversationId = conversation.id
       }
 
-      const sendBody: import('../types').AiConversationSendRequest = { content }
+      const sendBody: import('../types').AiConversationSendRequest = {}
+      if (content) sendBody.content = content
       if (modelToUse) sendBody.model = modelToUse
-      if (responseAudio) {
+      if (hasInputAudio) sendBody.inputAudioData = inputAudioData
+      if (responseAudio && !streamMode) {
         sendBody.responseAudio = true
         if (ttsModel && modelHasCapability(modelRegistry, ttsModel, 'audio_output')) {
           sendBody.ttsModel = ttsModel
         }
+        if (ttsFormat) sendBody.ttsFormat = ttsFormat
+        if (ttsVoice.trim()) sendBody.ttsVoice = ttsVoice.trim()
+        if (ttsPrompt.trim()) sendBody.ttsPrompt = ttsPrompt.trim()
       }
 
-      const reply = await sendAiMessage(conversationId, sendBody, controller.signal)
+      let reply: AiConversationReplyView
+      if (streamMode) {
+        let finalReply: AiConversationReplyView | null = null
+        await sendAiMessageStream(
+          conversationId,
+          sendBody,
+          {
+            onMeta: (meta) => {
+              setStreamingModel(meta.model)
+            },
+            onDelta: (chunk) => {
+              setStreamingDraft((current) => current + chunk)
+            },
+            onDone: (doneReply) => {
+              finalReply = doneReply
+            },
+          },
+          controller.signal,
+        )
+        if (!finalReply) {
+          throw new ApiError(-1, '流式请求已结束，但没有收到完整回复')
+        }
+        reply = finalReply
+      } else {
+        reply = await sendAiMessage(conversationId, sendBody, controller.signal)
+      }
 
       messageLoadSeqRef.current += 1
       setConversations((current) => upsertConversation(current, reply.conversation))
       setActiveConversationId(reply.conversation.id)
-      setSelectedModel(reply.conversation.model || modelToUse || '')
+      setSelectedModel(
+        modelHasCapability(modelRegistry, reply.conversation.model, 'text_chat')
+          ? reply.conversation.model
+          : modelToUse || defaultModel || '',
+      )
       setMessages((current) => [...current, reply.userMessage, reply.assistantMessage])
+      clearAudioInput()
+      setStreamingDraft('')
+      setStreamingModel('')
 
       if (reply.assistantMessage.content.length <= STREAM_MAX_LEN) {
         setStreamingMessageId(reply.assistantMessage.id)
@@ -846,9 +1044,11 @@ export default function AiChatPage() {
         message.error((error as Error).message)
       }
     } finally {
-      setPendingContent(null)
+      setPendingRequest(null)
       setSending(false)
       setElapsed(0)
+      setStreamingDraft('')
+      setStreamingModel('')
       abortRef.current = null
     }
   }
@@ -969,7 +1169,7 @@ export default function AiChatPage() {
 
     return (
       <>
-        {!messages.length && !pendingContent && (
+        {!messages.length && !pendingRequest && (
           <div className="ai-chat__empty-stage">
             <MessagesSquare size={22} />
             <h3>会话已创建</h3>
@@ -988,7 +1188,7 @@ export default function AiChatPage() {
           />
         ))}
 
-        {pendingContent && (
+        {pendingRequest && (
           <article className="ai-chat__message ai-chat__message--user">
             <div className="ai-chat__message-avatar" aria-hidden="true">
               我
@@ -1000,27 +1200,66 @@ export default function AiChatPage() {
                   {nextSendModel || activeConversation?.model || '默认模型'}
                 </span>
                 <span className="ai-chat__message-pill">等待写入</span>
+                {pendingRequest.hasAudioInput && (
+                  <span className="ai-chat__message-pill">
+                    <Mic size={11} />
+                    音频输入
+                  </span>
+                )}
               </div>
               <div className="ai-chat__message-content">
-                <div className="ai-chat__message-plain">{pendingContent}</div>
+                {pendingRequest.content ? (
+                  <div className="ai-chat__message-plain">{pendingRequest.content}</div>
+                ) : (
+                  <div className="ai-chat__message-placeholder">本轮仅发送音频输入</div>
+                )}
               </div>
+              {pendingRequest.hasAudioInput && (
+                <div className="ai-chat__pending-attachment">
+                  <Volume2 size={13} />
+                  <span>音频输入已附加，后端会按多模态消息发送</span>
+                </div>
+              )}
               <div className="ai-chat__pending-note">消息已发出，等待后端完成回复并落库。</div>
             </div>
           </article>
         )}
 
         {sending && (
-          <article className="ai-chat__message ai-chat__message--assistant">
+          <article
+            className={`ai-chat__message ai-chat__message--assistant${
+              streamingDraft ? ' is-streaming' : ''
+            }`}
+          >
             <div className="ai-chat__message-avatar" aria-hidden="true">
               <Bot size={18} />
             </div>
             <div className="ai-chat__bubble">
-              <div className="ai-chat__typing">
-                <LoaderCircle size={16} className="ai-chat__spinner" />
-                <span>模型正在回复，已等待 {elapsed}s · 按 Esc 取消</span>
+              <div className="ai-chat__message-meta">
+                <span className="ai-chat__message-role">AI</span>
+                <span className="ai-chat__message-model">
+                  {streamingModel || nextSendModel || activeConversation?.model || '默认模型'}
+                </span>
+                <span className="ai-chat__message-pill">
+                  {streamMode ? 'SSE 流式输出' : '等待完整响应'}
+                </span>
               </div>
+              {streamingDraft ? (
+                <div className="ai-chat__message-content">
+                  <MessageMarkdown content={streamingDraft} />
+                </div>
+              ) : (
+                <div className="ai-chat__typing">
+                  <LoaderCircle size={16} className="ai-chat__spinner" />
+                  <span>模型正在回复，已等待 {elapsed}s · 按 Esc 取消</span>
+                </div>
+              )}
               <div className="ai-chat__pending-note">
-                预计 30 秒到 2 分钟。不要自动重试，避免重复扣费。
+                {streamMode
+                  ? streamingDraft
+                    ? '正在持续接收流式分片，只有 done 事件完成后才会正式落库。'
+                    : '已建立流式连接，等待首个 token。'
+                  : '预计 30 秒到 2 分钟。不要自动重试，避免重复扣费。'}
               </div>
             </div>
           </article>
@@ -1037,7 +1276,7 @@ export default function AiChatPage() {
     bootstrapping ||
     creatingConversation ||
     !!composerBlockedReason ||
-    (!sending && (!draft.trim() || charDanger))
+    (!sending && ((!draft.trim() && !hasAudioInput) || charDanger))
 
   return (
     <div className="ai-chat">
@@ -1095,13 +1334,14 @@ export default function AiChatPage() {
               </div>
               <h1>真实会话接口已接入</h1>
               <p>
-                当前页面已对接后端 `/api/user/ai/*`：模型列表、会话创建、会话历史、消息历史和发送消息都可直接使用。
+                当前页面已对接后端 `/api/user/ai/*`：模型列表、会话历史、SSE 流式消息、TTS 回放和语音输入都可直接使用。
               </p>
               <div className="ai-chat__guest-points">
                 <span>登录后自动加载你的会话历史</span>
                 <span>发送期间支持取消，不做自动重试</span>
                 <span>会话和消息按当前用户隔离存储</span>
                 <span>模型能力会显示文本、语音输入、语音输出、音色定制标签</span>
+                <span>流式输出使用 SSE，语音输入支持音频文件和公网 URL</span>
               </div>
             </article>
 
@@ -1282,6 +1522,11 @@ export default function AiChatPage() {
                     {composerBlockedReason}
                   </div>
                 )}
+                {streamMode && (
+                  <div className="ai-chat__composer-banner">
+                    已启用 SSE 流式输出：会逐 token 渲染，但只有 `done` 事件完成后才会正式落库。
+                  </div>
+                )}
                 {ttsModelInvalid && (
                   <div className="ai-chat__composer-banner">
                     所选语音模型已被移出模型池，将回退到默认值。
@@ -1305,12 +1550,22 @@ export default function AiChatPage() {
                       }
                     >
                       {!selectedModel && <option value="">使用后端默认模型</option>}
-                      {models.map((item) => (
+                      {textChatModels.map((item) => (
                         <option key={item.model} value={item.model}>
                           {item.model}
                         </option>
                       ))}
                     </select>
+                    <label className="ai-chat__tts-toggle">
+                      <input
+                        type="checkbox"
+                        checked={streamMode}
+                        onChange={(event) => handleStreamModeChange(event.target.checked)}
+                        disabled={bootstrapping || sending || creatingConversation}
+                      />
+                      <SendHorizontal size={13} />
+                      <span>流式输出</span>
+                    </label>
                     <label className="ai-chat__tts-toggle">
                       <input
                         type="checkbox"
@@ -1320,27 +1575,177 @@ export default function AiChatPage() {
                           bootstrapping ||
                           sending ||
                           creatingConversation ||
-                          audioOutputModels.length === 0
+                          audioOutputModels.length === 0 ||
+                          streamMode
                         }
                       />
                       <Volume2 size={13} />
                       <span>语音回放</span>
                     </label>
-                    {responseAudio && audioOutputModels.length > 0 && (
-                      <select
-                        aria-label="语音回放模型"
-                        className="ai-chat__select ai-chat__select--composer"
-                        value={ttsModel}
-                        onChange={(event) => setTtsModel(event.target.value)}
+                  </div>
+
+                  {responseAudio && audioOutputModels.length > 0 && (
+                    <div className="ai-chat__composer-panel">
+                      <div className="ai-chat__composer-panel-head">
+                        <span className="ai-chat__composer-label">
+                          <Volume2 size={14} />
+                          TTS 参数
+                        </span>
+                        <button
+                          type="button"
+                          className="ai-chat__text-button"
+                          onClick={() => setShowTtsOptions((current) => !current)}
+                        >
+                          {showTtsOptions ? '收起高级参数' : '展开高级参数'}
+                        </button>
+                      </div>
+                      <div className="ai-chat__composer-panel-grid">
+                        <select
+                          aria-label="语音回放模型"
+                          className="ai-chat__select"
+                          value={ttsModel}
+                          onChange={(event) => setTtsModel(event.target.value)}
+                          disabled={bootstrapping || sending || creatingConversation}
+                        >
+                          <option value="">使用后端默认语音模型</option>
+                          {audioOutputModels.map((item) => (
+                            <option key={item.model} value={item.model}>
+                              {item.model}
+                            </option>
+                          ))}
+                        </select>
+                        <input
+                          type="text"
+                          className="ai-chat__input"
+                          value={ttsFormat}
+                          onChange={(event) => setTtsFormat(event.target.value)}
+                          placeholder="ttsFormat，例如 wav"
+                          disabled={bootstrapping || sending || creatingConversation}
+                        />
+                        <input
+                          type="text"
+                          className="ai-chat__input"
+                          value={ttsVoice}
+                          onChange={(event) => setTtsVoice(event.target.value)}
+                          placeholder="ttsVoice，例如 Chloe"
+                          disabled={bootstrapping || sending || creatingConversation}
+                        />
+                      </div>
+                      {showTtsOptions && (
+                        <textarea
+                          className="ai-chat__textarea ai-chat__textarea--compact"
+                          value={ttsPrompt}
+                          onChange={(event) => setTtsPrompt(event.target.value)}
+                          placeholder="可选 ttsPrompt，用于控制语气、风格等"
+                          disabled={bootstrapping || sending || creatingConversation}
+                          rows={3}
+                        />
+                      )}
+                    </div>
+                  )}
+
+                  <div className="ai-chat__composer-panel">
+                    <div className="ai-chat__composer-panel-head">
+                      <span className="ai-chat__composer-label">
+                        <Mic size={14} />
+                        语音输入
+                      </span>
+                      <span className="ai-chat__composer-subtle">
+                        {supportsAudioInput
+                          ? '当前发送模型支持 audio_input'
+                          : '切换到具备 audio_input 的模型后才能发送音频'}
+                      </span>
+                    </div>
+                    <div className="ai-chat__audio-mode-row">
+                      <button
+                        type="button"
+                        className={`ai-chat__mode-chip${
+                          audioInputMode === 'none' ? ' is-active' : ''
+                        }`}
+                        onClick={() => handleAudioInputModeChange('none')}
                         disabled={bootstrapping || sending || creatingConversation}
                       >
-                        <option value="">使用后端默认语音模型</option>
-                        {audioOutputModels.map((item) => (
-                          <option key={item.model} value={item.model}>
-                            {item.model}
-                          </option>
-                        ))}
-                      </select>
+                        不附加
+                      </button>
+                      <button
+                        type="button"
+                        className={`ai-chat__mode-chip${
+                          audioInputMode === 'upload' ? ' is-active' : ''
+                        }`}
+                        onClick={() => handleAudioInputModeChange('upload')}
+                        disabled={bootstrapping || sending || creatingConversation}
+                      >
+                        上传音频
+                      </button>
+                      <button
+                        type="button"
+                        className={`ai-chat__mode-chip${
+                          audioInputMode === 'url' ? ' is-active' : ''
+                        }`}
+                        onClick={() => handleAudioInputModeChange('url')}
+                        disabled={bootstrapping || sending || creatingConversation}
+                      >
+                        公网 URL
+                      </button>
+                    </div>
+
+                    {audioInputMode === 'upload' && (
+                      <div className="ai-chat__audio-input-box">
+                        <input
+                          ref={audioInputRef}
+                          type="file"
+                          accept="audio/*"
+                          className="ai-chat__sr-only"
+                          onChange={handleAudioFileChange}
+                        />
+                        <button
+                          type="button"
+                          className="ai-chat__button ai-chat__button--secondary"
+                          onClick={() => audioInputRef.current?.click()}
+                          disabled={bootstrapping || sending || creatingConversation}
+                        >
+                          <Upload size={14} />
+                          <span>{audioInputFileName ? '重新选择音频' : '选择音频文件'}</span>
+                        </button>
+                        {audioInputFileName && (
+                          <>
+                            <span className="ai-chat__inline-tag">{audioInputFileName}</span>
+                            <button
+                              type="button"
+                              className="ai-chat__icon-button"
+                              aria-label="清空音频文件"
+                              onClick={() => clearAudioInput('upload')}
+                              disabled={bootstrapping || sending || creatingConversation}
+                            >
+                              <X size={14} />
+                            </button>
+                          </>
+                        )}
+                      </div>
+                    )}
+
+                    {audioInputMode === 'url' && (
+                      <div className="ai-chat__audio-input-box">
+                        <input
+                          type="url"
+                          className="ai-chat__input"
+                          value={audioInputUrl}
+                          onChange={(event) => setAudioInputUrl(event.target.value)}
+                          placeholder="https://example.com/audio.wav"
+                          disabled={bootstrapping || sending || creatingConversation}
+                        />
+                        {audioInputUrl && (
+                          <button
+                            type="button"
+                            className="ai-chat__icon-button"
+                            aria-label="清空音频地址"
+                            onClick={() => setAudioInputUrl('')}
+                            disabled={bootstrapping || sending || creatingConversation}
+                          >
+                            <X size={14} />
+                          </button>
+                        )}
+                      </div>
                     )}
                   </div>
 
@@ -1375,12 +1780,24 @@ export default function AiChatPage() {
                       {charCount} / {CHAR_LIMIT}
                     </div>
                   </div>
+                  {hasAudioInput && (
+                    <div className="ai-chat__composer-attachment">
+                      <Volume2 size={13} />
+                      <span>
+                        {audioInputMode === 'upload'
+                          ? `将附加音频文件：${audioInputFileName || '未命名音频'}`
+                          : `将附加音频地址：${audioInputUrl.trim()}`}
+                      </span>
+                    </div>
+                  )}
 
                   <div className="ai-chat__composer-bottom">
                     <div className="ai-chat__composer-hint">
                       {sending
                         ? `模型正在回复，已等待 ${elapsed}s · 按 Esc 取消`
-                        : 'Enter 发送 · Shift + Enter 换行'}
+                        : streamMode
+                          ? 'Enter 发送 · Shift + Enter 换行 · SSE 流式模式不支持 TTS'
+                          : 'Enter 发送 · Shift + Enter 换行'}
                     </div>
                     <button
                       type="button"

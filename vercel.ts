@@ -8,6 +8,7 @@ if (!backendUrl) {
 
 export const config: VercelConfig = {
   rewrites: [
+    routes.rewrite('/_media', '/api/media-proxy'),
     routes.rewrite('/api/:path*', `${backendUrl}/api/:path*`),
     routes.rewrite('/(.*)', '/index.html'),
   ],

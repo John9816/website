@@ -1,5 +1,8 @@
 export type LrcLine = { time: number; text: string }
 
+const KUWO_HOST_SUFFIX = '.kuwo.cn'
+const MEDIA_PROXY_PATH = '/_media'
+
 export function parseLrc(text: string | null | undefined): LrcLine[] {
   if (!text) return []
   const lines = text.split(/\r?\n/)
@@ -37,24 +40,53 @@ export function formatDuration(sec?: number) {
   return `${m}:${String(s).padStart(2, '0')}`
 }
 
-export function normalizeCoverUrl(url?: string): string | undefined {
+function isHttpsPage() {
+  return typeof window !== 'undefined' && window.location.protocol === 'https:'
+}
+
+function isLocalHostname() {
+  if (typeof window === 'undefined') return false
+  return window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1'
+}
+
+function isKuwoHost(hostname: string) {
+  const lower = hostname.toLowerCase()
+  return lower === 'kuwo.cn' || lower.endsWith(KUWO_HOST_SUFFIX)
+}
+
+function buildMediaProxyUrl(url: string) {
+  return `${MEDIA_PROXY_PATH}?url=${encodeURIComponent(url)}`
+}
+
+function normalizeRemoteUrl(url?: string) {
   if (!url) return undefined
-  if (url.startsWith('http://')) {
+  if (!/^https?:\/\//i.test(url)) return url
+
+  let target: URL
+  try {
+    target = new URL(url)
+  } catch {
+    return url
+  }
+
+  if (isHttpsPage() && !isLocalHostname() && isKuwoHost(target.hostname)) {
+    // Kuwo CDN URLs are often HTTP-only or present an invalid HTTPS certificate.
+    return buildMediaProxyUrl(target.toString())
+  }
+
+  if (isHttpsPage() && target.protocol === 'http:') {
     return 'https:' + url.slice(5)
   }
+
   return url
 }
 
+export function normalizeCoverUrl(url?: string): string | undefined {
+  return normalizeRemoteUrl(url)
+}
+
 export function normalizeMediaUrl(url?: string): string {
-  if (!url) return ''
-  if (
-    typeof window !== 'undefined' &&
-    window.location.protocol === 'https:' &&
-    url.startsWith('http://')
-  ) {
-    return 'https:' + url.slice(5)
-  }
-  return url
+  return normalizeRemoteUrl(url) ?? ''
 }
 
 export function describeMediaError(err: MediaError | null): string {
