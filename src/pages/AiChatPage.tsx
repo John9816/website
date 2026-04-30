@@ -5,16 +5,19 @@ import {
   LoaderCircle,
   LogIn,
   MessagesSquare,
+  Play,
   Plus,
   RefreshCw,
   SendHorizontal,
   Settings,
   Sparkles,
+  Volume2,
   X,
 } from 'lucide-react'
 import { Link as RouterLink, NavLink as RouterNavLink } from 'react-router-dom'
 import {
   createAiConversation,
+  fetchAiMessageAudio,
   listAiConversations,
   listAiMessages,
   listAiModels,
@@ -36,6 +39,98 @@ const MESSAGE_PAGE_SIZE = 100
 
 function getDefaultModel(models: AiModelView[]) {
   return models.find((item) => item.defaultModel)?.model ?? models[0]?.model ?? ''
+}
+
+function modelHasCapability(
+  models: Map<string, AiModelView>,
+  modelId: string | null | undefined,
+  capability: AiModelView['capabilities'][number],
+) {
+  if (!modelId) return false
+  const info = models.get(modelId)
+  if (!info) return false
+  return info.capabilities.includes(capability)
+}
+
+function getDefaultTtsModel(models: AiModelView[]) {
+  return models.find((item) => item.capabilities.includes('audio_output'))?.model ?? ''
+}
+
+interface MessageAudioProps {
+  message: AiChatMessageView
+  onError: (text: string) => void
+}
+
+function MessageAudio({ message, onError }: MessageAudioProps) {
+  const [objectUrl, setObjectUrl] = useState<string | null>(null)
+  const [loading, setLoading] = useState(false)
+  const [errored, setErrored] = useState(false)
+  const objectUrlRef = useRef<string | null>(null)
+
+  useEffect(() => {
+    return () => {
+      if (objectUrlRef.current) {
+        URL.revokeObjectURL(objectUrlRef.current)
+        objectUrlRef.current = null
+      }
+    }
+  }, [])
+
+  useEffect(() => {
+    if (objectUrlRef.current) {
+      URL.revokeObjectURL(objectUrlRef.current)
+      objectUrlRef.current = null
+    }
+    setObjectUrl(null)
+    setErrored(false)
+    setLoading(false)
+  }, [message.id])
+
+  const handleLoad = async () => {
+    if (loading || objectUrl) return
+    setLoading(true)
+    setErrored(false)
+    try {
+      const blob = await fetchAiMessageAudio(message.id)
+      const next = URL.createObjectURL(blob)
+      objectUrlRef.current = next
+      setObjectUrl(next)
+    } catch (error) {
+      setErrored(true)
+      onError((error as Error).message)
+    } finally {
+      setLoading(false)
+    }
+  }
+
+  if (objectUrl) {
+    return (
+      <div className="ai-chat__audio">
+        <audio
+          controls
+          autoPlay
+          src={objectUrl}
+          aria-label={`消息 ${message.id} 的语音回放`}
+        />
+      </div>
+    )
+  }
+
+  return (
+    <button
+      type="button"
+      className="ai-chat__audio-trigger"
+      onClick={() => void handleLoad()}
+      disabled={loading}
+    >
+      {loading ? (
+        <LoaderCircle size={14} className="ai-chat__spinner" />
+      ) : (
+        <Play size={14} />
+      )}
+      <span>{errored ? '重试播放语音' : loading ? '加载中…' : '播放语音回放'}</span>
+    </button>
+  )
 }
 
 function upsertConversation(
@@ -78,6 +173,8 @@ export default function AiChatPage() {
   const [messages, setMessages] = useState<AiChatMessageView[]>([])
   const [draft, setDraft] = useState('')
   const [selectedModel, setSelectedModel] = useState('')
+  const [responseAudio, setResponseAudio] = useState(false)
+  const [ttsModel, setTtsModel] = useState('')
   const [bootstrapping, setBootstrapping] = useState(false)
   const [conversationsLoading, setConversationsLoading] = useState(false)
   const [messagesLoading, setMessagesLoading] = useState(false)
@@ -112,7 +209,19 @@ export default function AiChatPage() {
   const activeConversationModelRemoved =
     !!activeConversation && !!activeConversation.model && !activeConversationModelInfo
   const supportsTextConversation =
-    selectedCapabilities.length > 0 ? selectedCapabilities.includes('text') : true
+    selectedCapabilities.length > 0 ? selectedCapabilities.includes('text_chat') : true
+  const audioOutputModels = useMemo(
+    () => models.filter((item) => item.capabilities.includes('audio_output')),
+    [models],
+  )
+  const defaultTtsModel = useMemo(
+    () => getDefaultTtsModel(audioOutputModels),
+    [audioOutputModels],
+  )
+  const ttsModelInvalid =
+    responseAudio &&
+    !!ttsModel &&
+    !modelHasCapability(modelRegistry, ttsModel, 'audio_output')
   const noModelsConfigured = !bootstrapping && models.length === 0
   const nextSendModel = useMemo(() => {
     if (selectedModel && modelRegistry.has(selectedModel)) return selectedModel
@@ -125,7 +234,7 @@ export default function AiChatPage() {
   const composerBlockedReason = noModelsConfigured
     ? '管理员尚未配置可用模型'
     : !supportsTextConversation
-      ? '当前前端只支持文本对话，这个模型未声明 text 能力'
+      ? '当前模型未声明 text_chat 能力，无法用作主对话模型'
       : null
 
   const mainClassName = `ai-chat__main${auth.token ? ' ai-chat__main--authenticated' : ''}`
@@ -138,6 +247,8 @@ export default function AiChatPage() {
       setActiveConversationId(null)
       setMessages([])
       setSelectedModel('')
+      setResponseAudio(false)
+      setTtsModel('')
       setPendingContent(null)
       setSending(false)
       return
@@ -197,6 +308,19 @@ export default function AiChatPage() {
 
     setSelectedModel(models[0]?.model ?? '')
   }, [activeConversation?.id, activeConversation?.model, defaultModel, modelRegistry, models])
+
+  useEffect(() => {
+    if (!responseAudio) return
+    if (!ttsModel || !modelHasCapability(modelRegistry, ttsModel, 'audio_output')) {
+      setTtsModel(defaultTtsModel)
+    }
+  }, [responseAudio, defaultTtsModel, modelRegistry, ttsModel])
+
+  useEffect(() => {
+    if (responseAudio && audioOutputModels.length === 0) {
+      setResponseAudio(false)
+    }
+  }, [responseAudio, audioOutputModels.length])
 
   const loadActiveConversationMessages = async (conversationId: number) => {
     const seq = ++messageLoadSeqRef.current
@@ -322,11 +446,16 @@ export default function AiChatPage() {
         conversationId = conversation.id
       }
 
-      const reply = await sendAiMessage(
-        conversationId,
-        modelToUse ? { content, model: modelToUse } : { content },
-        controller.signal,
-      )
+      const sendBody: import('../types').AiConversationSendRequest = { content }
+      if (modelToUse) sendBody.model = modelToUse
+      if (responseAudio) {
+        sendBody.responseAudio = true
+        if (ttsModel && modelHasCapability(modelRegistry, ttsModel, 'audio_output')) {
+          sendBody.ttsModel = ttsModel
+        }
+      }
+
+      const reply = await sendAiMessage(conversationId, sendBody, controller.signal)
 
       messageLoadSeqRef.current += 1
       setConversations((current) => upsertConversation(current, reply.conversation))
@@ -605,8 +734,17 @@ export default function AiChatPage() {
                                 {formatTokenLabel(item)}
                               </span>
                             )}
+                            {item.audioAvailable && item.audioModel && (
+                              <span className="ai-chat__message-tokens">
+                                <Volume2 size={11} />
+                                {item.audioModel}
+                              </span>
+                            )}
                           </div>
                           <div className="ai-chat__message-content">{item.content}</div>
+                          {item.role === 'assistant' && item.audioAvailable && item.audioUrl && (
+                            <MessageAudio message={item} onError={message.error} />
+                          )}
                         </div>
                       </article>
                     ))}
@@ -686,11 +824,48 @@ export default function AiChatPage() {
                         ))}
                       </select>
                     </div>
+                    <div className="ai-chat__tts-controls">
+                      <label className="ai-chat__tts-toggle">
+                        <input
+                          type="checkbox"
+                          checked={responseAudio}
+                          onChange={(event) => setResponseAudio(event.target.checked)}
+                          disabled={
+                            bootstrapping ||
+                            sending ||
+                            creatingConversation ||
+                            audioOutputModels.length === 0
+                          }
+                        />
+                        <Volume2 size={13} />
+                        <span>请求语音回放</span>
+                      </label>
+                      {responseAudio && audioOutputModels.length > 0 && (
+                        <select
+                          aria-label="语音回放模型"
+                          className="ai-chat__select ai-chat__select--composer"
+                          value={ttsModel}
+                          onChange={(event) => setTtsModel(event.target.value)}
+                          disabled={bootstrapping || sending || creatingConversation}
+                        >
+                          <option value="">使用后端默认语音模型</option>
+                          {audioOutputModels.map((item) => (
+                            <option key={item.model} value={item.model}>
+                              {item.model}
+                            </option>
+                          ))}
+                        </select>
+                      )}
+                    </div>
                     <div className="ai-chat__composer-hint">
                       <div>
                         <strong>Enter</strong> 发送，<strong>Shift + Enter</strong> 换行。
                       </div>
                       {composerBlockedReason && <div>{composerBlockedReason}</div>}
+                      {ttsModelInvalid && <div>所选语音模型已被移出模型池，将回退到默认值。</div>}
+                      {audioOutputModels.length === 0 && responseAudio && (
+                        <div>当前模型池中没有 `audio_output` 模型，无法请求语音回放。</div>
+                      )}
                     </div>
                   </div>
                     <div className="ai-chat__composer-actions">

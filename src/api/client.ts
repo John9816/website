@@ -1,6 +1,6 @@
 import type { ApiEnvelope } from '../types'
 
-const BASE = ((import.meta.env.VITE_API_BASE as string | undefined) ?? '')
+export const BASE = ((import.meta.env.VITE_API_BASE as string | undefined) ?? '')
   .trim()
   .replace(/\/+$/, '')
 

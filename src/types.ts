@@ -69,7 +69,7 @@ export interface GeneratedImageView {
 }
 
 export type AiModelCapability =
-  | 'text'
+  | 'text_chat'
   | 'audio_input'
   | 'audio_output'
   | 'voice_customization'
@@ -95,6 +95,10 @@ export interface AiChatMessageView {
   role: 'user' | 'assistant' | 'system'
   content: string
   model: string | null
+  audioAvailable: boolean
+  audioMimeType: string | null
+  audioModel: string | null
+  audioUrl: string | null
   finishReason: string | null
   promptTokens: number | null
   completionTokens: number | null
@@ -108,8 +112,14 @@ export interface AiConversationCreateRequest {
 }
 
 export interface AiConversationSendRequest {
-  content: string
+  content?: string
   model?: string
+  responseAudio?: boolean
+  ttsModel?: string
+  ttsFormat?: string
+  ttsVoice?: string
+  ttsPrompt?: string
+  inputAudioData?: string
 }
 
 export interface AiConversationReplyView {

@@ -1,4 +1,4 @@
-import { request } from './client'
+import { ApiError, BASE, getToken, getTokenType, request } from './client'
 import type {
   AiChatMessageView,
   AiConversationCreateRequest,
@@ -50,3 +50,42 @@ export const sendAiMessage = (
     body,
     signal,
   })
+
+export async function fetchAiMessageAudio(
+  messageId: number,
+  signal?: AbortSignal,
+): Promise<Blob> {
+  const headers: Record<string, string> = {}
+  const token = getToken()
+  if (token) headers['Authorization'] = `${getTokenType()} ${token}`
+
+  let res: Response
+  try {
+    res = await fetch(`${BASE}/api/user/ai/messages/${messageId}/audio`, {
+      headers,
+      signal,
+    })
+  } catch (e) {
+    if ((e as Error).name === 'AbortError') {
+      throw new ApiError(-2, '请求已取消')
+    }
+    throw new ApiError(-1, `网络错误: ${(e as Error).message}`)
+  }
+
+  if (res.status === 401) {
+    throw new ApiError(401, '登录已过期，请重新登录')
+  }
+
+  if (!res.ok) {
+    const fallback = `读取语音失败 (HTTP ${res.status})`
+    try {
+      const json = (await res.json()) as { code?: number; message?: string }
+      throw new ApiError(json.code ?? res.status, json.message || fallback)
+    } catch (error) {
+      if (error instanceof ApiError) throw error
+      throw new ApiError(res.status, fallback)
+    }
+  }
+
+  return res.blob()
+}
