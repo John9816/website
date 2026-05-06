@@ -197,20 +197,6 @@ type DocRef = {
   title: string
 }
 
-function toDocFormValues(doc: KbDoc): DocFormValues {
-  return {
-    spaceId: doc.spaceId,
-    parentId: doc.parentId ?? undefined,
-    title: doc.title,
-    summary: doc.summary ?? '',
-    status: doc.status,
-    sortOrder: doc.sortOrder,
-    tagIds: doc.tags.map((item) => item.id),
-    changeNote: '',
-    contentHtml: doc.contentHtml ?? '',
-  }
-}
-
 export default function AdminKnowledgeBase() {
   const { message, modal } = AntApp.useApp()
 
@@ -242,10 +228,6 @@ export default function AdminKnowledgeBase() {
   const deferredKeyword = useDeferredValue(keyword.trim())
   const [tagFilterId, setTagFilterId] = useState<number | undefined>()
 
-  const [docModalOpen, setDocModalOpen] = useState(false)
-  const [docSaving, setDocSaving] = useState(false)
-  const [editingDoc, setEditingDoc] = useState<KbDoc | null>(null)
-  const [docForm] = Form.useForm<DocFormValues>()
   const [inlineEditingDocId, setInlineEditingDocId] = useState<number | null>(null)
   const [inlineDocSaving, setInlineDocSaving] = useState(false)
   const [inlineDocForm] = Form.useForm<DocFormValues>()
@@ -266,12 +248,7 @@ export default function AdminKnowledgeBase() {
   const [versionDetailLoading, setVersionDetailLoading] = useState(false)
   const [versionDetail, setVersionDetail] = useState<KbDocVersionDetail | null>(null)
 
-  const docContentHtml = Form.useWatch('contentHtml', docForm) ?? ''
   const inlineDocContentHtml = Form.useWatch('contentHtml', inlineDocForm) ?? ''
-  const docParentOptions = useMemo(
-    () => flattenTreeOptions(tree, '', editingDoc?.id),
-    [editingDoc?.id, tree],
-  )
   const inlineDocParentOptions = useMemo(
     () => flattenTreeOptions(tree, '', inlineEditingDocId ?? undefined),
     [inlineEditingDocId, tree],
