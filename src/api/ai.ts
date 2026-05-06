@@ -6,11 +6,15 @@ import type {
   AiConversationSendRequest,
   AiConversationView,
   AiModelView,
+  AiVoiceView,
   PageView,
 } from '../types'
 
 export const listAiModels = () =>
   request<AiModelView[]>('/api/user/ai/models', { auth: true })
+
+export const listAiVoices = () =>
+  request<AiVoiceView[]>('/api/user/ai/voices', { auth: true })
 
 export const createAiConversation = (body: AiConversationCreateRequest = {}) =>
   request<AiConversationView>('/api/user/ai/conversations', {
@@ -51,8 +55,9 @@ export const sendAiMessage = (
     signal,
   })
 
-export async function fetchAiMessageAudio(
-  messageId: number,
+async function fetchBinary(
+  path: string,
+  init?: RequestInit,
   signal?: AbortSignal,
 ): Promise<Blob> {
   const headers: Record<string, string> = {}
@@ -61,8 +66,12 @@ export async function fetchAiMessageAudio(
 
   let res: Response
   try {
-    res = await fetch(`${BASE}/api/user/ai/messages/${messageId}/audio`, {
-      headers,
+    res = await fetch(`${BASE}${path}`, {
+      ...init,
+      headers: {
+        ...headers,
+        ...(init?.headers ?? {}),
+      },
       signal,
     })
   } catch (e) {
@@ -90,8 +99,60 @@ export async function fetchAiMessageAudio(
   return res.blob()
 }
 
+export async function fetchAiMessageAudio(
+  messageId: number,
+  signal?: AbortSignal,
+): Promise<Blob> {
+  return fetchBinary(`/api/user/ai/messages/${messageId}/audio`, undefined, signal)
+}
+
+export async function synthesizeAiText(
+  body: {
+    text: string
+    ttsModel?: string
+    ttsVoice?: string
+    ttsFormat?: string
+    ttsPrompt?: string
+  },
+  signal?: AbortSignal,
+): Promise<Blob> {
+  return fetchBinary(
+    '/api/user/ai/tts',
+    {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(body),
+    },
+    signal,
+  )
+}
+
+export const regenerateAiMessageAudio = (
+  messageId: number,
+  body: {
+    ttsModel?: string
+    ttsVoice?: string
+    ttsFormat?: string
+    ttsPrompt?: string
+  },
+  signal?: AbortSignal,
+) =>
+  request<AiChatMessageView>(`/api/user/ai/messages/${messageId}/audio`, {
+    method: 'POST',
+    auth: true,
+    body,
+    signal,
+  })
+
 export interface AiStreamCallbacks {
   onMeta?: (meta: { conversationId: number; model: string }) => void
+  onAudio?: (audio: {
+    messageId: number
+    audioUrl?: string | null
+    audioMimeType?: string | null
+    audioModel?: string | null
+  }) => void
+  onAudioError?: (error: { code?: number; message?: string }) => void
   onDelta: (chunk: string) => void
   onDone: (reply: AiConversationReplyView) => void
 }
@@ -192,6 +253,25 @@ export async function sendAiMessageStream(
         callbacks.onDone(reply)
       } catch (err) {
         throw new ApiError(-1, `解析 done 事件失败: ${(err as Error).message}`)
+      }
+    } else if (event === 'audio') {
+      try {
+        const audio = JSON.parse(dataStr) as {
+          messageId: number
+          audioUrl?: string | null
+          audioMimeType?: string | null
+          audioModel?: string | null
+        }
+        callbacks.onAudio?.(audio)
+      } catch {
+        // ignore malformed audio event
+      }
+    } else if (event === 'audio_error') {
+      try {
+        const err = JSON.parse(dataStr) as { code?: number; message?: string }
+        callbacks.onAudioError?.(err)
+      } catch {
+        callbacks.onAudioError?.({ message: '音频生成失败' })
       }
     } else if (event === 'error') {
       try {

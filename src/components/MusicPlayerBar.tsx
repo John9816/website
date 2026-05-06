@@ -9,6 +9,7 @@ import {
 import {
   ChevronDown,
   ListMusic,
+  Loader2,
   Pause,
   Play,
   SkipBack,
@@ -19,11 +20,8 @@ import {
 import type { MusicQuality, SongSearchItem } from '../types'
 import MusicCover from './MusicCover'
 import { useMusicPlayer } from '../context/MusicPlayerContext'
-import {
-  formatDuration,
-  normalizeCoverUrl,
-  parseLrc,
-} from '../utils/musicPlayer'
+import { useActiveLyric } from '../hooks/useActiveLyric'
+import { formatDuration, normalizeCoverUrl } from '../utils/musicPlayer'
 
 const QUALITY_OPTIONS: Array<{ value: MusicQuality; label: string }> = [
   { value: '128k', label: '128K' },
@@ -46,11 +44,14 @@ function sourceLabel(source: 'qq' | 'netease' | 'kuwo') {
 }
 
 export default function MusicPlayerBar() {
-  const [dragging, setDragging] = useState(false)
+  const [seeking, setSeeking] = useState(false)
   const [expanded, setExpanded] = useState(false)
   const [fullscreenTab, setFullscreenTab] = useState<FullscreenTab>('lyrics')
   const lyricScrollRef = useRef<HTMLDivElement | null>(null)
   const queueScrollRef = useRef<HTMLDivElement | null>(null)
+  const titleRef = useRef<HTMLDivElement | null>(null)
+  const [titleOverflowPx, setTitleOverflowPx] = useState(0)
+  const titleOverflow = titleOverflowPx > 0
 
   const {
     current,
@@ -87,25 +88,10 @@ export default function MusicPlayerBar() {
     [duration, seekToTime],
   )
 
-  const lrcLines = useMemo(
-    () => parseLrc(current?.lyric?.lineLyrics),
-    [current?.lyric?.lineLyrics],
+  const { lines: lrcLines, activeIndex: activeLrcIndex } = useActiveLyric(
+    current?.lyric?.lineLyrics,
+    currentTime,
   )
-
-  const activeLrcIndex = useMemo(() => {
-    if (!lrcLines.length) return -1
-
-    let index = -1
-    for (let i = 0; i < lrcLines.length; i += 1) {
-      if (lrcLines[i].time <= currentTime) {
-        index = i
-      } else {
-        break
-      }
-    }
-
-    return index
-  }, [currentTime, lrcLines])
 
   const activeLyricText = useMemo(() => {
     if (activeLrcIndex >= 0) {
@@ -153,13 +139,102 @@ export default function MusicPlayerBar() {
   )
 
   useEffect(() => {
-    if (!dragging) return
-    const onUp = () => setDragging(false)
-    window.addEventListener('mouseup', onUp)
+    if (!seeking) return
+    const previousUserSelect = document.body.style.userSelect
+    document.body.style.userSelect = 'none'
     return () => {
-      window.removeEventListener('mouseup', onUp)
+      document.body.style.userSelect = previousUserSelect
     }
-  }, [dragging])
+  }, [seeking])
+
+  useEffect(() => {
+    if (!current) {
+      setTitleOverflowPx(0)
+      return
+    }
+
+    const node = titleRef.current
+    if (!node) return
+
+    const measure = () => {
+      const overflow = node.scrollWidth - node.clientWidth
+      setTitleOverflowPx(overflow > 1 ? overflow : 0)
+    }
+
+    measure()
+
+    if (typeof ResizeObserver !== 'undefined') {
+      const observer = new ResizeObserver(measure)
+      observer.observe(node)
+      return () => observer.disconnect()
+    }
+
+    window.addEventListener('resize', measure)
+    return () => window.removeEventListener('resize', measure)
+  }, [current])
+
+  useEffect(() => {
+    if (!current) return
+
+    const isEditableTarget = (target: EventTarget | null) => {
+      if (!(target instanceof HTMLElement)) return false
+      if (target.isContentEditable) return true
+      const tag = target.tagName
+      return tag === 'INPUT' || tag === 'TEXTAREA' || tag === 'SELECT'
+    }
+
+    const onKeyDown = (event: KeyboardEvent) => {
+      if (event.defaultPrevented) return
+      if (event.metaKey || event.ctrlKey || event.altKey) return
+      if (isEditableTarget(event.target)) return
+
+      switch (event.key) {
+        case ' ':
+        case 'Spacebar':
+          event.preventDefault()
+          togglePlay()
+          break
+        case 'ArrowLeft':
+          if (!duration) return
+          event.preventDefault()
+          seekToTime(currentTime - 5)
+          break
+        case 'ArrowRight':
+          if (!duration) return
+          event.preventDefault()
+          seekToTime(currentTime + 5)
+          break
+        case 'ArrowUp':
+          event.preventDefault()
+          setVolume(Math.min(1, (muted ? 0 : volume) + 0.05))
+          break
+        case 'ArrowDown':
+          event.preventDefault()
+          setVolume(Math.max(0, (muted ? 0 : volume) - 0.05))
+          break
+        case 'm':
+        case 'M':
+          event.preventDefault()
+          toggleMuted()
+          break
+        default:
+          break
+      }
+    }
+
+    window.addEventListener('keydown', onKeyDown)
+    return () => window.removeEventListener('keydown', onKeyDown)
+  }, [
+    current,
+    currentTime,
+    duration,
+    muted,
+    seekToTime,
+    setVolume,
+    togglePlay,
+    toggleMuted,
+    volume,
+  ])
 
   useEffect(() => {
     if (!expanded) return
@@ -220,15 +295,49 @@ export default function MusicPlayerBar() {
 
   const renderProgressTrack = (extraClass?: string) => (
     <div
-      className={`progress-track ${dragging ? 'dragging' : ''}${extraClass ? ` ${extraClass}` : ''}`}
-      onMouseDown={(event) => {
-        setDragging(true)
+      className={`progress-track ${seeking ? 'dragging' : ''}${
+        extraClass ? ` ${extraClass}` : ''
+      }`}
+      onPointerDown={(event) => {
+        if (event.button !== 0) return
+        setSeeking(true)
+        event.currentTarget.setPointerCapture(event.pointerId)
+        seekTo(event.clientX, event.currentTarget)
+        event.preventDefault()
+      }}
+      onPointerMove={(event) => {
+        if (!seeking) return
         seekTo(event.clientX, event.currentTarget)
       }}
-      onMouseMove={(event) => {
-        if (!dragging) return
-        seekTo(event.clientX, event.currentTarget)
+      onPointerUp={(event) => {
+        if (!seeking) return
+        if (event.currentTarget.hasPointerCapture(event.pointerId)) {
+          event.currentTarget.releasePointerCapture(event.pointerId)
+        }
+        setSeeking(false)
       }}
+      onPointerCancel={(event) => {
+        if (event.currentTarget.hasPointerCapture(event.pointerId)) {
+          event.currentTarget.releasePointerCapture(event.pointerId)
+        }
+        setSeeking(false)
+      }}
+      onKeyDown={(event) => {
+        if (!duration) return
+        if (event.key === 'ArrowLeft') {
+          seekToTime(currentTime - 5)
+          event.preventDefault()
+        } else if (event.key === 'ArrowRight') {
+          seekToTime(currentTime + 5)
+          event.preventDefault()
+        }
+      }}
+      role="slider"
+      tabIndex={0}
+      aria-label="播放进度"
+      aria-valuemin={0}
+      aria-valuemax={Math.max(duration, 0)}
+      aria-valuenow={Math.min(currentTime, duration || currentTime)}
       style={{ '--progress': `${progressPct}%` } as CSSProperties}
     >
       <div className="rail">
@@ -241,11 +350,15 @@ export default function MusicPlayerBar() {
   return (
     <>
       <div className="music-player-bar-wrap">
-        <div className="music-player-bar">
+        <div
+          className={`music-player-bar${isPlaying ? ' is-playing' : ''}${
+            playLoading ? ' is-loading' : ''
+          }`}
+        >
           <div className="music-player-bar__meta">
             <button
               type="button"
-              className="music-player-bar__cover-button"
+              className={`music-player-bar__cover-button${isPlaying ? ' is-playing' : ''}`}
               onClick={() => openFullscreen('lyrics')}
               aria-label="打开全屏播放器"
               title="打开全屏播放器"
@@ -253,8 +366,21 @@ export default function MusicPlayerBar() {
               <MusicCover src={current.coverUrl} size={64} rounded={18} loading="eager" />
             </button>
             <div className="music-player-bar__text">
-              <div className="music-player-bar__title" title={current.name}>
-                {current.name || '未知歌曲'}
+              <div
+                ref={titleRef}
+                className={`music-player-bar__title${
+                  titleOverflow ? ' is-overflowing' : ''
+                }`}
+                title={current.name}
+                style={
+                  titleOverflow
+                    ? ({ '--marquee-shift': `-${titleOverflowPx}px` } as CSSProperties)
+                    : undefined
+                }
+              >
+                <span className="music-player-bar__title-inner">
+                  {current.name || '未知歌曲'}
+                </span>
               </div>
               <div className="music-player-bar__artist" title={current.artist}>
                 {current.artist || '未知歌手'}
@@ -284,12 +410,14 @@ export default function MusicPlayerBar() {
               <button
                 type="button"
                 className="ctrl-btn primary"
-                disabled={!!unsupportedFormat}
+                disabled={!!unsupportedFormat || playLoading}
                 onClick={togglePlay}
                 aria-label={isPlaying ? '暂停' : '播放'}
                 title={isPlaying ? '暂停' : '播放'}
               >
-                {isPlaying ? (
+                {playLoading ? (
+                  <Loader2 size={20} className="ctrl-btn__spinner" />
+                ) : isPlaying ? (
                   <Pause size={20} />
                 ) : (
                   <Play size={20} style={{ marginLeft: 2 }} />
@@ -423,14 +551,7 @@ export default function MusicPlayerBar() {
               <section className="music-player-fullscreen__lyrics-panel">
                 <div className="music-player-fullscreen__hero">
                   <div className="music-player-fullscreen__hero-copy">
-                    <span className="player-kicker">
-                      {fullscreenTab === 'lyrics' ? 'Lyrics' : 'Playlist'}
-                    </span>
                     <div className="music-player-fullscreen__meta">
-                      <div className="music-player-fullscreen__eyebrow">
-                        <span>{current.album || '单曲循环'}</span>
-                        <span>{sourceLabel(current.actualSource || current.source)}</span>
-                      </div>
                       <div className="music-player-fullscreen__title" title={current.name}>
                         {current.name || '未知歌曲'}
                       </div>
@@ -525,6 +646,16 @@ export default function MusicPlayerBar() {
                               }${distance === 1 ? ' is-near' : ''}${
                                 distance >= 2 && distance <= 3 ? ' is-mid' : ''
                               }${distance >= 4 ? ' is-far' : ''}`}
+                              onClick={() => {
+                                seekToTime(line.time)
+                              }}
+                              role="button"
+                              tabIndex={0}
+                              onKeyDown={(e) => {
+                                if (e.key === 'Enter' || e.key === ' ') {
+                                  seekToTime(line.time)
+                                }
+                              }}
                             >
                               {line.text || '\u00A0'}
                             </div>
@@ -603,12 +734,14 @@ export default function MusicPlayerBar() {
                       <button
                         type="button"
                         className="ctrl-btn primary"
-                        disabled={!!unsupportedFormat}
+                        disabled={!!unsupportedFormat || playLoading}
                         onClick={togglePlay}
                         aria-label={isPlaying ? '暂停' : '播放'}
                         title={isPlaying ? '暂停' : '播放'}
                       >
-                        {isPlaying ? (
+                        {playLoading ? (
+                          <Loader2 size={22} className="ctrl-btn__spinner" />
+                        ) : isPlaying ? (
                           <Pause size={22} />
                         ) : (
                           <Play size={22} style={{ marginLeft: 2 }} />

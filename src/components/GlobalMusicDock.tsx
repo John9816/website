@@ -13,7 +13,8 @@ import {
 } from 'lucide-react'
 import MusicCover from './MusicCover'
 import { useMusicPlayer } from '../context/MusicPlayerContext'
-import { formatDuration, parseLrc } from '../utils/musicPlayer'
+import { useActiveLyric } from '../hooks/useActiveLyric'
+import { formatDuration } from '../utils/musicPlayer'
 import '../styles/music-dock.css'
 
 type DockPosition = {
@@ -95,25 +96,10 @@ export default function GlobalMusicDock() {
     playFromQueue,
   } = useMusicPlayer()
 
-  const lrcLines = useMemo(
-    () => parseLrc(current?.lyric?.lineLyrics),
-    [current?.lyric?.lineLyrics],
+  const { lines: lrcLines, activeIndex: activeLrcIndex } = useActiveLyric(
+    current?.lyric?.lineLyrics,
+    currentTime,
   )
-
-  const activeLrcIndex = useMemo(() => {
-    if (!lrcLines.length) return -1
-
-    let index = -1
-    for (let i = 0; i < lrcLines.length; i += 1) {
-      if (lrcLines[i].time <= currentTime) {
-        index = i
-      } else {
-        break
-      }
-    }
-
-    return index
-  }, [currentTime, lrcLines])
 
   const currentLrcText = useMemo(() => {
     if (activeLrcIndex >= 0) {
@@ -534,6 +520,14 @@ export default function GlobalMusicDock() {
                     className={`music-dock__lyrics-line${
                       index === activeLrcIndex ? ' is-active' : ''
                     }`}
+                    onClick={() => seekToTime(line.time)}
+                    role="button"
+                    tabIndex={0}
+                    onKeyDown={(e) => {
+                      if (e.key === 'Enter' || e.key === ' ') {
+                        seekToTime(line.time)
+                      }
+                    }}
                   >
                     {line.text || '\u00A0'}
                   </div>

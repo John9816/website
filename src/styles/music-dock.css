@@ -385,13 +385,25 @@
 }
 
 .music-dock__lyrics-line {
-  padding: 4px 2px;
+  padding: 4px 8px;
   color: var(--text-dim);
   font-size: 12px;
   line-height: 1.55;
   transition:
     color 0.18s ease,
-    transform 0.18s ease;
+    transform 0.18s ease,
+    background 0.18s ease;
+  cursor: pointer;
+  border-radius: 6px;
+}
+
+.music-dock__lyrics-line:hover {
+  background: rgba(255, 255, 255, 0.08);
+  color: var(--text);
+}
+
+.music-dock__lyrics-line:active {
+  transform: scale(0.96);
 }
 
 .music-dock__lyrics-line.is-active {

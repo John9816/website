@@ -1,6 +1,7 @@
 import { Layout, Menu, Button, Typography, theme as antdTheme } from 'antd'
 import {
   AppstoreOutlined,
+  BookOutlined,
   CustomerServiceOutlined,
   HomeOutlined,
   KeyOutlined,
@@ -16,34 +17,6 @@ import ThemeToggle from '../components/ThemeToggle'
 
 const { Header, Sider, Content } = Layout
 
-const items = [
-  {
-    key: '/admin/categories',
-    icon: <AppstoreOutlined />,
-    label: <Link to="/admin/categories">分类</Link>,
-  },
-  {
-    key: '/admin/links',
-    icon: <LinkOutlined />,
-    label: <Link to="/admin/links">链接</Link>,
-  },
-  {
-    key: '/admin/configs',
-    icon: <SettingOutlined />,
-    label: <Link to="/admin/configs">系统配置</Link>,
-  },
-  {
-    key: '/admin/image',
-    icon: <PictureOutlined />,
-    label: <Link to="/admin/image">图片生成</Link>,
-  },
-  {
-    key: '/admin/password',
-    icon: <KeyOutlined />,
-    label: <Link to="/admin/password">修改密码</Link>,
-  },
-]
-
 export default function AdminLayout() {
   const auth = useAuth()
   const location = useLocation()
@@ -53,6 +26,50 @@ export default function AdminLayout() {
 
   if (!auth.token) {
     return <Navigate to="/admin/login" state={{ from: location.pathname }} replace />
+  }
+
+  const items = [
+    {
+      key: '/admin/categories',
+      icon: <AppstoreOutlined />,
+      label: <Link to="/admin/categories">分类</Link>,
+    },
+    {
+      key: '/admin/links',
+      icon: <LinkOutlined />,
+      label: <Link to="/admin/links">链接</Link>,
+    },
+    {
+      key: '/admin/image',
+      icon: <PictureOutlined />,
+      label: <Link to="/admin/image">图片生成</Link>,
+    },
+    {
+      key: '/admin/kb',
+      icon: <BookOutlined />,
+      label: <Link to="/admin/kb">知识库</Link>,
+    },
+    {
+      key: '/admin/password',
+      icon: <KeyOutlined />,
+      label: <Link to="/admin/password">修改密码</Link>,
+    },
+  ]
+
+  if (auth.user?.canManageSystemConfig) {
+    items.splice(2, 0, {
+      key: '/admin/configs',
+      icon: <SettingOutlined />,
+      label: <Link to="/admin/configs">系统配置</Link>,
+    })
+  }
+
+  if (
+    !auth.profileLoading &&
+    !auth.user?.canManageSystemConfig &&
+    location.pathname.startsWith('/admin/configs')
+  ) {
+    return <Navigate to="/admin/categories" replace />
   }
 
   const selectedKey =

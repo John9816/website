@@ -46,6 +46,13 @@ export interface LoginResponse {
   role?: string
 }
 
+export interface CurrentUserView {
+  id: number
+  username: string
+  role: 'ADMIN' | 'USER'
+  canManageSystemConfig: boolean
+}
+
 export interface ImageGenerateResult {
   model: string
   imageUrl: string | null
@@ -78,6 +85,11 @@ export interface AiModelView {
   model: string
   defaultModel: boolean
   capabilities: AiModelCapability[]
+}
+
+export interface AiVoiceView {
+  id: string
+  label: string
 }
 
 export interface AiConversationView {
@@ -244,4 +256,105 @@ export interface PlaylistDetailView {
   pageSize: number
   total: number | null
   list: SongSearchItem[]
+}
+
+export type KbDocStatus = 'draft' | 'published'
+
+export interface KbSpace {
+  id: number
+  name: string
+  description?: string | null
+  icon?: string | null
+  sortOrder: number
+  docCount: number
+  createdAt?: string
+  updatedAt?: string
+}
+
+export interface KbDocTreeNode {
+  id: number
+  parentId?: number | null
+  title: string
+  status: KbDocStatus
+  sortOrder: number
+  children: KbDocTreeNode[]
+}
+
+export interface KbTag {
+  id: number
+  name: string
+  color?: string | null
+  createdAt?: string
+}
+
+export interface KbDocShare {
+  docId: number
+  token: string
+  enabled: boolean
+  expiresAt?: string | null
+  viewCount: number
+  createdAt?: string
+  updatedAt?: string
+}
+
+export interface KbDocSummary {
+  id: number
+  spaceId: number
+  parentId?: number | null
+  title: string
+  summary?: string | null
+  status: KbDocStatus
+  sortOrder: number
+  versionNo: number
+  createdAt?: string
+  updatedAt?: string
+}
+
+export interface KbDoc {
+  id: number
+  spaceId: number
+  parentId?: number | null
+  title: string
+  summary?: string | null
+  contentJson?: string | null
+  contentHtml?: string | null
+  status: KbDocStatus
+  sortOrder: number
+  versionNo: number
+  tags: KbTag[]
+  share?: KbDocShare | null
+  createdAt?: string
+  updatedAt?: string
+}
+
+export interface KbDocVersion {
+  id: number
+  docId: number
+  versionNo: number
+  title: string
+  summary?: string | null
+  editorUserId: number
+  changeNote?: string | null
+  createdAt?: string
+}
+
+export interface KbDocVersionDetail {
+  id: number
+  docId: number
+  versionNo: number
+  title: string
+  summary?: string | null
+  contentJson?: string | null
+  contentHtml?: string | null
+  editorUserId: number
+  changeNote?: string | null
+  createdAt?: string
+}
+
+export interface KbPublicDoc {
+  title: string
+  summary?: string | null
+  contentJson?: string | null
+  contentHtml?: string | null
+  updatedAt?: string
 }

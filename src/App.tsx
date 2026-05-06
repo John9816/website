@@ -23,6 +23,8 @@ const AdminLinks = lazy(() => import('./pages/AdminLinks'))
 const AdminConfigs = lazy(() => import('./pages/AdminConfigs'))
 const AdminImage = lazy(() => import('./pages/AdminImage'))
 const AdminPassword = lazy(() => import('./pages/AdminPassword'))
+const AdminKnowledgeBase = lazy(() => import('./pages/AdminKnowledgeBase'))
+const KbSharePage = lazy(() => import('./pages/KbSharePage'))
 
 function RouteFallback() {
   return (
@@ -65,6 +67,7 @@ export default function App() {
                 <Routes>
                   <Route path="/" element={<HomePage />} />
                   <Route path="/ai-chat" element={<AiChatPage />} />
+                  <Route path="/kb/share/:token" element={<KbSharePage />} />
                   <Route path="/music" element={<MusicLayout />}>
                     <Route index element={<MusicPage />} />
                     <Route
@@ -85,6 +88,7 @@ export default function App() {
                     <Route path="links" element={<AdminLinks />} />
                     <Route path="configs" element={<AdminConfigs />} />
                     <Route path="image" element={<AdminImage />} />
+                    <Route path="kb" element={<AdminKnowledgeBase />} />
                     <Route path="password" element={<AdminPassword />} />
                   </Route>
                   <Route path="*" element={<Navigate to="/" replace />} />

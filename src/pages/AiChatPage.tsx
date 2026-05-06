@@ -36,8 +36,11 @@ import {
   listAiConversations,
   listAiMessages,
   listAiModels,
+  listAiVoices,
+  regenerateAiMessageAudio,
   sendAiMessage,
   sendAiMessageStream,
+  synthesizeAiText,
 } from '../api/ai'
 import { ApiError } from '../api/client'
 import MessageMarkdown from '../components/MessageMarkdown'
@@ -49,6 +52,7 @@ import type {
   AiConversationView,
   AiModelCapability,
   AiModelView,
+  AiVoiceView,
 } from '../types'
 import { groupConversations } from '../utils/groupConversations'
 import '../styles/topbar.css'
@@ -328,17 +332,21 @@ function CopyButton({ text, onCopied, onError }: CopyButtonProps) {
 interface MessageBubbleProps {
   message: AiChatMessageView
   isStreaming: boolean
+  isRegeneratingAudio: boolean
   onAudioError: (text: string) => void
   onCopySuccess: () => void
   onCopyError: () => void
+  onRegenerateAudio: (message: AiChatMessageView) => void
 }
 
 function MessageBubble({
   message,
   isStreaming,
+  isRegeneratingAudio,
   onAudioError,
   onCopySuccess,
   onCopyError,
+  onRegenerateAudio,
 }: MessageBubbleProps) {
   const isAssistant = message.role === 'assistant'
   const sideClass = isAssistant ? 'assistant' : 'user'
@@ -400,6 +408,20 @@ function MessageBubble({
               onCopied={onCopySuccess}
               onError={onCopyError}
             />
+            <button
+              type="button"
+              className="ai-chat__msg-action"
+              onClick={() => onRegenerateAudio(message)}
+              disabled={isRegeneratingAudio}
+              aria-label={message.audioAvailable ? '重生成语音' : '生成语音'}
+            >
+              {isRegeneratingAudio ? (
+                <LoaderCircle size={12} className="ai-chat__spinner" />
+              ) : (
+                <RefreshCw size={12} />
+              )}
+              <span>{message.audioAvailable ? '重生成语音' : '生成语音'}</span>
+            </button>
           </div>
         )}
       </div>
@@ -490,6 +512,7 @@ export default function AiChatPage() {
   const { message } = AntApp.useApp()
 
   const [models, setModels] = useState<AiModelView[]>([])
+  const [voices, setVoices] = useState<AiVoiceView[]>([])
   const [conversations, setConversations] = useState<AiConversationView[]>([])
   const [activeConversationId, setActiveConversationId] = useState<number | null>(null)
   const [messages, setMessages] = useState<AiChatMessageView[]>([])
@@ -521,14 +544,19 @@ export default function AiChatPage() {
   const [streamingMessageId, setStreamingMessageId] = useState<number | null>(null)
   const [streamingDraft, setStreamingDraft] = useState('')
   const [streamingModel, setStreamingModel] = useState('')
+  const [ttsPreviewLoading, setTtsPreviewLoading] = useState(false)
+  const [ttsPreviewUrl, setTtsPreviewUrl] = useState<string | null>(null)
+  const [regeneratingAudioId, setRegeneratingAudioId] = useState<number | null>(null)
 
   const abortRef = useRef<AbortController | null>(null)
+  const ttsPreviewAbortRef = useRef<AbortController | null>(null)
   const messageLoadSeqRef = useRef(0)
   const messagesEndRef = useRef<HTMLDivElement | null>(null)
   const messagesContainerRef = useRef<HTMLDivElement | null>(null)
   const textareaRef = useRef<HTMLTextAreaElement | null>(null)
   const streamingTimerRef = useRef<number | null>(null)
   const audioInputRef = useRef<HTMLInputElement | null>(null)
+  const ttsPreviewUrlRef = useRef<string | null>(null)
 
   const modelRegistry = useMemo(
     () => new Map(models.map((item) => [item.model, item] as const)),
@@ -642,10 +670,102 @@ export default function AiChatPage() {
     [],
   )
 
+  const clearTtsPreview = useCallback(() => {
+    if (ttsPreviewUrlRef.current) {
+      URL.revokeObjectURL(ttsPreviewUrlRef.current)
+      ttsPreviewUrlRef.current = null
+    }
+    setTtsPreviewUrl(null)
+  }, [])
+
+  const replaceTtsPreview = useCallback(
+    (blob: Blob) => {
+      clearTtsPreview()
+      const next = URL.createObjectURL(blob)
+      ttsPreviewUrlRef.current = next
+      setTtsPreviewUrl(next)
+    },
+    [clearTtsPreview],
+  )
+
+  const buildTtsPayload = useCallback(() => {
+    const payload: {
+      ttsModel?: string
+      ttsVoice?: string
+      ttsFormat?: string
+      ttsPrompt?: string
+    } = {}
+
+    if (ttsModel && modelHasCapability(modelRegistry, ttsModel, 'audio_output')) {
+      payload.ttsModel = ttsModel
+    }
+    if (ttsFormat.trim()) payload.ttsFormat = ttsFormat.trim()
+    if (ttsVoice.trim()) payload.ttsVoice = ttsVoice.trim()
+    if (ttsPrompt.trim()) payload.ttsPrompt = ttsPrompt.trim()
+    return payload
+  }, [modelRegistry, ttsFormat, ttsModel, ttsPrompt, ttsVoice])
+
+  const handlePreviewTts = useCallback(async () => {
+    const text = draft.trim()
+    if (!text) {
+      message.warning('请先输入要试听的文本')
+      return
+    }
+
+    ttsPreviewAbortRef.current?.abort()
+    const controller = new AbortController()
+    ttsPreviewAbortRef.current = controller
+    setTtsPreviewLoading(true)
+
+    try {
+      const blob = await synthesizeAiText(
+        {
+          text,
+          ...buildTtsPayload(),
+        },
+        controller.signal,
+      )
+      replaceTtsPreview(blob)
+      message.success('已生成独立 TTS 试听')
+    } catch (error) {
+      if (error instanceof ApiError && error.code === -2) {
+        message.info('已取消 TTS 试听')
+      } else {
+        message.error((error as Error).message)
+      }
+    } finally {
+      if (ttsPreviewAbortRef.current === controller) {
+        ttsPreviewAbortRef.current = null
+      }
+      setTtsPreviewLoading(false)
+    }
+  }, [buildTtsPayload, draft, message, replaceTtsPreview])
+
+  const handleRegenerateMessageAudio = useCallback(
+    async (target: AiChatMessageView) => {
+      if (regeneratingAudioId === target.id) return
+      setRegeneratingAudioId(target.id)
+      try {
+        const updated = await regenerateAiMessageAudio(target.id, buildTtsPayload())
+        setMessages((current) =>
+          current.map((item) => (item.id === updated.id ? updated : item)),
+        )
+        message.success(target.audioAvailable ? '已重生成消息语音' : '已生成消息语音')
+      } catch (error) {
+        message.error((error as Error).message)
+      } finally {
+        setRegeneratingAudioId(null)
+      }
+    },
+    [buildTtsPayload, message, regeneratingAudioId],
+  )
+
   useEffect(() => {
     if (!auth.token) {
       abortRef.current?.abort()
+      ttsPreviewAbortRef.current?.abort()
       setModels([])
+      setVoices([])
       setConversations([])
       setActiveConversationId(null)
       setMessages([])
@@ -658,6 +778,9 @@ export default function AiChatPage() {
       setTtsPrompt('')
       setShowTtsOptions(false)
       clearAudioInput()
+      clearTtsPreview()
+      setTtsPreviewLoading(false)
+      setRegeneratingAudioId(null)
       setPendingRequest(null)
       setSending(false)
       setSearchQuery('')
@@ -674,10 +797,12 @@ export default function AiChatPage() {
     Promise.all([
       listAiModels(),
       listAiConversations(0, CONVERSATION_PAGE_SIZE),
+      listAiVoices().catch(() => [] as AiVoiceView[]),
     ])
-      .then(([modelList, conversationPage]) => {
+      .then(([modelList, conversationPage, voiceList]) => {
         if (cancelled) return
         setModels(modelList)
+        setVoices(voiceList)
         setSelectedModel((current) =>
           modelList.some(
             (item) => item.model === current && item.capabilities.includes('text_chat'),
@@ -708,7 +833,7 @@ export default function AiChatPage() {
     return () => {
       cancelled = true
     }
-  }, [auth.token, clearAudioInput, message])
+  }, [auth.token, clearAudioInput, clearTtsPreview, message])
 
   useEffect(() => {
     if (
@@ -847,9 +972,11 @@ export default function AiChatPage() {
   useEffect(() => {
     return () => {
       abortRef.current?.abort()
+      ttsPreviewAbortRef.current?.abort()
+      clearTtsPreview()
       if (streamingTimerRef.current) window.clearTimeout(streamingTimerRef.current)
     }
-  }, [])
+  }, [clearTtsPreview])
 
   const refreshConversations = useCallback(async () => {
     if (!auth.token) return
@@ -980,12 +1107,7 @@ export default function AiChatPage() {
       if (hasInputAudio) sendBody.inputAudioData = inputAudioData
       if (responseAudio && !streamMode) {
         sendBody.responseAudio = true
-        if (ttsModel && modelHasCapability(modelRegistry, ttsModel, 'audio_output')) {
-          sendBody.ttsModel = ttsModel
-        }
-        if (ttsFormat) sendBody.ttsFormat = ttsFormat
-        if (ttsVoice.trim()) sendBody.ttsVoice = ttsVoice.trim()
-        if (ttsPrompt.trim()) sendBody.ttsPrompt = ttsPrompt.trim()
+        Object.assign(sendBody, buildTtsPayload())
       }
 
       let reply: AiConversationReplyView
@@ -1000,6 +1122,9 @@ export default function AiChatPage() {
             },
             onDelta: (chunk) => {
               setStreamingDraft((current) => current + chunk)
+            },
+            onAudioError: (error) => {
+              message.warning(error.message || '语音生成失败，但文本回复已完成')
             },
             onDone: (doneReply) => {
               finalReply = doneReply
@@ -1182,9 +1307,11 @@ export default function AiChatPage() {
             key={item.id}
             message={item}
             isStreaming={streamingMessageId === item.id}
+            isRegeneratingAudio={regeneratingAudioId === item.id}
             onAudioError={message.error}
             onCopySuccess={() => message.success('已复制到剪贴板')}
             onCopyError={() => message.error('复制失败，请检查浏览器权限')}
+            onRegenerateAudio={(target) => void handleRegenerateMessageAudio(target)}
           />
         ))}
 
@@ -1591,14 +1718,49 @@ export default function AiChatPage() {
                           <Volume2 size={14} />
                           TTS 参数
                         </span>
-                        <button
-                          type="button"
-                          className="ai-chat__text-button"
-                          onClick={() => setShowTtsOptions((current) => !current)}
+                        <div
+                          style={{
+                            display: 'flex',
+                            gap: 8,
+                            alignItems: 'center',
+                            flexWrap: 'wrap',
+                            justifyContent: 'flex-end',
+                          }}
                         >
-                          {showTtsOptions ? '收起高级参数' : '展开高级参数'}
-                        </button>
+                          <button
+                            type="button"
+                            className="ai-chat__button ai-chat__button--secondary"
+                            onClick={() => void handlePreviewTts()}
+                            disabled={
+                              ttsPreviewLoading ||
+                              bootstrapping ||
+                              sending ||
+                              creatingConversation ||
+                              !draft.trim()
+                            }
+                          >
+                            {ttsPreviewLoading ? (
+                              <LoaderCircle size={14} className="ai-chat__spinner" />
+                            ) : (
+                              <Play size={14} />
+                            )}
+                            <span>{ttsPreviewLoading ? '生成试听中' : '试听当前输入'}</span>
+                          </button>
+                          <button
+                            type="button"
+                            className="ai-chat__text-button"
+                            onClick={() => setShowTtsOptions((current) => !current)}
+                          >
+                            {showTtsOptions ? '收起高级参数' : '展开高级参数'}
+                          </button>
+                        </div>
                       </div>
+                      {voices.length > 0 && (
+                        <div className="ai-chat__composer-subtle">
+                          已加载 {voices.length} 个音色，可直接选择建议值，也可以手动输入自定义
+                          `ttsVoice`
+                        </div>
+                      )}
                       <div className="ai-chat__composer-panel-grid">
                         <select
                           aria-label="语音回放模型"
@@ -1626,10 +1788,20 @@ export default function AiChatPage() {
                           type="text"
                           className="ai-chat__input"
                           value={ttsVoice}
+                          list="ai-chat-voice-list"
                           onChange={(event) => setTtsVoice(event.target.value)}
-                          placeholder="ttsVoice，例如 Chloe"
+                          placeholder={
+                            voices.length > 0 ? '选择或输入 ttsVoice' : 'ttsVoice，例如 alloy'
+                          }
                           disabled={bootstrapping || sending || creatingConversation}
                         />
+                        <datalist id="ai-chat-voice-list">
+                          {voices.map((voice) => (
+                            <option key={voice.id} value={voice.id}>
+                              {voice.label}
+                            </option>
+                          ))}
+                        </datalist>
                       </div>
                       {showTtsOptions && (
                         <textarea
@@ -1640,6 +1812,11 @@ export default function AiChatPage() {
                           disabled={bootstrapping || sending || creatingConversation}
                           rows={3}
                         />
+                      )}
+                      {ttsPreviewUrl && (
+                        <div className="ai-chat__audio">
+                          <audio controls src={ttsPreviewUrl} aria-label="独立 TTS 试听" />
+                        </div>
                       )}
                     </div>
                   )}

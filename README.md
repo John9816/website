@@ -1,6 +1,16 @@
 # Personal Navigation Frontend
 
-Vite + React + TypeScript frontend for a personal navigation site, with music pages and an admin panel.
+Vite + React + TypeScript frontend for the `website` backend.
+
+It now covers:
+
+- public navigation homepage
+- user registration / login / current-user session
+- per-user navigation category and link management
+- AI chat workspace with model list, voice list, SSE streaming, audio input, message audio replay, standalone TTS preview, and audio regeneration
+- image generation with per-user history
+- knowledge base spaces, document tree, tags, version history, and public share page
+- music aggregation pages
 
 ## Quick Start
 
@@ -19,6 +29,13 @@ The frontend should prefer same-origin `/api/*` requests.
 - In production, keep `VITE_API_BASE` empty so the browser still requests `/api/*` on the current domain.
 - On Vercel, configure `BACKEND_URL` and let [vercel.ts](/D:/Projects/VSCode/website/vercel.ts) proxy `/api/:path*` to the backend.
 
+Frontend endpoint conventions:
+
+- public read routes: `/api/public/*`
+- logged-in user routes: `/api/user/*`
+- admin-only system config routes: `/api/admin/configs/*`
+- music BFF routes: `/api/v1/music/*`
+
 Do not hardcode the public backend domain into the frontend bundle unless you explicitly want browsers to call it directly.
 
 ## Environment Variables
@@ -36,12 +53,17 @@ BACKEND_URL=https://your-backend.example.com
 ## Routes
 
 - `/`: public navigation page
+- `/login`: user login
+- `/register`: user registration
+- `/ai-chat`: AI workspace
 - `/music`: music explorer
+- `/kb/share/:token`: public knowledge-base share page
 - `/admin/login`: admin login
 - `/admin/categories`: category management
 - `/admin/links`: link management
 - `/admin/configs`: system configs
 - `/admin/image`: image generation
+- `/admin/kb`: knowledge-base management
 - `/admin/password`: change password
 
 ## Commands

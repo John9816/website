@@ -12,6 +12,7 @@ import {
 import { LockOutlined, UserOutlined } from '@ant-design/icons'
 import { register as apiRegister } from '../api/auth'
 import ThemeToggle from '../components/ThemeToggle'
+import { useAuth } from '../context/AuthContext'
 import { useTheme } from '../context/ThemeContext'
 
 function authBackground(mode: 'light' | 'dark') {
@@ -30,6 +31,7 @@ export default function RegisterPage() {
   const [loading, setLoading] = useState(false)
   const nav = useNavigate()
   const { message } = AntApp.useApp()
+  const auth = useAuth()
   const { mode } = useTheme()
   const { token } = antdTheme.useToken()
 
@@ -37,13 +39,9 @@ export default function RegisterPage() {
     setLoading(true)
     try {
       const result = await apiRegister(values.username, values.password)
-      const successMessage =
-        typeof result === 'string'
-          ? result
-          : result?.message || '注册成功，请登录'
-
-      message.success(successMessage)
-      nav('/login', { replace: true })
+      auth.login(result.token, result.username, result.tokenType)
+      message.success('注册成功，已自动登录')
+      nav('/', { replace: true })
     } catch (error) {
       message.error((error as Error).message)
     } finally {
