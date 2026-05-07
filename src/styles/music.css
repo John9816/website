@@ -760,6 +760,52 @@
   line-height: 1.7;
 }
 
+.music-auth-prompt {
+  display: grid;
+  justify-items: center;
+  gap: 12px;
+  padding: 42px 24px;
+  border: 1px dashed color-mix(in srgb, var(--border) 92%, transparent);
+  border-radius: 24px;
+  background: color-mix(in srgb, var(--panel) 84%, transparent);
+  text-align: center;
+}
+
+.music-auth-prompt__icon {
+  width: 44px;
+  height: 44px;
+  border-radius: 14px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  color: var(--accent);
+  background: var(--accent-soft);
+}
+
+.music-auth-prompt strong {
+  color: var(--text);
+  font-size: 18px;
+}
+
+.music-auth-prompt p {
+  margin: 0;
+  max-width: 560px;
+  color: var(--text-dim);
+}
+
+.music-auth-prompt__actions {
+  display: flex;
+  gap: 12px;
+  flex-wrap: wrap;
+  justify-content: center;
+}
+
+.music-library-toolbar {
+  display: flex;
+  justify-content: flex-end;
+  margin-bottom: 16px;
+}
+
 .music-pagination {
   display: flex;
   justify-content: flex-end;
@@ -802,12 +848,53 @@
   background: color-mix(in srgb, color-mix(in srgb, var(--accent) 8%, transparent) 88%, transparent);
 }
 
+.music-song-table__actions {
+  flex-wrap: nowrap;
+}
+
 .music-row-active td {
   background: color-mix(in srgb, var(--accent-soft) 56%, transparent) !important;
 }
 
 .music-song-table .ant-typography-secondary {
   color: var(--text-dim) !important;
+}
+
+.music-icon-action {
+  width: 32px;
+  height: 32px;
+  border: 1px solid color-mix(in srgb, var(--border) 94%, transparent);
+  border-radius: 999px;
+  background: color-mix(in srgb, var(--panel) 92%, transparent);
+  color: var(--text-dim);
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  transition:
+    color 0.18s ease,
+    border-color 0.18s ease,
+    background 0.18s ease,
+    transform 0.18s ease;
+}
+
+.music-icon-action:hover:not(:disabled) {
+  color: var(--text);
+  border-color: var(--border-strong);
+  background: var(--hover);
+  transform: translateY(-1px);
+}
+
+.music-icon-action.is-active {
+  color: var(--accent);
+  border-color: color-mix(in srgb, var(--accent) 34%, transparent);
+  background: color-mix(in srgb, var(--accent-soft) 92%, var(--panel));
+}
+
+.music-icon-action:disabled {
+  cursor: not-allowed;
+  opacity: 0.5;
+  transform: none;
 }
 
 .music-pagination .ant-pagination-item,

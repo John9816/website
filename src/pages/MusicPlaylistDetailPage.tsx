@@ -1,12 +1,13 @@
 import { useCallback, useEffect, useMemo, useRef, useState, type CSSProperties } from 'react'
 import { App as AntApp, Button } from 'antd'
 import { Link, useLocation, useParams } from 'react-router-dom'
-import { ChevronLeft, Play, RefreshCcw } from 'lucide-react'
+import { ChevronLeft, Heart, Play, RefreshCcw } from 'lucide-react'
 import { musicPlaylistDetail } from '../api/music'
 import MusicCover from '../components/MusicCover'
 import MusicSongTable from '../components/MusicSongTable'
 import { DEFAULT_PAGE_SIZE } from '../constants/pagination'
 import { useMusicPlayer } from '../context/MusicPlayerContext'
+import { useMusicFavorites } from '../hooks/useMusicFavorites'
 import type { MusicSourceId, PlaylistDetailView } from '../types'
 import { hydrateCollectionCovers, normalizeCoverUrl } from '../utils/musicPlayer'
 
@@ -50,6 +51,7 @@ export default function MusicPlaylistDetailPage() {
 
   const validSource = isMusicSourceId(source) ? source : null
   const routeCoverUrl = (location.state as MusicCollectionRouteState | null)?.coverUrl
+  const favoriteState = useMusicFavorites(detail?.list ?? [])
 
   const loadPage = useCallback(
     async (targetPage: number, options?: { autoplay?: boolean }) => {
@@ -120,6 +122,27 @@ export default function MusicPlaylistDetailPage() {
     ? ({
         ['--music-detail-cover' as string]: `url(${JSON.stringify(heroCoverUrl)})`,
       } as CSSProperties)
+    : undefined
+
+  const renderSongActions = favoriteState.canFavorite
+    ? (song: PlaylistDetailView['list'][number]) => (
+        <button
+          type="button"
+          className={`music-icon-action${favoriteState.isFavorite(song) ? ' is-active' : ''}`}
+          disabled={favoriteState.isFavoriteLoading(song)}
+          onClick={(event) => {
+            event.stopPropagation()
+            void favoriteState.toggleFavorite(song)
+          }}
+          aria-label={favoriteState.isFavorite(song) ? '取消喜欢' : '加入喜欢'}
+          title={favoriteState.isFavorite(song) ? '取消喜欢' : '加入喜欢'}
+        >
+          <Heart
+            size={16}
+            fill={favoriteState.isFavorite(song) ? 'currentColor' : 'none'}
+          />
+        </button>
+      )
     : undefined
 
   if (!validSource || !id) {
@@ -194,6 +217,8 @@ export default function MusicPlaylistDetailPage() {
           setPageSize(nextPageSize)
           setPage(nextPageSize !== pageSize ? 1 : nextPage)
         }}
+        renderActions={renderSongActions}
+        actionColumnWidth={favoriteState.canFavorite ? 132 : 76}
       />
     </div>
   )

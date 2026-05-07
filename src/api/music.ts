@@ -1,9 +1,13 @@
 import { request } from './client'
 import type {
   LyricView,
+  MusicFavoriteItem,
+  MusicFavoriteStatusView,
   MusicQuality,
+  MusicHistoryItem,
   MusicPlaylistSourceId,
   MusicSourceId,
+  PageView,
   PlaylistDetailView,
   PlaylistListView,
   PlayInfo,
@@ -29,6 +33,7 @@ export const musicPlay = (
   quality: MusicQuality = 'flac',
 ) =>
   request<PlayInfo>('/api/v1/music/play', {
+    auth: true,
     query: { source, id, quality },
   })
 
@@ -78,4 +83,52 @@ export const musicNewSongs = (
 ) =>
   request<ToplistDetailView>('/api/v1/music/new', {
     query: { source, page, pageSize },
+  })
+
+export interface MusicFavoritePayload {
+  source: MusicSourceId
+  songId: string
+  name: string
+  artist?: string
+  album?: string
+  coverUrl?: string
+  durationSec?: number
+}
+
+export const getMusicHistory = (page = 0, size = DEFAULT_PAGE_SIZE) =>
+  request<PageView<MusicHistoryItem>>('/api/user/music/history', {
+    auth: true,
+    query: { page, size },
+  })
+
+export const deleteMusicHistory = (id: number) =>
+  request<void>(`/api/user/music/history/${id}`, {
+    method: 'DELETE',
+    auth: true,
+  })
+
+export const getMusicFavorites = (page = 0, size = DEFAULT_PAGE_SIZE) =>
+  request<PageView<MusicFavoriteItem>>('/api/user/music/favorites', {
+    auth: true,
+    query: { page, size },
+  })
+
+export const saveMusicFavorite = (body: MusicFavoritePayload) =>
+  request<MusicFavoriteItem>('/api/user/music/favorites', {
+    method: 'POST',
+    auth: true,
+    body,
+  })
+
+export const deleteMusicFavorite = (source: MusicSourceId, songId: string) =>
+  request<void>('/api/user/music/favorites', {
+    method: 'DELETE',
+    auth: true,
+    query: { source, songId },
+  })
+
+export const getMusicFavoriteStatus = (source: MusicSourceId, songId: string) =>
+  request<MusicFavoriteStatusView>('/api/user/music/favorites/status', {
+    auth: true,
+    query: { source, songId },
   })

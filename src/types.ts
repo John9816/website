@@ -258,6 +258,36 @@ export interface PlaylistDetailView {
   list: SongSearchItem[]
 }
 
+export interface MusicHistoryItem {
+  id: number
+  source: MusicSourceId
+  songId: string
+  name: string
+  artist?: string | null
+  album?: string | null
+  coverUrl?: string | null
+  durationSec?: number | null
+  playedAt?: string
+  createdAt?: string
+}
+
+export interface MusicFavoriteItem {
+  id: number
+  source: MusicSourceId
+  songId: string
+  name: string
+  artist?: string | null
+  album?: string | null
+  coverUrl?: string | null
+  durationSec?: number | null
+  likedAt?: string
+}
+
+export interface MusicFavoriteStatusView {
+  liked: boolean
+  favoriteId?: number | null
+}
+
 export type KbDocStatus = 'draft' | 'published'
 
 export interface KbSpace {
@@ -352,9 +382,22 @@ export interface KbDocVersionDetail {
 }
 
 export interface KbPublicDoc {
+  id: number
+  token: string
   title: string
   summary?: string | null
   contentJson?: string | null
   contentHtml?: string | null
+  updatedAt?: string
+  documents: KbPublicDocItem[]
+}
+
+export interface KbPublicDocItem {
+  id: number
+  token: string
+  parentId?: number | null
+  title: string
+  summary?: string | null
+  sortOrder?: number
   updatedAt?: string
 }

@@ -1,4 +1,5 @@
 import { Empty, Pagination, Space, Table, Typography } from 'antd'
+import type { ReactNode } from 'react'
 import { Pause, Play } from 'lucide-react'
 import { PAGE_SIZE_OPTIONS } from '../constants/pagination'
 import MusicCover from './MusicCover'
@@ -14,6 +15,8 @@ type Props = {
   pageSize: number
   total?: number | null
   onPageChange?: (nextPage: number, nextPageSize: number) => void
+  renderActions?: (row: SongSearchItem) => ReactNode
+  actionColumnWidth?: number
 }
 
 function sourceLabel(source: SongSearchItem['source']) {
@@ -45,6 +48,8 @@ export default function MusicSongTable({
   pageSize,
   total,
   onPageChange,
+  renderActions,
+  actionColumnWidth = 76,
 }: Props) {
   const {
     current,
@@ -123,38 +128,42 @@ export default function MusicSongTable({
           },
           {
             title: '',
-            width: 76,
-            render: (_value, row) =>
-              isPlayingRow(row) && isPlaying ? (
-                <button
-                  type="button"
-                  className="ctrl-btn"
-                  style={{ width: 32, height: 32 }}
-                  onClick={(event) => {
-                    event.stopPropagation()
-                    togglePlay()
-                  }}
-                  aria-label="暂停"
-                  title="暂停"
-                >
-                  <Pause size={16} />
-                </button>
-              ) : (
-                <button
-                  type="button"
-                  className="ctrl-btn primary"
-                  style={{ width: 32, height: 32, boxShadow: 'none' }}
-                  disabled={playLoading && isPlayingRow(row)}
-                  onClick={(event) => {
-                    event.stopPropagation()
-                    handleRowActivate(row)
-                  }}
-                  aria-label="播放"
-                  title="播放"
-                >
-                  <Play size={16} />
-                </button>
-              ),
+            width: actionColumnWidth,
+            render: (_value, row) => (
+              <Space size={8} className="music-song-table__actions">
+                {isPlayingRow(row) && isPlaying ? (
+                  <button
+                    type="button"
+                    className="ctrl-btn"
+                    style={{ width: 32, height: 32 }}
+                    onClick={(event) => {
+                      event.stopPropagation()
+                      togglePlay()
+                    }}
+                    aria-label="暂停"
+                    title="暂停"
+                  >
+                    <Pause size={16} />
+                  </button>
+                ) : (
+                  <button
+                    type="button"
+                    className="ctrl-btn primary"
+                    style={{ width: 32, height: 32, boxShadow: 'none' }}
+                    disabled={playLoading && isPlayingRow(row)}
+                    onClick={(event) => {
+                      event.stopPropagation()
+                      handleRowActivate(row)
+                    }}
+                    aria-label="播放"
+                    title="播放"
+                  >
+                    <Play size={16} />
+                  </button>
+                )}
+                {renderActions?.(row)}
+              </Space>
+            ),
           },
         ]}
         rowClassName={(row) => (isPlayingRow(row) ? 'music-row-active' : '')}
