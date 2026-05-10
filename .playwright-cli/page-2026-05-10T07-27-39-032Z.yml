@@ -1,0 +1,148 @@
+- generic [ref=e12]:
+  - complementary [ref=e13]:
+    - generic [ref=e14]:
+      - generic [ref=e15]: 导航后台
+      - menu [ref=e16]:
+        - menuitem "appstore 分类" [ref=e17] [cursor=pointer]:
+          - img "appstore" [ref=e18]:
+            - img [ref=e19]
+          - link "分类" [ref=e22]:
+            - /url: /admin/categories
+        - menuitem "link 链接" [ref=e23] [cursor=pointer]:
+          - img "link" [ref=e24]:
+            - img [ref=e25]
+          - link "链接" [ref=e28]:
+            - /url: /admin/links
+        - menuitem "picture 图片生成" [ref=e29] [cursor=pointer]:
+          - img "picture" [ref=e30]:
+            - img [ref=e31]
+          - link "图片生成" [ref=e34]:
+            - /url: /admin/image
+        - menuitem "book 知识库" [ref=e35] [cursor=pointer]:
+          - img "book" [ref=e36]:
+            - img [ref=e37]
+          - link "知识库" [ref=e40]:
+            - /url: /admin/kb
+        - menuitem "key 修改密码" [ref=e41] [cursor=pointer]:
+          - img "key" [ref=e42]:
+            - img [ref=e43]
+          - link "修改密码" [ref=e46]:
+            - /url: /admin/password
+  - generic [ref=e47]:
+    - banner [ref=e48]:
+      - generic [ref=e49]: 欢迎，kbdebug1778397773
+      - generic [ref=e50]:
+        - link "home 首页" [ref=e51] [cursor=pointer]:
+          - /url: /
+          - button "home 首页" [ref=e52]:
+            - img "home" [ref=e54]:
+              - img [ref=e55]
+            - generic [ref=e57]: 首页
+        - link "customer-service 音乐" [ref=e58] [cursor=pointer]:
+          - /url: /music
+          - button "customer-service 音乐" [ref=e59]:
+            - img "customer-service" [ref=e61]:
+              - img [ref=e62]
+            - generic [ref=e64]: 音乐
+        - button "logout 退出" [ref=e65] [cursor=pointer]:
+          - img "logout" [ref=e67]:
+            - img [ref=e68]
+          - generic [ref=e70]: 退出
+        - button "切换到深色模式" [ref=e71]:
+          - img [ref=e73]
+    - main [ref=e75]:
+      - generic [ref=e78]:
+        - complementary [ref=e79]:
+          - generic [ref=e80]:
+            - generic [ref=e81]: 个人空间
+            - generic [ref=e82]:
+              - button "plus" [ref=e83] [cursor=pointer]:
+                - img "plus" [ref=e85]:
+                  - img [ref=e86]
+              - button "tags" [ref=e89] [cursor=pointer]:
+                - img "tags" [ref=e91]:
+                  - img [ref=e92]
+          - generic [ref=e95]:
+            - generic:
+              - textbox "for screen reader"
+            - tree [ref=e96]:
+              - generic [ref=e99]:
+                - treeitem "caret-down 个人空间" [expanded] [ref=e100]:
+                  - img "caret-down" [ref=e102] [cursor=pointer]:
+                    - img [ref=e103]
+                  - generic "个人空间" [ref=e105] [cursor=pointer]
+                - treeitem "未命名文档" [ref=e106]:
+                  - generic "未命名文档" [ref=e109] [cursor=pointer]
+          - generic [ref=e110]: 右键文档可新建子文档、分享或删除。
+        - generic [ref=e111]:
+          - generic [ref=e112]:
+            - navigation [ref=e114]:
+              - list [ref=e115]:
+                - listitem [ref=e116]:
+                  - generic [ref=e118] [cursor=pointer]: 个人空间
+                - listitem [ref=e119]: /
+                - listitem [ref=e120]: 未命名文档
+            - generic [ref=e226]:
+              - button "eye" [ref=e227] [cursor=pointer]:
+                - img "eye" [ref=e229]:
+                  - img [ref=e230]
+              - button "setting" [ref=e232] [cursor=pointer]:
+                - img "setting" [ref=e234]:
+                  - img [ref=e235]
+              - button "delete" [ref=e237] [cursor=pointer]:
+                - img "delete" [ref=e239]:
+                  - img [ref=e240]
+              - button "保 存" [ref=e243] [cursor=pointer]:
+                - generic [ref=e244]: 保 存
+          - generic [ref=e245]:
+            - generic [ref=e246]: 正在编辑
+            - textbox "无标题文档" [ref=e247]: 未命名文档
+            - textbox "补充一句摘要…" [ref=e248]
+            - generic [ref=e250]:
+              - generic [ref=e252]:
+                - button "undo" [disabled] [ref=e254]:
+                  - generic:
+                    - img "undo":
+                      - img
+                - button "redo" [disabled] [ref=e256]:
+                  - generic:
+                    - img "redo":
+                      - img
+                - separator [ref=e258]
+                - button "bold" [ref=e260] [cursor=pointer]:
+                  - img "bold" [ref=e262]:
+                    - img [ref=e263]
+                - button "italic" [ref=e266] [cursor=pointer]:
+                  - img "italic" [ref=e268]:
+                    - img [ref=e269]
+                - button "underline" [ref=e272] [cursor=pointer]:
+                  - img "underline" [ref=e274]:
+                    - img [ref=e275]
+                - button "strikethrough" [ref=e278] [cursor=pointer]:
+                  - img "strikethrough" [ref=e280]:
+                    - img [ref=e281]
+                - button "code" [ref=e284] [cursor=pointer]:
+                  - img "code" [ref=e286]:
+                    - img [ref=e287]
+                - separator [ref=e290]
+                - button "unordered-list" [ref=e292] [cursor=pointer]:
+                  - img "unordered-list" [ref=e294]:
+                    - img [ref=e295]
+                - button "ordered-list" [ref=e298] [cursor=pointer]:
+                  - img "ordered-list" [ref=e300]:
+                    - img [ref=e301]
+                - button "code" [ref=e304] [cursor=pointer]:
+                  - img "code" [ref=e306]:
+                    - img [ref=e307]
+                - separator [ref=e310]
+                - button "link" [ref=e312] [cursor=pointer]:
+                  - img "link" [ref=e314]:
+                    - img [ref=e315]
+                - button "picture" [ref=e318] [cursor=pointer]:
+                  - img "picture" [ref=e320]:
+                    - img [ref=e321]
+                - button "table" [ref=e324] [cursor=pointer]:
+                  - img "table" [ref=e326]:
+                    - img [ref=e327]
+              - textbox [active] [ref=e330]:
+                - paragraph [ref=e331]: 输入内容...

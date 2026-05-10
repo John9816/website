@@ -1,15 +1,18 @@
 import { useCallback, useDeferredValue, useEffect, useMemo, useState, type ReactNode } from 'react'
 import {
   App as AntApp,
+  Breadcrumb,
   Button,
   Card,
   Col,
   Divider,
   Drawer,
+  Dropdown,
   Empty,
   Form,
   Input,
   InputNumber,
+  MenuProps,
   Modal,
   Popconfirm,
   Row,
@@ -26,10 +29,16 @@ import {
   CopyOutlined,
   DeleteOutlined,
   EditOutlined,
+  EyeOutlined,
+  FileAddOutlined,
   HistoryOutlined,
+  MoreOutlined,
   PlusOutlined,
+  SettingOutlined,
   ShareAltOutlined,
+  TagsOutlined,
 } from '@ant-design/icons'
+import '../styles/kb-admin.css'
 import {
   createKbDoc,
   createKbSpace,
@@ -231,6 +240,11 @@ export default function AdminKnowledgeBase() {
   const [inlineEditingDocId, setInlineEditingDocId] = useState<number | null>(null)
   const [inlineDocSaving, setInlineDocSaving] = useState(false)
   const [inlineDocForm] = Form.useForm<DocFormValues>()
+  const [propertyDrawerOpen, setPropertyDrawerOpen] = useState(false)
+  const [editTitle, setEditTitle] = useState('')
+  const [editSummary, setEditSummary] = useState('')
+  const [editContentHtml, setEditContentHtml] = useState('')
+  const [editInitialContent, setEditInitialContent] = useState('')
 
   const [shareModalOpen, setShareModalOpen] = useState(false)
   const [shareLoading, setShareLoading] = useState(false)
@@ -246,9 +260,8 @@ export default function AdminKnowledgeBase() {
   const [versionTotal, setVersionTotal] = useState(0)
   const [selectedVersionId, setSelectedVersionId] = useState<number | null>(null)
   const [versionDetailLoading, setVersionDetailLoading] = useState(false)
-  const [versionDetail, setVersionDetail] = useState<KbDocVersionDetail | null>(null)
+  const [selectedRowKeys, setSelectedRowKeys] = useState<React.Key[]>([])
 
-  const inlineDocContentHtml = Form.useWatch('contentHtml', inlineDocForm) ?? ''
   const inlineDocParentOptions = useMemo(
     () => flattenTreeOptions(tree, '', inlineEditingDocId ?? undefined),
     [inlineEditingDocId, tree],
@@ -450,6 +463,12 @@ export default function AdminKnowledgeBase() {
   }, [inlineDocForm, inlineEditingDocId, selectedParentId])
 
   useEffect(() => {
+    if (!inlineEditingDocId) {
+      setPropertyDrawerOpen(false)
+    }
+  }, [inlineEditingDocId])
+
+  useEffect(() => {
     if (!treeContextMenu) return
 
     const close = () => setTreeContextMenu(null)
@@ -564,16 +583,17 @@ export default function AdminKnowledgeBase() {
   const enterInlineEdit = useCallback(
     (doc: KbDoc) => {
       setInlineEditingDocId(doc.id)
+      setEditTitle(doc.title)
+      setEditSummary(doc.summary ?? '')
+      setEditContentHtml(doc.contentHtml ?? '')
+      setEditInitialContent(doc.contentHtml ?? '')
       inlineDocForm.setFieldsValue({
         spaceId: doc.spaceId,
         parentId: doc.parentId ?? undefined,
-        title: doc.title,
-        summary: doc.summary ?? '',
         status: doc.status,
         sortOrder: doc.sortOrder,
         tagIds: doc.tags.map((item) => item.id),
         changeNote: '',
-        contentHtml: doc.contentHtml ?? '',
       })
     },
     [inlineDocForm],
@@ -581,8 +601,19 @@ export default function AdminKnowledgeBase() {
 
   const exitInlineEdit = useCallback(() => {
     setInlineEditingDocId(null)
+    setEditTitle('')
+    setEditSummary('')
+    setEditContentHtml('')
+    setEditInitialContent('')
     inlineDocForm.resetFields()
   }, [inlineDocForm])
+
+  const openProperties = useCallback(() => {
+    if (selectedDoc && inlineEditingDocId !== selectedDoc.id) {
+      enterInlineEdit(selectedDoc)
+    }
+    setPropertyDrawerOpen(true)
+  }, [enterInlineEdit, inlineEditingDocId, selectedDoc])
 
   const openEditDoc = async (doc: { id: number }) => {
     try {
@@ -597,6 +628,11 @@ export default function AdminKnowledgeBase() {
 
   const handleSaveInlineDoc = async () => {
     if (!selectedDoc || inlineEditingDocId !== selectedDoc.id) return
+    const trimmedTitle = editTitle.trim()
+    if (!trimmedTitle) {
+      message.error('请输入标题')
+      return
+    }
     const values = await inlineDocForm.validateFields()
     const nextParentId = values.parentId ?? null
     const nextTagIds = [...(values.tagIds ?? [])].sort((a, b) => a - b)
@@ -604,21 +640,20 @@ export default function AdminKnowledgeBase() {
     setInlineDocSaving(true)
     try {
       await updateKbDoc(selectedDoc.id, {
-        title: values.title,
-        summary: values.summary,
-        contentHtml: values.contentHtml,
+        title: trimmedTitle,
+        summary: editSummary,
+        contentHtml: editContentHtml,
         status: values.status,
         sortOrder: values.sortOrder,
         changeNote: values.changeNote,
       })
 
       if (
-        selectedDoc.spaceId !== values.spaceId ||
         (selectedDoc.parentId ?? null) !== nextParentId ||
         selectedDoc.sortOrder !== values.sortOrder
       ) {
         await moveKbDoc(selectedDoc.id, {
-          spaceId: values.spaceId,
+          spaceId: selectedDoc.spaceId,
           parentId: nextParentId,
           sortOrder: values.sortOrder,
         })
@@ -630,7 +665,7 @@ export default function AdminKnowledgeBase() {
       }
 
       message.success('文档已更新')
-      const targetSpaceId = values.spaceId
+      const targetSpaceId = selectedDoc.spaceId
       exitInlineEdit()
       setActiveSpaceId(targetSpaceId)
       await Promise.all([
@@ -862,12 +897,9 @@ export default function AdminKnowledgeBase() {
 
   return (
     <Space direction="vertical" size={16} style={{ width: '100%' }}>
-      <Card title="知识库">
-        {!spaces.length && !spacesLoading ? (
-          <Empty
-            description="还没有知识库空间"
-            image={Empty.PRESENTED_IMAGE_SIMPLE}
-          >
+      {!spaces.length && !spacesLoading ? (
+        <Card title="知识库">
+          <Empty description="还没有知识库空间" image={Empty.PRESENTED_IMAGE_SIMPLE}>
             <Button
               type="primary"
               icon={<PlusOutlined />}
@@ -877,189 +909,207 @@ export default function AdminKnowledgeBase() {
               创建个人空间
             </Button>
           </Empty>
-        ) : (
-          <Row gutter={16}>
-            <Col xs={24} lg={8} xl={7}>
-              {treeLoading && (
-                <Typography.Text type="secondary">文档树加载中...</Typography.Text>
-              )}
+        </Card>
+      ) : (
+        <>
+          <div className="kb-admin-shell">
+            <aside className="kb-admin-sidebar">
+              <div className="kb-admin-sidebar__header">
+                <span className="kb-admin-sidebar__title">个人空间</span>
+                <div className="kb-admin-sidebar__actions">
+                  <Tooltip title="新建顶层文档">
+                    <Button
+                      size="small"
+                      type="text"
+                      icon={<PlusOutlined />}
+                      onClick={() => void openCreateDoc(null)}
+                    />
+                  </Tooltip>
+                  <Tooltip title="管理标签">
+                    <Button
+                      size="small"
+                      type="text"
+                      icon={<TagsOutlined />}
+                      onClick={() => setTagModalOpen(true)}
+                    />
+                  </Tooltip>
+                </div>
+              </div>
 
-              <Tree
-                blockNode
-                defaultExpandAll
-                selectedKeys={selectedParentId ? [selectedParentId] : []}
-                treeData={[
-                  {
-                    key: ROOT_TREE_KEY,
-                    title: '个人空间',
-                    children: buildTreeData(tree),
-                  },
-                ]}
-                onSelect={(keys) => {
-                  const key = keys[0]
-                  if (key === undefined || key === ROOT_TREE_KEY) {
-                    setSelectedParentId(null)
-                    return
-                  }
-                  setSelectedParentId(typeof key === 'number' ? key : Number(key))
-                }}
-                onRightClick={({ event, node }) => {
-                  event.preventDefault()
-                  if (node.key === ROOT_TREE_KEY) {
-                    setTreeContextMenu({
-                      kind: 'root',
-                      x: event.clientX,
-                      y: event.clientY,
-                    })
-                    return
-                  }
-                  const docId = Number(node.key)
-                  setTreeContextMenu({
-                    kind: 'doc',
-                    docId,
-                    title: findTreeTitle(tree, docId) || '文档',
-                    x: event.clientX,
-                    y: event.clientY,
-                  })
-                }}
-              />
-            </Col>
-
-            <Col xs={24} lg={16} xl={17}>
-              <Card
-                size="small"
-                title={
-                  selectedParentId && selectedDoc
-                    ? `个人空间 · ${selectedDoc.title}`
-                    : '文档列表'
-                }
-                styles={{ body: { display: 'flex', flexDirection: 'column', gap: 12 } }}
-              >
-                {selectedParentId ? (
-                  selectedDocLoading ? (
-                    <Typography.Text type="secondary">正在加载文档内容...</Typography.Text>
-                  ) : selectedDoc ? (
-                    inlineEditingDocId === selectedDoc.id ? (
-                      <Space direction="vertical" size={16} style={{ width: '100%' }}>
-                        <Space wrap>
-                          <Button onClick={exitInlineEdit}>预览</Button>
-                          <Button
-                            type="primary"
-                            loading={inlineDocSaving}
-                            onClick={() => void handleSaveInlineDoc()}
+              <div className="kb-admin-sidebar__tree">
+                {treeLoading ? (
+                  <Typography.Text type="secondary" style={{ paddingLeft: 8 }}>
+                    加载中...
+                  </Typography.Text>
+                ) : (
+                  <Tree
+                    blockNode
+                    defaultExpandAll
+                    selectedKeys={selectedParentId ? [selectedParentId] : []}
+                    treeData={[
+                      {
+                        key: ROOT_TREE_KEY,
+                        title: (
+                          <Dropdown
+                            menu={{
+                              items: [
+                                {
+                                  key: 'add',
+                                  label: '新建顶层文档',
+                                  icon: <PlusOutlined />,
+                                  onClick: () => openCreateDoc(null),
+                                },
+                              ],
+                            }}
+                            trigger={['contextMenu']}
                           >
-                            保存
-                          </Button>
-                          <Button
-                            onClick={() => {
+                            <span style={{ fontWeight: 600 }}>个人空间</span>
+                          </Dropdown>
+                        ),
+                        children: buildTreeData(tree),
+                      },
+                    ]}
+                    onSelect={(keys) => {
+                      const key = keys[0]
+                      if (key === undefined || key === ROOT_TREE_KEY) {
+                        setSelectedParentId(null)
+                        return
+                      }
+                      setSelectedParentId(typeof key === 'number' ? key : Number(key))
+                    }}
+                    titleRender={(node: any) => {
+                      if (node.key === ROOT_TREE_KEY) return node.title
+                      const docId = Number(node.key)
+                      const title = node.title as string
+                      return (
+                        <Dropdown
+                          menu={{
+                            items: [
+                              {
+                                key: 'add-child',
+                                label: '新增子文档',
+                                icon: <PlusOutlined />,
+                                onClick: () => openCreateDoc(docId),
+                              },
+                              {
+                                key: 'share',
+                                label: '分享文档',
+                                icon: <ShareAltOutlined />,
+                                onClick: () => openShareModal({ id: docId, title }),
+                              },
+                              { type: 'divider' },
+                              {
+                                key: 'delete',
+                                label: '删除文档',
+                                icon: <DeleteOutlined />,
+                                danger: true,
+                                onClick: () => confirmDeleteDoc(docId, title),
+                              },
+                            ],
+                          }}
+                          trigger={['contextMenu']}
+                        >
+                          <div style={{ width: '100%' }}>{title}</div>
+                        </Dropdown>
+                      )
+                    }}
+                  />
+                )}
+              </div>
+
+              <div className="kb-admin-sidebar__hint">
+                右键文档可新建子文档、分享或删除。
+              </div>
+            </aside>
+
+            <section className="kb-admin-main">
+              <div className="kb-admin-toolbar">
+                <div className="kb-admin-toolbar__crumbs">
+                  <Breadcrumb
+                    items={[
+                      {
+                        title: (
+                          <a
+                            onClick={(event) => {
+                              event.preventDefault()
                               exitInlineEdit()
                               setSelectedParentId(null)
                             }}
                           >
-                            返回列表
-                          </Button>
-                        </Space>
+                            个人空间
+                          </a>
+                        ),
+                      },
+                      ...(selectedDoc
+                        ? [
+                            {
+                              title: (
+                                <a
+                                  onClick={(e) => {
+                                    e.preventDefault()
+                                    setSelectedParentId(null)
+                                  }}
+                                >
+                                  文档列表
+                                </a>
+                              ),
+                            },
+                            { title: selectedDoc.title || '未命名文档' },
+                          ]
+                        : [{ title: '文档列表' }]),
+                    ]}
+                  />
+                </div>
 
-                        <Form form={inlineDocForm} layout="vertical">
-                          <Form.Item
-                            name="spaceId"
-                            hidden
-                            rules={[{ required: true, message: '请选择空间' }]}
-                          >
-                            <InputNumber min={1} style={{ display: 'none' }} />
-                          </Form.Item>
-
-                          <Row gutter={12}>
-                            <Col xs={24} md={12}>
-                              <Form.Item name="parentId" label="父文档">
-                                <Select
-                                  allowClear
-                                  placeholder="顶层文档"
-                                  options={inlineDocParentOptions}
-                                  optionFilterProp="label"
-                                  showSearch
-                                />
-                              </Form.Item>
-                            </Col>
-                            <Col xs={12} md={6}>
-                              <Form.Item
-                                name="status"
-                                label="状态"
-                                rules={[{ required: true, message: '请选择状态' }]}
-                              >
-                                <Select
-                                  options={DOC_STATUS_OPTIONS.map((item) => ({
-                                    value: item.value,
-                                    label: item.label,
-                                  }))}
-                                />
-                              </Form.Item>
-                            </Col>
-                            <Col xs={12} md={6}>
-                              <Form.Item name="sortOrder" label="排序">
-                                <InputNumber min={0} style={{ width: '100%' }} />
-                              </Form.Item>
-                            </Col>
-                          </Row>
-
-                          <Form.Item
-                            name="title"
-                            label="标题"
-                            rules={[{ required: true, message: '请输入标题' }]}
-                          >
-                            <Input maxLength={200} />
-                          </Form.Item>
-
-                          <Form.Item name="summary" label="摘要">
-                            <Input.TextArea rows={2} maxLength={500} showCount />
-                          </Form.Item>
-
-                          <Row gutter={12}>
-                            <Col xs={24} md={12}>
-                              <Form.Item name="tagIds" label="标签">
-                                <Select
-                                  mode="multiple"
-                                  allowClear
-                                  options={tagOptions}
-                                  optionFilterProp="label"
-                                  placeholder="可绑定多个标签"
-                                />
-                              </Form.Item>
-                            </Col>
-                            <Col xs={24} md={12}>
-                              <Form.Item name="changeNote" label="版本备注">
-                                <Input placeholder="可选，记录本次修改" maxLength={500} />
-                              </Form.Item>
-                            </Col>
-                          </Row>
-
-                          <Form.Item name="contentHtml" label="正文" style={{ marginBottom: 0 }}>
-                            <TiptapEditor
-                              content={inlineDocContentHtml}
-                              onChange={(html) =>
-                                inlineDocForm.setFieldValue('contentHtml', html)
-                              }
-                              minHeight={400}
-                              maxHeight="none"
-                            />
-                          </Form.Item>
-                        </Form>
-                      </Space>
-                    ) : (
-                    <Space direction="vertical" size={16} style={{ width: '100%' }}>
-                      <Space wrap>
-                        <Button onClick={() => setSelectedParentId(null)}>返回列表</Button>
+                <div className="kb-admin-toolbar__actions">
+                  {selectedDoc && inlineEditingDocId === selectedDoc.id ? (
+                    <>
+                      <Tooltip title="预览">
+                        <Button type="text" icon={<EyeOutlined />} onClick={exitInlineEdit} />
+                      </Tooltip>
+                      <Tooltip title="文档属性">
                         <Button
-                          type="primary"
-                          icon={<PlusOutlined />}
-                          onClick={() => openCreateDoc(selectedDoc.id)}
-                        >
-                          新建子文档
-                        </Button>
-                        <Button icon={<EditOutlined />} onClick={() => enterInlineEdit(selectedDoc)}>
-                          编辑
-                        </Button>
+                          type="text"
+                          icon={<SettingOutlined />}
+                          onClick={() => setPropertyDrawerOpen(true)}
+                        />
+                      </Tooltip>
+                      <Popconfirm
+                        title="删除文档后不可恢复"
+                        onConfirm={() => void handleDeleteDoc(selectedDoc.id)}
+                      >
+                        <Tooltip title="删除">
+                          <Button type="text" danger icon={<DeleteOutlined />} />
+                        </Tooltip>
+                      </Popconfirm>
+                      <span className="kb-admin-toolbar__divider" />
+                      <Button
+                        type="primary"
+                        loading={inlineDocSaving}
+                        onClick={() => void handleSaveInlineDoc()}
+                      >
+                        保存
+                      </Button>
+                    </>
+                  ) : selectedDoc ? (
+                    <>
+                      <Tooltip title="编辑">
                         <Button
+                          type="text"
+                          icon={<EditOutlined />}
+                          onClick={() => enterInlineEdit(selectedDoc)}
+                        />
+                      </Tooltip>
+                      <Tooltip title="新建子文档">
+                        <Button
+                          type="text"
+                          icon={<FileAddOutlined />}
+                          onClick={() => void openCreateDoc(selectedDoc.id)}
+                        />
+                      </Tooltip>
+                      <Tooltip title="版本历史">
+                        <Button
+                          type="text"
                           icon={<HistoryOutlined />}
                           onClick={() =>
                             void openVersionsDrawer({
@@ -1067,10 +1117,11 @@ export default function AdminKnowledgeBase() {
                               title: selectedDoc.title,
                             })
                           }
-                        >
-                          版本
-                        </Button>
+                        />
+                      </Tooltip>
+                      <Tooltip title="分享">
                         <Button
+                          type="text"
                           icon={<ShareAltOutlined />}
                           onClick={() =>
                             void openShareModal({
@@ -1078,68 +1129,111 @@ export default function AdminKnowledgeBase() {
                               title: selectedDoc.title,
                             })
                           }
-                        >
-                          分享
-                        </Button>
-                        <Popconfirm
-                          title="删除文档后不可恢复"
-                          onConfirm={() => void handleDeleteDoc(selectedDoc.id)}
-                        >
-                          <Button danger icon={<DeleteOutlined />}>
-                            删除
-                          </Button>
-                        </Popconfirm>
-                      </Space>
+                        />
+                      </Tooltip>
+                      <Tooltip title="文档属性">
+                        <Button
+                          type="text"
+                          icon={<SettingOutlined />}
+                          onClick={openProperties}
+                        />
+                      </Tooltip>
+                      <Popconfirm
+                        title="删除文档后不可恢复"
+                        onConfirm={() => void handleDeleteDoc(selectedDoc.id)}
+                      >
+                        <Tooltip title="删除">
+                          <Button type="text" danger icon={<DeleteOutlined />} />
+                        </Tooltip>
+                      </Popconfirm>
+                    </>
+                  ) : null}
+                </div>
+              </div>
 
-                      <div>
-                        <Typography.Title level={3} style={{ marginBottom: 8 }}>
+              <div className="kb-admin-canvas">
+                {selectedParentId ? (
+                  selectedDocLoading ? (
+                    <Typography.Text type="secondary">正在加载文档内容...</Typography.Text>
+                  ) : selectedDoc ? (
+                    inlineEditingDocId === selectedDoc.id ? (
+                      <div className="kb-admin-article">
+                        <span className="kb-admin-article__eyebrow">正在编辑</span>
+                        <input
+                          className="kb-admin-edit__title"
+                          placeholder="无标题文档"
+                          maxLength={200}
+                          value={editTitle}
+                          onChange={(event) => setEditTitle(event.target.value)}
+                        />
+                        <textarea
+                          className="kb-admin-edit__summary"
+                          placeholder="补充一句摘要…"
+                          maxLength={500}
+                          rows={1}
+                          value={editSummary}
+                          onChange={(event) => setEditSummary(event.target.value)}
+                        />
+                        <div className="kb-admin-edit__editor">
+                          <TiptapEditor
+                            key={selectedDoc.id}
+                            content={editInitialContent}
+                            onChange={setEditContentHtml}
+                            minHeight={400}
+                            maxHeight="none"
+                          />
+                        </div>
+                      </div>
+                    ) : (
+                      <article className="kb-admin-article">
+                        <span className="kb-admin-article__eyebrow">个人空间</span>
+                        <Typography.Title level={1} className="kb-admin-article__title">
                           {selectedDoc.title}
                         </Typography.Title>
-                        {selectedDoc.summary && (
-                          <Typography.Paragraph type="secondary" style={{ marginBottom: 8 }}>
+                        {selectedDoc.summary ? (
+                          <Typography.Paragraph className="kb-admin-article__summary">
                             {selectedDoc.summary}
                           </Typography.Paragraph>
-                        )}
-                        <Space wrap size={[8, 8]}>
-                          <Tag color={selectedDoc.status === 'published' ? 'green' : 'orange'}>
+                        ) : null}
+                        <div className="kb-admin-article__facts">
+                          <span
+                            className={`kb-admin-article__status is-${selectedDoc.status}`}
+                          >
+                            <span className="pill" />
                             {selectedDoc.status === 'published' ? '已发布' : '草稿'}
-                          </Tag>
-                          <Tag>v{selectedDoc.versionNo}</Tag>
-                          <Tag>排序 {selectedDoc.sortOrder}</Tag>
-                          <Tag>更新于 {formatDateTime(selectedDoc.updatedAt)}</Tag>
-                          {selectedDoc.share?.token && (
-                            <Tag color={selectedDoc.share.enabled ? 'blue' : 'default'}>
-                              已分享
-                            </Tag>
-                          )}
-                        </Space>
-                        {!!selectedDoc.tags.length && (
-                          <div style={{ marginTop: 12 }}>
-                            <Space wrap>
-                              {selectedDoc.tags.map((tag) => (
-                                <Tag key={tag.id} color={tag.color || 'blue'}>
-                                  {tag.name}
-                                </Tag>
-                              ))}
-                            </Space>
+                          </span>
+                          <span className="dot" />
+                          <span>v{selectedDoc.versionNo}</span>
+                          <span className="dot" />
+                          <span>更新于 {formatDateTime(selectedDoc.updatedAt)}</span>
+                          {selectedDoc.share?.token ? (
+                            <>
+                              <span className="dot" />
+                              <span>已公开分享</span>
+                            </>
+                          ) : null}
+                        </div>
+                        {selectedDoc.tags.length ? (
+                          <div className="kb-admin-article__tags">
+                            {selectedDoc.tags.map((tag) => (
+                              <Tag key={tag.id} color={tag.color || 'blue'}>
+                                {tag.name}
+                              </Tag>
+                            ))}
+                          </div>
+                        ) : null}
+                        <div className="kb-admin-article__divider" />
+                        {selectedDocContentHtml ? (
+                          <div
+                            className="kb-admin-article__body"
+                            dangerouslySetInnerHTML={{ __html: selectedDocContentHtml }}
+                          />
+                        ) : (
+                          <div className="kb-admin-article__empty">
+                            这个文档还没有正文内容
                           </div>
                         )}
-                      </div>
-
-                      <Divider style={{ margin: 0 }} />
-
-                      {selectedDocContentHtml ? (
-                        <div
-                          style={{ minHeight: 240 }}
-                          dangerouslySetInnerHTML={{ __html: selectedDocContentHtml }}
-                        />
-                      ) : (
-                        <Empty
-                          image={Empty.PRESENTED_IMAGE_SIMPLE}
-                          description="这个文档还没有正文内容"
-                        />
-                      )}
-                    </Space>
+                      </article>
                     )
                   ) : (
                     <Empty
@@ -1148,8 +1242,8 @@ export default function AdminKnowledgeBase() {
                     />
                   )
                 ) : (
-                  <>
-                    <Space wrap>
+                  <div className="kb-admin-listmode">
+                    <div className="kb-admin-listmode__filters">
                       <Input.Search
                         allowClear
                         placeholder="搜索标题或摘要"
@@ -1163,10 +1257,7 @@ export default function AdminKnowledgeBase() {
                         placeholder="按标签筛选"
                         value={tagFilterId}
                         onChange={(value) => setTagFilterId(value)}
-                        options={tags.map((tag) => ({
-                          value: tag.id,
-                          label: tag.name,
-                        }))}
+                        options={tags.map((tag) => ({ value: tag.id, label: tag.name }))}
                         style={{ width: 200 }}
                         optionFilterProp="label"
                       />
@@ -1178,17 +1269,44 @@ export default function AdminKnowledgeBase() {
                       >
                         清空筛选
                       </Button>
-                    </Space>
-
-                    <Typography.Text type="secondary">
-                      左侧单击文档会直接打开正文；右键个人空间可新建顶层文档，右键文档可新增、删除或分享。
-                    </Typography.Text>
+                      {selectedRowKeys.length > 0 && (
+                        <Space style={{ marginLeft: 'auto' }}>
+                          <Typography.Text type="secondary">
+                            已选 {selectedRowKeys.length} 项
+                          </Typography.Text>
+                          <Popconfirm
+                            title={`确定删除这 ${selectedRowKeys.length} 个文档吗？`}
+                            onConfirm={async () => {
+                              try {
+                                await Promise.all(
+                                  selectedRowKeys.map((key) => deleteKbDoc(Number(key))),
+                                )
+                                message.success('批量删除成功')
+                                setSelectedRowKeys([])
+                                await loadTree(activeSpaceId!)
+                                await loadDocs()
+                              } catch (error) {
+                                message.error('部分文档删除失败')
+                              }
+                            }}
+                          >
+                            <Button danger size="small">
+                              批量删除
+                            </Button>
+                          </Popconfirm>
+                        </Space>
+                      )}
+                    </div>
 
                     <Table<KbDocSummary>
                       rowKey="id"
                       loading={docsLoading}
                       dataSource={docs}
                       columns={docColumns}
+                      rowSelection={{
+                        selectedRowKeys,
+                        onChange: (keys) => setSelectedRowKeys(keys),
+                      }}
                       pagination={{
                         current: docPage,
                         pageSize: docPageSize,
@@ -1201,16 +1319,70 @@ export default function AdminKnowledgeBase() {
                       }}
                       onChange={handleDocTableChange}
                       locale={{
-                        emptyText: activeSpaceId ? '当前筛选条件下没有文档' : '请先创建个人空间',
+                        emptyText: activeSpaceId
+                          ? '当前筛选条件下没有文档'
+                          : '请先创建个人空间',
                       }}
                     />
-                  </>
+                  </div>
                 )}
-              </Card>
-            </Col>
-          </Row>
-        )}
-      </Card>
+              </div>
+            </section>
+          </div>
+
+          <Drawer
+            title="文档属性"
+            placement="right"
+            width={360}
+            open={propertyDrawerOpen}
+            onClose={() => setPropertyDrawerOpen(false)}
+            mask={false}
+            destroyOnClose={false}
+          >
+            <Form form={inlineDocForm} component="div" layout="vertical">
+              <Form.Item name="parentId" label="父文档">
+                <Select
+                  allowClear
+                  placeholder="顶层文档"
+                  options={inlineDocParentOptions}
+                  optionFilterProp="label"
+                  showSearch
+                />
+              </Form.Item>
+              <Form.Item
+                name="status"
+                label="状态"
+                rules={[{ required: true, message: '请选择状态' }]}
+              >
+                <Select
+                  options={DOC_STATUS_OPTIONS.map((item) => ({
+                    value: item.value,
+                    label: item.label,
+                  }))}
+                />
+              </Form.Item>
+              <Form.Item name="sortOrder" label="排序">
+                <InputNumber min={0} style={{ width: '100%' }} />
+              </Form.Item>
+              <Form.Item name="tagIds" label="标签">
+                <Select
+                  mode="multiple"
+                  allowClear
+                  options={tagOptions}
+                  optionFilterProp="label"
+                  placeholder="可绑定多个标签"
+                />
+              </Form.Item>
+              <Form.Item name="changeNote" label="版本备注">
+                <Input placeholder="可选，记录本次修改" maxLength={500} />
+              </Form.Item>
+              <Typography.Text type="secondary" style={{ fontSize: 12 }}>
+                修改完成后，点击顶部"保存"按钮提交所有变更。
+              </Typography.Text>
+            </Form>
+          </Drawer>
+        </>
+      )}
 
       {treeContextMenu && (
         <div

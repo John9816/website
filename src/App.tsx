@@ -17,6 +17,7 @@ const MusicPlaylistDetailPage = lazy(
   () => import('./pages/MusicPlaylistDetailPage'),
 )
 const MusicToplistDetailPage = lazy(() => import('./pages/MusicToplistDetailPage'))
+const MusicSharePage = lazy(() => import('./pages/MusicSharePage'))
 const AdminLayout = lazy(() => import('./pages/AdminLayout'))
 const AdminCategories = lazy(() => import('./pages/AdminCategories'))
 const AdminLinks = lazy(() => import('./pages/AdminLinks'))
@@ -70,6 +71,7 @@ export default function App() {
                   <Route path="/kb/share/:token" element={<KbSharePage />} />
                   <Route path="/music" element={<MusicLayout />}>
                     <Route index element={<MusicPage />} />
+                    <Route path="share/:token" element={<MusicSharePage />} />
                     <Route
                       path="toplist/:source/:id"
                       element={<MusicToplistDetailPage />}

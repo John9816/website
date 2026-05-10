@@ -3,9 +3,11 @@ import type {
   LyricView,
   MusicFavoriteItem,
   MusicFavoriteStatusView,
+  MusicPublicShareView,
   MusicQuality,
   MusicHistoryItem,
   MusicPlaylistSourceId,
+  MusicShareView,
   MusicSourceId,
   PageView,
   PlaylistDetailView,
@@ -95,6 +97,12 @@ export interface MusicFavoritePayload {
   durationSec?: number
 }
 
+export interface MusicSharePayload extends MusicFavoritePayload {
+  requestedQuality?: MusicQuality
+  expiresAt?: string | null
+  rotateToken?: boolean
+}
+
 export const getMusicHistory = (page = 0, size = DEFAULT_PAGE_SIZE) =>
   request<PageView<MusicHistoryItem>>('/api/user/music/history', {
     auth: true,
@@ -132,3 +140,26 @@ export const getMusicFavoriteStatus = (source: MusicSourceId, songId: string) =>
     auth: true,
     query: { source, songId },
   })
+
+export const getMusicShareStatus = (source: MusicSourceId, songId: string) =>
+  request<MusicShareView | null>('/api/user/music/shares/status', {
+    auth: true,
+    query: { source, songId },
+  })
+
+export const saveMusicShare = (body: MusicSharePayload) =>
+  request<MusicShareView>('/api/user/music/shares', {
+    method: 'POST',
+    auth: true,
+    body,
+  })
+
+export const deleteMusicShare = (source: MusicSourceId, songId: string) =>
+  request<void>('/api/user/music/shares', {
+    method: 'DELETE',
+    auth: true,
+    query: { source, songId },
+  })
+
+export const getPublicMusicShare = (token: string) =>
+  request<MusicPublicShareView>(`/api/public/music/share/${encodeURIComponent(token)}`)

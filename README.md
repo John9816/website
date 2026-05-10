@@ -10,7 +10,7 @@ It now covers:
 - AI chat workspace with model list, voice list, SSE streaming, audio input, message audio replay, standalone TTS preview, and audio regeneration
 - image generation with per-user history
 - knowledge base spaces, document tree, tags, version history, and public share page
-- music aggregation pages
+- music aggregation pages, per-user track sharing, and a public song share page
 
 ## Quick Start
 
@@ -57,6 +57,7 @@ BACKEND_URL=https://your-backend.example.com
 - `/register`: user registration
 - `/ai-chat`: AI workspace
 - `/music`: music explorer
+- `/music/share/:token`: public music share page
 - `/kb/share/:token`: public knowledge-base share page
 - `/admin/login`: admin login
 - `/admin/categories`: category management

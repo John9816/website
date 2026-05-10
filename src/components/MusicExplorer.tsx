@@ -26,6 +26,7 @@ import { DEFAULT_PAGE_SIZE, PAGE_SIZE_OPTIONS } from '../constants/pagination'
 import { useAuth } from '../context/AuthContext'
 import { useMusicPlayer } from '../context/MusicPlayerContext'
 import { useMusicFavorites } from '../hooks/useMusicFavorites'
+import { useMusicShares } from '../hooks/useMusicShares'
 import type {
   MusicFavoriteItem,
   MusicHistoryItem,
@@ -39,6 +40,7 @@ import type {
 } from '../types'
 import { hydrateCollectionCovers } from '../utils/musicPlayer'
 import MusicCover from './MusicCover'
+import MusicShareAction from './MusicShareAction'
 import MusicSongTable from './MusicSongTable'
 
 type MusicView = 'toplist' | 'playlist' | 'new' | 'history' | 'favorites' | 'search'
@@ -244,6 +246,7 @@ export default function MusicExplorer() {
   }, [favoriteSongs, historySongs, newSongsDetail?.list, searchResults, view])
 
   const favoriteState = useMusicFavorites(activeSongs)
+  const shareState = useMusicShares(activeSongs)
 
   const setView = useCallback(
     (nextView: MusicView) => {
@@ -516,7 +519,8 @@ export default function MusicExplorer() {
   const renderSongActions = (song: SongSearchItem) => (
     <>
       {auth.token ? (
-        <button
+        <>
+          <button
           type="button"
           className={`music-icon-action${favoriteState.isFavorite(song) ? ' is-active' : ''}`}
           disabled={favoriteState.isFavoriteLoading(song)}
@@ -531,7 +535,15 @@ export default function MusicExplorer() {
             size={16}
             fill={favoriteState.isFavorite(song) ? 'currentColor' : 'none'}
           />
-        </button>
+          </button>
+          <MusicShareAction
+            song={song}
+            shared={shareState.isShared(song)}
+            loading={shareState.isShareLoading(song)}
+            initialShare={shareState.getShare(song)}
+            onChange={(share) => shareState.setShare(song, share)}
+          />
+        </>
       ) : null}
       {view === 'history' ? (
         <button
@@ -665,7 +677,7 @@ export default function MusicExplorer() {
                       )
                     }}
                     renderActions={auth.token ? renderSongActions : undefined}
-                    actionColumnWidth={auth.token ? 132 : 76}
+                    actionColumnWidth={auth.token ? 176 : 76}
                   />
                 </section>
               )}
@@ -859,7 +871,7 @@ export default function MusicExplorer() {
                   setNewSongsPage(nextPageSize !== newSongsPageSize ? 1 : nextPage)
                 }}
                 renderActions={auth.token ? renderSongActions : undefined}
-                actionColumnWidth={auth.token ? 132 : 76}
+                actionColumnWidth={auth.token ? 176 : 76}
               />
             </>
           )}
@@ -895,7 +907,7 @@ export default function MusicExplorer() {
                       setHistoryPage(nextPageSize !== historyPageSize ? 1 : nextPage)
                     }}
                     renderActions={renderSongActions}
-                    actionColumnWidth={168}
+                    actionColumnWidth={212}
                   />
                 </>
               )}
@@ -933,7 +945,7 @@ export default function MusicExplorer() {
                       setFavoritePage(nextPageSize !== favoritePageSize ? 1 : nextPage)
                     }}
                     renderActions={renderSongActions}
-                    actionColumnWidth={132}
+                    actionColumnWidth={176}
                   />
                 </>
               )}

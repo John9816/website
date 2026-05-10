@@ -288,6 +288,40 @@ export interface MusicFavoriteStatusView {
   favoriteId?: number | null
 }
 
+export interface MusicShareView {
+  id: number
+  source: MusicSourceId
+  songId: string
+  name: string
+  artist?: string | null
+  album?: string | null
+  coverUrl?: string | null
+  durationSec?: number | null
+  requestedQuality: MusicQuality
+  token: string
+  expiresAt?: string | null
+  viewCount: number
+  createdAt?: string
+  updatedAt?: string
+}
+
+export interface MusicPublicShareView {
+  token: string
+  source: MusicSourceId
+  songId: string
+  name: string
+  artist?: string | null
+  album?: string | null
+  coverUrl?: string | null
+  durationSec?: number | null
+  requestedQuality: MusicQuality
+  expiresAt?: string | null
+  viewCount: number
+  playable: boolean
+  playError?: string | null
+  playInfo?: PlayInfo | null
+}
+
 export type KbDocStatus = 'draft' | 'published'
 
 export interface KbSpace {

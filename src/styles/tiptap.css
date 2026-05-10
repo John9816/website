@@ -13,9 +13,12 @@
 }
 
 .editor-menu-bar {
-  padding: 8px;
+  padding: 6px 12px;
   background: #fafafa;
   border-bottom: 1px solid #d9d9d9;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px;
 }
 
 [data-theme='dark'] .editor-menu-bar {
@@ -24,16 +27,28 @@
 }
 
 .editor-content {
-  padding: 12px;
   min-height: var(--editor-min-height);
   max-height: var(--editor-max-height);
   overflow-y: auto;
 }
 
-.tiptap-editor-container--fill {
-  height: 100%;
-  min-height: 0;
+.tiptap-editor-container--fullscreen {
+  position: fixed;
+  inset: 0;
+  z-index: 9999;
+  border: none;
+  border-radius: 0;
+  background: #fff;
 }
+
+[data-theme='dark'] .tiptap-editor-container--fullscreen {
+  background: #141414;
+}
+
+.tiptap-editor-container--fullscreen .editor-content {
+  max-height: calc(100vh - 40px);
+}
+
 
 .editor-content--fill {
   flex: 1;
@@ -42,7 +57,14 @@
 }
 
 .ProseMirror {
+  min-height: var(--editor-min-height);
+  padding: 12px;
+  box-sizing: border-box;
   outline: none;
+}
+
+.editor-content--fill .ProseMirror {
+  min-height: 100%;
 }
 
 .ProseMirror p.is-editor-empty:first-child::before {

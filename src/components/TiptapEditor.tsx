@@ -1,4 +1,4 @@
-import { useEffect, type CSSProperties } from 'react'
+import { useState, useEffect, type CSSProperties } from 'react'
 import { useEditor, EditorContent } from '@tiptap/react'
 import StarterKit from '@tiptap/starter-kit'
 import Underline from '@tiptap/extension-underline'
@@ -11,6 +11,10 @@ import { Table } from '@tiptap/extension-table'
 import TableRow from '@tiptap/extension-table-row'
 import TableCell from '@tiptap/extension-table-cell'
 import TableHeader from '@tiptap/extension-table-header'
+import { Color } from '@tiptap/extension-color'
+import { TextStyle } from '@tiptap/extension-text-style'
+import CodeBlockLowlight from '@tiptap/extension-code-block-lowlight'
+import { all, createLowlight } from 'lowlight'
 import {
   BoldOutlined,
   ItalicOutlined,
@@ -24,9 +28,15 @@ import {
   TableOutlined,
   UndoOutlined,
   RedoOutlined,
+  FullscreenOutlined,
+  FullscreenExitOutlined,
+  BgColorsOutlined,
+  CheckOutlined,
 } from '@ant-design/icons'
-import { Button, Space, Tooltip, Divider } from 'antd'
+import { Button, Space, Tooltip, Divider, Select, ColorPicker } from 'antd'
 import '../styles/tiptap.css'
+
+const lowlight = createLowlight(all)
 
 interface TiptapEditorProps {
   content: string
@@ -36,13 +46,13 @@ interface TiptapEditorProps {
   fillHeight?: boolean
 }
 
-const MenuBar = ({ editor }: { editor: any }) => {
+const MenuBar = ({ editor, isFullscreen, toggleFullscreen }: { editor: any, isFullscreen: boolean, toggleFullscreen: () => void }) => {
   if (!editor) {
     return null
   }
 
   const addImage = () => {
-    const url = window.prompt('URL')
+    const url = window.prompt('图片 URL')
     if (url) {
       editor.chain().focus().setImage({ src: url }).run()
     }
@@ -83,6 +93,30 @@ const MenuBar = ({ editor }: { editor: any }) => {
             icon={<RedoOutlined />}
             onClick={() => editor.chain().focus().redo().run()}
             disabled={!editor.can().chain().focus().redo().run()}
+          />
+        </Tooltip>
+        <Divider type="vertical" />
+        <Select
+          size="small"
+          placeholder="标题"
+          style={{ width: 80 }}
+          onChange={(level: number) => editor.chain().focus().toggleHeading({ level }).run()}
+          options={[
+            { value: 1, label: 'H1' },
+            { value: 2, label: 'H2' },
+            { value: 3, label: 'H3' },
+          ]}
+          value={
+            editor.isActive('heading', { level: 1 }) ? 1 :
+            editor.isActive('heading', { level: 2 }) ? 2 :
+            editor.isActive('heading', { level: 3 }) ? 3 : undefined
+          }
+        />
+        <Tooltip title="文本颜色">
+          <ColorPicker
+            size="small"
+            onChange={(color) => editor.chain().focus().setColor(color.toHexString()).run()}
+            value={editor.getAttributes('textStyle').color}
           />
         </Tooltip>
         <Divider type="vertical" />
@@ -147,7 +181,7 @@ const MenuBar = ({ editor }: { editor: any }) => {
           <Button
             size="small"
             type={editor.isActive('taskList') ? 'primary' : 'text'}
-            icon={<CodeOutlined />}
+            icon={<CheckOutlined />}
             onClick={() => editor.chain().focus().toggleTaskList().run()}
           />
         </Tooltip>
@@ -178,6 +212,15 @@ const MenuBar = ({ editor }: { editor: any }) => {
             }
           />
         </Tooltip>
+        <Divider type="vertical" />
+        <Tooltip title={isFullscreen ? "退出全屏" : "全屏"}>
+          <Button
+            size="small"
+            type="text"
+            icon={isFullscreen ? <FullscreenExitOutlined /> : <FullscreenOutlined />}
+            onClick={toggleFullscreen}
+          />
+        </Tooltip>
       </Space>
     </div>
   )
@@ -190,6 +233,7 @@ export default function TiptapEditor({
   maxHeight,
   fillHeight = false,
 }: TiptapEditorProps) {
+  const [isFullscreen, setIsFullscreen] = useState(false)
   const editor = useEditor({
     extensions: [
       StarterKit,
@@ -211,6 +255,11 @@ export default function TiptapEditor({
       TableRow,
       TableHeader,
       TableCell,
+      Color,
+      TextStyle,
+      CodeBlockLowlight.configure({
+        lowlight,
+      }),
     ],
     content,
     onUpdate: ({ editor }) => {
@@ -235,10 +284,10 @@ export default function TiptapEditor({
 
   return (
     <div
-      className={`tiptap-editor-container${fillHeight ? ' tiptap-editor-container--fill' : ''}`}
+      className={`tiptap-editor-container${fillHeight ? ' tiptap-editor-container--fill' : ''}${isFullscreen ? ' tiptap-editor-container--fullscreen' : ''}`}
       style={style}
     >
-      <MenuBar editor={editor} />
+      <MenuBar editor={editor} isFullscreen={isFullscreen} toggleFullscreen={() => setIsFullscreen(!isFullscreen)} />
       <EditorContent
         editor={editor}
         className={`editor-content${fillHeight ? ' editor-content--fill' : ''}`}
