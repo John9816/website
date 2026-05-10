@@ -66,10 +66,10 @@ export interface KbDocSharePayload {
   rotateToken?: boolean
 }
 
-export const listKbSpaces = () => request<KbSpace[]>('/api/user/kb/spaces', { auth: true })
+export const listKbSpaces = (signal?: AbortSignal) => request<KbSpace[]>('/api/user/kb/spaces', { auth: true, signal })
 
-export const getKbSpace = (id: number) =>
-  request<KbSpace>(`/api/user/kb/spaces/${id}`, { auth: true })
+export const getKbSpace = (id: number, signal?: AbortSignal) =>
+  request<KbSpace>(`/api/user/kb/spaces/${id}`, { auth: true, signal })
 
 export const createKbSpace = (body: KbSpacePayload) =>
   request<KbSpace>('/api/user/kb/spaces', {
@@ -91,10 +91,10 @@ export const deleteKbSpace = (id: number) =>
     auth: true,
   })
 
-export const getKbSpaceTree = (id: number) =>
-  request<KbDocTreeNode[]>(`/api/user/kb/spaces/${id}/tree`, { auth: true })
+export const getKbSpaceTree = (id: number, signal?: AbortSignal) =>
+  request<KbDocTreeNode[]>(`/api/user/kb/spaces/${id}/tree`, { auth: true, signal })
 
-export const listKbTags = () => request<KbTag[]>('/api/user/kb/tags', { auth: true })
+export const listKbTags = (signal?: AbortSignal) => request<KbTag[]>('/api/user/kb/tags', { auth: true, signal })
 
 export const createKbTag = (body: KbTagPayload) =>
   request<KbTag>('/api/user/kb/tags', {
@@ -116,10 +116,11 @@ export const deleteKbTag = (id: number) =>
     auth: true,
   })
 
-export const searchKbDocs = (query: KbDocSearchQuery = {}) =>
+export const searchKbDocs = (query: KbDocSearchQuery = {}, signal?: AbortSignal) =>
   request<PageView<KbDocSummary>>('/api/user/kb/docs', {
     auth: true,
     query: query as Record<string, string | number | undefined>,
+    signal,
   })
 
 export const createKbDoc = (body: KbDocPayload) =>
@@ -129,8 +130,8 @@ export const createKbDoc = (body: KbDocPayload) =>
     body,
   })
 
-export const getKbDoc = (id: number) =>
-  request<KbDoc>(`/api/user/kb/docs/${id}`, { auth: true })
+export const getKbDoc = (id: number, signal?: AbortSignal) =>
+  request<KbDoc>(`/api/user/kb/docs/${id}`, { auth: true, signal })
 
 export const updateKbDoc = (id: number, body: KbDocUpdatePayload) =>
   request<KbDoc>(`/api/user/kb/docs/${id}`, {
@@ -159,15 +160,17 @@ export const replaceKbDocTags = (id: number, tagIds: number[]) =>
     body: { tagIds },
   })
 
-export const listKbDocVersions = (id: number, page = 0, size = 20) =>
+export const listKbDocVersions = (id: number, page = 0, size = 20, signal?: AbortSignal) =>
   request<PageView<KbDocVersion>>(`/api/user/kb/docs/${id}/versions`, {
     auth: true,
     query: { page, size },
+    signal,
   })
 
-export const getKbDocVersion = (id: number, versionId: number) =>
+export const getKbDocVersion = (id: number, versionId: number, signal?: AbortSignal) =>
   request<KbDocVersionDetail>(`/api/user/kb/docs/${id}/versions/${versionId}`, {
     auth: true,
+    signal,
   })
 
 export const restoreKbDocVersion = (id: number, versionId: number) =>
@@ -176,8 +179,8 @@ export const restoreKbDocVersion = (id: number, versionId: number) =>
     auth: true,
   })
 
-export const getKbDocShare = (id: number) =>
-  request<KbDocShare | null>(`/api/user/kb/docs/${id}/share`, { auth: true })
+export const getKbDocShare = (id: number, signal?: AbortSignal) =>
+  request<KbDocShare | null>(`/api/user/kb/docs/${id}/share`, { auth: true, signal })
 
 export const upsertKbDocShare = (id: number, body: KbDocSharePayload = {}) =>
   request<KbDocShare>(`/api/user/kb/docs/${id}/share`, {
