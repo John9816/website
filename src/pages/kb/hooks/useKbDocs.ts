@@ -314,6 +314,14 @@ export function useKbDocs(activeSpaceId: number | null) {
   )
 
   useEffect(() => {
+    if (selectedParentId) {
+      void loadSelectedDoc(selectedParentId)
+    } else {
+      setSelectedDoc(null)
+    }
+  }, [selectedParentId, loadSelectedDoc])
+
+  useEffect(() => {
     if (!isDirty || !selectedDoc || inlineDocSaving) {
       if (autosaveStatus === 'saved') {
         const timer = setTimeout(() => setAutosaveStatus('idle'), 3000)
