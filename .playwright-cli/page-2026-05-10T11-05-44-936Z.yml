@@ -1,0 +1,523 @@
+- generic [ref=e1]:
+  - generic [ref=e12]:
+    - banner [ref=e13]:
+      - link "我的导航" [ref=e14] [cursor=pointer]:
+        - /url: /
+        - generic [ref=e16]: 我的导航
+      - navigation "主导航" [ref=e17]:
+        - link "导航" [ref=e18] [cursor=pointer]:
+          - /url: /
+        - link "音乐" [ref=e19] [cursor=pointer]:
+          - /url: /music
+        - link "AI对话" [ref=e20] [cursor=pointer]:
+          - /url: /ai-chat
+      - generic [ref=e21]:
+        - link "登录" [ref=e22] [cursor=pointer]:
+          - /url: /login
+          - img [ref=e23]
+          - generic [ref=e26]: 登录
+        - button "切换到深色模式" [ref=e27]:
+          - img [ref=e815]
+    - generic [ref=e32]:
+      - generic [ref=e33]:
+        - link "返回榜单" [ref=e34] [cursor=pointer]:
+          - /url: /music?view=toplist
+          - img [ref=e35]
+          - generic [ref=e37]: 返回榜单
+        - generic [ref=e38]:
+          - button "播放全部" [ref=e39] [cursor=pointer]:
+            - img [ref=e41]
+            - generic [ref=e43]: 播放全部
+          - button "刷新" [ref=e44] [cursor=pointer]:
+            - img [ref=e46]
+            - generic [ref=e51]: 刷新
+      - generic [ref=e53]:
+        - generic [ref=e54]: 榜单详情
+        - heading "飙升榜" [level=2] [ref=e55]
+        - paragraph [ref=e56]: 飙升榜 第130天
+        - generic [ref=e57]:
+          - generic [ref=e58]: QQ 音乐 · 20 首
+          - generic [ref=e59]: 2026-05-10
+      - generic [ref=e61]:
+        - heading "歌曲列表" [level=3] [ref=e62]
+        - paragraph [ref=e63]: 共 100 首
+      - table [ref=e70]:
+        - rowgroup [ref=e77]:
+          - row "# 歌曲 来源 时长" [ref=e78]:
+            - columnheader "#" [ref=e79]
+            - columnheader "歌曲" [ref=e80]
+            - columnheader "来源" [ref=e81]
+            - columnheader "时长" [ref=e82]
+            - columnheader [ref=e83]
+        - rowgroup [ref=e84]:
+          - row "1 无声电影 鹭卓 · 无声电影 QQ 音乐 3:21 播放" [ref=e620] [cursor=pointer]:
+            - cell "1" [ref=e86]
+            - cell "无声电影 鹭卓 · 无声电影" [ref=e87]:
+              - generic [ref=e91]:
+                - generic [ref=e92]: 无声电影
+                - generic [ref=e93]: 鹭卓 · 无声电影
+            - cell "QQ 音乐" [ref=e94]
+            - cell "3:21" [ref=e95]
+            - cell "播放" [ref=e621]:
+              - button "播放" [ref=e622]:
+                - img [ref=e623]
+          - row "2 Be Yourself TF家族-陈奕恒 · Be Yourself QQ 音乐 3:26 播放" [ref=e102] [cursor=pointer]:
+            - cell "2" [ref=e103]
+            - cell "Be Yourself TF家族-陈奕恒 · Be Yourself" [ref=e104]:
+              - generic [ref=e108]:
+                - generic [ref=e109]: Be Yourself
+                - generic [ref=e110]: TF家族-陈奕恒 · Be Yourself
+            - cell "QQ 音乐" [ref=e111]
+            - cell "3:26" [ref=e112]
+            - cell "播放" [ref=e113]:
+              - button "播放" [ref=e116]:
+                - img [ref=e625]
+          - row "3 YOLO 卓沅 · YOLO QQ 音乐 2:57 播放" [ref=e119] [cursor=pointer]:
+            - cell "3" [ref=e120]
+            - cell "YOLO 卓沅 · YOLO" [ref=e121]:
+              - generic [ref=e125]:
+                - generic [ref=e126]: YOLO
+                - generic [ref=e127]: 卓沅 · YOLO
+            - cell "QQ 音乐" [ref=e128]
+            - cell "2:57" [ref=e129]
+            - cell "播放" [ref=e130]:
+              - button "播放" [ref=e133]:
+                - img [ref=e134]
+          - row "4 星梦-XingMeng GAI周延 · 星梦-XingMeng QQ 音乐 5:05 播放" [ref=e136] [cursor=pointer]:
+            - cell "4" [ref=e137]
+            - cell "星梦-XingMeng GAI周延 · 星梦-XingMeng" [ref=e138]:
+              - generic [ref=e142]:
+                - generic [ref=e143]: 星梦-XingMeng
+                - generic [ref=e144]: GAI周延 · 星梦-XingMeng
+            - cell "QQ 音乐" [ref=e145]
+            - cell "5:05" [ref=e146]
+            - cell "播放" [ref=e147]:
+              - button "播放" [ref=e150]:
+                - img [ref=e151]
+          - row "5 颜色 Gareth.T · 颜色 QQ 音乐 3:31 播放" [ref=e153] [cursor=pointer]:
+            - cell "5" [ref=e154]
+            - cell "颜色 Gareth.T · 颜色" [ref=e155]:
+              - generic [ref=e159]:
+                - generic [ref=e160]: 颜色
+                - generic [ref=e161]: Gareth.T · 颜色
+            - cell "QQ 音乐" [ref=e162]
+            - cell "3:31" [ref=e163]
+            - cell "播放" [ref=e164]:
+              - button "播放" [ref=e167]:
+                - img [ref=e168]
+          - row "6 一半一半 (Live) 希林娜依高 / 欧阳娣娣 (Didi Ouyang) / 王晓赟子 / 谢可寅 / 袁一琦 · 超燃青春的合唱 第3期 QQ 音乐 3:58 播放" [ref=e170] [cursor=pointer]:
+            - cell "6" [ref=e171]
+            - cell "一半一半 (Live) 希林娜依高 / 欧阳娣娣 (Didi Ouyang) / 王晓赟子 / 谢可寅 / 袁一琦 · 超燃青春的合唱 第3期" [ref=e172]:
+              - generic [ref=e176]:
+                - generic [ref=e177]: 一半一半 (Live)
+                - generic [ref=e178]: 希林娜依高 / 欧阳娣娣 (Didi Ouyang) / 王晓赟子 / 谢可寅 / 袁一琦 · 超燃青春的合唱 第3期
+            - cell "QQ 音乐" [ref=e179]
+            - cell "3:58" [ref=e180]
+            - cell "播放" [ref=e181]:
+              - button "播放" [ref=e184]:
+                - img [ref=e185]
+          - row "7 Somebody That I Used to Know Gotye / Kimbra · Making Mirrors QQ 音乐 4:04 播放" [ref=e187] [cursor=pointer]:
+            - cell "7" [ref=e188]
+            - cell "Somebody That I Used to Know Gotye / Kimbra · Making Mirrors" [ref=e189]:
+              - generic [ref=e193]:
+                - generic [ref=e194]: Somebody That I Used to Know
+                - generic [ref=e195]: Gotye / Kimbra · Making Mirrors
+            - cell "QQ 音乐" [ref=e196]
+            - cell "4:04" [ref=e197]
+            - cell "播放" [ref=e198]:
+              - button "播放" [ref=e201]:
+                - img [ref=e202]
+          - row "8 爱错 王力宏 · 心中的日月 QQ 音乐 3:58 播放" [ref=e204] [cursor=pointer]:
+            - cell "8" [ref=e205]
+            - cell "爱错 王力宏 · 心中的日月" [ref=e206]:
+              - generic [ref=e210]:
+                - generic [ref=e211]: 爱错
+                - generic [ref=e212]: 王力宏 · 心中的日月
+            - cell "QQ 音乐" [ref=e213]
+            - cell "3:58" [ref=e214]
+            - cell "播放" [ref=e215]:
+              - button "播放" [ref=e218]:
+                - img [ref=e219]
+          - row "9 Beauty And A Beat Justin Bieber / Nicki Minaj · Believe (Deluxe Edition) QQ 音乐 3:47 播放" [ref=e221] [cursor=pointer]:
+            - cell "9" [ref=e222]
+            - cell "Beauty And A Beat Justin Bieber / Nicki Minaj · Believe (Deluxe Edition)" [ref=e223]:
+              - generic [ref=e227]:
+                - generic [ref=e228]: Beauty And A Beat
+                - generic [ref=e229]: Justin Bieber / Nicki Minaj · Believe (Deluxe Edition)
+            - cell "QQ 音乐" [ref=e230]
+            - cell "3:47" [ref=e231]
+            - cell "播放" [ref=e232]:
+              - button "播放" [ref=e235]:
+                - img [ref=e236]
+          - row "10 晴天 周杰伦 · 叶惠美 QQ 音乐 4:29 播放" [ref=e238] [cursor=pointer]:
+            - cell "10" [ref=e239]
+            - cell "晴天 周杰伦 · 叶惠美" [ref=e240]:
+              - generic [ref=e244]:
+                - generic [ref=e245]: 晴天
+                - generic [ref=e246]: 周杰伦 · 叶惠美
+            - cell "QQ 音乐" [ref=e247]
+            - cell "4:29" [ref=e248]
+            - cell "播放" [ref=e249]:
+              - button "播放" [ref=e252]:
+                - img [ref=e253]
+          - row "11 天龙八部之宿敌 许嵩 · 天龙八部之宿敌 QQ 音乐 4:24 播放" [ref=e255] [cursor=pointer]:
+            - cell "11" [ref=e256]
+            - cell "天龙八部之宿敌 许嵩 · 天龙八部之宿敌" [ref=e257]:
+              - generic [ref=e261]:
+                - generic [ref=e262]: 天龙八部之宿敌
+                - generic [ref=e263]: 许嵩 · 天龙八部之宿敌
+            - cell "QQ 音乐" [ref=e264]
+            - cell "4:24" [ref=e265]
+            - cell "播放" [ref=e266]:
+              - button "播放" [ref=e269]:
+                - img [ref=e270]
+          - row "12 答案 — 冒海飞/徐丽东 冒海飞 / 徐丽东 · 音乐剧《嫌疑人X的献身》同名OST QQ 音乐 3:00 播放" [ref=e272] [cursor=pointer]:
+            - cell "12" [ref=e273]
+            - cell "答案 — 冒海飞/徐丽东 冒海飞 / 徐丽东 · 音乐剧《嫌疑人X的献身》同名OST" [ref=e274]:
+              - generic [ref=e278]:
+                - generic [ref=e279]: 答案 — 冒海飞/徐丽东
+                - generic [ref=e280]: 冒海飞 / 徐丽东 · 音乐剧《嫌疑人X的献身》同名OST
+            - cell "QQ 音乐" [ref=e281]
+            - cell "3:00" [ref=e282]
+            - cell "播放" [ref=e283]:
+              - button "播放" [ref=e286]:
+                - img [ref=e287]
+          - row "13 雨爱 杨丞琳 · 雨爱 QQ 音乐 4:20 播放" [ref=e289] [cursor=pointer]:
+            - cell "13" [ref=e290]
+            - cell "雨爱 杨丞琳 · 雨爱" [ref=e291]:
+              - generic [ref=e295]:
+                - generic [ref=e296]: 雨爱
+                - generic [ref=e297]: 杨丞琳 · 雨爱
+            - cell "QQ 音乐" [ref=e298]
+            - cell "4:20" [ref=e299]
+            - cell "播放" [ref=e300]:
+              - button "播放" [ref=e303]:
+                - img [ref=e304]
+          - row "14 尕连手 (Live) 赵骏 · 魔力歌先生 第9期 QQ 音乐 4:09 播放" [ref=e306] [cursor=pointer]:
+            - cell "14" [ref=e307]
+            - cell "尕连手 (Live) 赵骏 · 魔力歌先生 第9期" [ref=e308]:
+              - generic [ref=e312]:
+                - generic [ref=e313]: 尕连手 (Live)
+                - generic [ref=e314]: 赵骏 · 魔力歌先生 第9期
+            - cell "QQ 音乐" [ref=e315]
+            - cell "4:09" [ref=e316]
+            - cell "播放" [ref=e317]:
+              - button "播放" [ref=e320]:
+                - img [ref=e321]
+          - row "15 搁浅 周杰伦 · 七里香 QQ 音乐 4:00 播放" [ref=e323] [cursor=pointer]:
+            - cell "15" [ref=e324]
+            - cell "搁浅 周杰伦 · 七里香" [ref=e325]:
+              - generic [ref=e329]:
+                - generic [ref=e330]: 搁浅
+                - generic [ref=e331]: 周杰伦 · 七里香
+            - cell "QQ 音乐" [ref=e332]
+            - cell "4:00" [ref=e333]
+            - cell "播放" [ref=e334]:
+              - button "播放" [ref=e337]:
+                - img [ref=e338]
+          - row "16 妈妈我爱你 李昕融 · 妈妈我爱你 QQ 音乐 2:56 播放" [ref=e340] [cursor=pointer]:
+            - cell "16" [ref=e341]
+            - cell "妈妈我爱你 李昕融 · 妈妈我爱你" [ref=e342]:
+              - generic [ref=e346]:
+                - generic [ref=e347]: 妈妈我爱你
+                - generic [ref=e348]: 李昕融 · 妈妈我爱你
+            - cell "QQ 音乐" [ref=e349]
+            - cell "2:56" [ref=e350]
+            - cell "播放" [ref=e351]:
+              - button "播放" [ref=e354]:
+                - img [ref=e355]
+          - row "17 告白气球 周杰伦 · 周杰伦的床边故事 QQ 音乐 3:35 暂停" [ref=e627] [cursor=pointer]:
+            - cell "17" [ref=e358]
+            - cell "告白气球 周杰伦 · 周杰伦的床边故事" [ref=e359]:
+              - generic [ref=e363]:
+                - generic [ref=e364]: 告白气球
+                - generic [ref=e365]: 周杰伦 · 周杰伦的床边故事
+            - cell "QQ 音乐" [ref=e366]
+            - cell "3:35" [ref=e367]
+            - cell "暂停" [ref=e628]:
+              - button "暂停" [ref=e629]:
+                - img [ref=e630]
+          - row "18 一半一半 Top Barry / INDEcompany · 一半一半 QQ 音乐 3:55 播放" [ref=e374] [cursor=pointer]:
+            - cell "18" [ref=e375]
+            - cell "一半一半 Top Barry / INDEcompany · 一半一半" [ref=e376]:
+              - generic [ref=e380]:
+                - generic [ref=e381]: 一半一半
+                - generic [ref=e382]: Top Barry / INDEcompany · 一半一半
+            - cell "QQ 音乐" [ref=e383]
+            - cell "3:55" [ref=e384]
+            - cell "播放" [ref=e385]:
+              - button "播放" [ref=e388]:
+                - img [ref=e389]
+          - row "19 夏天的风 温岚 · 温式效应 QQ 音乐 4:00 播放" [ref=e391] [cursor=pointer]:
+            - cell "19" [ref=e392]
+            - cell "夏天的风 温岚 · 温式效应" [ref=e393]:
+              - generic [ref=e397]:
+                - generic [ref=e398]: 夏天的风
+                - generic [ref=e399]: 温岚 · 温式效应
+            - cell "QQ 音乐" [ref=e400]
+            - cell "4:00" [ref=e401]
+            - cell "播放" [ref=e402]:
+              - button "播放" [ref=e405]:
+                - img [ref=e406]
+          - row "20 稻香 周杰伦 · 魔杰座 QQ 音乐 3:43 播放" [ref=e408] [cursor=pointer]:
+            - cell "20" [ref=e409]
+            - cell "稻香 周杰伦 · 魔杰座" [ref=e410]:
+              - generic [ref=e414]:
+                - generic [ref=e415]: 稻香
+                - generic [ref=e416]: 周杰伦 · 魔杰座
+            - cell "QQ 音乐" [ref=e417]
+            - cell "3:43" [ref=e418]
+            - cell "播放" [ref=e419]:
+              - button "播放" [ref=e422]:
+                - img [ref=e423]
+      - list [ref=e426]:
+        - listitem "上一页" [ref=e427]:
+          - button "left" [disabled] [ref=e428]:
+            - img "left" [ref=e429]:
+              - img [ref=e430]
+        - listitem "1" [ref=e432] [cursor=pointer]:
+          - generic [ref=e433]: "1"
+        - listitem "2" [ref=e434] [cursor=pointer]:
+          - generic [ref=e435]: "2"
+        - listitem "3" [ref=e436] [cursor=pointer]:
+          - generic [ref=e437]: "3"
+        - listitem "4" [ref=e438] [cursor=pointer]:
+          - generic [ref=e439]: "4"
+        - listitem "5" [ref=e440] [cursor=pointer]:
+          - generic [ref=e441]: "5"
+        - listitem "下一页" [ref=e442] [cursor=pointer]:
+          - button "right" [ref=e443]:
+            - img "right" [ref=e444]:
+              - img [ref=e445]
+        - listitem [ref=e447]:
+          - generic "页码" [ref=e448] [cursor=pointer]:
+            - generic [ref=e450]:
+              - combobox "页码" [ref=e452]
+              - generic "20 条/页" [ref=e453]
+            - generic:
+              - img:
+                - img
+    - generic [ref=e461]:
+      - generic [ref=e462]:
+        - button "打开全屏播放器" [ref=e463] [cursor=pointer]
+        - generic [ref=e464]:
+          - generic "告白气球" [ref=e633]
+          - generic "周杰伦" [ref=e634]: 周杰伦 · 周杰伦的床边故事
+      - generic [ref=e467]:
+        - generic [ref=e468]:
+          - button "上一首" [ref=e469] [cursor=pointer]:
+            - img [ref=e470]
+          - button "暂停" [ref=e472] [cursor=pointer]:
+            - img [ref=e635]
+          - button "下一首" [ref=e476] [cursor=pointer]:
+            - img [ref=e477]
+        - generic [ref=e479]:
+          - generic [ref=e480]: 1:29
+          - slider "播放进度" [ref=e481] [cursor=pointer]
+          - generic [ref=e485]: 3:35
+      - generic [ref=e486]:
+        - button "打开当前播放列表" [active] [ref=e487] [cursor=pointer]:
+          - img [ref=e488]
+          - generic [ref=e490]: "20"
+        - button "静音" [ref=e491] [cursor=pointer]:
+          - img [ref=e817]
+        - slider "音量" [ref=e496] [cursor=pointer]: "0.84"
+    - dialog [ref=e821]:
+      - generic [ref=e823]:
+        - generic [ref=e824]:
+          - generic [ref=e825]: Now Playing
+          - button "关闭全屏播放器" [ref=e826] [cursor=pointer]:
+            - img [ref=e827]
+        - generic [ref=e829]:
+          - generic [ref=e836]:
+            - generic [ref=e837]: Black Vinyl
+            - generic [ref=e838]:
+              - generic [ref=e839]: 周杰伦的床边故事
+              - generic [ref=e840]: QQ 音乐 · flac
+            - generic [ref=e841]: 在说我愿意
+          - generic [ref=e842]:
+            - generic [ref=e845]:
+              - generic "告白气球" [ref=e846]
+              - generic "周杰伦" [ref=e847]: 周杰伦 · 周杰伦的床边故事
+              - generic [ref=e848]:
+                - generic [ref=e849]: flac
+                - generic [ref=e850]: QQ 音乐
+                - generic [ref=e851]: 缓存
+            - generic [ref=e853]:
+              - button "告白气球 - 周杰伦 (Jay Chou)" [ref=e854] [cursor=pointer]
+              - button "塞纳河畔 左岸的咖啡" [ref=e855] [cursor=pointer]
+              - button "我手一杯 品尝你的美" [ref=e856] [cursor=pointer]
+              - button "留下唇印的嘴" [ref=e857] [cursor=pointer]
+              - button "花店玫瑰 名字写错谁" [ref=e858] [cursor=pointer]
+              - button "告白气球 风吹到对街" [ref=e859] [cursor=pointer]
+              - button "微笑在天上飞" [ref=e860] [cursor=pointer]
+              - button "你说你有点难追" [ref=e861] [cursor=pointer]
+              - button "想让我知难而退" [ref=e862] [cursor=pointer]
+              - button "礼物不需挑最贵" [ref=e863] [cursor=pointer]
+              - button "只要香榭的落叶" [ref=e864] [cursor=pointer]
+              - button "喔 营造浪漫的约会" [ref=e865] [cursor=pointer]
+              - button "不害怕搞砸一切" [ref=e866] [cursor=pointer]
+              - button "拥有你就拥有全世界" [ref=e867] [cursor=pointer]
+              - button "亲爱的 爱上你" [ref=e868] [cursor=pointer]
+              - button "从那天起" [ref=e869] [cursor=pointer]
+              - button "甜蜜的很轻易" [ref=e870] [cursor=pointer]
+              - button "亲爱的 别任性" [ref=e871] [cursor=pointer]
+              - button "你的眼睛" [ref=e872] [cursor=pointer]
+              - button "在说我愿意" [ref=e873] [cursor=pointer]
+              - button "塞纳河畔 左岸的咖啡" [ref=e874] [cursor=pointer]
+              - button "我手一杯 品尝你的美" [ref=e875] [cursor=pointer]
+              - button "留下唇印的嘴" [ref=e876] [cursor=pointer]
+              - button "花店玫瑰 名字写错谁" [ref=e877] [cursor=pointer]
+              - button "告白气球 风吹到对街" [ref=e878] [cursor=pointer]
+              - button "微笑在天上飞" [ref=e879] [cursor=pointer]
+              - button "你说你有点难追" [ref=e880] [cursor=pointer]
+              - button "想让我知难而退" [ref=e881] [cursor=pointer]
+              - button "礼物不需挑最贵" [ref=e882] [cursor=pointer]
+              - button "只要香榭的落叶" [ref=e883] [cursor=pointer]
+              - button "喔 营造浪漫的约会" [ref=e884] [cursor=pointer]
+              - button "不害怕搞砸一切" [ref=e885] [cursor=pointer]
+              - button "拥有你就拥有 全世界" [ref=e886] [cursor=pointer]
+              - button "亲爱的 爱上你" [ref=e887] [cursor=pointer]
+              - button "从那天起" [ref=e888] [cursor=pointer]
+              - button "甜蜜的很轻易" [ref=e889] [cursor=pointer]
+              - button "亲爱的 别任性" [ref=e890] [cursor=pointer]
+              - button "你的眼睛" [ref=e891] [cursor=pointer]
+              - button "在说我愿意" [ref=e892] [cursor=pointer]
+              - button "亲爱的 爱上你" [ref=e893] [cursor=pointer]
+              - button "恋爱日记" [ref=e894] [cursor=pointer]
+              - button "飘香水的回忆" [ref=e895] [cursor=pointer]
+              - button "一整瓶 的梦境" [ref=e896] [cursor=pointer]
+              - button "全都有你" [ref=e897] [cursor=pointer]
+              - button "搅拌在一起" [ref=e898] [cursor=pointer]
+              - button "亲爱的别任性" [ref=e899] [cursor=pointer]
+              - button "你的眼睛" [ref=e900] [cursor=pointer]
+              - button "在说我愿意" [ref=e901] [cursor=pointer]
+            - generic [ref=e902]:
+              - generic [ref=e903]:
+                - generic [ref=e904]: 1:29
+                - slider "播放进度" [ref=e905] [cursor=pointer]
+                - generic [ref=e909]: 3:35
+              - generic [ref=e910]:
+                - generic [ref=e911]:
+                  - button "上一首" [ref=e912] [cursor=pointer]:
+                    - img [ref=e913]
+                  - button "暂停" [ref=e915] [cursor=pointer]:
+                    - img [ref=e916]
+                  - button "下一首" [ref=e919] [cursor=pointer]:
+                    - img [ref=e920]
+                - generic [ref=e922]:
+                  - button "音质切换" [ref=e923] [cursor=pointer]:
+                    - img [ref=e924]
+                  - button "播放列表，共 20 首" [ref=e925] [cursor=pointer]:
+                    - img [ref=e926]
+                    - generic [ref=e928]: "20"
+                  - button "静音" [ref=e929] [cursor=pointer]:
+                    - img [ref=e930]
+                  - slider "音量" [ref=e934] [cursor=pointer]: "0.84"
+  - tooltip "播放列表 20 首 01 无声电影 鹭卓 路 无声电影 02 Be Yourself TF家族-陈奕恒 路 Be Yourself 03 YOLO 卓沅 路 YOLO 04 星梦-XingMeng GAI周延 路 星梦-XingMeng 05 颜色 Gareth.T 路 颜色 06 一半一半 (Live) 希林娜依高 / 欧阳娣娣 (Didi Ouyang) / 王晓赟子 / 谢可寅 / 袁一琦 路 超燃青春的合唱 第3期 07 Somebody That I Used to Know Gotye / Kimbra 路 Making Mirrors 08 爱错 王力宏 路 心中的日月 09 Beauty And A Beat Justin Bieber / Nicki Minaj 路 Believe (Deluxe Edition) 10 晴天 周杰伦 路 叶惠美 11 天龙八部之宿敌 许嵩 路 天龙八部之宿敌 12 答案 — 冒海飞/徐丽东 冒海飞 / 徐丽东 路 音乐剧《嫌疑人X的献身》同名OST 13 雨爱 杨丞琳 路 雨爱 14 尕连手 (Live) 赵骏 路 魔力歌先生 第9期 15 搁浅 周杰伦 路 七里香 16 妈妈我爱你 李昕融 路 妈妈我爱你 17 告白气球 周杰伦 路 周杰伦的床边故事 Playing 18 一半一半 Top Barry / INDEcompany 路 一半一半 19 夏天的风 温岚 路 温式效应 20 稻香 周杰伦 路 魔杰座" [ref=e937]:
+    - generic [ref=e939]:
+      - generic [ref=e940]:
+        - generic [ref=e941]: 播放列表
+        - generic [ref=e942]: 20 首
+      - generic [ref=e943]:
+        - button "01 无声电影 鹭卓 路 无声电影" [ref=e944] [cursor=pointer]:
+          - generic [ref=e945]: "01"
+          - generic [ref=e946]:
+            - generic [ref=e947]: 无声电影
+            - generic [ref=e948]: 鹭卓 路 无声电影
+        - button "02 Be Yourself TF家族-陈奕恒 路 Be Yourself" [ref=e949] [cursor=pointer]:
+          - generic [ref=e950]: "02"
+          - generic [ref=e951]:
+            - generic [ref=e952]: Be Yourself
+            - generic [ref=e953]: TF家族-陈奕恒 路 Be Yourself
+        - button "03 YOLO 卓沅 路 YOLO" [ref=e954] [cursor=pointer]:
+          - generic [ref=e955]: "03"
+          - generic [ref=e956]:
+            - generic [ref=e957]: YOLO
+            - generic [ref=e958]: 卓沅 路 YOLO
+        - button "04 星梦-XingMeng GAI周延 路 星梦-XingMeng" [ref=e959] [cursor=pointer]:
+          - generic [ref=e960]: "04"
+          - generic [ref=e961]:
+            - generic [ref=e962]: 星梦-XingMeng
+            - generic [ref=e963]: GAI周延 路 星梦-XingMeng
+        - button "05 颜色 Gareth.T 路 颜色" [ref=e964] [cursor=pointer]:
+          - generic [ref=e965]: "05"
+          - generic [ref=e966]:
+            - generic [ref=e967]: 颜色
+            - generic [ref=e968]: Gareth.T 路 颜色
+        - button "06 一半一半 (Live) 希林娜依高 / 欧阳娣娣 (Didi Ouyang) / 王晓赟子 / 谢可寅 / 袁一琦 路 超燃青春的合唱 第3期" [ref=e969] [cursor=pointer]:
+          - generic [ref=e970]: "06"
+          - generic [ref=e971]:
+            - generic [ref=e972]: 一半一半 (Live)
+            - generic [ref=e973]: 希林娜依高 / 欧阳娣娣 (Didi Ouyang) / 王晓赟子 / 谢可寅 / 袁一琦 路 超燃青春的合唱 第3期
+        - button "07 Somebody That I Used to Know Gotye / Kimbra 路 Making Mirrors" [ref=e974] [cursor=pointer]:
+          - generic [ref=e975]: "07"
+          - generic [ref=e976]:
+            - generic [ref=e977]: Somebody That I Used to Know
+            - generic [ref=e978]: Gotye / Kimbra 路 Making Mirrors
+        - button "08 爱错 王力宏 路 心中的日月" [ref=e979] [cursor=pointer]:
+          - generic [ref=e980]: "08"
+          - generic [ref=e981]:
+            - generic [ref=e982]: 爱错
+            - generic [ref=e983]: 王力宏 路 心中的日月
+        - button "09 Beauty And A Beat Justin Bieber / Nicki Minaj 路 Believe (Deluxe Edition)" [ref=e984] [cursor=pointer]:
+          - generic [ref=e985]: "09"
+          - generic [ref=e986]:
+            - generic [ref=e987]: Beauty And A Beat
+            - generic [ref=e988]: Justin Bieber / Nicki Minaj 路 Believe (Deluxe Edition)
+        - button "10 晴天 周杰伦 路 叶惠美" [ref=e989] [cursor=pointer]:
+          - generic [ref=e990]: "10"
+          - generic [ref=e991]:
+            - generic [ref=e992]: 晴天
+            - generic [ref=e993]: 周杰伦 路 叶惠美
+        - button "11 天龙八部之宿敌 许嵩 路 天龙八部之宿敌" [ref=e994] [cursor=pointer]:
+          - generic [ref=e995]: "11"
+          - generic [ref=e996]:
+            - generic [ref=e997]: 天龙八部之宿敌
+            - generic [ref=e998]: 许嵩 路 天龙八部之宿敌
+        - button "12 答案 — 冒海飞/徐丽东 冒海飞 / 徐丽东 路 音乐剧《嫌疑人X的献身》同名OST" [ref=e999] [cursor=pointer]:
+          - generic [ref=e1000]: "12"
+          - generic [ref=e1001]:
+            - generic [ref=e1002]: 答案 — 冒海飞/徐丽东
+            - generic [ref=e1003]: 冒海飞 / 徐丽东 路 音乐剧《嫌疑人X的献身》同名OST
+        - button "13 雨爱 杨丞琳 路 雨爱" [ref=e1004] [cursor=pointer]:
+          - generic [ref=e1005]: "13"
+          - generic [ref=e1006]:
+            - generic [ref=e1007]: 雨爱
+            - generic [ref=e1008]: 杨丞琳 路 雨爱
+        - button "14 尕连手 (Live) 赵骏 路 魔力歌先生 第9期" [ref=e1009] [cursor=pointer]:
+          - generic [ref=e1010]: "14"
+          - generic [ref=e1011]:
+            - generic [ref=e1012]: 尕连手 (Live)
+            - generic [ref=e1013]: 赵骏 路 魔力歌先生 第9期
+        - button "15 搁浅 周杰伦 路 七里香" [ref=e1014] [cursor=pointer]:
+          - generic [ref=e1015]: "15"
+          - generic [ref=e1016]:
+            - generic [ref=e1017]: 搁浅
+            - generic [ref=e1018]: 周杰伦 路 七里香
+        - button "16 妈妈我爱你 李昕融 路 妈妈我爱你" [ref=e1019] [cursor=pointer]:
+          - generic [ref=e1020]: "16"
+          - generic [ref=e1021]:
+            - generic [ref=e1022]: 妈妈我爱你
+            - generic [ref=e1023]: 李昕融 路 妈妈我爱你
+        - button "17 告白气球 周杰伦 路 周杰伦的床边故事 Playing" [ref=e1024] [cursor=pointer]:
+          - generic [ref=e1025]: "17"
+          - generic [ref=e1026]:
+            - generic [ref=e1027]: 告白气球
+            - generic [ref=e1028]: 周杰伦 路 周杰伦的床边故事
+          - generic [ref=e1029]: Playing
+        - button "18 一半一半 Top Barry / INDEcompany 路 一半一半" [ref=e1030] [cursor=pointer]:
+          - generic [ref=e1031]: "18"
+          - generic [ref=e1032]:
+            - generic [ref=e1033]: 一半一半
+            - generic [ref=e1034]: Top Barry / INDEcompany 路 一半一半
+        - button "19 夏天的风 温岚 路 温式效应" [ref=e1035] [cursor=pointer]:
+          - generic [ref=e1036]: "19"
+          - generic [ref=e1037]:
+            - generic [ref=e1038]: 夏天的风
+            - generic [ref=e1039]: 温岚 路 温式效应
+        - button "20 稻香 周杰伦 路 魔杰座" [ref=e1040] [cursor=pointer]:
+          - generic [ref=e1041]: "20"
+          - generic [ref=e1042]:
+            - generic [ref=e1043]: 稻香
+            - generic [ref=e1044]: 周杰伦 路 魔杰座

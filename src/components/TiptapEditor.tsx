@@ -30,7 +30,6 @@ import {
   RedoOutlined,
   FullscreenOutlined,
   FullscreenExitOutlined,
-  BgColorsOutlined,
   CheckOutlined,
 } from '@ant-design/icons'
 import { Button, Space, Tooltip, Divider, Select, ColorPicker } from 'antd'

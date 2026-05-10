@@ -596,7 +596,7 @@ export default function MusicExplorer() {
                   title={item.description}
                 >
                   <span className="music-browser__side-item-icon">
-                    <Icon size={18} />
+                    <Icon size={18} strokeWidth={isActive ? 2.5 : 2} />
                   </span>
                   <span className="music-browser__side-item-name">{item.label}</span>
                 </button>
@@ -605,20 +605,21 @@ export default function MusicExplorer() {
           </nav>
 
           <div className="music-browser__sidebar-summary" aria-label="当前模块摘要">
-            <span className="music-browser__sidebar-summary-kicker">音乐中心</span>
+            <span className="music-browser__sidebar-summary-kicker">2026 Music</span>
             <div className="music-browser__sidebar-summary-title">
-              <ListMusic size={16} />
-              <span>多入口浏览</span>
+              <Sparkles size={16} className="music-dock-spin" style={{ color: 'var(--accent)' }} />
+              <span>沉浸式体验</span>
             </div>
             <div className="music-browser__sidebar-summary-copy">
-              <strong>搜索、榜单、歌单、新歌、历史、喜欢</strong>
+              <strong>现代、流畅、灵动</strong>
               <span>左侧模块互相独立，切换时不会打断当前播放。</span>
-              <span>登录后播放会自动写入历史，收藏会同步到喜欢列表。</span>
+              <span>基于玻璃拟态设计的 UI，提供最纯粹的听歌环境。</span>
             </div>
           </div>
         </aside>
 
-        <div className="music-browser__content">
+        <div className="music-browser__main">
+          <div className="music-browser__content">
           {view === 'search' && (
             <>
               <section className="music-search-stage" aria-label="独立搜索">
@@ -802,7 +803,7 @@ export default function MusicExplorer() {
                       </button>
                     ))}
                   </div>
-                  <div className="music-pagination">
+                  <div className="music-pagination music-pagination--bottom">
                     <Pagination
                       current={playlistPage}
                       pageSize={playlistPageSize}
@@ -951,6 +952,7 @@ export default function MusicExplorer() {
               )}
             </>
           )}
+          </div>
         </div>
       </div>
     </Card>

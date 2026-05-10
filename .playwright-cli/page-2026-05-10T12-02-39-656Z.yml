@@ -1,0 +1,232 @@
+- generic [ref=e12]:
+  - banner [ref=e13]:
+    - link "我的导航" [ref=e14] [cursor=pointer]:
+      - /url: /
+      - generic [ref=e16]: 我的导航
+    - navigation "主导航" [ref=e17]:
+      - link "导航" [ref=e18] [cursor=pointer]:
+        - /url: /
+      - link "音乐" [ref=e19] [cursor=pointer]:
+        - /url: /music
+      - link "AI对话" [ref=e20] [cursor=pointer]:
+        - /url: /ai-chat
+    - generic [ref=e21]:
+      - link "登录" [ref=e22] [cursor=pointer]:
+        - /url: /login
+        - img [ref=e23]
+        - generic [ref=e26]: 登录
+      - button "切换到深色模式" [ref=e27]:
+        - img [ref=e29]
+  - generic [ref=e34]:
+    - complementary [ref=e35]:
+      - generic [ref=e36]:
+        - generic [ref=e37]: 功能导航
+        - generic [ref=e38]: 6 个模块
+      - navigation "音乐功能导航" [ref=e39]:
+        - button "榜单" [ref=e40] [cursor=pointer]:
+          - img [ref=e42]
+          - generic [ref=e48]: 榜单
+        - button "歌单" [active] [pressed] [ref=e49] [cursor=pointer]:
+          - img [ref=e51]
+          - generic [ref=e53]: 歌单
+        - button "新歌" [ref=e54] [cursor=pointer]:
+          - img [ref=e56]
+          - generic [ref=e58]: 新歌
+        - button "历史" [ref=e59] [cursor=pointer]:
+          - img [ref=e61]
+          - generic [ref=e65]: 历史
+        - button "喜欢" [ref=e66] [cursor=pointer]:
+          - img [ref=e68]
+          - generic [ref=e70]: 喜欢
+        - button "搜索" [ref=e71] [cursor=pointer]:
+          - img [ref=e73]
+          - generic [ref=e76]: 搜索
+      - generic "当前模块摘要" [ref=e77]:
+        - generic [ref=e78]: 2026 Music
+        - generic [ref=e79]:
+          - img [ref=e80]
+          - generic [ref=e82]: 沉浸式体验
+        - generic [ref=e83]:
+          - strong [ref=e84]: 现代、流畅、灵动
+          - generic [ref=e85]: 左侧模块互相独立，切换时不会打断当前播放。
+          - generic [ref=e86]: 基于玻璃拟态设计的 UI，提供最纯粹的听歌环境。
+    - generic [ref=e87]:
+      - generic [ref=e88]:
+        - generic [ref=e89]:
+          - generic [ref=e90]: 歌单
+          - heading "推荐歌单" [level=1] [ref=e232]
+          - paragraph [ref=e92]: 按平台和分类连续浏览推荐歌单，适合整包收歌。
+        - generic "当前模块信息" [ref=e93]:
+          - img [ref=e233]
+          - generic [ref=e101]: 歌单 · 网易云 · 20 个歌单
+      - generic [ref=e235]:
+        - radiogroup "segmented control" [ref=e236]:
+          - generic [ref=e237]:
+            - generic [ref=e238] [cursor=pointer]:
+              - radio "网易云" [checked]
+              - generic "网易云" [ref=e239]
+            - generic [ref=e240] [cursor=pointer]:
+              - radio "酷我"
+              - generic "酷我" [ref=e241]
+        - textbox "分类" [ref=e243]: 全部
+      - list [ref=e245]:
+        - listitem "上一页" [ref=e246]:
+          - button "left" [disabled] [ref=e247]:
+            - img "left" [ref=e248]:
+              - img [ref=e249]
+        - listitem "1" [ref=e251] [cursor=pointer]:
+          - generic [ref=e252]: "1"
+        - listitem "2" [ref=e253] [cursor=pointer]:
+          - generic [ref=e254]: "2"
+        - listitem "3" [ref=e255] [cursor=pointer]:
+          - generic [ref=e256]: "3"
+        - listitem "向后 3 页" [ref=e257] [cursor=pointer]:
+          - generic [ref=e259]:
+            - img "double-right" [ref=e260]:
+              - img [ref=e261]
+            - generic [ref=e263]: •••
+        - listitem "35" [ref=e264] [cursor=pointer]:
+          - generic [ref=e265]: "35"
+        - listitem "下一页" [ref=e266] [cursor=pointer]:
+          - button "right" [ref=e267]:
+            - img "right" [ref=e268]:
+              - img [ref=e269]
+        - listitem [ref=e271]:
+          - generic "页码" [ref=e272] [cursor=pointer]:
+            - generic [ref=e274]:
+              - combobox "页码" [ref=e276]
+              - generic "20 条/页" [ref=e277]
+            - generic:
+              - img:
+                - img
+      - generic [ref=e278]:
+        - button "日系R&B·温柔暧昧｜宇多田光·松下优也 Javen__Q 62 首 · 4.1 万" [ref=e279] [cursor=pointer]:
+          - generic [ref=e280]:
+            - generic [ref=e281]: 日系R&B·温柔暧昧｜宇多田光·松下优也
+            - generic [ref=e282]: Javen__Q
+            - generic [ref=e283]: 62 首 · 4.1 万
+        - button "春日小清新 | “观我旧往，同我仰春” 心语馆 61 首 · 2447" [ref=e284] [cursor=pointer]:
+          - generic [ref=e285]:
+            - generic [ref=e286]: 春日小清新 | “观我旧往，同我仰春”
+            - generic [ref=e287]: 心语馆
+            - generic [ref=e288]: 61 首 · 2447
+        - button "Top Barry杨博睿 | 新生代rapper的成长日记 说唱王小明 124 首 · 6.9 万" [ref=e289] [cursor=pointer]:
+          - generic [ref=e290]:
+            - generic [ref=e291]: Top Barry杨博睿 | 新生代rapper的成长日记
+            - generic [ref=e292]: 说唱王小明
+            - generic [ref=e293]: 124 首 · 6.9 万
+        - button "看小说/写小说可听纯音乐 走出文言文 51 首 · 17.7 万" [ref=e294] [cursor=pointer]:
+          - generic [ref=e295]:
+            - generic [ref=e296]: 看小说/写小说可听纯音乐
+            - generic [ref=e297]: 走出文言文
+            - generic [ref=e298]: 51 首 · 17.7 万
+        - button "那些你熟悉却又不知道名字的轻音乐 Lelow 44 首 · 1.3 亿" [ref=e299] [cursor=pointer]:
+          - generic [ref=e300]:
+            - generic [ref=e301]: 那些你熟悉却又不知道名字的轻音乐
+            - generic [ref=e302]: Lelow
+            - generic [ref=e303]: 44 首 · 1.3 亿
+        - button "ASEN艾志恒精选 | 从DAY1到英雄的进化轨迹 说唱王小明 101 首 · 8.2 万" [ref=e304] [cursor=pointer]:
+          - generic [ref=e305]:
+            - generic [ref=e306]: ASEN艾志恒精选 | 从DAY1到英雄的进化轨迹
+            - generic [ref=e307]: 说唱王小明
+            - generic [ref=e308]: 101 首 · 8.2 万
+        - button "法老的硬核叙事 | 用说唱解剖现实与温柔 说唱王小明 178 首 · 4.5 万" [ref=e309] [cursor=pointer]:
+          - generic [ref=e310]:
+            - generic [ref=e311]: 法老的硬核叙事 | 用说唱解剖现实与温柔
+            - generic [ref=e312]: 说唱王小明
+            - generic [ref=e313]: 178 首 · 4.5 万
+        - button "春日轻小调 | 享受春天的清新与阳光！ 心语馆 75 首 · 1.5 万" [ref=e314] [cursor=pointer]:
+          - generic [ref=e315]:
+            - generic [ref=e316]: 春日轻小调 | 享受春天的清新与阳光！
+            - generic [ref=e317]: 心语馆
+            - generic [ref=e318]: 75 首 · 1.5 万
+        - button "【高质量轻音】沉浸自然 享受春和景明 心语馆 72 首 · 2.1 万" [ref=e319] [cursor=pointer]:
+          - generic [ref=e320]:
+            - generic [ref=e321]: 【高质量轻音】沉浸自然 享受春和景明
+            - generic [ref=e322]: 心语馆
+            - generic [ref=e323]: 72 首 · 2.1 万
+        - button "连麻Swimming | 内心挣扎的街头叙事报告 说唱王小明 92 首 · 3.1 万" [ref=e324] [cursor=pointer]:
+          - generic [ref=e325]:
+            - generic [ref=e326]: 连麻Swimming | 内心挣扎的街头叙事报告
+            - generic [ref=e327]: 说唱王小明
+            - generic [ref=e328]: 92 首 · 3.1 万
+        - button "戴上耳机『用日系旋律|逃离这个世界吧~』 留下你的真心 139 首 · 2.4 万" [ref=e329] [cursor=pointer]:
+          - generic [ref=e330]:
+            - generic [ref=e331]: 戴上耳机『用日系旋律|逃离这个世界吧~』
+            - generic [ref=e332]: 留下你的真心
+            - generic [ref=e333]: 139 首 · 2.4 万
+        - button "白日梦核｜Kpop初恋少年少女心事 JJAckers 40 首 · 2879" [ref=e334] [cursor=pointer]:
+          - generic [ref=e335]:
+            - generic [ref=e336]: 白日梦核｜Kpop初恋少年少女心事
+            - generic [ref=e337]: JJAckers
+            - generic [ref=e338]: 40 首 · 2879
+        - button "春和景明：“日暮春山绿，我心清且微” 心语馆 62 首 · 1439" [ref=e339] [cursor=pointer]:
+          - generic [ref=e340]:
+            - generic [ref=e341]: 春和景明：“日暮春山绿，我心清且微”
+            - generic [ref=e342]: 心语馆
+            - generic [ref=e343]: 62 首 · 1439
+        - button "全球精选英文金曲 好听到心跳加速 请叫我快乐冠军 58 首 · 11.9 万" [ref=e344] [cursor=pointer]:
+          - generic [ref=e345]:
+            - generic [ref=e346]: 全球精选英文金曲 好听到心跳加速
+            - generic [ref=e347]: 请叫我快乐冠军
+            - generic [ref=e348]: 58 首 · 11.9 万
+        - button "春归若梦 | 让灵魂散落在春天的记忆里 心语馆 56 首 · 1775" [ref=e349] [cursor=pointer]:
+          - generic [ref=e350]:
+            - generic [ref=e351]: 春归若梦 | 让灵魂散落在春天的记忆里
+            - generic [ref=e352]: 心语馆
+            - generic [ref=e353]: 56 首 · 1775
+        - button "KPOP宝藏节奏合集 | 洗澡/跑步/写作业BGM 第8个雨季 96 首 · 114.4 万" [ref=e354] [cursor=pointer]:
+          - generic [ref=e355]:
+            - generic [ref=e356]: KPOP宝藏节奏合集 | 洗澡/跑步/写作业BGM
+            - generic [ref=e357]: 第8个雨季
+            - generic [ref=e358]: 96 首 · 114.4 万
+        - button "他泰｜旋律一响 让你想起了哪些剧 星星会亮呀 114 首 · 8.2 万" [ref=e359] [cursor=pointer]:
+          - generic [ref=e360]:
+            - generic [ref=e361]: 他泰｜旋律一响 让你想起了哪些剧
+            - generic [ref=e362]: 星星会亮呀
+            - generic [ref=e363]: 114 首 · 8.2 万
+        - button "《魔力歌先生》｜音综新时代 城势上 102 首 · 112.4 万" [ref=e364] [cursor=pointer]:
+          - generic [ref=e365]:
+            - generic [ref=e366]: 《魔力歌先生》｜音综新时代
+            - generic [ref=e367]: 城势上
+            - generic [ref=e368]: 102 首 · 112.4 万
+        - button "高燃热血BGM｜逆风是命运的挑战 施绮言 179 首 · 3329" [ref=e369] [cursor=pointer]:
+          - generic [ref=e370]:
+            - generic [ref=e371]: 高燃热血BGM｜逆风是命运的挑战
+            - generic [ref=e372]: 施绮言
+            - generic [ref=e373]: 179 首 · 3329
+        - button "J. Cole热门作品：这个rapper篮球打得不错 Justin爱吃水煮鱼 57 首 · 5.1 万" [ref=e374] [cursor=pointer]:
+          - generic [ref=e375]:
+            - generic [ref=e376]: J. Cole热门作品：这个rapper篮球打得不错
+            - generic [ref=e377]: Justin爱吃水煮鱼
+            - generic [ref=e378]: 57 首 · 5.1 万
+      - list [ref=e380]:
+        - listitem "上一页" [ref=e381]:
+          - button "left" [disabled] [ref=e382]:
+            - img "left" [ref=e383]:
+              - img [ref=e384]
+        - listitem "1" [ref=e386] [cursor=pointer]:
+          - generic [ref=e387]: "1"
+        - listitem "2" [ref=e388] [cursor=pointer]:
+          - generic [ref=e389]: "2"
+        - listitem "3" [ref=e390] [cursor=pointer]:
+          - generic [ref=e391]: "3"
+        - listitem "向后 3 页" [ref=e392] [cursor=pointer]:
+          - generic [ref=e394]:
+            - img "double-right" [ref=e395]:
+              - img [ref=e396]
+            - generic [ref=e398]: •••
+        - listitem "35" [ref=e399] [cursor=pointer]:
+          - generic [ref=e400]: "35"
+        - listitem "下一页" [ref=e401] [cursor=pointer]:
+          - button "right" [ref=e402]:
+            - img "right" [ref=e403]:
+              - img [ref=e404]
+        - listitem [ref=e406]:
+          - generic "页码" [ref=e407] [cursor=pointer]:
+            - generic [ref=e409]:
+              - combobox "页码" [ref=e411]
+              - generic "20 条/页" [ref=e412]
+            - generic:
+              - img:
+                - img

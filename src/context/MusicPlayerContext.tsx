@@ -204,13 +204,10 @@ export function MusicPlayerProvider({ children }: { children: ReactNode }) {
     if (!current || !unsupportedFormat) return
 
     setIsPlaying(false)
-    const advanced = advanceQueue()
     message.error(
-      `当前返回的是 ${unsupportedFormat} 格式，浏览器无法直接播放${
-        advanced ? '，已自动切到下一首。' : '。请切换音质或音源后重试。'
-      }`,
+      `当前返回的是 ${unsupportedFormat} 格式，浏览器无法直接播放。请切换音质或音源后重试。`,
     )
-  }, [advanceQueue, current, message, unsupportedFormat])
+  }, [current, message, unsupportedFormat])
 
   useEffect(() => {
     if (unsupportedFormat) return
@@ -316,11 +313,8 @@ export function MusicPlayerProvider({ children }: { children: ReactNode }) {
         onError={(event) => {
           const el = event.currentTarget as HTMLAudioElement
           setIsPlaying(false)
-          const advanced = advanceQueue()
           message.error(
-            `播放失败：${describeMediaError(el.error)}${
-              advanced ? '，已自动切到下一首。' : ''
-            }`,
+            `播放失败：${describeMediaError(el.error)}。`,
           )
         }}
       />

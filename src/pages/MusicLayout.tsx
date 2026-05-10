@@ -1,4 +1,4 @@
-import { Suspense, lazy } from 'react'
+import { Suspense, lazy, useEffect, useRef } from 'react'
 import { Link as RouterLink, NavLink as RouterNavLink, Outlet } from 'react-router-dom'
 import { LogIn, Settings } from 'lucide-react'
 import ThemeToggle from '../components/ThemeToggle'
@@ -12,10 +12,33 @@ const MusicPlayerBar = lazy(() => import('../components/MusicPlayerBar'))
 export default function MusicLayout() {
   const auth = useAuth()
   const { current } = useMusicPlayer()
+  const pageRef = useRef<HTMLDivElement | null>(null)
+  const topbarRef = useRef<HTMLElement | null>(null)
+
+  useEffect(() => {
+    const page = pageRef.current
+    const topbar = topbarRef.current
+    if (!page || !topbar) return
+
+    const updateTopbarHeight = () => {
+      page.style.setProperty('--music-topbar-height', `${topbar.offsetHeight}px`)
+    }
+
+    updateTopbarHeight()
+
+    if (typeof ResizeObserver !== 'undefined') {
+      const observer = new ResizeObserver(updateTopbarHeight)
+      observer.observe(topbar)
+      return () => observer.disconnect()
+    }
+
+    window.addEventListener('resize', updateTopbarHeight)
+    return () => window.removeEventListener('resize', updateTopbarHeight)
+  }, [])
 
   return (
-    <div className="music-page">
-      <header className="topbar">
+    <div ref={pageRef} className="music-page">
+      <header ref={topbarRef} className="topbar">
         <RouterLink to="/" className="topbar-brand">
           <span className="brand-dot" />
           <span className="brand-title">我的导航</span>

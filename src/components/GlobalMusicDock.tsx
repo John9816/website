@@ -11,11 +11,14 @@ import {
   Volume2,
   VolumeX,
 } from 'lucide-react'
+import { FastAverageColor } from 'fast-average-color'
 import MusicCover from './MusicCover'
 import { useMusicPlayer } from '../context/MusicPlayerContext'
 import { useActiveLyric } from '../hooks/useActiveLyric'
-import { formatDuration } from '../utils/musicPlayer'
+import { formatDuration, normalizeCoverUrl } from '../utils/musicPlayer'
 import '../styles/music-dock.css'
+
+const fac = new FastAverageColor()
 
 type DockPosition = {
   x: number
@@ -75,6 +78,7 @@ export default function GlobalMusicDock() {
   const [collapsed, setCollapsed] = useState(true)
   const [panel, setPanel] = useState<DockPanel>(null)
   const [seeking, setSeeking] = useState(false)
+  const [dominantColor, setDominantColor] = useState<string | null>(null)
 
   const {
     current,
@@ -183,6 +187,33 @@ export default function GlobalMusicDock() {
     container.scrollTo({ top, behavior: 'smooth' })
   }, [currentIndex, panel])
 
+  useEffect(() => {
+    const url = normalizeCoverUrl(current?.coverUrl)
+    if (!url) {
+      setDominantColor(null)
+      return
+    }
+
+    let isMounted = true
+    // Because canvas extraction fails on tainted canvas (no cross-origin headers from some CDNs),
+    // we use a best-effort approach. If it fails, fallback to default glass styles.
+    fac
+      .getColorAsync(url, { algorithm: 'dominant', crossOrigin: 'anonymous' })
+      .then((color) => {
+        if (isMounted) {
+          // Store raw rgb values for css variables `r, g, b`
+          setDominantColor(color.value.slice(0, 3).join(', '))
+        }
+      })
+      .catch(() => {
+        if (isMounted) setDominantColor(null)
+      })
+
+    return () => {
+      isMounted = false
+    }
+  }, [current?.coverUrl])
+
   const seekTo = useCallback(
     (clientX: number, element: HTMLDivElement) => {
       if (!duration) return
@@ -199,14 +230,17 @@ export default function GlobalMusicDock() {
     ? Math.min(100, (currentTime / duration) * 100)
     : 0
 
-  const dockStyle = position
-    ? {
-        left: `${position.x}px`,
-        top: `${position.y}px`,
-        right: 'auto',
-        bottom: 'auto',
-      }
-    : undefined
+  const dockStyle = {
+    ...(position
+      ? {
+          left: `${position.x}px`,
+          top: `${position.y}px`,
+          right: 'auto',
+          bottom: 'auto',
+        }
+      : {}),
+    ...(dominantColor ? { '--dominant-rgb': dominantColor } : {}),
+  } as React.CSSProperties
 
   const startDrag = (event: React.PointerEvent<HTMLDivElement>) => {
     if (event.button !== 0) return
@@ -310,179 +344,183 @@ export default function GlobalMusicDock() {
       ref={dockRef}
       className={`music-dock${dragging ? ' is-dragging' : ''}${panel ? ' is-expanded' : ''}${
         collapsed ? ' is-collapsed' : ''
-      }${seeking ? ' is-seeking' : ''}`}
+      }${seeking ? ' is-seeking' : ''}${isPlaying ? ' is-playing' : ''}`}
       style={dockStyle}
       onPointerDown={startDrag}
       onPointerMove={onDragMove}
       onPointerUp={stopDrag}
       onPointerCancel={stopDrag}
     >
-      <div className="music-dock__header">
-        <div className="music-dock__meta">
-          <MusicCover src={current.coverUrl} size={44} rounded={10} loading="eager" />
-          <div className="music-dock__text">
-            <div className="music-dock__title" title={current.name}>
-              {current.name || '未知歌曲'}
+      <div className="music-dock__shell">
+        <div className="music-dock__header">
+          <div className="music-dock__meta">
+            <div className="music-dock__cover-wrap">
+              <MusicCover src={current.coverUrl} size={collapsed ? 36 : 44} rounded={collapsed ? 18 : 10} loading="eager" className="music-dock__cover-img" />
             </div>
-            <div className="music-dock__artist" title={current.artist}>
-              {current.artist || '未知歌手'}
+            <div className="music-dock__text">
+              <div className="music-dock__title" title={current.name}>
+                {current.name || '未知歌曲'}
+              </div>
+              <div className="music-dock__artist" title={current.artist}>
+                {current.artist || '未知歌手'}
+              </div>
+              <div className="music-dock__badges">
+                <span>{current.actualQuality || current.requestedQuality}</span>
+                <span>{sourceLabel(current.actualSource || current.source)}</span>
+                {unsupportedFormat && <span>{unsupportedFormat}</span>}
+              </div>
             </div>
-            <div className="music-dock__badges">
-              <span>{current.actualQuality || current.requestedQuality}</span>
-              <span>{sourceLabel(current.actualSource || current.source)}</span>
-              {unsupportedFormat && <span>{unsupportedFormat}</span>}
-            </div>
+          </div>
+
+          <div className="music-dock__tools">
+            {!collapsed && (
+              <>
+                <button
+                  type="button"
+                  className={`music-dock__icon-btn${panel === 'lyrics' ? ' is-active' : ''}`}
+                  onClick={() => togglePanel('lyrics')}
+                  aria-label="切换歌词面板"
+                  title="歌词"
+                >
+                  词
+                </button>
+                <button
+                  type="button"
+                  className={`music-dock__icon-btn${panel === 'queue' ? ' is-active' : ''}`}
+                  onClick={() => togglePanel('queue')}
+                  aria-label="切换播放列表面板"
+                  title="列表"
+                >
+                  单
+                </button>
+              </>
+            )}
+            <button
+              type="button"
+              className={`music-dock__icon-btn music-dock__collapse-btn${
+                collapsed ? ' is-collapsed' : ''
+              }`}
+              onClick={toggleCollapsed}
+              aria-label={collapsed ? '展开迷你播放器' : '折叠迷你播放器'}
+              title={collapsed ? '展开' : '折叠'}
+            >
+              <ChevronDown size={14} />
+            </button>
+            <span
+              className="music-dock__grabber"
+              data-dock-drag-handle="true"
+              title="拖动播放器"
+            >
+              <GripVertical size={14} />
+            </span>
+            <RouterLink
+              to="/music"
+              className="music-dock__icon-link"
+              aria-label="打开音乐页"
+              title="打开音乐页"
+            >
+              <ChevronRight size={14} />
+            </RouterLink>
           </div>
         </div>
 
-        <div className="music-dock__tools">
-          {!collapsed && (
-            <>
-              <button
-                type="button"
-                className={`music-dock__icon-btn${panel === 'lyrics' ? ' is-active' : ''}`}
-                onClick={() => togglePanel('lyrics')}
-                aria-label="切换歌词面板"
-                title="歌词"
-              >
-                词
-              </button>
-              <button
-                type="button"
-                className={`music-dock__icon-btn${panel === 'queue' ? ' is-active' : ''}`}
-                onClick={() => togglePanel('queue')}
-                aria-label="切换播放列表面板"
-                title="列表"
-              >
-                单
-              </button>
-            </>
-          )}
-          <button
-            type="button"
-            className={`music-dock__icon-btn music-dock__collapse-btn${
-              collapsed ? ' is-collapsed' : ''
-            }`}
-            onClick={toggleCollapsed}
-            aria-label={collapsed ? '展开迷你播放器' : '折叠迷你播放器'}
-            title={collapsed ? '展开' : '折叠'}
+        <div className="music-dock__progress">
+          <span className="music-dock__time">{formatDuration(currentTime)}</span>
+          <div
+            className={`music-dock__progress-rail${seeking ? ' is-seeking' : ''}`}
+            data-dock-no-drag="true"
+            onPointerDown={startSeek}
+            onPointerMove={moveSeek}
+            onPointerUp={stopSeek}
+            onPointerCancel={stopSeek}
+            onKeyDown={(event) => {
+              if (!duration) return
+              if (event.key !== 'ArrowLeft' && event.key !== 'ArrowRight') return
+              const delta = event.key === 'ArrowRight' ? 5 : -5
+              seekToTime(currentTime + delta)
+              event.preventDefault()
+            }}
+            role="slider"
+            tabIndex={0}
+            aria-label="播放进度"
+            aria-valuemin={0}
+            aria-valuemax={Math.max(duration, 0)}
+            aria-valuenow={Math.min(currentTime, duration || currentTime)}
           >
-            <ChevronDown size={14} />
-          </button>
-          <span
-            className="music-dock__grabber"
-            data-dock-drag-handle="true"
-            title="拖动播放器"
-          >
-            <GripVertical size={14} />
+            <div
+              className="music-dock__progress-fill"
+              style={{ width: `${progressPct}%` }}
+            />
+            <div
+              className="music-dock__progress-thumb"
+              style={{ left: `calc(${progressPct}% - 6px)` }}
+            />
+          </div>
+          <span className="music-dock__time music-dock__time--right">
+            {formatDuration(duration)}
           </span>
-          <RouterLink
-            to="/music"
-            className="music-dock__icon-link"
-            aria-label="打开音乐页"
-            title="打开音乐页"
-          >
-            <ChevronRight size={14} />
-          </RouterLink>
-        </div>
-      </div>
-
-      <div className="music-dock__progress">
-        <span className="music-dock__time">{formatDuration(currentTime)}</span>
-        <div
-          className={`music-dock__progress-rail${seeking ? ' is-seeking' : ''}`}
-          data-dock-no-drag="true"
-          onPointerDown={startSeek}
-          onPointerMove={moveSeek}
-          onPointerUp={stopSeek}
-          onPointerCancel={stopSeek}
-          onKeyDown={(event) => {
-            if (!duration) return
-            if (event.key !== 'ArrowLeft' && event.key !== 'ArrowRight') return
-            const delta = event.key === 'ArrowRight' ? 5 : -5
-            seekToTime(currentTime + delta)
-            event.preventDefault()
-          }}
-          role="slider"
-          tabIndex={0}
-          aria-label="播放进度"
-          aria-valuemin={0}
-          aria-valuemax={Math.max(duration, 0)}
-          aria-valuenow={Math.min(currentTime, duration || currentTime)}
-        >
-          <div
-            className="music-dock__progress-fill"
-            style={{ width: `${progressPct}%` }}
-          />
-          <div
-            className="music-dock__progress-thumb"
-            style={{ left: `calc(${progressPct}% - 6px)` }}
-          />
-        </div>
-        <span className="music-dock__time music-dock__time--right">
-          {formatDuration(duration)}
-        </span>
-      </div>
-
-      {!collapsed && (
-        <div className="music-dock__lyric-preview" title={currentLrcText}>
-          <span key={`${activeLrcIndex}:${currentLrcText}`}>{currentLrcText}</span>
-        </div>
-      )}
-
-      <div className="music-dock__controls">
-        <div className="music-dock__main-controls">
-          {!collapsed && (
-            <button
-              type="button"
-              className="music-dock__btn"
-              disabled={!canPrev}
-              onClick={playPrev}
-              aria-label="上一首"
-              title="上一首"
-            >
-              <SkipBack size={15} />
-            </button>
-          )}
-          <button
-            type="button"
-            className="music-dock__btn music-dock__btn--primary"
-            disabled={!!unsupportedFormat}
-            onClick={togglePlay}
-            aria-label={isPlaying ? '暂停' : '播放'}
-            title={isPlaying ? '暂停' : '播放'}
-          >
-            {isPlaying ? <Pause size={17} /> : <Play size={17} />}
-          </button>
-          {!collapsed && (
-            <button
-              type="button"
-              className="music-dock__btn"
-              disabled={!canNext}
-              onClick={playNext}
-              aria-label="下一首"
-              title="下一首"
-            >
-              <SkipForward size={15} />
-            </button>
-          )}
         </div>
 
         {!collapsed && (
-          <button
-            type="button"
-            className="music-dock__btn"
-            onClick={toggleMuted}
-            aria-label={muted ? '取消静音' : '静音'}
-            title={muted ? '取消静音' : '静音'}
-          >
-            {muted || volume === 0 ? (
-              <VolumeX size={15} />
-            ) : (
-              <Volume2 size={15} />
-            )}
-          </button>
+          <div className="music-dock__lyric-preview" title={currentLrcText}>
+            <span key={`${activeLrcIndex}:${currentLrcText}`}>{currentLrcText}</span>
+          </div>
         )}
+
+        <div className="music-dock__controls">
+          <div className="music-dock__main-controls">
+            {!collapsed && (
+              <button
+                type="button"
+                className="music-dock__btn"
+                disabled={!canPrev}
+                onClick={playPrev}
+                aria-label="上一首"
+                title="上一首"
+              >
+                <SkipBack size={15} />
+              </button>
+            )}
+            <button
+              type="button"
+              className="music-dock__btn music-dock__btn--primary"
+              disabled={!!unsupportedFormat}
+              onClick={togglePlay}
+              aria-label={isPlaying ? '暂停' : '播放'}
+              title={isPlaying ? '暂停' : '播放'}
+            >
+              {isPlaying ? <Pause size={17} /> : <Play size={17} />}
+            </button>
+            {!collapsed && (
+              <button
+                type="button"
+                className="music-dock__btn"
+                disabled={!canNext}
+                onClick={playNext}
+                aria-label="下一首"
+                title="下一首"
+              >
+                <SkipForward size={15} />
+              </button>
+            )}
+          </div>
+
+          {!collapsed && (
+            <button
+              type="button"
+              className="music-dock__btn"
+              onClick={toggleMuted}
+              aria-label={muted ? '取消静音' : '静音'}
+              title={muted ? '取消静音' : '静音'}
+            >
+              {muted || volume === 0 ? (
+                <VolumeX size={15} />
+              ) : (
+                <Volume2 size={15} />
+              )}
+            </button>
+          )}
+        </div>
       </div>
 
       {!collapsed && panel && (

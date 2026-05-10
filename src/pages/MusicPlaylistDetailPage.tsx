@@ -172,6 +172,27 @@ export default function MusicPlaylistDetailPage() {
           <ChevronLeft size={16} />
           <span>返回歌单</span>
         </Link>
+        <div className="music-detail-actions-group">
+          <Button
+            type="primary"
+            icon={<Play size={14} />}
+            disabled={!detail?.list?.length}
+            onClick={() => {
+              if (!detail?.list?.length) return
+              void playPlaylist(detail.list)
+            }}
+          >
+            播放全部
+          </Button>
+          <Button
+            icon={<RefreshCcw size={14} />}
+            onClick={() => {
+              setPage(1)
+            }}
+          >
+            刷新
+          </Button>
+        </div>
       </div>
 
       <div
@@ -194,27 +215,6 @@ export default function MusicPlaylistDetailPage() {
         <div className="music-detail-list-copy">
           <h3>歌曲列表</h3>
           <p>{detail?.total ? `共 ${detail.total} 首` : metaText}</p>
-        </div>
-        <div className="music-detail-actions-group">
-          <Button
-            type="primary"
-            icon={<Play size={14} />}
-            disabled={!detail?.list?.length}
-            onClick={() => {
-              if (!detail?.list?.length) return
-              void playPlaylist(detail.list)
-            }}
-          >
-            播放全部
-          </Button>
-          <Button
-            icon={<RefreshCcw size={14} />}
-            onClick={() => {
-              setPage(1)
-            }}
-          >
-            刷新
-          </Button>
         </div>
       </div>
 

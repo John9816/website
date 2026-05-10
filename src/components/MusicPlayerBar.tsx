@@ -7,6 +7,7 @@ import {
   type CSSProperties,
 } from 'react'
 import {
+  AudioLines,
   ChevronDown,
   ListMusic,
   Loader2,
@@ -17,11 +18,15 @@ import {
   Volume2,
   VolumeX,
 } from 'lucide-react'
+import { Popover } from 'antd'
+import { FastAverageColor } from 'fast-average-color'
 import type { MusicQuality, SongSearchItem } from '../types'
 import MusicCover from './MusicCover'
 import { useMusicPlayer } from '../context/MusicPlayerContext'
 import { useActiveLyric } from '../hooks/useActiveLyric'
 import { formatDuration, normalizeCoverUrl } from '../utils/musicPlayer'
+
+const fac = new FastAverageColor()
 
 const QUALITY_OPTIONS: Array<{ value: MusicQuality; label: string }> = [
   { value: '128k', label: '128K' },
@@ -47,11 +52,17 @@ export default function MusicPlayerBar() {
   const [seeking, setSeeking] = useState(false)
   const [expanded, setExpanded] = useState(false)
   const [fullscreenTab, setFullscreenTab] = useState<FullscreenTab>('lyrics')
+  const [queuePopoverOpen, setQueuePopoverOpen] = useState(false)
+  const [qualityPopoverOpen, setQualityPopoverOpen] = useState(false)
+  const [progressPreview, setProgressPreview] = useState<{
+    track: 'bar' | 'fullscreen'
+    pct: number
+    sec: number
+  } | null>(null)
+  const barWrapRef = useRef<HTMLDivElement | null>(null)
   const lyricScrollRef = useRef<HTMLDivElement | null>(null)
   const queueScrollRef = useRef<HTMLDivElement | null>(null)
-  const titleRef = useRef<HTMLDivElement | null>(null)
-  const [titleOverflowPx, setTitleOverflowPx] = useState(0)
-  const titleOverflow = titleOverflowPx > 0
+  const [dominantColor, setDominantColor] = useState<string | null>(null)
 
   const {
     current,
@@ -78,14 +89,38 @@ export default function MusicPlayerBar() {
     playFromQueue,
   } = useMusicPlayer()
 
-  const seekTo = useCallback(
+  const getSeekPreview = useCallback(
     (clientX: number, element: HTMLDivElement) => {
-      if (!duration) return
+      if (!duration) return null
       const rect = element.getBoundingClientRect()
       const ratio = Math.min(1, Math.max(0, (clientX - rect.left) / rect.width))
-      seekToTime(ratio * duration)
+      return {
+        pct: ratio * 100,
+        sec: ratio * duration,
+      }
     },
-    [duration, seekToTime],
+    [duration],
+  )
+
+  const seekTo = useCallback(
+    (clientX: number, element: HTMLDivElement) => {
+      const preview = getSeekPreview(clientX, element)
+      if (!preview) return
+      seekToTime(preview.sec)
+    },
+    [getSeekPreview, seekToTime],
+  )
+
+  const getVolumeRatio = useCallback((clientX: number, element: HTMLDivElement) => {
+    const rect = element.getBoundingClientRect()
+    return Math.min(1, Math.max(0, (clientX - rect.left) / rect.width))
+  }, [])
+
+  const applyVolumeFromPointer = useCallback(
+    (clientX: number, element: HTMLDivElement) => {
+      setVolume(getVolumeRatio(clientX, element))
+    },
+    [getVolumeRatio, setVolume],
   )
 
   const { lines: lrcLines, activeIndex: activeLrcIndex } = useActiveLyric(
@@ -146,32 +181,6 @@ export default function MusicPlayerBar() {
       document.body.style.userSelect = previousUserSelect
     }
   }, [seeking])
-
-  useEffect(() => {
-    if (!current) {
-      setTitleOverflowPx(0)
-      return
-    }
-
-    const node = titleRef.current
-    if (!node) return
-
-    const measure = () => {
-      const overflow = node.scrollWidth - node.clientWidth
-      setTitleOverflowPx(overflow > 1 ? overflow : 0)
-    }
-
-    measure()
-
-    if (typeof ResizeObserver !== 'undefined') {
-      const observer = new ResizeObserver(measure)
-      observer.observe(node)
-      return () => observer.disconnect()
-    }
-
-    window.addEventListener('resize', measure)
-    return () => window.removeEventListener('resize', measure)
-  }, [current])
 
   useEffect(() => {
     if (!current) return
@@ -254,6 +263,48 @@ export default function MusicPlayerBar() {
   }, [expanded])
 
   useEffect(() => {
+    if (expanded) return
+    setQueuePopoverOpen(false)
+    setQualityPopoverOpen(false)
+  }, [expanded])
+
+  useEffect(() => {
+    const root = document.documentElement
+    if (!current) {
+      root.style.removeProperty('--music-player-safe-space-runtime')
+      return
+    }
+
+    const node = barWrapRef.current
+    if (!node) {
+      root.style.removeProperty('--music-player-safe-space-runtime')
+      return
+    }
+
+    const updateSafeSpace = () => {
+      const height = node.offsetHeight + 24
+      root.style.setProperty('--music-player-safe-space-runtime', `${height}px`)
+    }
+
+    updateSafeSpace()
+
+    if (typeof ResizeObserver !== 'undefined') {
+      const observer = new ResizeObserver(updateSafeSpace)
+      observer.observe(node)
+      return () => {
+        observer.disconnect()
+        root.style.removeProperty('--music-player-safe-space-runtime')
+      }
+    }
+
+    window.addEventListener('resize', updateSafeSpace)
+    return () => {
+      window.removeEventListener('resize', updateSafeSpace)
+      root.style.removeProperty('--music-player-safe-space-runtime')
+    }
+  }, [current])
+
+  useEffect(() => {
     if (!expanded) return
     const container = lyricScrollRef.current
     if (!container || activeLrcIndex < 0) return
@@ -269,7 +320,7 @@ export default function MusicPlayerBar() {
   }, [activeLrcIndex, expanded])
 
   useEffect(() => {
-    if (!expanded || fullscreenTab !== 'queue') return
+    if (!expanded || !queuePopoverOpen) return
     const container = queueScrollRef.current
     if (!container || activeQueueIndex < 0) return
 
@@ -281,31 +332,157 @@ export default function MusicPlayerBar() {
     const top =
       activeItem.offsetTop - container.clientHeight / 2 + activeItem.clientHeight / 2
     container.scrollTo({ top, behavior: 'smooth' })
-  }, [activeQueueIndex, expanded, fullscreenTab])
+  }, [activeQueueIndex, expanded, queuePopoverOpen])
+
+  useEffect(() => {
+    const url = normalizeCoverUrl(current?.coverUrl)
+    if (!url) {
+      setDominantColor(null)
+      return
+    }
+
+    let isMounted = true
+    fac
+      .getColorAsync(url, { algorithm: 'dominant', crossOrigin: 'anonymous' })
+      .then((color) => {
+        if (isMounted) {
+          setDominantColor(color.value.slice(0, 3).join(', '))
+        }
+      })
+      .catch(() => {
+        if (isMounted) setDominantColor(null)
+      })
+
+    return () => {
+      isMounted = false
+    }
+  }, [current?.coverUrl])
 
   if (!current) return null
 
   const progressPct = duration ? Math.min(100, (currentTime / duration) * 100) : 0
   const volumePct = muted ? 0 : volume * 100
   const coverUrl = normalizeCoverUrl(current.coverUrl)
-  const openFullscreen = (tab: FullscreenTab) => {
-    setFullscreenTab(tab)
+  const openFullscreen = (target: 'lyrics' | 'queue' = 'lyrics') => {
+    setFullscreenTab('lyrics')
+    setQualityPopoverOpen(false)
+    setQueuePopoverOpen(target === 'queue')
     setExpanded(true)
   }
+
+  const qualityPopoverContent = (
+    <div className="music-player-fullscreen__popover-menu music-player-fullscreen__popover-menu--quality">
+      {availableQualities.map((item) => (
+        <button
+          key={item.value}
+          type="button"
+          className={`music-player-fullscreen__popover-option${
+            preferredQuality === item.value ? ' is-active' : ''
+          }`}
+          disabled={playLoading}
+          onClick={() => {
+            if (preferredQuality !== item.value) {
+              switchQuality(item.value)
+            }
+            setQualityPopoverOpen(false)
+          }}
+        >
+          <span>{item.label}</span>
+          {preferredQuality === item.value && <span>当前</span>}
+        </button>
+      ))}
+    </div>
+  )
+
+  const queuePopoverContent = (
+    <div className="music-player-fullscreen__popover-menu music-player-fullscreen__popover-menu--queue">
+      <div className="music-player-fullscreen__popover-head">
+        <span>播放列表</span>
+        <span>{queueItems.length} 首</span>
+      </div>
+      <div
+        ref={queueScrollRef}
+        className="music-player-fullscreen__queue music-player-fullscreen__queue--popover"
+      >
+        {queueItems.length === 0 ? (
+          <div className="music-player-fullscreen__lyrics-empty">暂无播放列表</div>
+        ) : (
+          queueItems.map((item, index) => (
+            <button
+              key={`${item.source}:${item.id}:${index}`}
+              type="button"
+              data-player-queue-idx={index}
+              className={`music-player-fullscreen__queue-item${
+                index === activeQueueIndex ? ' is-active' : ''
+              }`}
+              onClick={() => {
+                if (playlist.length) {
+                  void playFromQueue(index)
+                } else {
+                  void playSong(item, preferredQuality)
+                }
+                setQueuePopoverOpen(false)
+              }}
+            >
+              <span className="music-player-fullscreen__queue-index">
+                {String(index + 1).padStart(2, '0')}
+              </span>
+              <span className="music-player-fullscreen__queue-copy">
+                <span className="music-player-fullscreen__queue-title">
+                  {item.name || '未知歌曲'}
+                </span>
+                <span className="music-player-fullscreen__queue-artist">
+                  {item.artist || '未知歌手'}
+                  {item.album ? ` 路 ${item.album}` : ''}
+                </span>
+              </span>
+              {index === activeQueueIndex && (
+                <span className="music-player-fullscreen__queue-pill">
+                  {isPlaying ? 'Playing' : 'Paused'}
+                </span>
+              )}
+            </button>
+          ))
+        )}
+      </div>
+    </div>
+  )
 
   const renderProgressTrack = (extraClass?: string) => (
     <div
       className={`progress-track ${seeking ? 'dragging' : ''}${
         extraClass ? ` ${extraClass}` : ''
       }`}
+      onPointerEnter={(event) => {
+        const preview = getSeekPreview(event.clientX, event.currentTarget)
+        if (!preview) return
+        setProgressPreview({
+          track: extraClass === 'music-player-fullscreen__progress-track' ? 'fullscreen' : 'bar',
+          ...preview,
+        })
+      }}
       onPointerDown={(event) => {
         if (event.button !== 0) return
         setSeeking(true)
         event.currentTarget.setPointerCapture(event.pointerId)
+        const preview = getSeekPreview(event.clientX, event.currentTarget)
+        if (preview) {
+          setProgressPreview({
+            track: extraClass === 'music-player-fullscreen__progress-track' ? 'fullscreen' : 'bar',
+            ...preview,
+          })
+        }
         seekTo(event.clientX, event.currentTarget)
         event.preventDefault()
       }}
       onPointerMove={(event) => {
+        const preview = getSeekPreview(event.clientX, event.currentTarget)
+        if (preview) {
+          setProgressPreview({
+            track: extraClass === 'music-player-fullscreen__progress-track' ? 'fullscreen' : 'bar',
+            ...preview,
+          })
+        }
         if (!seeking) return
         seekTo(event.clientX, event.currentTarget)
       }}
@@ -316,19 +493,23 @@ export default function MusicPlayerBar() {
         }
         setSeeking(false)
       }}
+      onPointerLeave={() => {
+        if (!seeking) setProgressPreview(null)
+      }}
       onPointerCancel={(event) => {
         if (event.currentTarget.hasPointerCapture(event.pointerId)) {
           event.currentTarget.releasePointerCapture(event.pointerId)
         }
         setSeeking(false)
+        setProgressPreview(null)
       }}
       onKeyDown={(event) => {
         if (!duration) return
         if (event.key === 'ArrowLeft') {
-          seekToTime(currentTime - 5)
+          seekToTime(currentTime - 1)
           event.preventDefault()
         } else if (event.key === 'ArrowRight') {
-          seekToTime(currentTime + 5)
+          seekToTime(currentTime + 1)
           event.preventDefault()
         }
       }}
@@ -340,6 +521,71 @@ export default function MusicPlayerBar() {
       aria-valuenow={Math.min(currentTime, duration || currentTime)}
       style={{ '--progress': `${progressPct}%` } as CSSProperties}
     >
+      {progressPreview &&
+      progressPreview.track ===
+        (extraClass === 'music-player-fullscreen__progress-track' ? 'fullscreen' : 'bar') ? (
+        <div
+          className="progress-track__preview"
+          style={{ left: `${progressPreview.pct}%` }}
+        >
+          {formatDuration(progressPreview.sec)}
+          <span>.{Math.floor((progressPreview.sec % 1) * 10)}</span>
+        </div>
+      ) : null}
+      <div className="rail">
+        <div className="fill" />
+      </div>
+      <div className="thumb" />
+    </div>
+  )
+
+  const renderVolumeTrack = (extraClass?: string) => (
+    <div
+      className={`progress-track progress-track--volume${extraClass ? ` ${extraClass}` : ''}`}
+      onPointerDown={(event) => {
+        if (event.button !== 0) return
+        event.currentTarget.setPointerCapture(event.pointerId)
+        applyVolumeFromPointer(event.clientX, event.currentTarget)
+        event.preventDefault()
+      }}
+      onPointerMove={(event) => {
+        if (!event.currentTarget.hasPointerCapture(event.pointerId)) return
+        applyVolumeFromPointer(event.clientX, event.currentTarget)
+      }}
+      onPointerUp={(event) => {
+        if (event.currentTarget.hasPointerCapture(event.pointerId)) {
+          event.currentTarget.releasePointerCapture(event.pointerId)
+        }
+      }}
+      onPointerCancel={(event) => {
+        if (event.currentTarget.hasPointerCapture(event.pointerId)) {
+          event.currentTarget.releasePointerCapture(event.pointerId)
+        }
+      }}
+      onKeyDown={(event) => {
+        if (event.key === 'ArrowLeft' || event.key === 'ArrowDown') {
+          setVolume((muted ? 0 : volume) - 0.05)
+          event.preventDefault()
+        } else if (event.key === 'ArrowRight' || event.key === 'ArrowUp') {
+          setVolume((muted ? 0 : volume) + 0.05)
+          event.preventDefault()
+        } else if (event.key === 'Home') {
+          setVolume(0)
+          event.preventDefault()
+        } else if (event.key === 'End') {
+          setVolume(1)
+          event.preventDefault()
+        }
+      }}
+      role="slider"
+      tabIndex={0}
+      aria-label="闊抽噺"
+      aria-valuemin={0}
+      aria-valuemax={100}
+      aria-valuenow={Math.round(volumePct)}
+      aria-valuetext={`${Math.round(volumePct)}%`}
+      style={{ '--progress': `${volumePct}%` } as CSSProperties}
+    >
       <div className="rail">
         <div className="fill" />
       </div>
@@ -349,12 +595,17 @@ export default function MusicPlayerBar() {
 
   return (
     <>
-      <div className="music-player-bar-wrap">
+      <div ref={barWrapRef} className="music-player-bar-wrap">
         <div
           className={`music-player-bar${isPlaying ? ' is-playing' : ''}${
             playLoading ? ' is-loading' : ''
           }`}
+          style={dominantColor ? ({ '--dominant-rgb': dominantColor } as CSSProperties) : undefined}
         >
+          <div className="music-player-bar__progress music-player-bar__progress--top">
+            {renderProgressTrack('music-player-bar__progress-track')}
+          </div>
+
           <div className="music-player-bar__meta">
             <button
               type="button"
@@ -363,20 +614,12 @@ export default function MusicPlayerBar() {
               aria-label="打开全屏播放器"
               title="打开全屏播放器"
             >
-              <MusicCover src={current.coverUrl} size={64} rounded={18} loading="eager" />
+              <MusicCover src={current.coverUrl} size={48} rounded={14} loading="eager" />
             </button>
             <div className="music-player-bar__text">
               <div
-                ref={titleRef}
-                className={`music-player-bar__title${
-                  titleOverflow ? ' is-overflowing' : ''
-                }`}
+                className="music-player-bar__title"
                 title={current.name}
-                style={
-                  titleOverflow
-                    ? ({ '--marquee-shift': `-${titleOverflowPx}px` } as CSSProperties)
-                    : undefined
-                }
               >
                 <span className="music-player-bar__title-inner">
                   {current.name || '未知歌曲'}
@@ -434,19 +677,13 @@ export default function MusicPlayerBar() {
                 <SkipForward size={18} />
               </button>
             </div>
-
-            <div className="music-player-bar__progress">
-              <span className="time">{formatDuration(currentTime)}</span>
-              {renderProgressTrack()}
-              <span className="time time-right">{formatDuration(duration)}</span>
-            </div>
           </div>
 
           <div className="music-player-bar__aside">
             <button
               type="button"
               className={`ctrl-btn music-player-bar__icon-btn${
-                expanded && fullscreenTab === 'queue' ? ' is-active' : ''
+                expanded && queuePopoverOpen ? ' is-active' : ''
               }`}
               onClick={() => openFullscreen('queue')}
               aria-label="打开当前播放列表"
@@ -464,6 +701,7 @@ export default function MusicPlayerBar() {
             >
               {muted || volume === 0 ? <VolumeX size={16} /> : <Volume2 size={16} />}
             </button>
+            {renderVolumeTrack('music-player-bar__volume-track')}
             <input
               type="range"
               min={0}
@@ -487,9 +725,10 @@ export default function MusicPlayerBar() {
           <div
             className="music-player-fullscreen__shell"
             style={
-              coverUrl
-                ? ({ '--player-cover': `url("${coverUrl}")` } as CSSProperties)
-                : undefined
+              {
+                ...(coverUrl ? { '--player-cover': `url("${coverUrl}")` } : {}),
+                ...(dominantColor ? { '--dominant-rgb': dominantColor } : {}),
+              } as CSSProperties
             }
           >
             <div className="music-player-fullscreen__topbar">
@@ -568,28 +807,6 @@ export default function MusicPlayerBar() {
                     </div>
                   </div>
 
-                  <div
-                    className="music-player-fullscreen__quality-switch"
-                    role="group"
-                    aria-label="Quality"
-                  >
-                    {availableQualities.map((item) => (
-                      <button
-                        key={item.value}
-                        type="button"
-                        className={`music-player-fullscreen__quality-btn${
-                          preferredQuality === item.value ? ' is-active' : ''
-                        }`}
-                        disabled={playLoading}
-                        onClick={() => {
-                          if (preferredQuality === item.value) return
-                          switchQuality(item.value)
-                        }}
-                      >
-                        {item.label}
-                      </button>
-                    ))}
-                  </div>
                 </div>
 
                 <div className="music-player-fullscreen__lyrics-head">
@@ -760,6 +977,53 @@ export default function MusicPlayerBar() {
                     </div>
 
                     <div className="music-player-fullscreen__volume">
+                      <Popover
+                        trigger="click"
+                        placement="top"
+                        overlayClassName="music-player-fullscreen__popover"
+                        content={qualityPopoverContent}
+                        open={qualityPopoverOpen}
+                        onOpenChange={(open) => {
+                          setQualityPopoverOpen(open)
+                          if (open) setQueuePopoverOpen(false)
+                        }}
+                      >
+                        <button
+                          type="button"
+                          className={`ctrl-btn music-player-fullscreen__tool-trigger${
+                            qualityPopoverOpen ? ' is-active' : ''
+                          }`}
+                          aria-label="音质切换"
+                          title="音质切换"
+                        >
+                          <AudioLines size={16} />
+                        </button>
+                      </Popover>
+                      <Popover
+                        trigger="click"
+                        placement="topRight"
+                        overlayClassName="music-player-fullscreen__popover"
+                        content={queuePopoverContent}
+                        open={queuePopoverOpen}
+                        onOpenChange={(open) => {
+                          setQueuePopoverOpen(open)
+                          if (open) setQualityPopoverOpen(false)
+                        }}
+                      >
+                        <button
+                          type="button"
+                          className={`ctrl-btn music-player-fullscreen__tool-trigger music-player-fullscreen__tool-trigger--queue${
+                            queuePopoverOpen ? ' is-active' : ''
+                          }`}
+                          aria-label={`播放列表，共 ${queueItems.length} 首`}
+                          title={`播放列表 (${queueItems.length})`}
+                        >
+                          <ListMusic size={16} />
+                          <span className="music-player-fullscreen__tool-badge">
+                            {queueItems.length}
+                          </span>
+                        </button>
+                      </Popover>
                       <button
                         type="button"
                         className="ctrl-btn"

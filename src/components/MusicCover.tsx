@@ -7,6 +7,8 @@ type MusicCoverProps = {
   size: number
   rounded?: number
   loading?: 'lazy' | 'eager'
+  className?: string
+  crossOrigin?: 'anonymous' | 'use-credentials'
 }
 
 export default function MusicCover({
@@ -14,6 +16,8 @@ export default function MusicCover({
   size,
   rounded = 6,
   loading = 'lazy',
+  className,
+  crossOrigin,
 }: MusicCoverProps) {
   const [failed, setFailed] = useState(false)
   const url = normalizeCoverUrl(src)
@@ -25,6 +29,7 @@ export default function MusicCover({
   if (!url || failed) {
     return (
       <div
+        className={className}
         style={{
           width: size,
           height: size,
@@ -49,6 +54,8 @@ export default function MusicCover({
       loading={loading}
       decoding="async"
       referrerPolicy="no-referrer"
+      crossOrigin={crossOrigin}
+      className={className}
       onError={() => setFailed(true)}
       style={{
         width: size,

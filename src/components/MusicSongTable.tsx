@@ -73,6 +73,23 @@ export default function MusicSongTable({
     void playSong(row, preferredQuality)
   }
 
+  const paginationNode =
+    onPageChange && songs.length > 0 ? (
+      <div className="music-pagination music-pagination--bottom">
+        <Pagination
+          current={page}
+          pageSize={pageSize}
+          total={pageTotal(page, pageSize, songs.length, total)}
+          onChange={onPageChange}
+          responsive
+          showLessItems
+          showSizeChanger
+          showQuickJumper={false}
+          pageSizeOptions={PAGE_SIZE_OPTIONS}
+        />
+      </div>
+    ) : null
+
   return (
     <>
       <Table<SongSearchItem>
@@ -92,22 +109,24 @@ export default function MusicSongTable({
             title: '歌曲',
             dataIndex: 'name',
             render: (name: string, row) => (
-              <Space>
-                <MusicCover src={row.coverUrl} size={48} rounded={16} />
+              <Space size={14}>
+                <MusicCover src={row.coverUrl} size={44} rounded={12} className={isPlayingRow(row) && isPlaying ? 'music-dock-spin' : ''} />
                 <div style={{ minWidth: 0 }}>
                   <div
                     style={{
-                      fontWeight: 600,
+                      fontSize: 15,
+                      fontWeight: 700,
                       whiteSpace: 'nowrap',
                       overflow: 'hidden',
                       textOverflow: 'ellipsis',
                       maxWidth: 360,
-                      color: isPlayingRow(row) ? 'var(--music-accent)' : undefined,
+                      color: isPlayingRow(row) ? 'var(--accent)' : undefined,
+                      transition: 'color 0.3s ease',
                     }}
                   >
                     {name}
                   </div>
-                  <Typography.Text type="secondary" style={{ fontSize: 12 }}>
+                  <Typography.Text type="secondary" style={{ fontSize: 13, opacity: 0.8 }}>
                     {row.artist}
                     {row.album ? ` · ${row.album}` : ''}
                   </Typography.Text>
@@ -175,21 +194,7 @@ export default function MusicSongTable({
         })}
         locale={{ emptyText: <Empty description={emptyText} /> }}
       />
-      {onPageChange && songs.length > 0 && (
-        <div className="music-pagination">
-          <Pagination
-            current={page}
-            pageSize={pageSize}
-            total={pageTotal(page, pageSize, songs.length, total)}
-            onChange={onPageChange}
-            responsive
-            showLessItems
-            showSizeChanger
-            showQuickJumper={false}
-            pageSizeOptions={PAGE_SIZE_OPTIONS}
-          />
-        </div>
-      )}
+      {paginationNode}
     </>
   )
 }

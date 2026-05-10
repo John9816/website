@@ -12,7 +12,6 @@ import {
   Form,
   Input,
   InputNumber,
-  MenuProps,
   Modal,
   Popconfirm,
   Row,
@@ -32,7 +31,6 @@ import {
   EyeOutlined,
   FileAddOutlined,
   HistoryOutlined,
-  MoreOutlined,
   PlusOutlined,
   SettingOutlined,
   ShareAltOutlined,
@@ -143,16 +141,6 @@ function flattenTreeOptions(
   return result
 }
 
-function findTreeTitle(nodes: KbDocTreeNode[], id: number | null): string {
-  if (!id) return ''
-  for (const node of nodes) {
-    if (node.id === id) return node.title
-    const child = findTreeTitle(node.children ?? [], id)
-    if (child) return child
-  }
-  return ''
-}
-
 function buildTreeData(nodes: KbDocTreeNode[]): TreeDataNode[] {
   return nodes.map((node) => ({
     key: node.id,
@@ -258,6 +246,7 @@ export default function AdminKnowledgeBase() {
   const [versionItems, setVersionItems] = useState<KbDocVersion[]>([])
   const [versionPage, setVersionPage] = useState(1)
   const [versionTotal, setVersionTotal] = useState(0)
+  const [versionDetail, setVersionDetail] = useState<KbDocVersionDetail | null>(null)
   const [selectedVersionId, setSelectedVersionId] = useState<number | null>(null)
   const [versionDetailLoading, setVersionDetailLoading] = useState(false)
   const [selectedRowKeys, setSelectedRowKeys] = useState<React.Key[]>([])
