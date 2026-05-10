@@ -1,5 +1,5 @@
 import React, { Suspense } from 'react'
-import { Breadcrumb, Button, Empty, Input, Popconfirm, Select, Skeleton, Space, Table, Tag, Tooltip, Typography } from 'antd'
+import { Breadcrumb, Button, Empty, Input, Popconfirm, Select, Skeleton, Space, Table, Tag, Tooltip, Typography, App as AntApp } from 'antd'
 import {
   CheckCircleOutlined,
   CloudUploadOutlined,
@@ -437,11 +437,13 @@ const KbMain: React.FC = () => {
                         await Promise.all(
                           selectedRowKeys.map((key) => handleDeleteDoc(Number(key))),
                         )
-                        AntApp.useApp().message.success('批量删除成功')
+                        const { message } = AntApp.useApp()
+                        message.success('批量删除成功')
                         setSelectedRowKeys([])
                         // These will be refreshed by useEffects in Context
                       } catch (error) {
-                        AntApp.useApp().message.error('部分文档删除失败')
+                        const { message } = AntApp.useApp()
+                        message.error('部分文档删除失败')
                       }
                     }}
                   >

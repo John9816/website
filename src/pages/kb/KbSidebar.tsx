@@ -28,8 +28,6 @@ const KbSidebar: React.FC = () => {
     openShareModal,
     confirmDeleteDoc,
     setTagModalOpen,
-    setTreeContextMenu,
-    treeContextMenu,
   } = useKbContext()
 
   return (

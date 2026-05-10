@@ -1,4 +1,4 @@
-import { createContext, useContext, type ReactNode } from 'react'
+import { createContext, useContext } from 'react'
 import type { FormInstance } from 'antd'
 import type {
   KbDoc,
@@ -80,6 +80,7 @@ export interface KbContextState {
   shareDoc: DocRef | null
   shareInfo: KbDocShare | null
   shareExpiresAt: string
+  setShareExpiresAt: (expiresAt: string) => void
   versionDrawerDoc: DocRef | null
   versionsLoading: boolean
   versionItems: KbDocVersion[]
