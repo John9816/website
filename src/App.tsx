@@ -5,6 +5,7 @@ import zhCN from 'antd/locale/zh_CN'
 import { AuthProvider } from './context/AuthContext'
 import { MusicPlayerProvider } from './context/MusicPlayerContext'
 import { ThemeProvider, useTheme } from './context/ThemeContext'
+import { usePageTitle } from './hooks/usePageTitle'
 
 const HomePage = lazy(() => import('./pages/HomePage'))
 const GlobalMusicDock = lazy(() => import('./components/GlobalMusicDock'))
@@ -57,6 +58,11 @@ function ThemedAntd({ children }: { children: React.ReactNode }) {
   )
 }
 
+function PageTitleSetter() {
+  usePageTitle()
+  return null
+}
+
 export default function App() {
   return (
     <ThemeProvider>
@@ -64,6 +70,7 @@ export default function App() {
         <AuthProvider>
           <MusicPlayerProvider>
             <BrowserRouter>
+              <PageTitleSetter />
               <Suspense fallback={<RouteFallback />}>
                 <Routes>
                   <Route path="/" element={<HomePage />} />

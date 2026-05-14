@@ -13,7 +13,7 @@ import {
   App as AntApp,
   Card,
   Skeleton,
-  Tooltip,
+  Typography,
 } from 'antd'
 import { PlusOutlined, EditOutlined, DeleteOutlined, ReloadOutlined, GlobalOutlined } from '@ant-design/icons'
 import {

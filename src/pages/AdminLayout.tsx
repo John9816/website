@@ -2,7 +2,6 @@ import { Layout, Menu, Button, Typography, ConfigProvider, Space, theme as antdT
 import {
   AppstoreOutlined,
   BookOutlined,
-  CustomerServiceOutlined,
   HomeOutlined,
   KeyOutlined,
   LinkOutlined,
