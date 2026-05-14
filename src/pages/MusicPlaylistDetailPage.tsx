@@ -167,38 +167,14 @@ export default function MusicPlaylistDetailPage() {
 
   return (
     <div className="music-detail-shell">
-      <div className="music-detail-actions">
-        <Link to="/music?view=playlist" className="music-back-link">
-          <ChevronLeft size={16} />
-          <span>返回歌单</span>
-        </Link>
-        <div className="music-detail-actions-group">
-          <Button
-            type="primary"
-            icon={<Play size={14} />}
-            disabled={!detail?.list?.length}
-            onClick={() => {
-              if (!detail?.list?.length) return
-              void playPlaylist(detail.list)
-            }}
-          >
-            播放全部
-          </Button>
-          <Button
-            icon={<RefreshCcw size={14} />}
-            onClick={() => {
-              setPage(1)
-            }}
-          >
-            刷新
-          </Button>
-        </div>
-      </div>
-
       <div
         className={`music-detail-hero${heroCoverUrl ? ' music-detail-hero--with-cover' : ''}`}
         style={heroStyle}
       >
+        <Link to="/music?view=playlist" className="music-hero-back" title="返回歌单">
+          <ChevronLeft size={20} />
+        </Link>
+
         <MusicCover src={detail?.coverUrl} size={148} rounded={32} loading="eager" />
         <div className="music-detail-hero__copy">
           <span className="music-stage-kicker">歌单详情</span>
@@ -207,6 +183,33 @@ export default function MusicPlaylistDetailPage() {
           <div className="music-detail-meta">
             <span>{metaText}</span>
             {detail?.updateTime && <span>{detail.updateTime}</span>}
+          </div>
+
+          <div className="music-hero-actions">
+            <Button
+              type="primary"
+              size="large"
+              icon={<Play size={16} fill="currentColor" />}
+              disabled={!detail?.list?.length}
+              onClick={() => {
+                if (!detail?.list?.length) return
+                void playPlaylist(detail.list)
+              }}
+              className="music-hero-play-btn"
+            >
+              播放全部
+            </Button>
+            <Button
+              ghost
+              size="large"
+              icon={<RefreshCcw size={16} />}
+              onClick={() => {
+                setPage(1)
+              }}
+              className="music-hero-refresh-btn"
+            >
+              刷新
+            </Button>
           </div>
         </div>
       </div>

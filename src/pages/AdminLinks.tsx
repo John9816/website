@@ -12,8 +12,10 @@ import {
   Tag,
   App as AntApp,
   Card,
+  Skeleton,
+  Tooltip,
 } from 'antd'
-import { PlusOutlined, EditOutlined, DeleteOutlined } from '@ant-design/icons'
+import { PlusOutlined, EditOutlined, DeleteOutlined, ReloadOutlined, GlobalOutlined } from '@ant-design/icons'
 import {
   adminListLinks,
   adminCreateLink,
@@ -29,6 +31,7 @@ export default function AdminLinks() {
   const [rows, setRows] = useState<NavLink[]>([])
   const [cats, setCats] = useState<Category[]>([])
   const [loading, setLoading] = useState(false)
+  const [submitLoading, setSubmitLoading] = useState(false)
   const [filterCat, setFilterCat] = useState<number | undefined>()
   const [open, setOpen] = useState(false)
   const [editing, setEditing] = useState<NavLink | null>(null)
@@ -78,6 +81,7 @@ export default function AdminLinks() {
 
   const submit = async () => {
     const values = await form.validateFields()
+    setSubmitLoading(true)
     try {
       if (editing) {
         await adminUpdateLink(editing.id, values)
@@ -90,6 +94,8 @@ export default function AdminLinks() {
       load(filterCat)
     } catch (e) {
       message.error((e as Error).message)
+    } finally {
+      setSubmitLoading(false)
     }
   }
 
@@ -104,10 +110,13 @@ export default function AdminLinks() {
   }
 
   return (
-    <Card
-      title="链接管理"
-      extra={
-        <Space>
+    <div style={{ display: 'flex', flexDirection: 'column', gap: 24 }}>
+      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+        <div>
+          <h2 style={{ margin: 0, fontSize: 24, fontWeight: 600 }}>链接管理</h2>
+          <p style={{ margin: '4px 0 0', color: 'rgba(0,0,0,0.45)' }}>管理导航站的所有链接条目</p>
+        </div>
+        <Space size="middle">
           <Select
             allowClear
             placeholder="按分类筛选"
@@ -118,107 +127,193 @@ export default function AdminLinks() {
               setFilterCat(v)
               load(v)
             }}
+            size="large"
           />
-          <Button type="primary" icon={<PlusOutlined />} onClick={openCreate}>
+          <Button icon={<ReloadOutlined />} onClick={() => load(filterCat)} loading={loading} size="large">
+            刷新
+          </Button>
+          <Button type="primary" size="large" icon={<PlusOutlined />} onClick={openCreate}>
             新建链接
           </Button>
         </Space>
-      }
-    >
-      <Table
-        rowKey="id"
-        dataSource={rows}
-        loading={loading}
-        pagination={{
-          defaultPageSize: DEFAULT_PAGE_SIZE,
-          showSizeChanger: true,
-          showQuickJumper: false,
-          pageSizeOptions: PAGE_SIZE_OPTIONS,
-        }}
-        columns={[
-          { title: 'ID', dataIndex: 'id', width: 70 },
-          {
-            title: '图标',
-            dataIndex: 'icon',
-            width: 70,
-            render: (v: string | null, row) => <CategoryIcon icon={v} size={22} alt={row.name} />,
-          },
-          { title: '名称', dataIndex: 'name' },
-          {
-            title: 'URL',
-            dataIndex: 'url',
-            ellipsis: true,
-            render: (v: string) => (
-              <a href={v} target="_blank" rel="noreferrer">
-                {v}
-              </a>
-            ),
-          },
-          { title: '描述', dataIndex: 'description', ellipsis: true },
-          {
-            title: '分类',
-            dataIndex: 'categoryId',
-            width: 110,
-            render: (id: number) => <Tag>{catMap.get(id)?.name ?? id}</Tag>,
-          },
-          { title: '排序', dataIndex: 'sortOrder', width: 80 },
-          {
-            title: '操作',
-            width: 160,
-            fixed: 'right',
-            render: (_, row) => (
-              <Space>
-                <Button size="small" icon={<EditOutlined />} onClick={() => openEdit(row)}>
-                  编辑
-                </Button>
-                <Popconfirm title="删除链接？" onConfirm={() => del(row.id)}>
-                  <Button size="small" danger icon={<DeleteOutlined />}>
-                    删除
-                  </Button>
-                </Popconfirm>
-              </Space>
-            ),
-          },
-        ]}
-        scroll={{ x: 960 }}
-      />
+      </div>
+
+      <Card styles={{ body: { padding: 0 } }} style={{ overflow: 'hidden', border: 'none', boxShadow: '0 1px 2px 0 rgba(0, 0, 0, 0.03), 0 1px 6px -1px rgba(0, 0, 0, 0.02), 0 2px 4px 0 rgba(0, 0, 0, 0.02)' }}>
+        {loading && rows.length === 0 ? (
+          <div style={{ padding: 24 }}>
+            <Skeleton active paragraph={{ rows: 10 }} />
+          </div>
+        ) : (
+          <Table
+            rowKey="id"
+            dataSource={rows}
+            loading={loading}
+            pagination={{
+              defaultPageSize: DEFAULT_PAGE_SIZE,
+              showSizeChanger: true,
+              showQuickJumper: false,
+              pageSizeOptions: PAGE_SIZE_OPTIONS,
+              position: ['bottomRight'],
+              style: { padding: '16px 24px' }
+            }}
+            scroll={{ x: 'max-content' }}
+            style={{ width: '100%' }}
+            columns={[
+              {
+                title: '图标',
+                dataIndex: 'icon',
+                width: 64,
+                align: 'center',
+                render: (v: string | null, row) => (
+                  <div
+                    style={{
+                      width: 40,
+                      height: 40,
+                      borderRadius: 8,
+                      background: 'rgba(0,0,0,0.02)',
+                      display: 'flex',
+                      alignItems: 'center',
+                      justifyContent: 'center',
+                      border: '1px solid rgba(0,0,0,0.05)'
+                    }}
+                  >
+                    <CategoryIcon icon={v} size={20} alt={row.name} />
+                  </div>
+                ),
+              },
+              {
+                title: '站点名称',
+                dataIndex: 'name',
+                width: 140,
+                ellipsis: true,
+                render: (v) => <span style={{ fontWeight: 600 }}>{v}</span>,
+              },
+              {
+                title: '分类',
+                dataIndex: 'categoryId',
+                width: 100,
+                render: (id: number) => {
+                  const cat = catMap.get(id)
+                  return (
+                    <Tag color="blue" style={{ borderRadius: 4, padding: '2px 8px' }}>
+                      {cat?.name ?? id}
+                    </Tag>
+                  )
+                },
+              },
+              {
+                title: 'URL 地址',
+                dataIndex: 'url',
+                width: 150,
+                ellipsis: true,
+                render: (v: string) => (
+                  <Space size={4}>
+                    <GlobalOutlined style={{ color: 'rgba(0,0,0,0.25)' }} />
+                    <a href={v} target="_blank" rel="noreferrer" style={{ color: '#1677ff' }}>
+                      {v}
+                    </a>
+                  </Space>
+                ),
+              },
+              {
+                title: '描述',
+                dataIndex: 'description',
+                width: 250,
+                render: (v) => (
+                  <div style={{ maxWidth: 250 }}>
+                    <Typography.Paragraph
+                      ellipsis={{ rows: 1, tooltip: v }}
+                      style={{ color: 'rgba(0,0,0,0.45)', fontSize: 13, marginBottom: 0 }}
+                    >
+                      {v || '-'}
+                    </Typography.Paragraph>
+                  </div>
+                ),
+              },
+              {
+                title: '排序',
+                dataIndex: 'sortOrder',
+                width: 80,
+                align: 'center',
+                render: (v) => <Tag style={{ border: 'none', background: 'rgba(0,0,0,0.04)', fontWeight: 500 }}>{v}</Tag>,
+              },
+              {
+                title: '操作',
+                width: 140,
+                fixed: 'right',
+                align: 'center',
+                render: (_, row) => (
+                  <Space size="middle">
+                    <Button
+                      type="text"
+                      icon={<EditOutlined />}
+                      onClick={() => openEdit(row)}
+                      style={{ color: '#1677ff' }}
+                    >
+                      编辑
+                    </Button>
+                    <Popconfirm
+                      title="确认删除该链接？"
+                      onConfirm={() => del(row.id)}
+                      okText="确认删除"
+                      cancelText="取消"
+                      okButtonProps={{ danger: true }}
+                    >
+                      <Button type="text" danger icon={<DeleteOutlined />}>
+                        删除
+                      </Button>
+                    </Popconfirm>
+                  </Space>
+                ),
+              },
+            ]}
+          />
+        )}
+      </Card>
 
       <Modal
         title={editing ? '编辑链接' : '新建链接'}
         open={open}
         onCancel={() => setOpen(false)}
         onOk={submit}
+        confirmLoading={submitLoading}
         destroyOnClose
-        width={560}
+        centered
+        width={600}
       >
-        <Form layout="vertical" form={form}>
-          <Form.Item name="categoryId" label="分类" rules={[{ required: true }]}>
-            <Select
-              options={cats.map((c) => ({ value: c.id, label: c.name }))}
-              placeholder="选择分类"
-            />
+        <Form layout="vertical" form={form} style={{ marginTop: 24 }}>
+          <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '0 16px' }}>
+            <Form.Item name="name" label="站点名称" rules={[{ required: true, message: '请输入站点名称' }]}>
+              <Input placeholder="例如：GitHub" maxLength={100} size="large" />
+            </Form.Item>
+            <Form.Item name="categoryId" label="所属分类" rules={[{ required: true, message: '请选择分类' }]}>
+              <Select
+                options={cats.map((c) => ({ value: c.id, label: c.name }))}
+                placeholder="选择分类"
+                size="large"
+              />
+            </Form.Item>
+          </div>
+          <Form.Item name="url" label="URL 地址" rules={[{ required: true, type: 'url', message: '请输入有效的 URL' }]}>
+            <Input placeholder="https://..." size="large" />
           </Form.Item>
-          <Form.Item name="name" label="名称" rules={[{ required: true }]}>
-            <Input placeholder="站点名称" maxLength={100} />
+          <Form.Item name="description" label="描述说明">
+            <Input.TextArea rows={3} placeholder="简要描述该站点的功能或用途" maxLength={255} showCount />
           </Form.Item>
-          <Form.Item name="url" label="URL" rules={[{ required: true, type: 'url' }]}>
-            <Input placeholder="https://..." />
-          </Form.Item>
-          <Form.Item name="description" label="描述">
-            <Input.TextArea rows={2} maxLength={255} showCount />
-          </Form.Item>
-          <Form.Item
-            name="icon"
-            label="图标"
-            tooltip="支持 Lucide 图标名 或 图片 URL（favicon）"
-          >
-            <Input placeholder="https://site.com/favicon.ico 或 Rocket" />
-          </Form.Item>
-          <Form.Item name="sortOrder" label="排序" rules={[{ required: true }]}>
-            <InputNumber min={0} style={{ width: '100%' }} />
-          </Form.Item>
+          <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '0 16px' }}>
+            <Form.Item
+              name="icon"
+              label="图标/Favicon"
+              tooltip="支持 Lucide 图标名 或 图片 URL（favicon）"
+            >
+              <Input placeholder="Rocket 或 https://..." size="large" />
+            </Form.Item>
+            <Form.Item name="sortOrder" label="排序权重" rules={[{ required: true, message: '请输入排序权重' }]}>
+              <InputNumber min={0} style={{ width: '100%' }} size="large" />
+            </Form.Item>
+          </div>
         </Form>
       </Modal>
-    </Card>
+    </div>
   )
 }

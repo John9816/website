@@ -1,11 +1,8 @@
 import React, { Suspense } from 'react'
 import { Breadcrumb, Button, Empty, Input, Popconfirm, Select, Skeleton, Space, Table, Tag, Tooltip, Typography, App as AntApp } from 'antd'
 import {
-  CheckCircleOutlined,
-  CloudUploadOutlined,
   DeleteOutlined,
   EditOutlined,
-  ExclamationCircleOutlined,
   EyeOutlined,
   FileAddOutlined,
   HistoryOutlined,
@@ -207,43 +204,7 @@ const KbMain: React.FC = () => {
         </div>
 
         <div className="kb-admin-toolbar__actions">
-          {selectedDoc && inlineEditingDocId === selectedDoc.id ? (
-            <>
-              {autosaveStatus !== 'idle' && (
-                <div style={{ marginRight: 12, display: 'flex', alignItems: 'center', fontSize: 12, color: 'rgba(0,0,0,0.45)' }}>
-                  {autosaveStatus === 'saving' && <><CloudUploadOutlined style={{ marginRight: 4 }} /> 正在自动保存...</>}
-                  {autosaveStatus === 'saved' && <><CheckCircleOutlined style={{ marginRight: 4, color: '#52c41a' }} /> 草稿已保存</>}
-                  {autosaveStatus === 'error' && <><ExclamationCircleOutlined style={{ marginRight: 4, color: '#ff4d4f' }} /> 自动保存失败</>}
-                </div>
-              )}
-              <Tooltip title="预览">
-                <Button type="text" icon={<EyeOutlined />} onClick={exitInlineEdit} />
-              </Tooltip>
-              <Tooltip title="文档属性">
-                <Button
-                  type="text"
-                  icon={<SettingOutlined />}
-                  onClick={() => setPropertyDrawerOpen(true)}
-                />
-              </Tooltip>
-              <Popconfirm
-                title="删除文档后不可恢复"
-                onConfirm={() => void handleDeleteDoc(selectedDoc.id)}
-              >
-                <Tooltip title="删除">
-                  <Button type="text" danger icon={<DeleteOutlined />} />
-                </Tooltip>
-              </Popconfirm>
-              <span className="kb-admin-toolbar__divider" />
-              <Button
-                type="primary"
-                loading={inlineDocSaving}
-                onClick={() => void handleSaveInlineDoc()}
-              >
-                {isDirty ? '保存*' : '保存'}
-              </Button>
-            </>
-          ) : selectedDoc ? (
+          {selectedDoc && inlineEditingDocId === selectedDoc.id ? null : selectedDoc ? (
             <>
               <Tooltip title="编辑">
                 <Button
@@ -310,14 +271,43 @@ const KbMain: React.FC = () => {
           ) : selectedDoc ? (
             inlineEditingDocId === selectedDoc.id ? (
               <div className="kb-admin-article">
-                <span className="kb-admin-article__eyebrow">正在编辑</span>
-                <input
-                  className="kb-admin-edit__title"
-                  placeholder="无标题文档"
-                  maxLength={200}
-                  value={editTitle}
-                  onChange={(event) => setEditTitle(event.target.value)}
-                />
+                <div className="kb-admin-edit__title-group">
+                  <div className="kb-admin-edit__toolbar">
+                    <div className="kb-admin-edit__toolbar-left">
+                      {autosaveStatus !== 'idle' && (
+                        <span className="kb-admin-edit__autosave">
+                          {autosaveStatus === 'saving' && '正在自动保存...'}
+                          {autosaveStatus === 'saved' && '草稿已保存'}
+                          {autosaveStatus === 'error' && '自动保存失败'}
+                        </span>
+                      )}
+                    </div>
+                    <div className="kb-admin-edit__toolbar-right">
+                      <Tooltip title="预览">
+                        <Button type="text" icon={<EyeOutlined />} onClick={exitInlineEdit} />
+                      </Tooltip>
+                      <Tooltip title="文档属性">
+                        <Button type="text" icon={<SettingOutlined />} onClick={() => setPropertyDrawerOpen(true)} />
+                      </Tooltip>
+                      <Popconfirm title="删除文档后不可恢复" onConfirm={() => void handleDeleteDoc(selectedDoc.id)}>
+                        <Tooltip title="删除">
+                          <Button type="text" danger icon={<DeleteOutlined />} />
+                        </Tooltip>
+                      </Popconfirm>
+                      <span className="kb-admin-toolbar__divider" />
+                      <Button type="primary" size="small" loading={inlineDocSaving} onClick={() => void handleSaveInlineDoc()}>
+                        {isDirty ? '保存*' : '保存'}
+                      </Button>
+                    </div>
+                  </div>
+                  <input
+                    className="kb-admin-edit__title"
+                    placeholder="无标题文档"
+                    maxLength={200}
+                    value={editTitle}
+                    onChange={(event) => setEditTitle(event.target.value)}
+                  />
+                </div>
                 <textarea
                   className="kb-admin-edit__summary"
                   placeholder="补充一句摘要…"

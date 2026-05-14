@@ -1,4 +1,4 @@
-import { Layout, Menu, Button, Typography, theme as antdTheme } from 'antd'
+import { Layout, Menu, Button, Typography, ConfigProvider, Space, theme as antdTheme } from 'antd'
 import {
   AppstoreOutlined,
   BookOutlined,
@@ -22,7 +22,6 @@ export default function AdminLayout() {
   const location = useLocation()
   const navigate = useNavigate()
   const { mode } = useTheme()
-  const { token } = antdTheme.useToken()
 
   if (!auth.token) {
     return <Navigate to="/admin/login" state={{ from: location.pathname }} replace />
@@ -81,72 +80,150 @@ export default function AdminLayout() {
   }
 
   return (
-    <Layout style={{ minHeight: '100vh' }}>
+    <ConfigProvider
+      theme={{
+        algorithm: mode === 'dark' ? antdTheme.darkAlgorithm : antdTheme.defaultAlgorithm,
+        token: {
+          colorPrimary: '#e11d48',
+          borderRadius: 8,
+          fontFamily:
+            "-apple-system, BlinkMacSystemFont, 'Segoe UI', 'PingFang SC', 'Hiragino Sans GB', 'Microsoft YaHei', sans-serif",
+        },
+        components: {
+          Layout: {
+            headerBg: mode === 'dark' ? '#181315' : '#ffffff',
+            siderBg: mode === 'dark' ? '#181315' : '#ffffff',
+          },
+          Menu: {
+            itemBg: 'transparent',
+          },
+        },
+      }}
+    >
+      <LayoutContent
+        mode={mode}
+        selectedKey={selectedKey}
+        items={items}
+        auth={auth}
+        doLogout={doLogout}
+      />
+    </ConfigProvider>
+  )
+}
+
+function LayoutContent({
+  mode,
+  selectedKey,
+  items,
+  auth,
+  doLogout,
+}: {
+  mode: string
+  selectedKey: string
+  items: any[]
+  auth: any
+  doLogout: () => void
+}) {
+  const { token } = antdTheme.useToken()
+
+  return (
+    <Layout hasSider style={{ minHeight: '100vh', background: token.colorBgLayout }}>
       <Sider
         theme={mode === 'dark' ? 'dark' : 'light'}
         breakpoint="lg"
         collapsedWidth="0"
-        width={220}
+        width={240}
+        style={{
+          borderRight: `1px solid ${token.colorBorderSecondary}`,
+          height: '100vh',
+          position: 'fixed',
+          left: 0,
+          top: 0,
+          bottom: 0,
+          zIndex: 100,
+          overflow: 'auto',
+        }}
       >
         <div
           style={{
-            padding: '20px 16px',
+            height: 64,
+            display: 'flex',
+            alignItems: 'center',
+            padding: '0 24px',
             fontSize: 18,
             fontWeight: 700,
+            color: token.colorPrimary,
             borderBottom: `1px solid ${token.colorBorderSecondary}`,
-            color: token.colorText,
           }}
         >
-          导航后台
+          <div
+            style={{
+              width: 8,
+              height: 8,
+              borderRadius: '50%',
+              background: token.colorPrimary,
+              marginRight: 10,
+            }}
+          />
+          管理后台
         </div>
         <Menu
           theme={mode === 'dark' ? 'dark' : 'light'}
           mode="inline"
           selectedKeys={[selectedKey]}
           items={items}
-          style={{ borderRight: 0 }}
+          style={{ borderRight: 0, marginTop: 16 }}
         />
       </Sider>
 
-      <Layout>
+      <Layout style={{ marginLeft: 240, transition: 'all 0.2s', minWidth: 0, minHeight: '100vh', display: 'flex', flexDirection: 'column' }}>
         <Header
           style={{
             position: 'sticky',
             top: 0,
             zIndex: 20,
             background: token.colorBgContainer,
-            padding: '0 24px',
+            padding: '0 32px',
             display: 'flex',
             alignItems: 'center',
             justifyContent: 'space-between',
             borderBottom: `1px solid ${token.colorBorderSecondary}`,
+            height: 64,
+            flexShrink: 0,
           }}
         >
-          <Typography.Text type="secondary">
-            {auth.username ? `欢迎，${auth.username}` : ''}
-          </Typography.Text>
+          <Typography.Title level={5} style={{ margin: 0, fontWeight: 500 }}>
+            {items.find((item) => item.key === selectedKey)?.label?.props?.children || '管理'}
+          </Typography.Title>
           <div
             style={{
               display: 'flex',
-              gap: 8,
+              gap: 16,
               alignItems: 'center',
-              flexWrap: 'wrap',
-              justifyContent: 'flex-end',
             }}
           >
-            <Link to="/">
-              <Button icon={<HomeOutlined />}>首页</Button>
-            </Link>
-            <Link to="/music">
-              <Button icon={<CustomerServiceOutlined />}>音乐</Button>
-            </Link>
-            <Button icon={<LogoutOutlined />} onClick={doLogout}>
-              退出
-            </Button>
-            <ThemeToggle bare />
+            <Typography.Text type="secondary" style={{ marginRight: 8 }}>
+              {auth.username ? `欢迎，${auth.username}` : ''}
+            </Typography.Text>
+            <Space size={8}>
+              <Link to="/">
+                <Button variant="text" color="default" icon={<HomeOutlined />}>
+                  首页
+                </Button>
+              </Link>
+              <Button variant="text" color="danger" icon={<LogoutOutlined />} onClick={doLogout}>
+                退出
+              </Button>
+              <ThemeToggle bare />
+            </Space>
           </div>
         </Header>
-        <Content style={{ padding: 24 }}>
+        <Content
+          style={{
+            padding: '32px',
+            minHeight: 'calc(100vh - 64px)',
+          }}
+        >
           <Outlet />
         </Content>
       </Layout>
