@@ -56,6 +56,7 @@ BACKEND_URL=https://your-backend.example.com
 - `/login`: user login
 - `/register`: user registration
 - `/ai-chat`: AI workspace
+- `/ai-image`: AI image generation
 - `/music`: music explorer
 - `/music/share/:token`: public music share page
 - `/kb/share/:token`: public knowledge-base share page
@@ -63,7 +64,6 @@ BACKEND_URL=https://your-backend.example.com
 - `/admin/categories`: category management
 - `/admin/links`: link management
 - `/admin/configs`: system configs
-- `/admin/image`: image generation
 - `/admin/kb`: knowledge-base management
 - `/admin/password`: change password
 

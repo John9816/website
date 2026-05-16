@@ -40,6 +40,7 @@ import {
 } from '../api/ai'
 import { ApiError } from '../api/client'
 import MessageMarkdown from '../components/MessageMarkdown'
+import TopbarUserMenu from '../components/TopbarUserMenu'
 import ThemeToggle from '../components/ThemeToggle'
 import { useAuth } from '../context/AuthContext'
 import type {
@@ -1205,6 +1206,12 @@ export default function AiChatPage() {
           >
             AI对话
           </RouterNavLink>
+          <RouterNavLink
+            to="/ai-image"
+            className={({ isActive }) => `topbar-nav__link${isActive ? ' is-active' : ''}`}
+          >
+            AI生图
+          </RouterNavLink>
         </nav>
 
         <div className="topbar-actions" aria-label="站点操作">
@@ -1220,6 +1227,7 @@ export default function AiChatPage() {
             </RouterLink>
           )}
           <ThemeToggle />
+          {auth.token && <TopbarUserMenu />}
         </div>
       </header>
 

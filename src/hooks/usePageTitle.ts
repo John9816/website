@@ -6,6 +6,7 @@ const SITE_NAME = '个人导航'
 const titleMap: Record<string, string> = {
   '/': '首页',
   '/ai-chat': 'AI 对话',
+  '/ai-image': 'AI 生图',
   '/music': '音乐',
   '/music/share': '音乐分享',
   '/music/toplist': '榜单详情',
@@ -18,7 +19,6 @@ const titleMap: Record<string, string> = {
   '/admin/categories': '分类管理',
   '/admin/links': '链接管理',
   '/admin/configs': '站点配置',
-  '/admin/image': '图片管理',
   '/admin/kb': '知识库管理',
   '/admin/password': '密码管理',
 }

@@ -53,11 +53,17 @@ export interface CurrentUserView {
   canManageSystemConfig: boolean
 }
 
+export interface ImageGenerateDataItem {
+  url: string | null
+  b64Json?: string | null
+  revisedPrompt?: string | null
+}
+
 export interface ImageGenerateResult {
+  created: number
   model: string
-  imageUrl: string | null
-  content: string | null
-  raw?: unknown
+  data: ImageGenerateDataItem[]
+  usage?: Record<string, unknown> | null
 }
 
 export interface PageView<T> {
@@ -72,6 +78,8 @@ export interface GeneratedImageView {
   prompt: string
   imageUrl: string
   model: string
+  size?: string | null
+  isShared: boolean
   createdAt: string
 }
 
@@ -284,6 +292,8 @@ export interface MusicFavoriteItem {
 }
 
 export interface MusicFavoriteStatusView {
+  source: MusicSourceId
+  songId: string
   liked: boolean
   favoriteId?: number | null
 }
@@ -434,4 +444,50 @@ export interface KbPublicDocItem {
   summary?: string | null
   sortOrder?: number
   updatedAt?: string
+}
+
+export interface ImportedPlaylist {
+  id: number
+  source: MusicSourceId
+  externalId: string
+  name: string
+  description?: string | null
+  coverUrl?: string | null
+  creatorName?: string | null
+  trackCount?: number
+  playCount?: number
+  sourceUrl?: string | null
+  createdAt?: string
+  updatedAt?: string
+}
+
+export interface ImportedPlaylistItem {
+  id: number
+  playlistId: number
+  source: MusicSourceId
+  songId: string
+  name: string
+  artist?: string | null
+  album?: string | null
+  coverUrl?: string | null
+  durationSec?: number | null
+  sortOrder: number
+  createdAt?: string
+}
+
+export interface ImportedPlaylistDetailView {
+  playlist: ImportedPlaylist
+  items: ImportedPlaylistItem[]
+  total: number
+  page: number
+  size: number
+}
+
+export interface ImportPlaylistRequest {
+  url: string
+  name?: string
+}
+
+export interface UpdatePlaylistRequest {
+  name?: string
 }

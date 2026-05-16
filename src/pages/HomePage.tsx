@@ -6,6 +6,7 @@ import type { CategoryWithLinks, NavLink } from '../types'
 import { useAuth } from '../context/AuthContext'
 import CategoryIcon from '../components/CategoryIcon'
 import LinkCard from '../components/LinkCard'
+import TopbarUserMenu from '../components/TopbarUserMenu'
 import ThemeToggle from '../components/ThemeToggle'
 import '../styles/topbar.css'
 import '../styles/home.css'
@@ -151,6 +152,12 @@ export default function HomePage() {
           >
             AI对话
           </RouterNavLink>
+          <RouterNavLink
+            to="/ai-image"
+            className={({ isActive }) => `topbar-nav__link${isActive ? ' is-active' : ''}`}
+          >
+            AI生图
+          </RouterNavLink>
         </nav>
 
         <div className="topbar-actions" aria-label="站点操作">
@@ -166,6 +173,7 @@ export default function HomePage() {
             </RouterLink>
           )}
           <ThemeToggle />
+          {auth.token && <TopbarUserMenu />}
         </div>
       </header>
 

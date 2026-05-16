@@ -1,9 +1,8 @@
 import React, { Suspense } from 'react'
-import { Breadcrumb, Button, Empty, Input, Popconfirm, Select, Skeleton, Space, Table, Tag, Tooltip, Typography, App as AntApp } from 'antd'
+import { Breadcrumb, Button, Empty, Input, Popconfirm, Select, Skeleton, Space, Table, Tag, Tooltip, Typography, App as AntApp, Segmented } from 'antd'
 import {
   DeleteOutlined,
   EditOutlined,
-  EyeOutlined,
   FileAddOutlined,
   HistoryOutlined,
   SettingOutlined,
@@ -33,6 +32,8 @@ function escapeHtml(text?: string | null) {
 }
 
 const KbMain: React.FC = () => {
+  const [toolbarContainer, setToolbarContainer] = React.useState<HTMLElement | null>(null)
+  
   const {
     activeSpaceId,
     selectedParentId,
@@ -43,7 +44,6 @@ const KbMain: React.FC = () => {
     exitInlineEdit,
     setPropertyDrawerOpen,
     handleDeleteDoc,
-    inlineDocSaving,
     handleSaveInlineDoc,
     enterInlineEdit,
     openCreateDoc,
@@ -204,46 +204,68 @@ const KbMain: React.FC = () => {
         </div>
 
         <div className="kb-admin-toolbar__actions">
-          {selectedDoc && inlineEditingDocId === selectedDoc.id ? null : selectedDoc ? (
+          {selectedDoc ? (
             <>
-              <Tooltip title="编辑">
-                <Button
-                  type="text"
-                  icon={<EditOutlined />}
-                  onClick={() => enterInlineEdit(selectedDoc)}
-                />
-              </Tooltip>
-              <Tooltip title="新建子文档">
-                <Button
-                  type="text"
-                  icon={<FileAddOutlined />}
-                  onClick={() => void openCreateDoc(selectedDoc.id)}
-                />
-              </Tooltip>
-              <Tooltip title="版本历史">
-                <Button
-                  type="text"
-                  icon={<HistoryOutlined />}
-                  onClick={() =>
-                    void openVersionsDrawer({
-                      id: selectedDoc.id,
-                      title: selectedDoc.title,
-                    })
+              {inlineEditingDocId === selectedDoc.id && autosaveStatus !== 'idle' && (
+                <span className="kb-admin-edit__autosave" style={{ marginRight: 8 }}>
+                  {autosaveStatus === 'saving' && '正在自动保存...'}
+                  {autosaveStatus === 'saved' && '草稿已保存'}
+                  {autosaveStatus === 'error' && '自动保存失败'}
+                </span>
+              )}
+              <Segmented
+                options={['预览', '编辑']}
+                value={inlineEditingDocId === selectedDoc.id ? '编辑' : '预览'}
+                onChange={(value) => {
+                  if (value === '编辑') {
+                    enterInlineEdit(selectedDoc)
+                  } else {
+                    if (isDirty) {
+                      handleSaveInlineDoc().then(() => exitInlineEdit())
+                    } else {
+                      exitInlineEdit()
+                    }
                   }
-                />
-              </Tooltip>
-              <Tooltip title="分享">
-                <Button
-                  type="text"
-                  icon={<ShareAltOutlined />}
-                  onClick={() =>
-                    void openShareModal({
-                      id: selectedDoc.id,
-                      title: selectedDoc.title,
-                    })
-                  }
-                />
-              </Tooltip>
+                }}
+              />
+              <span className="kb-admin-toolbar__divider" />
+              
+              {inlineEditingDocId !== selectedDoc.id && (
+                <>
+                  <Tooltip title="新建子文档">
+                    <Button
+                      type="text"
+                      icon={<FileAddOutlined />}
+                      onClick={() => void openCreateDoc(selectedDoc.id)}
+                    />
+                  </Tooltip>
+                  <Tooltip title="版本历史">
+                    <Button
+                      type="text"
+                      icon={<HistoryOutlined />}
+                      onClick={() =>
+                        void openVersionsDrawer({
+                          id: selectedDoc.id,
+                          title: selectedDoc.title,
+                        })
+                      }
+                    />
+                  </Tooltip>
+                  <Tooltip title="分享">
+                    <Button
+                      type="text"
+                      icon={<ShareAltOutlined />}
+                      onClick={() =>
+                        void openShareModal({
+                          id: selectedDoc.id,
+                          title: selectedDoc.title,
+                        })
+                      }
+                    />
+                  </Tooltip>
+                </>
+              )}
+              
               <Tooltip title="文档属性">
                 <Button
                   type="text"
@@ -272,34 +294,7 @@ const KbMain: React.FC = () => {
             inlineEditingDocId === selectedDoc.id ? (
               <div className="kb-admin-article">
                 <div className="kb-admin-edit__title-group">
-                  <div className="kb-admin-edit__toolbar">
-                    <div className="kb-admin-edit__toolbar-left">
-                      {autosaveStatus !== 'idle' && (
-                        <span className="kb-admin-edit__autosave">
-                          {autosaveStatus === 'saving' && '正在自动保存...'}
-                          {autosaveStatus === 'saved' && '草稿已保存'}
-                          {autosaveStatus === 'error' && '自动保存失败'}
-                        </span>
-                      )}
-                    </div>
-                    <div className="kb-admin-edit__toolbar-right">
-                      <Tooltip title="预览">
-                        <Button type="text" icon={<EyeOutlined />} onClick={exitInlineEdit} />
-                      </Tooltip>
-                      <Tooltip title="文档属性">
-                        <Button type="text" icon={<SettingOutlined />} onClick={() => setPropertyDrawerOpen(true)} />
-                      </Tooltip>
-                      <Popconfirm title="删除文档后不可恢复" onConfirm={() => void handleDeleteDoc(selectedDoc.id)}>
-                        <Tooltip title="删除">
-                          <Button type="text" danger icon={<DeleteOutlined />} />
-                        </Tooltip>
-                      </Popconfirm>
-                      <span className="kb-admin-toolbar__divider" />
-                      <Button type="primary" size="small" loading={inlineDocSaving} onClick={() => void handleSaveInlineDoc()}>
-                        {isDirty ? '保存*' : '保存'}
-                      </Button>
-                    </div>
-                  </div>
+                  <div ref={setToolbarContainer} className="kb-admin-edit__tiptap-toolbar-wrapper"></div>
                   <input
                     className="kb-admin-edit__title"
                     placeholder="无标题文档"
@@ -325,6 +320,7 @@ const KbMain: React.FC = () => {
                         onChange={setEditContentHtml}
                         minHeight={400}
                         maxHeight="none"
+                        toolbarContainer={toolbarContainer}
                       />
                     </Suspense>
                   </ErrorBoundary>

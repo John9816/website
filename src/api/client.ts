@@ -38,10 +38,13 @@ export class ApiError extends Error {
 }
 
 type Options = {
-  method?: 'GET' | 'POST' | 'PUT' | 'DELETE'
+  method?: 'GET' | 'POST' | 'PUT' | 'DELETE' | 'PATCH'
   body?: unknown
   auth?: boolean
-  query?: Record<string, string | number | undefined>
+  query?: Record<
+    string,
+    string | number | boolean | undefined | null | Array<string | number | boolean>
+  >
   signal?: AbortSignal
 }
 
@@ -50,6 +53,14 @@ export async function request<T>(path: string, opts: Options = {}): Promise<T> {
   const url = new URL(BASE + path, window.location.origin)
   if (query) {
     for (const [k, v] of Object.entries(query)) {
+      if (Array.isArray(v)) {
+        v.forEach((item) => {
+          if (item !== undefined && item !== null && item !== '') {
+            url.searchParams.append(k, String(item))
+          }
+        })
+        continue
+      }
       if (v !== undefined && v !== null && v !== '') url.searchParams.set(k, String(v))
     }
   }

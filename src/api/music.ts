@@ -16,6 +16,10 @@ import type {
   SearchResultView,
   ToplistDetailView,
   ToplistListView,
+  ImportedPlaylist,
+  ImportedPlaylistItem,
+  ImportPlaylistRequest,
+  UpdatePlaylistRequest,
 } from '../types'
 import { DEFAULT_PAGE_SIZE } from '../constants/pagination'
 
@@ -136,9 +140,17 @@ export const deleteMusicFavorite = (source: MusicSourceId, songId: string) =>
   })
 
 export const getMusicFavoriteStatus = (source: MusicSourceId, songId: string) =>
-  request<MusicFavoriteStatusView>('/api/user/music/favorites/status', {
+  request<MusicFavoriteStatusView[]>('/api/user/music/favorites/status', {
+    method: 'POST',
     auth: true,
-    query: { source, songId },
+    body: { source, songIds: [songId] },
+  }).then((items) => items[0] ?? { source, songId, liked: false, favoriteId: null })
+
+export const getMusicFavoriteStatuses = (source: MusicSourceId, songIds: string[]) =>
+  request<MusicFavoriteStatusView[]>('/api/user/music/favorites/status', {
+    method: 'POST',
+    auth: true,
+    body: { source, songIds },
   })
 
 export const getMusicShareStatus = (source: MusicSourceId, songId: string) =>
@@ -163,3 +175,41 @@ export const deleteMusicShare = (source: MusicSourceId, songId: string) =>
 
 export const getPublicMusicShare = (token: string) =>
   request<MusicPublicShareView>(`/api/public/music/share/${encodeURIComponent(token)}`)
+
+export const getImportedPlaylists = (page = 0, size = DEFAULT_PAGE_SIZE) =>
+  request<PageView<ImportedPlaylist>>('/api/user/music/playlists', {
+    auth: true,
+    query: { page, size },
+  })
+
+export const getImportedPlaylistDetail = (id: number, page = 0, size = DEFAULT_PAGE_SIZE) =>
+  request<PageView<ImportedPlaylistItem> & { playlist?: ImportedPlaylist }>(`/api/user/music/playlists/${id}`, {
+    auth: true,
+    query: { page, size },
+  })
+
+export const importPlaylist = (body: ImportPlaylistRequest) =>
+  request<ImportedPlaylist>('/api/user/music/playlists/import', {
+    method: 'POST',
+    auth: true,
+    body,
+  })
+
+export const updateImportedPlaylist = (id: number, body: UpdatePlaylistRequest) =>
+  request<ImportedPlaylist>(`/api/user/music/playlists/${id}`, {
+    method: 'PATCH',
+    auth: true,
+    body,
+  })
+
+export const deleteImportedPlaylist = (id: number) =>
+  request<void>(`/api/user/music/playlists/${id}`, {
+    method: 'DELETE',
+    auth: true,
+  })
+
+export const removePlaylistItem = (playlistId: number, itemId: number) =>
+  request<void>(`/api/user/music/playlists/${playlistId}/items/${itemId}`, {
+    method: 'DELETE',
+    auth: true,
+  })

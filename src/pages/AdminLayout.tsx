@@ -6,7 +6,6 @@ import {
   KeyOutlined,
   LinkOutlined,
   LogoutOutlined,
-  PictureOutlined,
   SettingOutlined,
 } from '@ant-design/icons'
 import { Link, Navigate, Outlet, useLocation, useNavigate } from 'react-router-dom'
@@ -36,11 +35,6 @@ export default function AdminLayout() {
       key: '/admin/links',
       icon: <LinkOutlined />,
       label: <Link to="/admin/links">链接</Link>,
-    },
-    {
-      key: '/admin/image',
-      icon: <PictureOutlined />,
-      label: <Link to="/admin/image">图片生成</Link>,
     },
     {
       key: '/admin/kb',

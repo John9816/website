@@ -106,7 +106,8 @@
 }
 
 .topbar-action,
-.topbar-actions .theme-toggle {
+.topbar-actions .theme-toggle,
+.topbar-user-trigger {
   display: inline-flex;
   align-items: center;
   justify-content: center;
@@ -130,7 +131,8 @@
 }
 
 .topbar-action:hover,
-.topbar-actions .theme-toggle:hover {
+.topbar-actions .theme-toggle:hover,
+.topbar-user-trigger:hover {
   color: var(--text);
   background: var(--hover);
   border-color: var(--border-strong);
@@ -139,6 +141,149 @@
 .topbar-actions .theme-toggle {
   font-family: inherit;
   flex: 0 0 auto;
+}
+
+.topbar-user-trigger {
+  font-family: inherit;
+  cursor: pointer;
+}
+
+.topbar-user-trigger__avatar {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 24px;
+  height: 24px;
+  border-radius: 50%;
+  background: var(--accent-soft);
+  color: var(--accent);
+  font-size: 12px;
+  font-weight: 700;
+  flex: 0 0 auto;
+}
+
+.topbar-user-trigger__name {
+  max-width: 110px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.topbar-user-trigger__icon,
+.topbar-user-trigger__chevron {
+  opacity: 0.8;
+  flex: 0 0 auto;
+}
+
+.topbar-user-popover .ant-popover-inner {
+  padding: 0 !important;
+  border-radius: 18px !important;
+  background: transparent !important;
+  box-shadow: none !important;
+}
+
+.topbar-user-popover .ant-popover-arrow {
+  display: none !important;
+}
+
+.topbar-user-card {
+  width: 300px;
+  padding: 18px;
+  border-radius: 18px;
+  background: var(--panel);
+  border: 1px solid var(--border);
+  box-shadow: var(--shadow-md);
+}
+
+.topbar-user-card__profile {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.topbar-user-card__avatar {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 46px;
+  height: 46px;
+  border-radius: 16px;
+  background: var(--accent-soft);
+  color: var(--accent);
+  font-size: 18px;
+  font-weight: 700;
+  flex: 0 0 auto;
+}
+
+.topbar-user-card__summary {
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.topbar-user-card__summary strong {
+  font-size: 16px;
+  color: var(--text);
+}
+
+.topbar-user-card__summary span {
+  font-size: 13px;
+  color: var(--text-dim);
+}
+
+.topbar-user-card__meta {
+  display: grid;
+  gap: 10px;
+  margin-top: 16px;
+  padding: 14px;
+  border-radius: 14px;
+  background: var(--panel-alt);
+  border: 1px solid var(--border);
+}
+
+.topbar-user-card__meta-item {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+}
+
+.topbar-user-card__meta-item span {
+  font-size: 12px;
+  color: var(--text-dim);
+}
+
+.topbar-user-card__meta-item b {
+  font-size: 13px;
+  color: var(--text);
+}
+
+.topbar-user-card__logout {
+  width: 100%;
+  margin-top: 16px;
+  min-height: 42px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  border: 1px solid color-mix(in srgb, var(--accent) 18%, var(--border));
+  border-radius: 12px;
+  background: color-mix(in srgb, var(--accent) 10%, transparent);
+  color: var(--accent);
+  font-size: 14px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: background 0.15s ease, transform 0.15s ease, border-color 0.15s ease;
+}
+
+.topbar-user-card__logout:hover {
+  background: color-mix(in srgb, var(--accent) 14%, transparent);
+  border-color: color-mix(in srgb, var(--accent) 30%, var(--border));
+}
+
+.topbar-user-card__logout:active {
+  transform: scale(0.98);
 }
 
 .topbar--pinned .topbar-brand {
@@ -165,7 +310,8 @@
 }
 
 .topbar--pinned .topbar-action,
-.topbar--pinned .topbar-actions .theme-toggle {
+.topbar--pinned .topbar-actions .theme-toggle,
+.topbar--pinned .topbar-user-trigger {
   min-height: 40px;
   padding: 0 14px;
 }
@@ -222,8 +368,17 @@
   }
 
   .topbar-action,
-  .topbar-actions .theme-toggle {
+  .topbar-actions .theme-toggle,
+  .topbar-user-trigger {
     flex: 0 0 auto;
     padding-inline: 12px;
+  }
+
+  .topbar-user-trigger__name {
+    max-width: 84px;
+  }
+
+  .topbar-user-card {
+    width: min(300px, calc(100vw - 28px));
   }
 }

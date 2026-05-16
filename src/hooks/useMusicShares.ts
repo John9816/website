@@ -14,6 +14,7 @@ export function useMusicShares(songs: SongSearchItem[]) {
   const requestIdRef = useRef(0)
 
   const songKeys = useMemo(() => songs.map((song) => shareKey(song)), [songs])
+  const songKeysJoined = songKeys.join(',')
 
   useEffect(() => {
     if (!auth.token || !songs.length) {
@@ -24,8 +25,12 @@ export function useMusicShares(songs: SongSearchItem[]) {
     const requestId = ++requestIdRef.current
     Promise.all(
       songs.map(async (song) => {
-        const status = await getMusicShareStatus(song.source, song.id)
-        return [shareKey(song), status] as const
+        try {
+          const status = await getMusicShareStatus(song.source, song.id)
+          return [shareKey(song), status] as const
+        } catch (e) {
+          return [shareKey(song), null] as const
+        }
       }),
     )
       .then((entries) => {
@@ -36,7 +41,7 @@ export function useMusicShares(songs: SongSearchItem[]) {
         if (requestId !== requestIdRef.current) return
         setShareMap({})
       })
-  }, [auth.token, songs])
+  }, [auth.token, songKeysJoined])
 
   useEffect(() => {
     setShareMap((previous) => {

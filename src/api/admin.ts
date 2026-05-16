@@ -9,6 +9,12 @@ import type {
 } from '../types'
 import { DEFAULT_PAGE_SIZE } from '../constants/pagination'
 
+export interface GenerateImagePayload {
+  prompt: string
+  size?: string
+  n?: number
+}
+
 // Categories
 export const adminListCategories = () =>
   request<Category[]>('/api/user/categories', { auth: true })
@@ -42,11 +48,11 @@ export const adminDeleteConfig = (id: number) =>
   request<void>(`/api/admin/configs/${id}`, { method: 'DELETE', auth: true })
 
 // Image
-export const adminGenerateImage = (prompt: string, signal?: AbortSignal) =>
+export const adminGenerateImage = (body: GenerateImagePayload, signal?: AbortSignal) =>
   request<ImageGenerateResult>('/api/user/image/generate', {
     method: 'POST',
     auth: true,
-    body: { prompt },
+    body,
     signal,
   })
 
@@ -60,4 +66,11 @@ export const adminDeleteImageHistory = (id: number) =>
   request<void>(`/api/user/image/history/${id}`, {
     method: 'DELETE',
     auth: true,
+  })
+
+export const adminToggleImageHistoryShare = (id: number, shared: boolean) =>
+  request<GeneratedImageView>(`/api/user/image/history/${id}/share`, {
+    method: 'PATCH',
+    auth: true,
+    query: { shared },
   })

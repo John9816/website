@@ -1,5 +1,5 @@
-import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
-import { App as AntApp, Button, Card, Input, Pagination, Segmented } from 'antd'
+import { useCallback, useEffect, useMemo, useRef, useState, Fragment } from 'react'
+import { App as AntApp, Button, Card, Input, Modal, Pagination, Segmented } from 'antd'
 import {
   Heart,
   History,
@@ -10,6 +10,7 @@ import {
   Sparkles,
   Trash2,
   Trophy,
+  Upload,
   type LucideIcon,
 } from 'lucide-react'
 import { Link, useNavigate, useSearchParams } from 'react-router-dom'
@@ -21,6 +22,8 @@ import {
   musicPlaylist,
   musicSearch,
   musicToplist,
+  getImportedPlaylists,
+  importPlaylist,
 } from '../api/music'
 import { DEFAULT_PAGE_SIZE, PAGE_SIZE_OPTIONS } from '../constants/pagination'
 import { useAuth } from '../context/AuthContext'
@@ -37,13 +40,14 @@ import type {
   SongSearchItem,
   ToplistDetailView,
   ToplistItem,
+  ImportedPlaylist,
 } from '../types'
 import { hydrateCollectionCovers } from '../utils/musicPlayer'
 import MusicCover from './MusicCover'
 import MusicShareAction from './MusicShareAction'
 import MusicSongTable from './MusicSongTable'
 
-type MusicView = 'toplist' | 'playlist' | 'new' | 'history' | 'favorites' | 'search'
+type MusicView = 'toplist' | 'playlist' | 'new' | 'history' | 'favorites' | 'search' | 'my-playlists'
 
 const VIEW_OPTIONS: Array<{
   label: string
@@ -51,6 +55,7 @@ const VIEW_OPTIONS: Array<{
   description: string
   icon: LucideIcon
   searchMode?: boolean
+  authRequired?: boolean
 }> = [
   {
     label: '榜单',
@@ -63,6 +68,13 @@ const VIEW_OPTIONS: Array<{
     value: 'playlist',
     description: '按平台和分类浏览推荐歌单。',
     icon: ListMusic,
+  },
+  {
+    label: '我的歌单',
+    value: 'my-playlists',
+    description: '管理你从外部导入的歌单。',
+    icon: ListMusic,
+    authRequired: true,
   },
   {
     label: '新歌',
@@ -127,7 +139,8 @@ function isMusicView(value: string | null): value is MusicView {
     value === 'new' ||
     value === 'history' ||
     value === 'favorites' ||
-    value === 'search'
+    value === 'search' ||
+    value === 'my-playlists'
   )
 }
 
@@ -220,10 +233,20 @@ export default function MusicExplorer() {
   const [favoriteTotal, setFavoriteTotal] = useState(0)
   const [favoriteLoading, setFavoriteLoading] = useState(false)
 
+  const [myPlaylistsPage, setMyPlaylistsPage] = useState(1)
+  const [myPlaylistsPageSize, setMyPlaylistsPageSize] = useState(DEFAULT_PAGE_SIZE)
+  const [myPlaylists, setMyPlaylists] = useState<ImportedPlaylist[]>([])
+  const [myPlaylistsTotal, setMyPlaylistsTotal] = useState(0)
+  const [myPlaylistsLoading, setMyPlaylistsLoading] = useState(false)
+  const [importDialogVisible, setImportDialogVisible] = useState(false)
+  const [importUrl, setImportUrl] = useState('')
+  const [importing, setImporting] = useState(false)
+
   const playlistRequestIdRef = useRef(0)
   const newSongsRequestIdRef = useRef(0)
   const historyRequestIdRef = useRef(0)
   const favoriteRequestIdRef = useRef(0)
+  const myPlaylistsRequestIdRef = useRef(0)
 
   const view = isMusicView(searchParams.get('view')) ? searchParams.get('view') : 'toplist'
 
@@ -379,6 +402,43 @@ export default function MusicExplorer() {
     }
   }, [auth.token, favoritePage, favoritePageSize, message, setPlaylist])
 
+  const loadMyPlaylists = useCallback(async () => {
+    if (!auth.token) return
+    const requestId = ++myPlaylistsRequestIdRef.current
+    setMyPlaylistsLoading(true)
+    try {
+      const data = await getImportedPlaylists(myPlaylistsPage - 1, myPlaylistsPageSize)
+      if (requestId !== myPlaylistsRequestIdRef.current) return
+      setMyPlaylists(data.items)
+      setMyPlaylistsTotal(data.total)
+    } catch (error) {
+      if (requestId !== myPlaylistsRequestIdRef.current) return
+      message.error((error as Error).message)
+    } finally {
+      if (requestId !== myPlaylistsRequestIdRef.current) return
+      setMyPlaylistsLoading(false)
+    }
+  }, [auth.token, myPlaylistsPage, myPlaylistsPageSize, message])
+
+  const handleImportPlaylist = useCallback(async () => {
+    if (!importUrl.trim()) {
+      message.warning('请输入分享链接')
+      return
+    }
+    setImporting(true)
+    try {
+      await importPlaylist({ url: importUrl.trim() })
+      message.success('导入成功！')
+      setImportDialogVisible(false)
+      setImportUrl('')
+      void loadMyPlaylists()
+    } catch (error) {
+      message.error((error as Error).message)
+    } finally {
+      setImporting(false)
+    }
+  }, [importUrl, loadMyPlaylists, message])
+
   useEffect(() => {
     if (view === 'toplist') void loadToplists()
   }, [view, loadToplists])
@@ -386,6 +446,10 @@ export default function MusicExplorer() {
   useEffect(() => {
     if (view === 'playlist') void loadPlaylists()
   }, [view, loadPlaylists])
+
+  useEffect(() => {
+    if (view === 'my-playlists' && auth.token) void loadMyPlaylists()
+  }, [auth.token, loadMyPlaylists, view])
 
   useEffect(() => {
     if (view === 'new') void loadNewSongs()
@@ -405,6 +469,8 @@ export default function MusicExplorer() {
     setHistoryTotal(0)
     setFavoriteItems([])
     setFavoriteTotal(0)
+    setMyPlaylists([])
+    setMyPlaylistsTotal(0)
   }, [auth.token])
 
   const stageTitle = useMemo(() => {
@@ -415,6 +481,8 @@ export default function MusicExplorer() {
         return '热门榜单'
       case 'playlist':
         return '推荐歌单'
+      case 'my-playlists':
+        return '我的歌单'
       case 'new':
         return newSongsDetail?.name || '最新歌曲'
       case 'history':
@@ -432,6 +500,10 @@ export default function MusicExplorer() {
         return '先看平台趋势，再进入榜单详情整组播放。'
       case 'playlist':
         return '按平台和分类连续浏览推荐歌单，适合整包收歌。'
+      case 'my-playlists':
+        return auth.token
+          ? '从 QQ 音乐/网易云音乐导入你喜欢的歌单，统一在这管理。'
+          : '我的歌单需要登录后才能导入和管理。'
       case 'new':
         return '快速跟进平台最近上新的歌曲，适合补歌和追更。'
       case 'history':
@@ -455,6 +527,8 @@ export default function MusicExplorer() {
         return `${sourceLabel(toplistSource)} · ${toplists.length} 个榜单`
       case 'playlist':
         return `${sourceLabel(playlistSource)} · ${playlists.length} 个歌单`
+      case 'my-playlists':
+        return auth.token ? `已导入 · ${myPlaylistsTotal} 个歌单` : '登录后可导入'
       case 'new':
         return `${sourceLabel(newSource)} · ${newSongsDetail?.list.length ?? 0} 首`
       case 'history':
@@ -467,6 +541,7 @@ export default function MusicExplorer() {
     favoriteTotal,
     historyTotal,
     lastKeyword,
+    myPlaylistsTotal,
     newSongsDetail?.list.length,
     newSource,
     playlistSource,
@@ -567,7 +642,8 @@ export default function MusicExplorer() {
   )
 
   return (
-    <Card className="music-browser" bordered={false} styles={{ body: { padding: 0 } }}>
+    <Fragment>
+      <Card className="music-browser" bordered={false} styles={{ body: { padding: 0 } }}>
       <div
         className={`music-browser__layout${
           view === 'search' ? ' music-browser__layout--search' : ''
@@ -952,9 +1028,110 @@ export default function MusicExplorer() {
               )}
             </>
           )}
+
+          {view === 'my-playlists' && (
+            <>
+              {!auth.token ? (
+                <MusicAuthPrompt />
+              ) : (
+                <>
+                  <div className="music-library-toolbar">
+                    <Button
+                      type="primary"
+                      icon={<Upload size={14} />}
+                      onClick={() => {
+                        setImportUrl('')
+                        setImportDialogVisible(true)
+                      }}
+                    >
+                      导入歌单
+                    </Button>
+                  </div>
+                  {myPlaylists.length > 0 ? (
+                    <>
+                      <div className="music-collection-grid">
+                        {myPlaylists.map((item) => (
+                          <button
+                            key={item.id}
+                            type="button"
+                            className="music-collection-card"
+                            onClick={() => {
+                              navigate(
+                                `/music/my-playlist/${item.id}`,
+                                {
+                                  state: { coverUrl: item.coverUrl },
+                                },
+                              )
+                            }}
+                          >
+                            <MusicCover src={item.coverUrl ?? undefined} size={128} rounded={24} />
+                            <div className="music-collection-card__body">
+                              <div className="music-collection-card__title">{item.name}</div>
+                              <div className="music-collection-card__meta">
+                                {item.creatorName || sourceLabel(item.source)}
+                              </div>
+                              <div className="music-collection-card__meta">
+                                {item.trackCount ? `${item.trackCount} 首` : ''}
+                                {typeof item.playCount === 'number'
+                                  ? ` · ${formatPlayCount(item.playCount)}`
+                                  : ''}
+                              </div>
+                            </div>
+                          </button>
+                        ))}
+                      </div>
+                      <div className="music-pagination music-pagination--bottom">
+                        <Pagination
+                          current={myPlaylistsPage}
+                          pageSize={myPlaylistsPageSize}
+                          total={pageTotal(
+                            myPlaylistsPage,
+                            myPlaylistsPageSize,
+                            myPlaylists.length,
+                            myPlaylistsTotal,
+                          )}
+                          onChange={(nextPage, nextPageSize) => {
+                            setMyPlaylistsPageSize(nextPageSize)
+                            setMyPlaylistsPage(nextPageSize !== myPlaylistsPageSize ? 1 : nextPage)
+                          }}
+                          responsive
+                          showLessItems
+                          showSizeChanger
+                          showQuickJumper={false}
+                          pageSizeOptions={PAGE_SIZE_OPTIONS}
+                        />
+                      </div>
+                    </>
+                  ) : (
+                    <div className="music-empty-state">
+                      {myPlaylistsLoading ? '正在加载我的歌单...' : '暂无歌单，点击上方按钮导入'}
+                    </div>
+                  )}
+                </>
+              )}
+            </>
+          )}
           </div>
         </div>
       </div>
     </Card>
+
+    <Modal
+      title="导入歌单"
+      open={importDialogVisible}
+      onCancel={() => setImportDialogVisible(false)}
+      onOk={handleImportPlaylist}
+      confirmLoading={importing}
+      okText="导入"
+    >
+      <p style={{ marginBottom: 16 }}>请粘贴 QQ 音乐/网易云音乐的分享链接：</p>
+      <Input
+        placeholder="https://..."
+        value={importUrl}
+        onChange={(e) => setImportUrl(e.target.value)}
+        onPressEnter={handleImportPlaylist}
+      />
+    </Modal>
+    </Fragment>
   )
 }

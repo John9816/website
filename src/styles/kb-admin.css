@@ -363,32 +363,9 @@
 /* 编辑态：标题+工具栏组合控件 */
 
 .kb-admin-edit__title-group {
-  border: 1px solid var(--border);
   border-radius: 12px;
   overflow: hidden;
-  background: var(--panel);
-}
-
-.kb-admin-edit__toolbar {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  gap: 12px;
-  padding: 6px 8px;
-  border-bottom: 1px solid var(--border);
-  background: var(--panel-alt);
-}
-
-.kb-admin-edit__toolbar-left {
-  display: flex;
-  align-items: center;
-  gap: 8px;
-}
-
-.kb-admin-edit__toolbar-right {
-  display: flex;
-  align-items: center;
-  gap: 2px;
+  background: transparent;
 }
 
 .kb-admin-edit__autosave {
@@ -444,19 +421,16 @@
   background: transparent;
 }
 
-.kb-admin-edit__editor .editor-menu-bar {
-  position: sticky;
-  top: 48px;
-  z-index: 5;
-  margin: 0 -24px;
-  padding: 6px 24px;
-  background: var(--panel-glass);
-  backdrop-filter: blur(12px);
+.kb-admin-edit__tiptap-toolbar-wrapper .editor-menu-bar {
+  background: var(--panel-alt);
   border-bottom: 1px solid var(--border);
+  border-top: none;
+  padding: 6px 12px;
 }
 
-[data-theme='dark'] .kb-admin-edit__editor .editor-menu-bar {
-  background: var(--panel-glass);
+[data-theme='dark'] .kb-admin-edit__tiptap-toolbar-wrapper .editor-menu-bar {
+  background: var(--panel-alt);
+  border-bottom-color: var(--border);
 }
 
 .kb-admin-edit__editor .editor-content {

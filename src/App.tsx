@@ -14,16 +14,17 @@ const RegisterPage = lazy(() => import('./pages/RegisterPage'))
 const MusicLayout = lazy(() => import('./pages/MusicLayout'))
 const MusicPage = lazy(() => import('./pages/MusicPage'))
 const AiChatPage = lazy(() => import('./pages/AiChatPage'))
+const AiImagePage = lazy(() => import('./pages/AiImagePage'))
 const MusicPlaylistDetailPage = lazy(
   () => import('./pages/MusicPlaylistDetailPage'),
 )
 const MusicToplistDetailPage = lazy(() => import('./pages/MusicToplistDetailPage'))
+const MusicMyPlaylistDetailPage = lazy(() => import('./pages/MusicMyPlaylistDetailPage'))
 const MusicSharePage = lazy(() => import('./pages/MusicSharePage'))
 const AdminLayout = lazy(() => import('./pages/AdminLayout'))
 const AdminCategories = lazy(() => import('./pages/AdminCategories'))
 const AdminLinks = lazy(() => import('./pages/AdminLinks'))
 const AdminConfigs = lazy(() => import('./pages/AdminConfigs'))
-const AdminImage = lazy(() => import('./pages/AdminImage'))
 const AdminPassword = lazy(() => import('./pages/AdminPassword'))
 const AdminKnowledgeBase = lazy(() => import('./pages/AdminKnowledgeBase'))
 const KbSharePage = lazy(() => import('./pages/KbSharePage'))
@@ -75,6 +76,7 @@ export default function App() {
                 <Routes>
                   <Route path="/" element={<HomePage />} />
                   <Route path="/ai-chat" element={<AiChatPage />} />
+                  <Route path="/ai-image" element={<AiImagePage />} />
                   <Route path="/kb/share/:token" element={<KbSharePage />} />
                   <Route path="/music" element={<MusicLayout />}>
                     <Route index element={<MusicPage />} />
@@ -87,6 +89,10 @@ export default function App() {
                       path="playlist/:source/:id"
                       element={<MusicPlaylistDetailPage />}
                     />
+                    <Route
+                      path="my-playlist/:id"
+                      element={<MusicMyPlaylistDetailPage />}
+                    />
                   </Route>
                   <Route path="/login" element={<LoginPage />} />
                   <Route path="/register" element={<RegisterPage />} />
@@ -96,7 +102,6 @@ export default function App() {
                     <Route path="categories" element={<AdminCategories />} />
                     <Route path="links" element={<AdminLinks />} />
                     <Route path="configs" element={<AdminConfigs />} />
-                    <Route path="image" element={<AdminImage />} />
                     <Route path="kb" element={<AdminKnowledgeBase />} />
                     <Route path="password" element={<AdminPassword />} />
                   </Route>

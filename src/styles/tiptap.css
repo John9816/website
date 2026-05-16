@@ -2,28 +2,38 @@
   --editor-min-height: 300px;
   --editor-max-height: 600px;
   border: 1px solid #d9d9d9;
-  border-radius: 6px;
+  border-radius: 8px;
   overflow: hidden;
   display: flex;
   flex-direction: column;
+  box-shadow: 0 1px 2px rgba(0, 0, 0, 0.03);
 }
 
 [data-theme='dark'] .tiptap-editor-container {
   border-color: #424242;
+  box-shadow: none;
 }
 
 .editor-menu-bar {
-  padding: 6px 12px;
+  padding: 8px 12px;
   background: #fafafa;
   border-bottom: 1px solid #d9d9d9;
   display: flex;
   flex-wrap: wrap;
-  gap: 4px;
+  align-items: center;
+  gap: 2px;
 }
 
 [data-theme='dark'] .editor-menu-bar {
   background: #1d1d1d;
   border-bottom-color: #424242;
+}
+
+.menu-group {
+  display: inline-flex;
+  align-items: center;
+  gap: 2px;
+  padding: 0 4px;
 }
 
 .editor-content {
@@ -162,4 +172,103 @@
 .ProseMirror img {
   max-width: 100%;
   height: auto;
+}
+
+.ProseMirror mark {
+  background-color: #ffe066;
+  padding: 0 2px;
+  border-radius: 2px;
+}
+
+[data-theme='dark'] .ProseMirror mark {
+  background-color: #744210;
+}
+
+.ProseMirror blockquote {
+  border-left: 4px solid #d1d5db;
+  padding-left: 1rem;
+  margin-left: 0;
+  margin-right: 0;
+  color: #6b7280;
+}
+
+[data-theme='dark'] .ProseMirror blockquote {
+  border-left-color: #4b5563;
+  color: #9ca3af;
+}
+
+.ProseMirror pre {
+  background: #1e1e1e;
+  color: #d4d4d4;
+  padding: 1rem;
+  border-radius: 6px;
+  overflow-x: auto;
+  font-family: 'SFMono-Regular', Consolas, 'Liberation Mono', Menlo, monospace;
+  font-size: 0.875rem;
+  line-height: 1.5;
+}
+
+.ProseMirror code {
+  background: #f3f4f6;
+  padding: 0.2em 0.4em;
+  border-radius: 4px;
+  font-family: 'SFMono-Regular', Consolas, 'Liberation Mono', Menlo, monospace;
+  font-size: 0.875em;
+}
+
+[data-theme='dark'] .ProseMirror code {
+  background: #374151;
+}
+
+.ProseMirror pre code {
+  background: transparent;
+  padding: 0;
+}
+
+.ProseMirror h1,
+.ProseMirror h2,
+.ProseMirror h3,
+.ProseMirror h4,
+.ProseMirror h5,
+.ProseMirror h6 {
+  margin-top: 1.5em;
+  margin-bottom: 0.5em;
+  font-weight: 600;
+}
+
+.ProseMirror h1 {
+  font-size: 2rem;
+}
+
+.ProseMirror h2 {
+  font-size: 1.5rem;
+}
+
+.ProseMirror h3 {
+  font-size: 1.25rem;
+}
+
+.ProseMirror h4 {
+  font-size: 1.125rem;
+}
+
+.ProseMirror h5 {
+  font-size: 1rem;
+}
+
+.ProseMirror h6 {
+  font-size: 0.875rem;
+}
+
+.ProseMirror p {
+  margin: 0.5em 0;
+}
+
+.ProseMirror a {
+  color: #1890ff;
+  text-decoration: underline;
+}
+
+[data-theme='dark'] .ProseMirror a {
+  color: #40a9ff;
 }
