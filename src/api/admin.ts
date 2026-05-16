@@ -3,6 +3,7 @@ import type {
   Category,
   GeneratedImageView,
   ImageGenerateResult,
+  ImageTaskView,
   NavLink,
   PageView,
   SysConfig,
@@ -40,6 +41,13 @@ function normalizePageView(page: PageView<GeneratedImageView>): PageView<Generat
   }
 }
 
+function normalizeImageTaskView(task: ImageTaskView): ImageTaskView {
+  return {
+    ...task,
+    result: task.result ? normalizeImageGenerateResult(task.result) : task.result,
+  }
+}
+
 // Categories
 export const adminListCategories = () =>
   request<Category[]>('/api/user/categories', { auth: true })
@@ -74,10 +82,16 @@ export const adminDeleteConfig = (id: number) =>
 
 // Image
 export const adminGenerateImage = async (body: GenerateImagePayload, signal?: AbortSignal) =>
-  normalizeImageGenerateResult(await request<ImageGenerateResult>('/api/user/image/generate', {
+  normalizeImageTaskView(await request<ImageTaskView>('/api/user/image/generate', {
     method: 'POST',
     auth: true,
     body,
+    signal,
+  }))
+
+export const adminGetImageTask = async (taskId: number, signal?: AbortSignal) =>
+  normalizeImageTaskView(await request<ImageTaskView>(`/api/user/image/generate/${taskId}`, {
+    auth: true,
     signal,
   }))
 

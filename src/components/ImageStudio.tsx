@@ -14,15 +14,23 @@ import {
 import {
   adminDeleteImageHistory,
   adminGenerateImage,
+  adminGetImageTask,
   adminListImageHistory,
   adminToggleImageHistoryShare,
 } from '../api/admin'
 import ImagePreviewOverlay from '../components/ImagePreviewOverlay'
 import { DEFAULT_PAGE_SIZE } from '../constants/pagination'
-import type { GeneratedImageView, ImageGenerateDataItem, ImageGenerateResult } from '../types'
+import type {
+  GeneratedImageView,
+  ImageGenerateDataItem,
+  ImageGenerateResult,
+  ImageTaskStatus,
+  ImageTaskView,
+} from '../types'
 import '../styles/admin-image.css'
 
 const MAX_PROMPT = 2000
+const TASK_POLL_INTERVAL_MS = 2000
 const SIZE_OPTIONS = [
   { value: '', label: '上游默认' },
   { value: '1024x1024', label: '1024 x 1024' },
@@ -44,7 +52,11 @@ export default function ImageStudio({ layout = 'admin' }: ImageStudioProps) {
   const [loading, setLoading] = useState(false)
   const [elapsed, setElapsed] = useState(0)
   const [result, setResult] = useState<ImageGenerateResult | null>(null)
+  const [task, setTask] = useState<ImageTaskView | null>(null)
   const abortRef = useRef<AbortController | null>(null)
+  const pollAbortRef = useRef<AbortController | null>(null)
+  const pollTimerRef = useRef<number | null>(null)
+  const activeRef = useRef(true)
 
   const [items, setItems] = useState<GeneratedImageView[]>([])
   const [total, setTotal] = useState(0)
@@ -58,17 +70,20 @@ export default function ImageStudio({ layout = 'admin' }: ImageStudioProps) {
   const resultItems = (result?.data ?? []).filter((item) => resolveImageSrc(item))
   const usageNumbers = result?.usage ?? null
 
-  const loadHistory = async (p = page) => {
+  const loadHistory = async (nextPage = page) => {
     setHistoryLoading(true)
     try {
-      const data = await adminListImageHistory(p - 1, DEFAULT_PAGE_SIZE)
+      const data = await adminListImageHistory(nextPage - 1, DEFAULT_PAGE_SIZE)
+      if (!activeRef.current) return
       setItems(data.items)
       setTotal(data.total)
-      setPage(p)
+      setPage(nextPage)
     } catch (e) {
       message.error((e as Error).message)
     } finally {
-      setHistoryLoading(false)
+      if (activeRef.current) {
+        setHistoryLoading(false)
+      }
     }
   }
 
@@ -88,8 +103,74 @@ export default function ImageStudio({ layout = 'admin' }: ImageStudioProps) {
   }, [loading])
 
   useEffect(() => {
-    return () => abortRef.current?.abort()
+    activeRef.current = true
+    return () => {
+      activeRef.current = false
+      abortRef.current?.abort()
+      clearTaskPolling()
+    }
   }, [])
+
+  const clearTaskPolling = () => {
+    pollAbortRef.current?.abort()
+    pollAbortRef.current = null
+    if (pollTimerRef.current !== null) {
+      window.clearTimeout(pollTimerRef.current)
+      pollTimerRef.current = null
+    }
+  }
+
+  const finishTask = (nextTask: ImageTaskView) => {
+    if (!activeRef.current) return
+
+    clearTaskPolling()
+    setTask(nextTask)
+
+    if (nextTask.status === 'COMPLETED') {
+      const nextResult = nextTask.result ?? null
+      setResult(nextResult)
+      setLoading(false)
+      if (nextResult?.data?.length) {
+        message.success(`生成完成，共返回 ${nextResult.data.length} 张`)
+      } else {
+        message.success('任务已完成，可在历史记录中查看结果')
+      }
+      void loadHistory(1)
+      return
+    }
+
+    setResult(null)
+    setLoading(false)
+    message.error(nextTask.errorMessage || '生成失败')
+  }
+
+  const pollTaskStatus = async (taskId: number) => {
+    const ctrl = new AbortController()
+    pollAbortRef.current = ctrl
+
+    try {
+      const nextTask = await adminGetImageTask(taskId, ctrl.signal)
+      if (!activeRef.current) return
+
+      setTask(nextTask)
+
+      if (isTerminalTask(nextTask.status)) {
+        finishTask(nextTask)
+        return
+      }
+
+      pollAbortRef.current = null
+      pollTimerRef.current = window.setTimeout(() => {
+        void pollTaskStatus(taskId)
+      }, TASK_POLL_INTERVAL_MS)
+    } catch (e) {
+      const err = e as Error & { code?: number }
+      if (ctrl.signal.aborted || err.code === -2) return
+      clearTaskPolling()
+      setLoading(false)
+      message.error(err.message || '查询任务状态失败')
+    }
+  }
 
   const handleGenerate = async () => {
     const text = prompt.trim()
@@ -102,14 +183,17 @@ export default function ImageStudio({ layout = 'admin' }: ImageStudioProps) {
       return
     }
 
+    clearTaskPolling()
     abortRef.current?.abort()
     const ctrl = new AbortController()
     abortRef.current = ctrl
 
     setLoading(true)
     setResult(null)
+    setTask(null)
+
     try {
-      const data = await adminGenerateImage(
+      const nextTask = await adminGenerateImage(
         {
           prompt: text,
           size: normalizedSize || undefined,
@@ -117,23 +201,40 @@ export default function ImageStudio({ layout = 'admin' }: ImageStudioProps) {
         },
         ctrl.signal,
       )
-      setResult(data)
-      message.success(`生成成功，共返回 ${data.data?.length ?? 0} 张`)
-      void loadHistory(1)
+      if (!activeRef.current) return
+
+      setTask(nextTask)
+      abortRef.current = null
+
+      if (isTerminalTask(nextTask.status)) {
+        finishTask(nextTask)
+        return
+      }
+
+      message.success(`生成任务已提交，任务 ID #${nextTask.id}`)
+      void pollTaskStatus(nextTask.id)
     } catch (e) {
       const err = e as Error & { code?: number }
       if (err.code === -2) {
-        message.info('已取消生成')
+        message.info('已取消提交')
       } else {
         message.error(err.message)
       }
     } finally {
-      setLoading(false)
-      abortRef.current = null
+      if (abortRef.current === ctrl) {
+        abortRef.current = null
+        setLoading(false)
+      }
     }
   }
 
   const handleCancel = () => {
+    if (task && !isTerminalTask(task.status)) {
+      clearTaskPolling()
+      setLoading(false)
+      message.info('已停止当前页面等待，后台任务仍会继续执行')
+      return
+    }
     abortRef.current?.abort()
   }
 
@@ -187,21 +288,6 @@ export default function ImageStudio({ layout = 'admin' }: ImageStudioProps) {
     }
   }
 
-  const formatTime = (value: string) => {
-    if (!value) return ''
-    const date = new Date(value.replace(' ', 'T'))
-    if (Number.isNaN(date.getTime())) return value
-    const now = new Date()
-    const today = new Date(now.getFullYear(), now.getMonth(), now.getDate()).getTime()
-    const time = date.getTime()
-    const hh = String(date.getHours()).padStart(2, '0')
-    const mm = String(date.getMinutes()).padStart(2, '0')
-    if (time >= today) return `${hh}:${mm}`
-    const month = String(date.getMonth() + 1).padStart(2, '0')
-    const day = String(date.getDate()).padStart(2, '0')
-    return `${month}-${day} ${hh}:${mm}`
-  }
-
   const usageValue = (key: string) => {
     const value = usageNumbers?.[key]
     return typeof value === 'number' ? value : null
@@ -221,7 +307,7 @@ export default function ImageStudio({ layout = 'admin' }: ImageStudioProps) {
             图片生成
           </h1>
           <p className="admin-image__subtitle">
-            输入描述性提示词，AI 将为你生成图像。生成过程约 30 秒至 3 分钟。
+            输入描述性提示词，AI 将为你生成图像。现在会以异步任务方式提交，页面会自动等待结果。
           </p>
         </div>
 
@@ -295,7 +381,7 @@ export default function ImageStudio({ layout = 'admin' }: ImageStudioProps) {
                 disabled
               >
                 <LoaderCircle size={16} className="admin-image__spinner" />
-                生成中 {elapsed}s...
+                {task ? `任务进行中 ${elapsed}s...` : `提交中 ${elapsed}s...`}
               </button>
               <button
                 type="button"
@@ -303,7 +389,7 @@ export default function ImageStudio({ layout = 'admin' }: ImageStudioProps) {
                 onClick={handleCancel}
               >
                 <StopCircle size={16} />
-                取消
+                {task ? '停止等待' : '取消'}
               </button>
             </>
           ) : (
@@ -318,6 +404,34 @@ export default function ImageStudio({ layout = 'admin' }: ImageStudioProps) {
             </button>
           )}
         </div>
+
+        {task && !result && (
+          <div className="admin-image__task">
+            <div className="admin-image__task-head">
+              <span>当前任务 #{task.id}</span>
+              <span
+                className={`admin-image__task-status admin-image__task-status--${taskStatusTone(
+                  task.status,
+                )}`}
+              >
+                {taskStatusLabel(task.status)}
+              </span>
+            </div>
+            <div className="admin-image__task-meta">
+              <span>{task.model || 'unknown model'}</span>
+              {task.size && <span>{task.size}</span>}
+              <span>{task.n} 张</span>
+            </div>
+            <div className="admin-image__task-prompt" title={task.prompt}>
+              {task.prompt}
+            </div>
+            <div className="admin-image__task-note">
+              {task.status === 'FAILED'
+                ? task.errorMessage || '任务执行失败'
+                : '任务已提交，页面会自动轮询状态；完成后结果会出现在下方，并同步进入历史记录。'}
+            </div>
+          </div>
+        )}
 
         {result && (
           <div className="admin-image__result">
@@ -374,7 +488,7 @@ export default function ImageStudio({ layout = 'admin' }: ImageStudioProps) {
                 )}
               </>
             ) : (
-              <div className="admin-image__result-empty">未返回图片 URL</div>
+              <div className="admin-image__result-empty">任务已完成，但未返回可展示的图片地址。</div>
             )}
           </div>
         )}
@@ -562,6 +676,53 @@ export default function ImageStudio({ layout = 'admin' }: ImageStudioProps) {
       )}
     </div>
   )
+}
+
+function isTerminalTask(status: ImageTaskStatus) {
+  return status === 'COMPLETED' || status === 'FAILED'
+}
+
+function taskStatusLabel(status: ImageTaskStatus) {
+  switch (status) {
+    case 'PENDING':
+      return '排队中'
+    case 'PROCESSING':
+      return '生成中'
+    case 'COMPLETED':
+      return '已完成'
+    case 'FAILED':
+      return '失败'
+    default:
+      return status
+  }
+}
+
+function taskStatusTone(status: ImageTaskStatus) {
+  switch (status) {
+    case 'COMPLETED':
+      return 'success'
+    case 'FAILED':
+      return 'danger'
+    case 'PROCESSING':
+      return 'info'
+    default:
+      return 'pending'
+  }
+}
+
+function formatTime(value: string) {
+  if (!value) return ''
+  const date = new Date(value.replace(' ', 'T'))
+  if (Number.isNaN(date.getTime())) return value
+  const now = new Date()
+  const today = new Date(now.getFullYear(), now.getMonth(), now.getDate()).getTime()
+  const time = date.getTime()
+  const hh = String(date.getHours()).padStart(2, '0')
+  const mm = String(date.getMinutes()).padStart(2, '0')
+  if (time >= today) return `${hh}:${mm}`
+  const month = String(date.getMonth() + 1).padStart(2, '0')
+  const day = String(date.getDate()).padStart(2, '0')
+  return `${month}-${day} ${hh}:${mm}`
 }
 
 function resolveImageSrc(item: ImageGenerateDataItem | { imageUrl: string | null | undefined }) {

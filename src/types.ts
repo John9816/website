@@ -66,6 +66,22 @@ export interface ImageGenerateResult {
   usage?: Record<string, unknown> | null
 }
 
+export type ImageTaskStatus = 'PENDING' | 'PROCESSING' | 'COMPLETED' | 'FAILED'
+
+export interface ImageTaskView {
+  id: number
+  prompt: string
+  size?: string | null
+  n: number
+  model: string
+  status: ImageTaskStatus
+  errorMessage?: string | null
+  result?: ImageGenerateResult | null
+  createdAt?: string
+  updatedAt?: string
+  completedAt?: string | null
+}
+
 export interface PageView<T> {
   items: T[]
   total: number
