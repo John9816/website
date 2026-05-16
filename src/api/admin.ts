@@ -8,11 +8,36 @@ import type {
   SysConfig,
 } from '../types'
 import { DEFAULT_PAGE_SIZE } from '../constants/pagination'
+import { normalizeRemoteImageUrl } from '../utils/remoteImage'
 
 export interface GenerateImagePayload {
   prompt: string
   size?: string
   n?: number
+}
+
+function normalizeGeneratedImageView(item: GeneratedImageView): GeneratedImageView {
+  return {
+    ...item,
+    imageUrl: normalizeRemoteImageUrl(item.imageUrl, { requireUsableAssetPath: true }) || item.imageUrl,
+  }
+}
+
+function normalizeImageGenerateResult(result: ImageGenerateResult): ImageGenerateResult {
+  return {
+    ...result,
+    data: result.data.map((item) => ({
+      ...item,
+      url: normalizeRemoteImageUrl(item.url, { requireUsableAssetPath: true }) || item.url,
+    })),
+  }
+}
+
+function normalizePageView(page: PageView<GeneratedImageView>): PageView<GeneratedImageView> {
+  return {
+    ...page,
+    items: page.items.map(normalizeGeneratedImageView),
+  }
 }
 
 // Categories
@@ -48,19 +73,19 @@ export const adminDeleteConfig = (id: number) =>
   request<void>(`/api/admin/configs/${id}`, { method: 'DELETE', auth: true })
 
 // Image
-export const adminGenerateImage = (body: GenerateImagePayload, signal?: AbortSignal) =>
-  request<ImageGenerateResult>('/api/user/image/generate', {
+export const adminGenerateImage = async (body: GenerateImagePayload, signal?: AbortSignal) =>
+  normalizeImageGenerateResult(await request<ImageGenerateResult>('/api/user/image/generate', {
     method: 'POST',
     auth: true,
     body,
     signal,
-  })
+  }))
 
-export const adminListImageHistory = (page = 0, size = DEFAULT_PAGE_SIZE) =>
-  request<PageView<GeneratedImageView>>('/api/user/image/history', {
+export const adminListImageHistory = async (page = 0, size = DEFAULT_PAGE_SIZE) =>
+  normalizePageView(await request<PageView<GeneratedImageView>>('/api/user/image/history', {
     auth: true,
     query: { page, size },
-  })
+  }))
 
 export const adminDeleteImageHistory = (id: number) =>
   request<void>(`/api/user/image/history/${id}`, {
@@ -68,9 +93,9 @@ export const adminDeleteImageHistory = (id: number) =>
     auth: true,
   })
 
-export const adminToggleImageHistoryShare = (id: number, shared: boolean) =>
-  request<GeneratedImageView>(`/api/user/image/history/${id}/share`, {
+export const adminToggleImageHistoryShare = async (id: number, shared: boolean) =>
+  normalizeGeneratedImageView(await request<GeneratedImageView>(`/api/user/image/history/${id}/share`, {
     method: 'PATCH',
     auth: true,
     query: { shared },
-  })
+  }))

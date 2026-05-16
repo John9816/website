@@ -1,5 +1,6 @@
 import { useEffect, useState } from 'react'
 import { X } from 'lucide-react'
+import { normalizeRemoteImageUrl } from '../utils/remoteImage'
 
 interface ImagePreviewOverlayProps {
   src: string
@@ -18,6 +19,7 @@ export default function ImagePreviewOverlay({
   onClose,
 }: ImagePreviewOverlayProps) {
   const [meta, setMeta] = useState<ImageMeta | null>(null)
+  const normalizedSrc = normalizeRemoteImageUrl(src, { requireUsableAssetPath: true }) || src
 
   useEffect(() => {
     let active = true
@@ -29,11 +31,11 @@ export default function ImagePreviewOverlay({
         height: img.naturalHeight,
       })
     }
-    img.src = src
+    img.src = normalizedSrc
     return () => {
       active = false
     }
-  }, [src])
+  }, [normalizedSrc])
 
   return (
     <div className="admin-image__preview-overlay" onClick={onClose}>
@@ -50,7 +52,7 @@ export default function ImagePreviewOverlay({
           className="admin-image__preview-content"
           onClick={(event) => event.stopPropagation()}
         >
-          <img src={src} alt={alt} className="admin-image__preview-img" />
+          <img src={normalizedSrc} alt={alt} className="admin-image__preview-img" />
           {meta && (
             <div className="admin-image__preview-meta">
               原始比例 {meta.width} x {meta.height}
