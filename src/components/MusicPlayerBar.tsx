@@ -8,11 +8,16 @@ import {
 } from 'react'
 import {
   AudioLines,
+  Captions,
   ChevronDown,
+  ChevronLeft,
   ListMusic,
   Loader2,
   Pause,
   Play,
+  Repeat,
+  Repeat1,
+  Shuffle,
   SkipBack,
   SkipForward,
   Volume2,
@@ -22,7 +27,7 @@ import { Popover } from 'antd'
 import { FastAverageColor } from 'fast-average-color'
 import type { MusicQuality, SongSearchItem } from '../types'
 import MusicCover from './MusicCover'
-import { useMusicPlayer } from '../context/MusicPlayerContext'
+import { useMusicPlayer, type PlayMode } from '../context/MusicPlayerContext'
 import { useActiveLyric } from '../hooks/useActiveLyric'
 import { formatDuration, normalizeCoverUrl } from '../utils/musicPlayer'
 
@@ -36,6 +41,26 @@ const QUALITY_OPTIONS: Array<{ value: MusicQuality; label: string }> = [
 ]
 
 type FullscreenTab = 'lyrics' | 'queue'
+
+function getPlayModeMeta(mode: PlayMode) {
+  switch (mode) {
+    case 'repeat-one':
+      return {
+        label: '单曲循环',
+        icon: Repeat1,
+      }
+    case 'shuffle':
+      return {
+        label: '随机播放',
+        icon: Shuffle,
+      }
+    default:
+      return {
+        label: '顺序播放',
+        icon: Repeat,
+      }
+  }
+}
 
 function sourceLabel(source: 'qq' | 'netease' | 'kuwo') {
   switch (source) {
@@ -62,7 +87,11 @@ export default function MusicPlayerBar() {
   const barWrapRef = useRef<HTMLDivElement | null>(null)
   const lyricScrollRef = useRef<HTMLDivElement | null>(null)
   const queueScrollRef = useRef<HTMLDivElement | null>(null)
+  const coverBackdropRef = useRef<string | null>(null)
+  const coverBackdropTimeoutRef = useRef<number | null>(null)
   const [dominantColor, setDominantColor] = useState<string | null>(null)
+  const [coverBackdrop, setCoverBackdrop] = useState<string | null>(null)
+  const [previousCoverBackdrop, setPreviousCoverBackdrop] = useState<string | null>(null)
 
   const {
     current,
@@ -76,6 +105,7 @@ export default function MusicPlayerBar() {
     playLoading,
     preferredQuality,
     unsupportedFormat,
+    playMode,
     canPrev,
     canNext,
     playSong,
@@ -85,6 +115,7 @@ export default function MusicPlayerBar() {
     seekToTime,
     setPreferredQuality,
     setVolume,
+    cyclePlayMode,
     toggleMuted,
     playFromQueue,
   } = useMusicPlayer()
@@ -134,6 +165,11 @@ export default function MusicPlayerBar() {
     }
     return ''
   }, [activeLrcIndex, lrcLines])
+
+  const normalizedCoverUrl = useMemo(
+    () => normalizeCoverUrl(current?.coverUrl),
+    [current?.coverUrl],
+  )
 
   const currentRow = useMemo<SongSearchItem | null>(() => {
     if (!current) return null
@@ -335,7 +371,7 @@ export default function MusicPlayerBar() {
   }, [activeQueueIndex, expanded, queuePopoverOpen])
 
   useEffect(() => {
-    const url = normalizeCoverUrl(current?.coverUrl)
+    const url = normalizedCoverUrl
     if (!url) {
       setDominantColor(null)
       return
@@ -356,18 +392,69 @@ export default function MusicPlayerBar() {
     return () => {
       isMounted = false
     }
-  }, [current?.coverUrl])
+  }, [normalizedCoverUrl])
+
+  useEffect(() => {
+    return () => {
+      if (coverBackdropTimeoutRef.current !== null) {
+        window.clearTimeout(coverBackdropTimeoutRef.current)
+      }
+    }
+  }, [])
+
+  useEffect(() => {
+    if (coverBackdropTimeoutRef.current !== null) {
+      window.clearTimeout(coverBackdropTimeoutRef.current)
+      coverBackdropTimeoutRef.current = null
+    }
+
+    const nextCover = normalizedCoverUrl ?? null
+    const currentCover = coverBackdropRef.current
+
+    if (currentCover === nextCover) return
+
+    setPreviousCoverBackdrop(currentCover)
+    coverBackdropRef.current = nextCover
+    setCoverBackdrop(nextCover)
+
+    if (currentCover && nextCover) {
+      coverBackdropTimeoutRef.current = window.setTimeout(() => {
+        setPreviousCoverBackdrop(null)
+        coverBackdropTimeoutRef.current = null
+      }, 520)
+      return
+    }
+
+    setPreviousCoverBackdrop(null)
+  }, [normalizedCoverUrl])
 
   if (!current) return null
 
   const progressPct = duration ? Math.min(100, (currentTime / duration) * 100) : 0
   const volumePct = muted ? 0 : volume * 100
-  const coverUrl = normalizeCoverUrl(current.coverUrl)
-  const openFullscreen = (target: 'lyrics' | 'queue' = 'lyrics') => {
-    setFullscreenTab('lyrics')
+  const playModeMeta = getPlayModeMeta(playMode)
+  const PlayModeIcon = playModeMeta.icon
+  const progressValueText = `${formatDuration(
+    Math.min(currentTime, duration || currentTime),
+  )} / ${formatDuration(duration)}`
+  const isLyricsViewOpen = expanded && fullscreenTab === 'lyrics'
+  const isQueueViewOpen = expanded && fullscreenTab === 'queue'
+
+  const openFullscreen = (target: FullscreenTab = 'lyrics') => {
+    setFullscreenTab(target)
     setQualityPopoverOpen(false)
-    setQueuePopoverOpen(target === 'queue')
+    setQueuePopoverOpen(false)
     setExpanded(true)
+  }
+
+  const toggleFullscreenPanel = (target: FullscreenTab) => {
+    if (expanded && fullscreenTab === target) {
+      setQualityPopoverOpen(false)
+      setQueuePopoverOpen(false)
+      setExpanded(false)
+      return
+    }
+    openFullscreen(target)
   }
 
   const qualityPopoverContent = (
@@ -511,6 +598,12 @@ export default function MusicPlayerBar() {
         } else if (event.key === 'ArrowRight') {
           seekToTime(currentTime + 1)
           event.preventDefault()
+        } else if (event.key === 'Home') {
+          seekToTime(0)
+          event.preventDefault()
+        } else if (event.key === 'End') {
+          seekToTime(duration)
+          event.preventDefault()
         }
       }}
       role="slider"
@@ -519,6 +612,7 @@ export default function MusicPlayerBar() {
       aria-valuemin={0}
       aria-valuemax={Math.max(duration, 0)}
       aria-valuenow={Math.min(currentTime, duration || currentTime)}
+      aria-valuetext={progressValueText}
       style={{ '--progress': `${progressPct}%` } as CSSProperties}
     >
       {progressPreview &&
@@ -579,7 +673,7 @@ export default function MusicPlayerBar() {
       }}
       role="slider"
       tabIndex={0}
-      aria-label="闊抽噺"
+      aria-label="音量"
       aria-valuemin={0}
       aria-valuemax={100}
       aria-valuenow={Math.round(volumePct)}
@@ -603,7 +697,13 @@ export default function MusicPlayerBar() {
           style={dominantColor ? ({ '--dominant-rgb': dominantColor } as CSSProperties) : undefined}
         >
           <div className="music-player-bar__progress music-player-bar__progress--top">
+            <span className="time music-player-bar__progress-time">
+              {formatDuration(currentTime)}
+            </span>
             {renderProgressTrack('music-player-bar__progress-track')}
+            <span className="time time-right music-player-bar__progress-time">
+              {formatDuration(duration)}
+            </span>
           </div>
 
           <div className="music-player-bar__meta">
@@ -683,9 +783,31 @@ export default function MusicPlayerBar() {
             <button
               type="button"
               className={`ctrl-btn music-player-bar__icon-btn${
-                expanded && queuePopoverOpen ? ' is-active' : ''
+                playMode !== 'sequence' ? ' is-active' : ''
               }`}
-              onClick={() => openFullscreen('queue')}
+              onClick={cyclePlayMode}
+              aria-label={`播放模式：${playModeMeta.label}，点击切换`}
+              title={`播放模式：${playModeMeta.label}，点击切换`}
+            >
+              <PlayModeIcon size={16} />
+            </button>
+            <button
+              type="button"
+              className={`ctrl-btn music-player-bar__icon-btn${
+                isLyricsViewOpen ? ' is-active' : ''
+              }`}
+              onClick={() => toggleFullscreenPanel('lyrics')}
+              aria-label={isLyricsViewOpen ? '收起歌词视图' : '打开歌词视图'}
+              title={isLyricsViewOpen ? '收起歌词' : '打开歌词'}
+            >
+              <Captions size={16} />
+            </button>
+            <button
+              type="button"
+              className={`ctrl-btn music-player-bar__icon-btn${
+                isQueueViewOpen ? ' is-active' : ''
+              }`}
+              onClick={() => toggleFullscreenPanel('queue')}
               aria-label="打开当前播放列表"
               title={`当前播放列表 (${queueItems.length})`}
             >
@@ -724,15 +846,34 @@ export default function MusicPlayerBar() {
           />
           <div
             className="music-player-fullscreen__shell"
-            style={
-              {
-                ...(coverUrl ? { '--player-cover': `url("${coverUrl}")` } : {}),
-                ...(dominantColor ? { '--dominant-rgb': dominantColor } : {}),
-              } as CSSProperties
-            }
+            style={dominantColor ? ({ '--dominant-rgb': dominantColor } as CSSProperties) : undefined}
           >
+            <div className="music-player-fullscreen__backdrops" aria-hidden="true">
+              {previousCoverBackdrop && previousCoverBackdrop !== coverBackdrop ? (
+                <div
+                  className="music-player-fullscreen__cover-backdrop is-previous"
+                  style={{ backgroundImage: `url("${previousCoverBackdrop}")` }}
+                />
+              ) : null}
+              {coverBackdrop ? (
+                <div
+                  key={coverBackdrop}
+                  className="music-player-fullscreen__cover-backdrop is-current"
+                  style={{ backgroundImage: `url("${coverBackdrop}")` }}
+                />
+              ) : null}
+            </div>
             <div className="music-player-fullscreen__topbar">
-              <span className="player-kicker">Now Playing</span>
+              <button
+                type="button"
+                className="player-kicker player-kicker--nav"
+                onClick={() => setExpanded(false)}
+                aria-label="收起全屏播放器，返回列表"
+                title="返回列表"
+              >
+                <ChevronLeft size={14} />
+                <span>Now Playing</span>
+              </button>
               <button
                 type="button"
                 className="music-player-fullscreen__close"
@@ -868,13 +1009,24 @@ export default function MusicPlayerBar() {
                               }}
                               role="button"
                               tabIndex={0}
+                              aria-label={`跳转到 ${formatDuration(line.time)} ${line.text || '歌词位置'}`}
+                              title={`跳转到 ${formatDuration(line.time)}`}
                               onKeyDown={(e) => {
                                 if (e.key === 'Enter' || e.key === ' ') {
                                   seekToTime(line.time)
+                                  e.preventDefault()
                                 }
                               }}
                             >
-                              {line.text || '\u00A0'}
+                              <span className="music-player-fullscreen__lyrics-text">
+                                {line.text || '\u00A0'}
+                              </span>
+                              <span
+                                className="music-player-fullscreen__lyrics-action"
+                                aria-hidden="true"
+                              >
+                                <Play size={12} />
+                              </span>
                             </div>
                           )
                         })
@@ -977,6 +1129,17 @@ export default function MusicPlayerBar() {
                     </div>
 
                     <div className="music-player-fullscreen__volume">
+                      <button
+                        type="button"
+                        className={`ctrl-btn music-player-fullscreen__tool-trigger${
+                          playMode !== 'sequence' ? ' is-active' : ''
+                        }`}
+                        onClick={cyclePlayMode}
+                        aria-label={`播放模式：${playModeMeta.label}，点击切换`}
+                        title={`播放模式：${playModeMeta.label}，点击切换`}
+                      >
+                        <PlayModeIcon size={16} />
+                      </button>
                       <Popover
                         trigger="click"
                         placement="top"
@@ -1037,16 +1200,7 @@ export default function MusicPlayerBar() {
                           <Volume2 size={16} />
                         )}
                       </button>
-                      <input
-                        type="range"
-                        min={0}
-                        max={1}
-                        step={0.01}
-                        value={muted ? 0 : volume}
-                        onChange={(event) => setVolume(Number(event.target.value))}
-                        style={{ '--vol': `${volumePct}%` } as CSSProperties}
-                        aria-label="音量"
-                      />
+                      {renderVolumeTrack('music-player-fullscreen__volume-track')}
                     </div>
                   </div>
                 </div>

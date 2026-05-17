@@ -363,8 +363,11 @@
 /* 编辑态：标题+工具栏组合控件 */
 
 .kb-admin-edit__title-group {
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
   border-radius: 12px;
-  overflow: hidden;
+  overflow: visible;
   background: transparent;
 }
 
@@ -419,18 +422,30 @@
   border: 0;
   border-radius: 0;
   background: transparent;
+  box-shadow: none;
+}
+
+.kb-admin-edit__tiptap-toolbar-wrapper {
+  position: sticky;
+  top: 12px;
+  z-index: 3;
 }
 
 .kb-admin-edit__tiptap-toolbar-wrapper .editor-menu-bar {
-  background: var(--panel-alt);
-  border-bottom: 1px solid var(--border);
-  border-top: none;
-  padding: 6px 12px;
+  border: 1px solid var(--border);
+  border-radius: 20px;
+  background:
+    linear-gradient(180deg, color-mix(in srgb, var(--panel) 82%, rgba(255, 255, 255, 0.72)), transparent 100%),
+    color-mix(in srgb, var(--panel-alt) 72%, transparent);
+  box-shadow: var(--shadow-md);
+  padding: 10px;
 }
 
 [data-theme='dark'] .kb-admin-edit__tiptap-toolbar-wrapper .editor-menu-bar {
-  background: var(--panel-alt);
-  border-bottom-color: var(--border);
+  background:
+    linear-gradient(180deg, rgba(255, 255, 255, 0.06), transparent 100%),
+    color-mix(in srgb, var(--panel-alt) 80%, transparent);
+  border-color: var(--border);
 }
 
 .kb-admin-edit__editor .editor-content {
@@ -442,7 +457,7 @@
 
 .kb-admin-edit__editor .ProseMirror {
   min-height: var(--editor-min-height, 360px);
-  padding: 12px 0 24px;
+  padding: 10px 0 24px;
   box-sizing: border-box;
   font-size: 1rem;
   line-height: 1.85;

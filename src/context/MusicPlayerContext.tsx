@@ -19,6 +19,34 @@ import {
 } from '../utils/musicPlayer'
 
 type AutoNextHandler = () => void | Promise<void>
+export type PlayMode = 'sequence' | 'repeat-one' | 'shuffle'
+
+const PLAY_MODE_KEY = 'music-player-play-mode'
+const PLAY_MODE_ORDER: PlayMode[] = ['sequence', 'repeat-one', 'shuffle']
+
+function getInitialPlayMode(): PlayMode {
+  if (typeof window === 'undefined') return 'sequence'
+
+  const stored = window.localStorage.getItem(PLAY_MODE_KEY)
+  if (
+    stored === 'sequence' ||
+    stored === 'repeat-one' ||
+    stored === 'shuffle'
+  ) {
+    return stored
+  }
+
+  return 'sequence'
+}
+
+function getRandomQueueIndex(length: number, currentIndex: number) {
+  if (length <= 1) return currentIndex
+  let nextIndex = Math.floor(Math.random() * length)
+  if (nextIndex === currentIndex) {
+    nextIndex = (nextIndex + 1 + Math.floor(Math.random() * (length - 1))) % length
+  }
+  return nextIndex
+}
 
 type MusicPlayerContextValue = {
   current: PlayInfo | null
@@ -32,6 +60,7 @@ type MusicPlayerContextValue = {
   playLoading: boolean
   unsupportedFormat: string | null
   preferredQuality: MusicQuality
+  playMode: PlayMode
   canPrev: boolean
   canNext: boolean
   setPlaylist: (items: SongSearchItem[]) => void
@@ -48,6 +77,8 @@ type MusicPlayerContextValue = {
   playNext: () => void
   seekToTime: (time: number) => void
   setVolume: (value: number) => void
+  setPlayMode: (mode: PlayMode) => void
+  cyclePlayMode: () => void
   toggleMuted: () => void
   setAutoNextHandler: (handler: AutoNextHandler | null) => void
 }
@@ -69,6 +100,7 @@ export function MusicPlayerProvider({ children }: { children: ReactNode }) {
   const [playlist, setPlaylistState] = useState<SongSearchItem[]>([])
   const [preferredQuality, setPreferredQualityState] =
     useState<MusicQuality>('flac')
+  const [playMode, setPlayModeState] = useState<PlayMode>(getInitialPlayMode)
 
   const unsupportedFormat = useMemo(
     () => (current ? detectUnsupportedFormat(current.playUrl) : null),
@@ -83,7 +115,10 @@ export function MusicPlayerProvider({ children }: { children: ReactNode }) {
   }, [current, playlist])
 
   const canPrev = currentIndex > 0
-  const canNext = currentIndex >= 0 && currentIndex < playlist.length - 1
+  const canNext =
+    playMode === 'shuffle'
+      ? playlist.length > 1
+      : currentIndex >= 0 && currentIndex < playlist.length - 1
 
   const setPlaylist = useCallback((items: SongSearchItem[]) => {
     setPlaylistState(items)
@@ -91,6 +126,17 @@ export function MusicPlayerProvider({ children }: { children: ReactNode }) {
 
   const setPreferredQuality = useCallback((quality: MusicQuality) => {
     setPreferredQualityState(quality)
+  }, [])
+
+  const setPlayMode = useCallback((mode: PlayMode) => {
+    setPlayModeState(mode)
+  }, [])
+
+  const cyclePlayMode = useCallback(() => {
+    setPlayModeState((currentMode) => {
+      const currentIndex = PLAY_MODE_ORDER.indexOf(currentMode)
+      return PLAY_MODE_ORDER[(currentIndex + 1) % PLAY_MODE_ORDER.length]
+    })
   }, [])
 
   const playSong = useCallback(
@@ -136,15 +182,29 @@ export function MusicPlayerProvider({ children }: { children: ReactNode }) {
     [playSong, playlist, preferredQuality],
   )
 
+  const restartCurrentTrack = useCallback(() => {
+    const el = audioRef.current
+    if (!el || !current || unsupportedFormat) return false
+    el.currentTime = 0
+    setCurrentTime(0)
+    void el.play().catch(() => {})
+    return true
+  }, [current, unsupportedFormat])
+
   const playPrev = useCallback(() => {
     if (!canPrev) return
     void playSong(playlist[currentIndex - 1], preferredQuality)
   }, [canPrev, currentIndex, playSong, playlist, preferredQuality])
 
   const playNext = useCallback(() => {
+    if (playMode === 'shuffle' && playlist.length > 1) {
+      const nextIndex = getRandomQueueIndex(playlist.length, currentIndex)
+      void playSong(playlist[nextIndex], preferredQuality)
+      return
+    }
     if (!canNext) return
     void playSong(playlist[currentIndex + 1], preferredQuality)
-  }, [canNext, currentIndex, playSong, playlist, preferredQuality])
+  }, [canNext, currentIndex, playMode, playSong, playlist, preferredQuality])
 
   const togglePlay = useCallback(() => {
     const el = audioRef.current
@@ -181,6 +241,11 @@ export function MusicPlayerProvider({ children }: { children: ReactNode }) {
     setMuted((value) => !value)
   }, [])
 
+  useEffect(() => {
+    if (typeof window === 'undefined') return
+    window.localStorage.setItem(PLAY_MODE_KEY, playMode)
+  }, [playMode])
+
   const setAutoNextHandler = useCallback(
     (handler: AutoNextHandler | null) => {
       autoNextHandlerRef.current = handler
@@ -189,6 +254,19 @@ export function MusicPlayerProvider({ children }: { children: ReactNode }) {
   )
 
   const advanceQueue = useCallback(() => {
+    if (playMode === 'repeat-one' && restartCurrentTrack()) {
+      return true
+    }
+    if (playMode === 'shuffle') {
+      if (playlist.length > 1) {
+        const nextIndex = getRandomQueueIndex(playlist.length, currentIndex)
+        void playSong(playlist[nextIndex], preferredQuality)
+        return true
+      }
+      if (restartCurrentTrack()) {
+        return true
+      }
+    }
     if (canNext) {
       void playSong(playlist[currentIndex + 1], preferredQuality)
       return true
@@ -198,7 +276,15 @@ export function MusicPlayerProvider({ children }: { children: ReactNode }) {
       return true
     }
     return false
-  }, [canNext, currentIndex, playSong, playlist, preferredQuality])
+  }, [
+    canNext,
+    currentIndex,
+    playMode,
+    playSong,
+    playlist,
+    preferredQuality,
+    restartCurrentTrack,
+  ])
 
   useEffect(() => {
     if (!current || !unsupportedFormat) return
@@ -243,6 +329,7 @@ export function MusicPlayerProvider({ children }: { children: ReactNode }) {
       playLoading,
       unsupportedFormat,
       preferredQuality,
+      playMode,
       canPrev,
       canNext,
       setPlaylist,
@@ -255,18 +342,22 @@ export function MusicPlayerProvider({ children }: { children: ReactNode }) {
       playNext,
       seekToTime,
       setVolume,
+      setPlayMode,
+      cyclePlayMode,
       toggleMuted,
       setAutoNextHandler,
     }),
     [
       canNext,
       canPrev,
+      cyclePlayMode,
       current,
       currentIndex,
       currentTime,
       duration,
       isPlaying,
       muted,
+      playMode,
       playLoading,
       playNext,
       playFromQueue,
@@ -276,6 +367,7 @@ export function MusicPlayerProvider({ children }: { children: ReactNode }) {
       playlist,
       preferredQuality,
       seekToTime,
+      setPlayMode,
       setPlaylist,
       setPreferredQuality,
       setVolume,

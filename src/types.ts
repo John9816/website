@@ -164,6 +164,69 @@ export interface AiConversationReplyView {
   assistantMessage: AiChatMessageView
 }
 
+export interface AgentTeamView {
+  id: number
+  code: string
+  name: string
+  description?: string | null
+  isEnabled: boolean
+}
+
+export type AgentSessionStatus = 'idle' | 'running' | 'done' | 'failed'
+
+export interface AgentSessionView {
+  id: number
+  teamCode: string
+  title?: string | null
+  status: AgentSessionStatus
+  lastError?: string | null
+  costUsd: number
+  turnCount: number
+  lastRunAt?: string | null
+  createdAt: string
+  updatedAt: string
+}
+
+export type AgentMessageType =
+  | 'user'
+  | 'assistant'
+  | 'tool_use'
+  | 'tool_result'
+  | 'system'
+  | 'result'
+  | 'error'
+
+export interface AgentMessageView {
+  id: number
+  messageType: AgentMessageType
+  content: string
+  costUsd?: number | null
+  createdAt: string
+}
+
+export interface AgentQuotaView {
+  dailyCostUsd: number
+  dailyLimitUsd: number
+  monthlyCostUsd: number
+  monthlyLimitUsd: number
+  resetDailyAt?: string | null
+  resetMonthlyAt?: string | null
+}
+
+export type AgentStreamEventName =
+  | 'assistant'
+  | 'tool_use'
+  | 'tool_result'
+  | 'system'
+  | 'result'
+  | 'error'
+  | 'claude_session'
+
+export interface AgentStreamEvent {
+  event: AgentStreamEventName
+  data: Record<string, unknown>
+}
+
 export type MusicSourceId = 'qq' | 'netease' | 'kuwo'
 export type MusicPlaylistSourceId = Extract<MusicSourceId, 'netease' | 'kuwo'>
 export type MusicQuality = '128k' | '320k' | 'flac' | 'flac24bit'

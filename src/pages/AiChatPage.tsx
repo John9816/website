@@ -1212,6 +1212,12 @@ export default function AiChatPage() {
           >
             AI生图
           </RouterNavLink>
+          <RouterNavLink
+            to="/agent"
+            className={({ isActive }) => `topbar-nav__link${isActive ? ' is-active' : ''}`}
+          >
+            Agent
+          </RouterNavLink>
         </nav>
 
         <div className="topbar-actions" aria-label="站点操作">
