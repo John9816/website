@@ -165,6 +165,41 @@ function songKey(song: Pick<SongSearchItem, 'source' | 'id'>) {
   return `${song.source}:${song.id}`
 }
 
+function normalizeImportPlaylistUrl(value: string) {
+  const trimmed = value.trim()
+  if (!trimmed) return trimmed
+
+  try {
+    const url = new URL(trimmed)
+    const host = url.hostname.toLowerCase()
+    const pathname = url.pathname.toLowerCase()
+
+    if (host === 'y.qq.com' || host.endsWith('.y.qq.com')) {
+      const pathPlaylistId = pathname.match(/\/playlist\/(\d+)/)?.[1]
+      if (pathPlaylistId) {
+        return `https://y.qq.com/n/ryqq/playlist/${pathPlaylistId}`
+      }
+
+      const queryPlaylistId =
+        url.searchParams.get('id') ||
+        url.searchParams.get('disstid') ||
+        url.searchParams.get('dirid')
+
+      if (
+        queryPlaylistId &&
+        /^\d+$/.test(queryPlaylistId) &&
+        (pathname.includes('playlist') || pathname.includes('taoge') || pathname.includes('songlist'))
+      ) {
+        return `https://y.qq.com/n/ryqq/playlist/${queryPlaylistId}`
+      }
+    }
+
+    return trimmed
+  } catch {
+    return trimmed
+  }
+}
+
 function MusicAuthPrompt() {
   return (
     <div className="music-auth-prompt">
@@ -425,9 +460,10 @@ export default function MusicExplorer() {
       message.warning('请输入分享链接')
       return
     }
+    const normalizedUrl = normalizeImportPlaylistUrl(importUrl)
     setImporting(true)
     try {
-      await importPlaylist({ url: importUrl.trim() })
+      await importPlaylist({ url: normalizedUrl })
       message.success('导入成功！')
       setImportDialogVisible(false)
       setImportUrl('')

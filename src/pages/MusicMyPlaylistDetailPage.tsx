@@ -15,6 +15,7 @@ import MusicSongTable from '../components/MusicSongTable'
 import { normalizeCoverUrl } from '../utils/musicPlayer'
 
 const ALL_QUALITIES: MusicQuality[] = ['128k', '320k', 'flac', 'flac24bit']
+const FULL_PLAY_FETCH_SIZE = 100
 
 function sourceLabel(source: MusicSourceId) {
   switch (source) {
@@ -50,6 +51,27 @@ function songKey(song: Pick<SongSearchItem, 'source' | 'id'>) {
   return `${song.source}:${song.id}`
 }
 
+function extractImportedPlaylistItems(data: unknown) {
+  const rawData = (data as any).data || data
+  let listData = (data as any).items || rawData.items || (data as any).list || rawData.list || []
+
+  if (!Array.isArray(listData)) {
+    if (listData && Array.isArray((listData as any).items)) {
+      listData = (listData as any).items
+    } else {
+      console.error('Expected array for playlist items, got:', listData)
+      listData = []
+    }
+  }
+
+  return {
+    rawData,
+    playlistData:
+      (data as any).playlist || rawData.playlist || (data !== rawData ? rawData : null),
+    listData: listData as ImportedPlaylistItem[],
+  }
+}
+
 export default function MusicMyPlaylistDetailPage() {
   const { message, modal } = AntApp.useApp()
   const auth = useAuth()
@@ -69,6 +91,7 @@ export default function MusicMyPlaylistDetailPage() {
   const [newName, setNewName] = useState('')
   const [renaming, setRenaming] = useState(false)
   const [deleting, setDeleting] = useState(false)
+  const [playingAll, setPlayingAll] = useState(false)
 
   const requestIdRef = useRef(0)
 
@@ -112,12 +135,21 @@ export default function MusicMyPlaylistDetailPage() {
       }
       
       const songList = listData.map(toSongSearchItem)
+      const fallbackTrackCount =
+        typeof playlistData?.trackCount === 'number'
+          ? playlistData.trackCount
+          : typeof playlist?.trackCount === 'number'
+            ? playlist.trackCount
+            : null
       
       // 先计算好再更新状态，避免中间态导致渲染崩溃
       setItems(listData)
-      const totalCount = typeof (data as any).total === 'number' 
-        ? (data as any).total 
-        : (typeof rawData.total === 'number' ? rawData.total : listData.length)
+      const totalCount =
+        typeof (data as any).total === 'number'
+          ? (data as any).total
+          : typeof rawData.total === 'number'
+            ? rawData.total
+            : (fallbackTrackCount ?? listData.length)
       setTotal(totalCount)
       setPlaylist(songList)
     } catch (error) {
@@ -129,6 +161,62 @@ export default function MusicMyPlaylistDetailPage() {
       }
     }
   }, [playlistId, page, pageSize, setPlaylist, message])
+
+  const handlePlayEntirePlaylist = useCallback(async () => {
+    if (!playlistId || Number.isNaN(playlistId)) return
+    if (!total && !songs.length) return
+
+    setPlayingAll(true)
+    try {
+      const allItems: ImportedPlaylistItem[] = []
+      let nextPage = 0
+      let knownTotal =
+        typeof playlist?.trackCount === 'number' && playlist.trackCount > 0
+          ? playlist.trackCount
+          : total
+
+      while (true) {
+        const data = await getImportedPlaylistDetail(playlistId, nextPage, FULL_PLAY_FETCH_SIZE)
+        const { rawData, playlistData, listData } = extractImportedPlaylistItems(data)
+        const pageTotal =
+          typeof (data as any).total === 'number'
+            ? (data as any).total
+            : typeof rawData.total === 'number'
+              ? rawData.total
+              : typeof playlistData?.trackCount === 'number'
+                ? playlistData.trackCount
+                : knownTotal
+
+        if (playlistData && playlistData.name) {
+          setPlaylistState(playlistData)
+        }
+        if (!listData.length) break
+
+        allItems.push(...listData)
+        knownTotal = pageTotal
+
+        const reachedTotal = typeof knownTotal === 'number' && allItems.length >= knownTotal
+        const reachedLastPage =
+          listData.length < FULL_PLAY_FETCH_SIZE &&
+          (typeof knownTotal !== 'number' || knownTotal <= allItems.length)
+        if (reachedTotal || reachedLastPage) break
+
+        nextPage += 1
+      }
+
+      const allSongs = allItems.map(toSongSearchItem)
+      if (!allSongs.length) {
+        message.warning('这个歌单里还没有歌曲')
+        return
+      }
+
+      await playPlaylist(allSongs)
+    } catch (error) {
+      message.error((error as Error).message)
+    } finally {
+      setPlayingAll(false)
+    }
+  }, [message, playPlaylist, playlist?.trackCount, playlistId, songs.length, total])
 
   const handleRename = useCallback(async () => {
     if (!playlistId || !newName.trim()) return
@@ -293,14 +381,34 @@ export default function MusicMyPlaylistDetailPage() {
               type="primary"
               size="large"
               icon={<Play size={16} fill="currentColor" />}
-              disabled={!songs.length}
+              disabled={!total && !songs.length}
+              loading={playingAll}
+              onClick={() => {
+                void handlePlayEntirePlaylist()
+              }}
+              className="music-hero-play-btn"
+            >
+              全部播放
+            </Button>
+            <Button
+              ghost
+              size="large"
+              icon={<Play size={16} />}
+              disabled={!songs.length || playingAll}
               onClick={() => {
                 if (!songs.length) return
                 void playPlaylist(songs)
               }}
-              className="music-hero-play-btn"
+              style={{
+                height: 48,
+                padding: '0 24px',
+                borderRadius: 16,
+                background: 'rgba(255, 255, 255, 0.1)',
+                borderColor: 'rgba(255, 255, 255, 0.2)',
+                color: '#fff',
+              }}
             >
-              播放全部
+              播放本页
             </Button>
             <Button
               ghost
@@ -308,6 +416,7 @@ export default function MusicMyPlaylistDetailPage() {
               icon={<RefreshCcw size={16} />}
               onClick={() => void loadDetail()}
               loading={loading}
+              disabled={playingAll}
               className="music-hero-refresh-btn"
             >
               刷新
