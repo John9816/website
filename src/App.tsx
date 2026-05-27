@@ -15,7 +15,6 @@ const MusicLayout = lazy(() => import('./pages/MusicLayout'))
 const MusicPage = lazy(() => import('./pages/MusicPage'))
 const AiChatPage = lazy(() => import('./pages/AiChatPage'))
 const AiImagePage = lazy(() => import('./pages/AiImagePage'))
-const AgentPage = lazy(() => import('./pages/AgentPage'))
 const MusicPlaylistDetailPage = lazy(
   () => import('./pages/MusicPlaylistDetailPage'),
 )
@@ -78,7 +77,6 @@ export default function App() {
                   <Route path="/" element={<HomePage />} />
                   <Route path="/ai-chat" element={<AiChatPage />} />
                   <Route path="/ai-image" element={<AiImagePage />} />
-                  <Route path="/agent" element={<AgentPage />} />
                   <Route path="/kb/share/:token" element={<KbSharePage />} />
                   <Route path="/music" element={<MusicLayout />}>
                     <Route index element={<MusicPage />} />
