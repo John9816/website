@@ -49,33 +49,27 @@ export default function MusicLayout() {
           <RouterNavLink
             to="/"
             end
-            className={({ isActive }) => `topbar-nav__link${isActive ? ' is-active' : ''}`}
+            className={({ isActive }) => `topbar-nav__link`}
           >
             导航
           </RouterNavLink>
           <RouterNavLink
             to="/music"
-            className={({ isActive }) => `topbar-nav__link${isActive ? ' is-active' : ''}`}
+            className={({ isActive }) => `topbar-nav__link`}
           >
             音乐
           </RouterNavLink>
           <RouterNavLink
             to="/ai-chat"
-            className={({ isActive }) => `topbar-nav__link${isActive ? ' is-active' : ''}`}
+            className={({ isActive }) => `topbar-nav__link`}
           >
             AI对话
           </RouterNavLink>
           <RouterNavLink
             to="/ai-image"
-            className={({ isActive }) => `topbar-nav__link${isActive ? ' is-active' : ''}`}
+            className={({ isActive }) => `topbar-nav__link`}
           >
             AI生图
-          </RouterNavLink>
-          <RouterNavLink
-            to="/agent"
-            className={({ isActive }) => `topbar-nav__link${isActive ? ' is-active' : ''}`}
-          >
-            Agent
           </RouterNavLink>
         </nav>
 
@@ -96,7 +90,7 @@ export default function MusicLayout() {
         </div>
       </header>
 
-      <div className={`music-body ${current ? 'music-body--with-player' : ''}`}>
+      <div className={`music-body `}>
         <Outlet />
       </div>
 
