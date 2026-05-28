@@ -1,10 +1,10 @@
 import { Suspense, lazy, useEffect, useRef } from 'react'
-import { Link as RouterLink, NavLink as RouterNavLink, Outlet } from 'react-router-dom'
+import { Link as RouterLink, Outlet } from 'react-router-dom'
 import { LogIn, Settings } from 'lucide-react'
+import TopbarNav from '../components/TopbarNav'
 import TopbarUserMenu from '../components/TopbarUserMenu'
 import ThemeToggle from '../components/ThemeToggle'
 import { useAuth } from '../context/AuthContext'
-import { useMusicPlayer } from '../context/MusicPlayerContext'
 import '../styles/topbar.css'
 import '../styles/music.css'
 
@@ -12,7 +12,6 @@ const MusicPlayerBar = lazy(() => import('../components/MusicPlayerBar'))
 
 export default function MusicLayout() {
   const auth = useAuth()
-  const { current } = useMusicPlayer()
   const pageRef = useRef<HTMLDivElement | null>(null)
   const topbarRef = useRef<HTMLElement | null>(null)
 
@@ -45,33 +44,7 @@ export default function MusicLayout() {
           <span className="brand-title">我的导航</span>
         </RouterLink>
 
-        <nav className="topbar-nav" aria-label="主导航">
-          <RouterNavLink
-            to="/"
-            end
-            className={({ isActive }) => `topbar-nav__link`}
-          >
-            导航
-          </RouterNavLink>
-          <RouterNavLink
-            to="/music"
-            className={({ isActive }) => `topbar-nav__link`}
-          >
-            音乐
-          </RouterNavLink>
-          <RouterNavLink
-            to="/ai-chat"
-            className={({ isActive }) => `topbar-nav__link`}
-          >
-            AI对话
-          </RouterNavLink>
-          <RouterNavLink
-            to="/ai-image"
-            className={({ isActive }) => `topbar-nav__link`}
-          >
-            AI生图
-          </RouterNavLink>
-        </nav>
+        <TopbarNav />
 
         <div className="topbar-actions">
           {auth.token ? (

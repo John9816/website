@@ -56,10 +56,13 @@
 
 .topbar-nav {
   justify-self: center;
+  position: relative;
+  isolation: isolate;
   display: inline-flex;
   align-items: center;
   gap: 6px;
   padding: 6px;
+  overflow: hidden;
   background: var(--panel);
   border: 1px solid var(--border);
   border-radius: 999px;
@@ -67,7 +70,43 @@
   transition: padding 0.28s ease, gap 0.28s ease;
 }
 
+.topbar-nav__indicator {
+  position: absolute;
+  top: 6px;
+  bottom: 6px;
+  left: 0;
+  z-index: 0;
+  width: var(--topbar-indicator-width, 88px);
+  border-radius: 999px;
+  background:
+    linear-gradient(
+      135deg,
+      color-mix(in srgb, var(--accent) 20%, transparent),
+      color-mix(in srgb, var(--accent) 10%, transparent)
+    ),
+    var(--accent-soft);
+  box-shadow:
+    inset 0 0 0 1px color-mix(in srgb, var(--accent) 12%, transparent),
+    0 8px 18px color-mix(in srgb, var(--accent) 10%, transparent);
+  opacity: 0;
+  transform: translateX(var(--topbar-indicator-left, 6px)) scaleX(0.82);
+  transform-origin: left center;
+  transition:
+    transform 0.34s cubic-bezier(0.2, 0.82, 0.2, 1),
+    width 0.34s cubic-bezier(0.2, 0.82, 0.2, 1),
+    opacity 0.16s ease,
+    background-color 0.24s ease,
+    box-shadow 0.24s ease;
+}
+
+.topbar-nav__indicator.is-ready {
+  opacity: 1;
+  transform: translateX(var(--topbar-indicator-left, 6px)) scaleX(1);
+}
+
 .topbar-nav__link {
+  position: relative;
+  z-index: 1;
   display: inline-flex;
   align-items: center;
   justify-content: center;
@@ -78,22 +117,70 @@
   text-decoration: none;
   font-size: 14px;
   font-weight: 600;
+  outline: none;
+  will-change: transform;
   transition:
     min-width 0.28s ease,
     padding 0.28s ease,
-    background 0.15s ease,
-    color 0.15s ease,
-    transform 0.15s ease;
+    color 0.2s ease,
+    transform 0.2s cubic-bezier(0.2, 0.82, 0.2, 1);
+}
+
+.topbar-nav__link::before {
+  content: '';
+  position: absolute;
+  inset: 2px;
+  z-index: -1;
+  border-radius: inherit;
+  background: var(--hover);
+  opacity: 0;
+  transform: scale(0.92);
+  transition:
+    opacity 0.18s ease,
+    transform 0.18s cubic-bezier(0.2, 0.82, 0.2, 1);
+}
+
+.topbar-nav__label {
+  display: inline-block;
+  transform: translateY(0);
+  transition: transform 0.2s cubic-bezier(0.2, 0.82, 0.2, 1);
 }
 
 .topbar-nav__link:hover {
   color: var(--text);
-  background: var(--hover);
+  transform: translateY(-1px);
+}
+
+.topbar-nav__link:hover::before,
+.topbar-nav__link:focus-visible::before {
+  opacity: 1;
+  transform: scale(1);
+}
+
+.topbar-nav__link:focus-visible {
+  color: var(--text);
+  box-shadow: 0 0 0 2px color-mix(in srgb, var(--accent) 34%, transparent);
+}
+
+.topbar-nav__link:active {
+  transform: translateY(0) scale(0.98);
 }
 
 .topbar-nav__link.is-active {
   color: var(--accent);
-  background: var(--accent-soft);
+}
+
+.topbar-nav__link.is-active::before {
+  opacity: 0;
+}
+
+.topbar-nav__link.is-active .topbar-nav__label,
+.topbar-nav__link.is-transitioning .topbar-nav__label {
+  transform: translateY(-1px);
+}
+
+.topbar-nav__link.is-transitioning {
+  color: var(--accent);
 }
 
 .topbar-actions {
@@ -380,5 +467,61 @@
 
   .topbar-user-card {
     width: min(300px, calc(100vw - 28px));
+  }
+}
+
+@keyframes topbar-page-out {
+  from {
+    opacity: 1;
+    transform: translateY(0) scale(1);
+    filter: blur(0);
+  }
+  to {
+    opacity: 0;
+    transform: translateY(-6px) scale(0.995);
+    filter: blur(2px);
+  }
+}
+
+@keyframes topbar-page-in {
+  from {
+    opacity: 0;
+    transform: translateY(8px) scale(0.998);
+    filter: blur(2px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0) scale(1);
+    filter: blur(0);
+  }
+}
+
+::view-transition-old(root) {
+  animation: topbar-page-out 0.18s ease both;
+}
+
+::view-transition-new(root) {
+  animation: topbar-page-in 0.26s 0.04s cubic-bezier(0.2, 0.82, 0.2, 1) both;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .topbar,
+  .topbar-brand,
+  .topbar-nav,
+  .topbar-nav__indicator,
+  .topbar-nav__link,
+  .topbar-nav__link::before,
+  .topbar-nav__label,
+  .topbar-actions,
+  .topbar-action,
+  .topbar-actions .theme-toggle,
+  .topbar-user-trigger {
+    transition-duration: 0.01ms !important;
+    animation-duration: 0.01ms !important;
+  }
+
+  ::view-transition-old(root),
+  ::view-transition-new(root) {
+    animation: none;
   }
 }

@@ -27,7 +27,7 @@ import {
   StopCircle,
   Upload,
 } from 'lucide-react'
-import { Link as RouterLink, NavLink as RouterNavLink } from 'react-router-dom'
+import { Link as RouterLink } from 'react-router-dom'
 import {
   createAiConversation,
   fetchAiMessageAudio,
@@ -40,6 +40,7 @@ import {
 } from '../api/ai'
 import { ApiError } from '../api/client'
 import MessageMarkdown from '../components/MessageMarkdown'
+import TopbarNav from '../components/TopbarNav'
 import TopbarUserMenu from '../components/TopbarUserMenu'
 import ThemeToggle from '../components/ThemeToggle'
 import { useAuth } from '../context/AuthContext'
@@ -1186,39 +1187,7 @@ export default function AiChatPage() {
           <span>我的导航</span>
         </RouterLink>
 
-        <nav className="topbar-nav" aria-label="主导航">
-          <RouterNavLink
-            to="/"
-            end
-            className={({ isActive }) => `topbar-nav__link${isActive ? ' is-active' : ''}`}
-          >
-            导航
-          </RouterNavLink>
-          <RouterNavLink
-            to="/music"
-            className={({ isActive }) => `topbar-nav__link${isActive ? ' is-active' : ''}`}
-          >
-            音乐
-          </RouterNavLink>
-          <RouterNavLink
-            to="/ai-chat"
-            className={({ isActive }) => `topbar-nav__link${isActive ? ' is-active' : ''}`}
-          >
-            AI对话
-          </RouterNavLink>
-          <RouterNavLink
-            to="/ai-image"
-            className={({ isActive }) => `topbar-nav__link${isActive ? ' is-active' : ''}`}
-          >
-            AI生图
-          </RouterNavLink>
-          <RouterNavLink
-            to="/agent"
-            className={({ isActive }) => `topbar-nav__link${isActive ? ' is-active' : ''}`}
-          >
-            Agent
-          </RouterNavLink>
-        </nav>
+        <TopbarNav />
 
         <div className="topbar-actions" aria-label="站点操作">
           {auth.token ? (

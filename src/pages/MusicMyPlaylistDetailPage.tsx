@@ -6,7 +6,6 @@ import { DEFAULT_PAGE_SIZE } from '../constants/pagination'
 import { useAuth } from '../context/AuthContext'
 import { useMusicPlayer } from '../context/MusicPlayerContext'
 import { useMusicFavorites } from '../hooks/useMusicFavorites'
-import { useMusicShares } from '../hooks/useMusicShares'
 import type { ImportedPlaylist, ImportedPlaylistItem, MusicQuality, MusicSourceId, SongSearchItem } from '../types'
 import { getImportedPlaylistDetail, removePlaylistItem, updateImportedPlaylist, deleteImportedPlaylist } from '../api/music'
 import MusicCover from '../components/MusicCover'
@@ -98,7 +97,6 @@ export default function MusicMyPlaylistDetailPage() {
   const playlistId = params.id ? Number(params.id) : null
   const songs = useMemo(() => (Array.isArray(items) ? items.map(toSongSearchItem) : []), [items])
   const favoriteState = useMusicFavorites(songs)
-  const shareState = useMusicShares(songs)
 
   const loadDetail = useCallback(async () => {
     if (!playlistId || Number.isNaN(playlistId)) return
@@ -307,13 +305,7 @@ export default function MusicMyPlaylistDetailPage() {
           fill={favoriteState.isFavorite(song) ? 'currentColor' : 'none'}
         />
       </button>
-      <MusicShareAction
-        song={song}
-        shared={shareState.isShared(song)}
-        loading={shareState.isShareLoading(song)}
-        initialShare={shareState.getShare(song)}
-        onChange={(share) => shareState.setShare(song, share)}
-      />
+      <MusicShareAction song={song} />
       <Popconfirm title="确定要从歌单中移除这首歌吗？" onConfirm={() => void handleRemoveItem(song)}>
         <button
           type="button"

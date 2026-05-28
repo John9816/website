@@ -1,10 +1,11 @@
 import { useEffect, useState } from 'react'
 import { App as AntApp } from 'antd'
 import { LoaderCircle, LogIn, RefreshCw, Settings, Sparkles } from 'lucide-react'
-import { Link as RouterLink, NavLink as RouterNavLink } from 'react-router-dom'
+import { Link as RouterLink } from 'react-router-dom'
 import { listSharedImages } from '../api/public'
 import ImageStudio from '../components/ImageStudio'
 import ImagePreviewOverlay from '../components/ImagePreviewOverlay'
+import TopbarNav from '../components/TopbarNav'
 import TopbarUserMenu from '../components/TopbarUserMenu'
 import ThemeToggle from '../components/ThemeToggle'
 import { DEFAULT_PAGE_SIZE } from '../constants/pagination'
@@ -55,39 +56,7 @@ export default function AiImagePage() {
           <span>我的导航</span>
         </RouterLink>
 
-        <nav className="topbar-nav" aria-label="主导航">
-          <RouterNavLink
-            to="/"
-            end
-            className={({ isActive }) => `topbar-nav__link${isActive ? ' is-active' : ''}`}
-          >
-            导航
-          </RouterNavLink>
-          <RouterNavLink
-            to="/music"
-            className={({ isActive }) => `topbar-nav__link${isActive ? ' is-active' : ''}`}
-          >
-            音乐
-          </RouterNavLink>
-          <RouterNavLink
-            to="/ai-chat"
-            className={({ isActive }) => `topbar-nav__link${isActive ? ' is-active' : ''}`}
-          >
-            AI对话
-          </RouterNavLink>
-          <RouterNavLink
-            to="/ai-image"
-            className={({ isActive }) => `topbar-nav__link${isActive ? ' is-active' : ''}`}
-          >
-            AI生图
-          </RouterNavLink>
-          <RouterNavLink
-            to="/agent"
-            className={({ isActive }) => `topbar-nav__link${isActive ? ' is-active' : ''}`}
-          >
-            Agent
-          </RouterNavLink>
-        </nav>
+        <TopbarNav />
 
         <div className="topbar-actions" aria-label="站点操作">
           {auth.token ? (

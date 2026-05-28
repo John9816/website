@@ -29,7 +29,6 @@ import { DEFAULT_PAGE_SIZE, PAGE_SIZE_OPTIONS } from '../constants/pagination'
 import { useAuth } from '../context/AuthContext'
 import { useMusicPlayer } from '../context/MusicPlayerContext'
 import { useMusicFavorites } from '../hooks/useMusicFavorites'
-import { useMusicShares } from '../hooks/useMusicShares'
 import type {
   MusicFavoriteItem,
   MusicHistoryItem,
@@ -304,7 +303,6 @@ export default function MusicExplorer() {
   }, [favoriteSongs, historySongs, newSongsDetail?.list, searchResults, view])
 
   const favoriteState = useMusicFavorites(activeSongs)
-  const shareState = useMusicShares(activeSongs)
 
   const setView = useCallback(
     (nextView: MusicView) => {
@@ -630,8 +628,7 @@ export default function MusicExplorer() {
   const renderSongActions = (song: SongSearchItem) => (
     <>
       {auth.token ? (
-        <>
-          <button
+        <button
           type="button"
           className={`music-icon-action${favoriteState.isFavorite(song) ? ' is-active' : ''}`}
           disabled={favoriteState.isFavoriteLoading(song)}
@@ -646,16 +643,9 @@ export default function MusicExplorer() {
             size={16}
             fill={favoriteState.isFavorite(song) ? 'currentColor' : 'none'}
           />
-          </button>
-          <MusicShareAction
-            song={song}
-            shared={shareState.isShared(song)}
-            loading={shareState.isShareLoading(song)}
-            initialShare={shareState.getShare(song)}
-            onChange={(share) => shareState.setShare(song, share)}
-          />
-        </>
+        </button>
       ) : null}
+      <MusicShareAction song={song} />
       {view === 'history' ? (
         <button
           type="button"
@@ -789,8 +779,8 @@ export default function MusicExplorer() {
                         nextPageSize,
                       )
                     }}
-                    renderActions={auth.token ? renderSongActions : undefined}
-                    actionColumnWidth={auth.token ? 176 : 76}
+                    renderActions={renderSongActions}
+                    actionColumnWidth={auth.token ? 176 : 132}
                   />
                 </section>
               )}
@@ -983,8 +973,8 @@ export default function MusicExplorer() {
                   setNewSongsPageSize(nextPageSize)
                   setNewSongsPage(nextPageSize !== newSongsPageSize ? 1 : nextPage)
                 }}
-                renderActions={auth.token ? renderSongActions : undefined}
-                actionColumnWidth={auth.token ? 176 : 76}
+                renderActions={renderSongActions}
+                actionColumnWidth={auth.token ? 176 : 132}
               />
             </>
           )}

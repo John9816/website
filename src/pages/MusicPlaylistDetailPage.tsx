@@ -9,7 +9,6 @@ import MusicSongTable from '../components/MusicSongTable'
 import { DEFAULT_PAGE_SIZE } from '../constants/pagination'
 import { useMusicPlayer } from '../context/MusicPlayerContext'
 import { useMusicFavorites } from '../hooks/useMusicFavorites'
-import { useMusicShares } from '../hooks/useMusicShares'
 import type { MusicSourceId, PlaylistDetailView } from '../types'
 import { hydrateCollectionCovers, normalizeCoverUrl } from '../utils/musicPlayer'
 
@@ -54,7 +53,6 @@ export default function MusicPlaylistDetailPage() {
   const validSource = isMusicSourceId(source) ? source : null
   const routeCoverUrl = (location.state as MusicCollectionRouteState | null)?.coverUrl
   const favoriteState = useMusicFavorites(detail?.list ?? [])
-  const shareState = useMusicShares(detail?.list ?? [])
 
   const loadPage = useCallback(
     async (targetPage: number, options?: { autoplay?: boolean }) => {
@@ -127,10 +125,10 @@ export default function MusicPlaylistDetailPage() {
       } as CSSProperties)
     : undefined
 
-  const renderSongActions = favoriteState.canFavorite
-    ? (song: PlaylistDetailView['list'][number]) => (
-        <>
-          <button
+  const renderSongActions = (song: PlaylistDetailView['list'][number]) => (
+    <>
+      {favoriteState.canFavorite ? (
+        <button
           type="button"
           className={`music-icon-action${favoriteState.isFavorite(song) ? ' is-active' : ''}`}
           disabled={favoriteState.isFavoriteLoading(song)}
@@ -145,17 +143,11 @@ export default function MusicPlaylistDetailPage() {
             size={16}
             fill={favoriteState.isFavorite(song) ? 'currentColor' : 'none'}
           />
-          </button>
-          <MusicShareAction
-            song={song}
-            shared={shareState.isShared(song)}
-            loading={shareState.isShareLoading(song)}
-            initialShare={shareState.getShare(song)}
-            onChange={(share) => shareState.setShare(song, share)}
-          />
-        </>
-      )
-    : undefined
+        </button>
+      ) : null}
+      <MusicShareAction song={song} />
+    </>
+  )
 
   if (!validSource || !id) {
     return (
@@ -233,7 +225,7 @@ export default function MusicPlaylistDetailPage() {
           setPage(nextPageSize !== pageSize ? 1 : nextPage)
         }}
         renderActions={renderSongActions}
-        actionColumnWidth={favoriteState.canFavorite ? 176 : 76}
+        actionColumnWidth={favoriteState.canFavorite ? 176 : 132}
       />
     </div>
   )

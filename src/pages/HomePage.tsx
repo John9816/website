@@ -1,11 +1,12 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
-import { Link as RouterLink, NavLink as RouterNavLink } from 'react-router-dom'
+import { Link as RouterLink } from 'react-router-dom'
 import { ArrowUp, LogIn, Search, Settings, X } from 'lucide-react'
 import { getNav } from '../api/public'
 import type { CategoryWithLinks, NavLink } from '../types'
 import { useAuth } from '../context/AuthContext'
 import CategoryIcon from '../components/CategoryIcon'
 import LinkCard from '../components/LinkCard'
+import TopbarNav from '../components/TopbarNav'
 import TopbarUserMenu from '../components/TopbarUserMenu'
 import ThemeToggle from '../components/ThemeToggle'
 import '../styles/topbar.css'
@@ -132,33 +133,7 @@ export default function HomePage() {
           <span className="brand-text">我的导航</span>
         </RouterLink>
 
-        <nav className="topbar-nav" aria-label="主导航">
-          <RouterNavLink
-            to="/"
-            end
-            className={({ isActive }) => `topbar-nav__link${isActive ? ' is-active' : ''}`}
-          >
-            导航
-          </RouterNavLink>
-          <RouterNavLink
-            to="/music"
-            className={({ isActive }) => `topbar-nav__link${isActive ? ' is-active' : ''}`}
-          >
-            音乐
-          </RouterNavLink>
-          <RouterNavLink
-            to="/ai-chat"
-            className={({ isActive }) => `topbar-nav__link${isActive ? ' is-active' : ''}`}
-          >
-            AI对话
-          </RouterNavLink>
-          <RouterNavLink
-            to="/ai-image"
-            className={({ isActive }) => `topbar-nav__link${isActive ? ' is-active' : ''}`}
-          >
-            AI生图
-          </RouterNavLink>
-        </nav>
+        <TopbarNav />
 
         <div className="topbar-actions" aria-label="站点操作">
           {auth.token ? (
