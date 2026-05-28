@@ -28,6 +28,7 @@
     "@tiptap/pm": "^3.23.4",
     "@tiptap/react": "^3.23.4",
     "@tiptap/starter-kit": "^3.23.4",
+    "@tiptap/suggestion": "^3.23.4",
     "antd": "^5.22.0",
     "colorthief": "^2.7.0",
     "fast-average-color": "^9.5.2",
@@ -38,7 +39,8 @@
     "react-dom": "^18.3.1",
     "react-markdown": "^9.1.0",
     "react-router-dom": "^6.28.0",
-    "remark-gfm": "^4.0.1"
+    "remark-gfm": "^4.0.1",
+    "tippy.js": "^6.3.7"
   },
   "devDependencies": {
     "@types/node": "^25.6.0",

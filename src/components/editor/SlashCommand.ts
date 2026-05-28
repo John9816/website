@@ -1,5 +1,9 @@
 import { Extension, type Editor, type Range } from '@tiptap/core'
-import Suggestion, { type SuggestionOptions } from '@tiptap/suggestion'
+import Suggestion, {
+  type SuggestionKeyDownProps,
+  type SuggestionOptions,
+  type SuggestionProps,
+} from '@tiptap/suggestion'
 import { ReactRenderer } from '@tiptap/react'
 import tippy, { type Instance as TippyInstance } from 'tippy.js'
 import {
@@ -23,6 +27,10 @@ import { EDITOR_TEXT } from './texts'
 interface SlashCommandStorage {
   onInsertImage?: () => void
 }
+
+type SlashCommandSuggestionOptions = SuggestionOptions<SlashCommandItem, SlashCommandItem>
+type SlashCommandSuggestionProps = SuggestionProps<SlashCommandItem, SlashCommandItem>
+type SlashCommandItemsProps = { query: string; editor: Editor }
 
 const defaultItems = ({ onInsertImage }: { onInsertImage?: () => void }): SlashCommandItem[] => [
   {
@@ -111,13 +119,13 @@ const defaultItems = ({ onInsertImage }: { onInsertImage?: () => void }): SlashC
   },
 ]
 
-const renderSuggestion: SuggestionOptions<SlashCommandItem>['render'] = () => {
+const renderSuggestion: SlashCommandSuggestionOptions['render'] = () => {
   let component: ReactRenderer<SlashCommandListHandle> | null = null
   let popup: TippyInstance | null = null
   let cachedRect: DOMRect | null = null
 
   return {
-    onStart: (props) => {
+    onStart: (props: SlashCommandSuggestionProps) => {
       component = new ReactRenderer(SlashCommandList, {
         props,
         editor: props.editor,
@@ -136,7 +144,7 @@ const renderSuggestion: SuggestionOptions<SlashCommandItem>['render'] = () => {
         placement: 'bottom-start',
       })
     },
-    onUpdate: (props) => {
+    onUpdate: (props: SlashCommandSuggestionProps) => {
       component?.updateProps(props)
       if (props.clientRect) {
         const fallback = cachedRect
@@ -145,7 +153,7 @@ const renderSuggestion: SuggestionOptions<SlashCommandItem>['render'] = () => {
         })
       }
     },
-    onKeyDown: (props) => {
+    onKeyDown: (props: SuggestionKeyDownProps) => {
       if (props.event.key === 'Escape') {
         popup?.hide()
         return true
@@ -163,7 +171,7 @@ const renderSuggestion: SuggestionOptions<SlashCommandItem>['render'] = () => {
 }
 
 export interface SlashCommandOptions {
-  suggestion: Omit<SuggestionOptions<SlashCommandItem>, 'editor'>
+  suggestion: Omit<SlashCommandSuggestionOptions, 'editor'>
   onInsertImage?: () => void
 }
 
@@ -188,7 +196,7 @@ export const SlashCommand = Extension.create<SlashCommandOptions, SlashCommandSt
         }) => {
           props.command({ editor, range })
         },
-        items: ({ query }: { query: string }): SlashCommandItem[] => {
+        items: ({ query }: SlashCommandItemsProps): SlashCommandItem[] => {
           // `this` is the extension instance — but `items` runs without `this`
           // so we capture options via closure created in `addProseMirrorPlugins`
           return filterItems(defaultItems({}), query)
@@ -210,7 +218,7 @@ export const SlashCommand = Extension.create<SlashCommandOptions, SlashCommandSt
       Suggestion<SlashCommandItem>({
         editor: this.editor,
         ...this.options.suggestion,
-        items: ({ query }) =>
+        items: ({ query }: SlashCommandItemsProps) =>
           filterItems(
             defaultItems({ onInsertImage: extension.storage.onInsertImage }),
             query,
