@@ -1,12 +1,11 @@
-import { useEffect, useState } from 'react'
+import { type CSSProperties, useEffect, useMemo, useState } from 'react'
 import { App as AntApp } from 'antd'
-import { LoaderCircle, LogIn, RefreshCw, Settings, Sparkles } from 'lucide-react'
+import { ImageIcon, LoaderCircle, LogIn, RefreshCw, Sparkles } from 'lucide-react'
 import { Link as RouterLink } from 'react-router-dom'
 import { listSharedImages } from '../api/public'
 import ImageStudio from '../components/ImageStudio'
 import ImagePreviewOverlay from '../components/ImagePreviewOverlay'
 import TopbarNav from '../components/TopbarNav'
-import TopbarUserMenu from '../components/TopbarUserMenu'
 import ThemeToggle from '../components/ThemeToggle'
 import { DEFAULT_PAGE_SIZE } from '../constants/pagination'
 import { useAuth } from '../context/AuthContext'
@@ -22,11 +21,17 @@ export default function AiImagePage() {
   const { message } = AntApp.useApp()
   const auth = useAuth()
   const mainClassName = `ai-chat__main${auth.token ? ' ai-chat__main--authenticated' : ''}`
+  const pageClassName = `ai-chat${auth.token ? ' ai-chat--image-authenticated' : ''}`
   const [sharedItems, setSharedItems] = useState<GeneratedImageView[]>([])
   const [sharedTotal, setSharedTotal] = useState(0)
   const [sharedPage, setSharedPage] = useState(1)
   const [sharedLoading, setSharedLoading] = useState(false)
   const [previewUrl, setPreviewUrl] = useState<string | null>(null)
+
+  const pageCount = useMemo(
+    () => Math.max(1, Math.ceil(sharedTotal / SHARED_PAGE_SIZE)),
+    [sharedTotal],
+  )
 
   const loadShared = async (nextPage = sharedPage) => {
     setSharedLoading(true)
@@ -49,31 +54,25 @@ export default function AiImagePage() {
   }, [auth.token])
 
   return (
-    <div className="ai-chat">
-      <header className="topbar">
-        <RouterLink to="/" className="topbar-brand" aria-label="返回首页">
-          <span className="brand-dot" />
-          <span>我的导航</span>
-        </RouterLink>
+    <div className={pageClassName}>
+      {!auth.token && (
+        <header className="topbar">
+          <RouterLink to="/" className="topbar-brand" aria-label="返回首页">
+            <span className="brand-dot" />
+            <span>我的导航</span>
+          </RouterLink>
 
-        <TopbarNav />
+          <TopbarNav />
 
-        <div className="topbar-actions" aria-label="站点操作">
-          {auth.token ? (
-            <RouterLink to="/admin" className="topbar-action">
-              <Settings size={16} />
-              <span>管理</span>
-            </RouterLink>
-          ) : (
+          <div className="topbar-actions" aria-label="站点操作">
             <RouterLink to="/login" className="topbar-action" state={{ from: '/ai-image' }}>
               <LogIn size={16} />
               <span>登录</span>
             </RouterLink>
-          )}
-          <ThemeToggle />
-          {auth.token && <TopbarUserMenu />}
-        </div>
-      </header>
+            <ThemeToggle />
+          </div>
+        </header>
+      )}
 
       <main className={mainClassName}>
         {auth.token ? (
@@ -115,117 +114,105 @@ export default function AiImagePage() {
               </article>
             </section>
 
-            <section className="ai-image-page__shared">
+            <section className="ai-image-page__shared" aria-labelledby="shared-gallery-title">
               <div className="ai-image-page__shared-head">
                 <div>
                   <div className="ai-chat__eyebrow">
-                    <Sparkles size={14} />
+                    <ImageIcon size={14} />
                     <span>Public Share</span>
                   </div>
-                  <h2>公开分享广场</h2>
-                  <p>这里会展示用户主动公开的图片作品。登录后你也可以把自己的图片发布到这里。</p>
+                  <h2 id="shared-gallery-title">公开分享广场</h2>
+                  <p>这里展示用户主动公开的图片作品。登录后，你也可以把自己的作品发布到这里。</p>
                 </div>
                 <button
                   type="button"
-                  className="admin-image__refresh-btn"
+                  className="ai-image-page__refresh"
                   onClick={() => void loadShared(sharedPage)}
                   disabled={sharedLoading}
                 >
                   {sharedLoading ? (
-                    <LoaderCircle size={14} className="admin-image__spinner" />
+                    <LoaderCircle size={15} className="admin-image__spinner" />
                   ) : (
-                    <RefreshCw size={14} />
+                    <RefreshCw size={15} />
                   )}
-                  刷新
+                  <span>刷新</span>
                 </button>
               </div>
 
+              <div className="ai-image-page__shared-toolbar">
+                <span>{sharedTotal ? `${sharedTotal} 张公开作品` : '公开作品'}</span>
+                <span>点击图片可预览大图</span>
+              </div>
+
               {sharedLoading && !sharedItems.length ? (
-                <div className="admin-image__grid">
-                  {Array.from({ length: 6 }).map((_, index) => (
-                    <div key={index} className="admin-image__skeleton-card">
-                      <div className="admin-image__skeleton-img" />
-                      <div className="admin-image__skeleton-text" style={{ width: '70%' }} />
-                      <div
-                        className="admin-image__skeleton-text"
-                        style={{ width: '40%', marginBottom: 12 }}
-                      />
+                <div className="ai-image-page__gallery" aria-label="公开图片加载中">
+                  {Array.from({ length: 8 }).map((_, index) => (
+                    <div key={index} className="ai-image-page__gallery-card is-loading">
+                      <div className="ai-image-page__gallery-skeleton-image" />
+                      <div className="ai-image-page__gallery-skeleton-line is-wide" />
+                      <div className="ai-image-page__gallery-skeleton-line" />
                     </div>
                   ))}
                 </div>
               ) : !sharedItems.length ? (
                 <div className="ai-image-page__shared-empty">
-                  <Sparkles size={30} />
+                  <ImageIcon size={32} />
                   <p>还没有公开分享的图片。</p>
                 </div>
               ) : (
                 <>
-                  <div className="admin-image__grid">
+                  <div className="ai-image-page__gallery">
                     {sharedItems.map((item) => (
-                      <div key={item.id} className="admin-image__card">
-                        <div
-                          className="admin-image__card-img-wrap"
-                          onClick={() => item.imageUrl && setPreviewUrl(item.imageUrl)}
-                        >
-                          <img
-                            src={item.imageUrl}
-                            alt={item.prompt}
-                            className="admin-image__card-img"
-                            loading="lazy"
-                          />
+                      <article key={item.id} className="ai-image-page__gallery-card">
+                        {item.imageUrl ? (
+                          <button
+                            type="button"
+                            className="ai-image-page__gallery-image"
+                            style={imageAspectStyle(item.size)}
+                            onClick={() => setPreviewUrl(item.imageUrl)}
+                            aria-label={`预览图片：${item.prompt || '公开作品'}`}
+                          >
+                            <img src={item.imageUrl} alt={item.prompt || '公开图片'} loading="lazy" />
+                          </button>
+                        ) : (
+                          <div className="ai-image-page__gallery-image ai-image-page__gallery-image--empty">
+                            <ImageIcon size={28} />
+                          </div>
+                        )}
+                        <div className="ai-image-page__gallery-body">
+                          <p className="ai-image-page__gallery-prompt" title={item.prompt}>
+                            {item.prompt || '未命名图片'}
+                          </p>
+                          <div className="ai-image-page__gallery-meta">
+                            <span>{item.model || 'image model'}</span>
+                            {item.size && <span>{item.size}</span>}
+                            <span>公开作品</span>
+                          </div>
+                          <time className="ai-image-page__gallery-time" dateTime={item.createdAt}>
+                            {formatTime(item.createdAt)}
+                          </time>
                         </div>
-                        <div className="admin-image__card-body">
-                          <div className="admin-image__card-prompt" title={item.prompt}>
-                            {item.prompt}
-                          </div>
-                          <div className="admin-image__card-meta">
-                            <span className="admin-image__card-model">{item.model}</span>
-                            {item.size && (
-                              <span className="admin-image__card-chip">{item.size}</span>
-                            )}
-                            <span className="admin-image__card-chip admin-image__card-chip--shared">
-                              公开作品
-                            </span>
-                          </div>
-                          <div className="admin-image__card-footer">
-                            <span className="admin-image__card-time">
-                              {formatTime(item.createdAt)}
-                            </span>
-                          </div>
-                        </div>
-                      </div>
+                      </article>
                     ))}
                   </div>
 
                   {sharedTotal > SHARED_PAGE_SIZE && (
-                    <div
-                      style={{
-                        display: 'flex',
-                        justifyContent: 'center',
-                        padding: '20px 0 0',
-                        gap: 8,
-                        flexWrap: 'wrap',
-                      }}
-                    >
-                      {Array.from({ length: Math.ceil(sharedTotal / SHARED_PAGE_SIZE) }).map(
-                        (_, index) => (
+                    <nav className="ai-image-page__pagination" aria-label="公开图片分页">
+                      {Array.from({ length: pageCount }).map((_, index) => {
+                        const nextPage = index + 1
+                        return (
                           <button
-                            key={index}
+                            key={nextPage}
                             type="button"
-                            className="admin-image__refresh-btn"
-                            style={{
-                              background: sharedPage === index + 1 ? 'var(--text)' : undefined,
-                              color: sharedPage === index + 1 ? 'var(--bg)' : undefined,
-                              borderColor:
-                                sharedPage === index + 1 ? 'var(--text)' : undefined,
-                            }}
-                            onClick={() => void loadShared(index + 1)}
+                            className={sharedPage === nextPage ? 'is-active' : ''}
+                            onClick={() => void loadShared(nextPage)}
+                            aria-current={sharedPage === nextPage ? 'page' : undefined}
                           >
-                            {index + 1}
+                            {nextPage}
                           </button>
-                        ),
-                      )}
-                    </div>
+                        )
+                      })}
+                    </nav>
                   )}
                 </>
               )}
@@ -241,17 +228,27 @@ export default function AiImagePage() {
   )
 }
 
+function imageAspectStyle(size?: string | null): CSSProperties {
+  const match = size?.match(/(\d+)\s*[xX*]\s*(\d+)/)
+  if (!match) return { aspectRatio: '1 / 1' }
+  const width = Number(match[1])
+  const height = Number(match[2])
+  if (!width || !height) return { aspectRatio: '1 / 1' }
+  return { aspectRatio: `${width} / ${height}` }
+}
+
 function formatTime(value: string) {
   if (!value) return ''
-  const date = new Date(value.replace(' ', 'T'))
+  const date = new Date(`${value.replace(' ', 'T')}Z`)
   if (Number.isNaN(date.getTime())) return value
   const now = new Date()
   const today = new Date(now.getFullYear(), now.getMonth(), now.getDate()).getTime()
   const time = date.getTime()
   const hh = String(date.getHours()).padStart(2, '0')
   const mm = String(date.getMinutes()).padStart(2, '0')
-  if (time >= today) return `${hh}:${mm}`
+  const ss = String(date.getSeconds()).padStart(2, '0')
+  if (time >= today) return `${hh}:${mm}:${ss}`
   const month = String(date.getMonth() + 1).padStart(2, '0')
   const day = String(date.getDate()).padStart(2, '0')
-  return `${month}-${day} ${hh}:${mm}`
+  return `${month}-${day} ${hh}:${mm}:${ss}`
 }

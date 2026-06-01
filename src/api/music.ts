@@ -7,7 +7,6 @@ import type {
   MusicQuality,
   MusicHistoryItem,
   MusicPlaylistSourceId,
-  MusicShareView,
   MusicSourceId,
   PageView,
   PlaylistDetailView,
@@ -20,6 +19,7 @@ import type {
   ImportedPlaylistItem,
   ImportPlaylistRequest,
   UpdatePlaylistRequest,
+  MusicSearchType,
 } from '../types'
 import { DEFAULT_PAGE_SIZE } from '../constants/pagination'
 
@@ -28,9 +28,16 @@ export const musicSearch = (
   keyword: string,
   page = 1,
   pageSize = DEFAULT_PAGE_SIZE,
+  type: MusicSearchType = 'song',
 ) =>
   request<SearchResultView>('/api/v1/music/search', {
-    query: { source, keyword, page, pageSize },
+    query: {
+      source,
+      keyword,
+      page,
+      pageSize,
+      type: type === 'song' ? undefined : type,
+    },
   })
 
 export const musicPlay = (
@@ -101,12 +108,6 @@ export interface MusicFavoritePayload {
   durationSec?: number
 }
 
-export interface MusicSharePayload extends MusicFavoritePayload {
-  requestedQuality?: MusicQuality
-  expiresAt?: string | null
-  rotateToken?: boolean
-}
-
 export const getMusicHistory = (page = 0, size = DEFAULT_PAGE_SIZE) =>
   request<PageView<MusicHistoryItem>>('/api/user/music/history', {
     auth: true,
@@ -151,26 +152,6 @@ export const getMusicFavoriteStatuses = (source: MusicSourceId, songIds: string[
     method: 'POST',
     auth: true,
     body: { source, songIds },
-  })
-
-export const getMusicShareStatus = (source: MusicSourceId, songId: string) =>
-  request<MusicShareView | null>('/api/user/music/shares/status', {
-    auth: true,
-    query: { source, songId },
-  })
-
-export const saveMusicShare = (body: MusicSharePayload) =>
-  request<MusicShareView>('/api/user/music/shares', {
-    method: 'POST',
-    auth: true,
-    body,
-  })
-
-export const deleteMusicShare = (source: MusicSourceId, songId: string) =>
-  request<void>('/api/user/music/shares', {
-    method: 'DELETE',
-    auth: true,
-    query: { source, songId },
   })
 
 export const getPublicMusicShare = (token: string) =>

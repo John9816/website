@@ -51,6 +51,7 @@ type Options = {
 export async function request<T>(path: string, opts: Options = {}): Promise<T> {
   const { method = 'GET', body, auth = false, query, signal } = opts
   const url = new URL(BASE + path, window.location.origin)
+  const isFormData = typeof FormData !== 'undefined' && body instanceof FormData
   if (query) {
     for (const [k, v] of Object.entries(query)) {
       if (Array.isArray(v)) {
@@ -66,7 +67,7 @@ export async function request<T>(path: string, opts: Options = {}): Promise<T> {
   }
 
   const headers: Record<string, string> = {}
-  if (body !== undefined) headers['Content-Type'] = 'application/json'
+  if (body !== undefined && !isFormData) headers['Content-Type'] = 'application/json'
   if (auth) {
     const t = getToken()
     if (t) headers['Authorization'] = `${getTokenType()} ${t}`
@@ -77,7 +78,7 @@ export async function request<T>(path: string, opts: Options = {}): Promise<T> {
     res = await fetch(url.toString(), {
       method,
       headers,
-      body: body === undefined ? undefined : JSON.stringify(body),
+      body: body === undefined ? undefined : isFormData ? body : JSON.stringify(body),
       signal,
     })
   } catch (e) {

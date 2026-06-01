@@ -7,7 +7,9 @@
     "dev": "vite",
     "build": "tsc --noEmit && vite build",
     "preview": "vite preview",
-    "lint": "tsc --noEmit"
+    "lint": "tsc --noEmit",
+    "pages:dev": "npm run build && npx wrangler pages dev dist",
+    "pages:deploy": "npm run build && npx wrangler pages deploy dist"
   },
   "dependencies": {
     "@tiptap/extension-code-block-lowlight": "^3.23.4",

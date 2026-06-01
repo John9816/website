@@ -8,6 +8,10 @@ const FORWARDED_RESPONSE_HEADERS = [
   'last-modified',
 ] as const
 
+type PagesContext = {
+  request: Request
+}
+
 function json(status: number, body: Record<string, string>) {
   return new Response(JSON.stringify(body), {
     status,
@@ -113,7 +117,7 @@ async function proxy(request: Request, method: 'GET' | 'HEAD') {
     if (value) headers.set(name, value)
   }
 
-  headers.set('X-Image-Proxy', 'vercel')
+  headers.set('X-Image-Proxy', 'cloudflare-pages')
 
   return new Response(method === 'HEAD' ? null : upstream.body, {
     status: upstream.status,
@@ -121,10 +125,10 @@ async function proxy(request: Request, method: 'GET' | 'HEAD') {
   })
 }
 
-export function GET(request: Request) {
-  return proxy(request, 'GET')
-}
+export function onRequest({ request }: PagesContext) {
+  if (request.method === 'GET' || request.method === 'HEAD') {
+    return proxy(request, request.method)
+  }
 
-export function HEAD(request: Request) {
-  return proxy(request, 'HEAD')
+  return json(405, { message: 'Method not allowed.' })
 }

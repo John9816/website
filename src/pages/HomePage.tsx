@@ -64,6 +64,15 @@ export default function HomePage() {
       .filter((category) => category.links.length > 0)
   }, [categories, filterLinks, normalizedQuery])
 
+  const visibleLinkCount = useMemo(
+    () =>
+      visibleCategories.reduce(
+        (total, category) => total + (category.links?.length ?? 0),
+        0,
+      ),
+    [visibleCategories],
+  )
+
   useEffect(() => {
     const root = contentRef.current
     if (!root || !visibleCategories.length) return
@@ -154,10 +163,9 @@ export default function HomePage() {
 
       <aside className="sidebar">
         <div className="sidebar-head">
-          <span className="sidebar-kicker">
-            {normalizedQuery ? '搜索结果' : '分类导航'}
+          <span className="sidebar-meta">
+            {visibleCategories.length} 个分类 · {visibleLinkCount} 个链接
           </span>
-          <span className="sidebar-meta">{visibleCategories.length} 个分类</span>
         </div>
         <nav className="side-nav" aria-label="分类导航">
           {visibleCategories.map((category) => (
@@ -170,6 +178,7 @@ export default function HomePage() {
             >
               <CategoryIcon icon={category.icon} size={18} />
               <span className="side-item-name">{category.name}</span>
+              <span className="side-item-count">{category.links?.length ?? 0}</span>
             </button>
           ))}
           {!visibleCategories.length && !error && !normalizedQuery && (
@@ -180,14 +189,7 @@ export default function HomePage() {
 
       <main ref={contentRef} className="content">
         <header className="hero">
-          <div>
-            <h1>
-              <span className="hero-title">Hello</span>{' '}
-              <span className="hero-emoji">👋</span>
-            </h1>
-            <p>收藏的资源与工具，一键直达。</p>
-          </div>
-          <div className="search-box">
+          <label className="search-box">
             <Search size={18} className="search-icon" />
             <input
               type="search"
@@ -203,10 +205,10 @@ export default function HomePage() {
                 onClick={() => setQuery('')}
                 aria-label="清除搜索"
               >
-                <X size={14} />
+                <X size={15} />
               </button>
             )}
-          </div>
+          </label>
         </header>
 
         {error && <div className="error-box">加载失败：{error}</div>}
@@ -241,10 +243,13 @@ export default function HomePage() {
               sectionRefs.current[category.id] = element
             }}
           >
-            <h2 className="cat-title">
-              <CategoryIcon icon={category.icon} size={22} />
-              <span>{category.name}</span>
-            </h2>
+            <div className="cat-head">
+              <h2 className="cat-title">
+                <CategoryIcon icon={category.icon} size={22} />
+                <span>{category.name}</span>
+              </h2>
+              <span className="cat-count">{category.links?.length ?? 0} 个链接</span>
+            </div>
             {category.links?.length ? (
               <div className="link-grid">
                 {category.links.map((link) => (

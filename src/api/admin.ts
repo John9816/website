@@ -13,7 +13,19 @@ import { normalizeRemoteImageUrl } from '../utils/remoteImage'
 
 export interface GenerateImagePayload {
   prompt: string
+  model?: string
   size?: string
+  quality?: string
+  n?: number
+}
+
+export interface EditImagePayload {
+  prompt: string
+  image: File
+  mask?: File | null
+  model?: string
+  size?: string
+  quality?: string
   n?: number
 }
 
@@ -21,6 +33,7 @@ function normalizeGeneratedImageView(item: GeneratedImageView): GeneratedImageVi
   return {
     ...item,
     imageUrl: normalizeRemoteImageUrl(item.imageUrl, { requireUsableAssetPath: true }) || item.imageUrl,
+    isShared: item.isShared ?? (item as unknown as { shared?: boolean }).shared ?? false,
   }
 }
 
@@ -89,6 +102,24 @@ export const adminGenerateImage = async (body: GenerateImagePayload, signal?: Ab
     signal,
   }))
 
+export const adminEditImage = async (body: EditImagePayload, signal?: AbortSignal) => {
+  const formData = new FormData()
+  formData.set('image', body.image)
+  formData.set('prompt', body.prompt)
+  if (body.mask) formData.set('mask', body.mask)
+  if (body.model) formData.set('model', body.model)
+  if (body.size) formData.set('size', body.size)
+  if (body.quality) formData.set('quality', body.quality)
+  if (body.n) formData.set('n', String(body.n))
+
+  return normalizeImageTaskView(await request<ImageTaskView>('/api/user/image/edit', {
+    method: 'POST',
+    auth: true,
+    body: formData,
+    signal,
+  }))
+}
+
 export const adminGetImageTask = async (taskId: number, signal?: AbortSignal) =>
   normalizeImageTaskView(await request<ImageTaskView>(`/api/user/image/generate/${taskId}`, {
     auth: true,
@@ -106,6 +137,12 @@ export const adminDeleteImageHistory = (id: number) =>
     method: 'DELETE',
     auth: true,
   })
+
+export const adminRetryImageHistory = async (id: number) =>
+  normalizeImageTaskView(await request<ImageTaskView>(`/api/user/image/history/${id}/retry`, {
+    method: 'POST',
+    auth: true,
+  }))
 
 export const adminToggleImageHistoryShare = async (id: number, shared: boolean) =>
   normalizeGeneratedImageView(await request<GeneratedImageView>(`/api/user/image/history/${id}/share`, {

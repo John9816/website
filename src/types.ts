@@ -91,11 +91,16 @@ export interface PageView<T> {
 
 export interface GeneratedImageView {
   id: number
+  taskId?: number | null
+  type?: string | null
+  status?: ImageTaskStatus | null
   prompt: string
-  imageUrl: string
+  imageUrl: string | null
+  imageData?: string | null
   model: string
   size?: string | null
   isShared: boolean
+  errorMessage?: string | null
   createdAt: string
 }
 
@@ -167,6 +172,7 @@ export interface AiConversationReplyView {
 export type MusicSourceId = 'qq' | 'netease' | 'kuwo'
 export type MusicPlaylistSourceId = Extract<MusicSourceId, 'netease' | 'kuwo'>
 export type MusicQuality = '128k' | '320k' | 'flac' | 'flac24bit'
+export type MusicSearchType = 'song' | 'album' | 'artist' | 'playlist'
 
 export interface SongSearchItem {
   id: string
@@ -183,10 +189,28 @@ export interface SongSearchItem {
 
 export interface SearchResultView {
   source: MusicSourceId
+  type?: MusicSearchType
   keyword: string
   page: number
   pageSize: number
+  total?: number | null
   list: SongSearchItem[]
+  songs?: SongSearchItem[]
+  artists?: SearchCollectionItem[]
+  albums?: SearchCollectionItem[]
+  playlists?: SearchCollectionItem[]
+}
+
+export interface SearchCollectionItem {
+  id: string
+  source: MusicSourceId
+  type: MusicSearchType
+  name: string
+  artist?: string
+  creatorName?: string
+  coverUrl?: string
+  trackCount?: number
+  playCount?: number
 }
 
 export interface LyricInfo {
@@ -312,23 +336,6 @@ export interface MusicFavoriteStatusView {
   songId: string
   liked: boolean
   favoriteId?: number | null
-}
-
-export interface MusicShareView {
-  id: number
-  source: MusicSourceId
-  songId: string
-  name: string
-  artist?: string | null
-  album?: string | null
-  coverUrl?: string | null
-  durationSec?: number | null
-  requestedQuality: MusicQuality
-  token: string
-  expiresAt?: string | null
-  viewCount: number
-  createdAt?: string
-  updatedAt?: string
 }
 
 export interface MusicPublicShareView {

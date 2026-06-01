@@ -14,6 +14,8 @@ const iconLoaders = dynamicIconImports as Record<
   string,
   () => Promise<{ default: LucideIconComponent }>
 >
+const iconCache = new Map<string, LucideIconComponent | null>()
+const iconPromiseCache = new Map<string, Promise<LucideIconComponent | null>>()
 
 function isUrl(v: string) {
   return /^https?:\/\//i.test(v) || v.startsWith('/') || v.startsWith('data:')
@@ -47,23 +49,39 @@ export default function CategoryIcon({ icon, alt, size = 20 }: Props) {
       }
     }
 
+    if (iconCache.has(iconKey)) {
+      setDynamicIcon(() => iconCache.get(iconKey) ?? null)
+      return () => {
+        cancelled = true
+      }
+    }
+
     const loadIcon = iconLoaders[iconKey]
     if (!loadIcon) {
+      iconCache.set(iconKey, null)
       setDynamicIcon(null)
       return () => {
         cancelled = true
       }
     }
 
-    void loadIcon()
-      .then((module) => {
+    let iconPromise = iconPromiseCache.get(iconKey)
+    if (!iconPromise) {
+      iconPromise = loadIcon()
+        .then((module) => {
+          iconCache.set(iconKey, module.default)
+          return module.default
+        })
+        .catch(() => {
+          iconCache.set(iconKey, null)
+          return null
+        })
+      iconPromiseCache.set(iconKey, iconPromise)
+    }
+
+    void iconPromise.then((Icon) => {
         if (!cancelled) {
-          setDynamicIcon(() => module.default)
-        }
-      })
-      .catch(() => {
-        if (!cancelled) {
-          setDynamicIcon(null)
+          setDynamicIcon(() => Icon)
         }
       })
 

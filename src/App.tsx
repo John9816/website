@@ -1,9 +1,9 @@
 import { Suspense, lazy } from 'react'
-import { BrowserRouter, Navigate, Route, Routes } from 'react-router-dom'
+import { BrowserRouter, Navigate, Route, Routes, useLocation } from 'react-router-dom'
 import { App as AntApp, ConfigProvider, Spin, theme as antdTheme } from 'antd'
 import zhCN from 'antd/locale/zh_CN'
 import { AuthProvider } from './context/AuthContext'
-import { MusicPlayerProvider } from './context/MusicPlayerContext'
+import { MusicPlayerProvider, useMusicPlayer } from './context/MusicPlayerContext'
 import { ThemeProvider, useTheme } from './context/ThemeContext'
 import { usePageTitle } from './hooks/usePageTitle'
 
@@ -45,7 +45,7 @@ function RouteFallback() {
 
 function ThemedAntd({ children }: { children: React.ReactNode }) {
   const { mode } = useTheme()
-  const colorPrimary = mode === 'dark' ? '#eb645b' : '#d33a31'
+  const colorPrimary = mode === 'dark' ? '#5eead4' : '#0f766e'
   return (
     <ConfigProvider
       locale={zhCN}
@@ -62,6 +62,19 @@ function ThemedAntd({ children }: { children: React.ReactNode }) {
 function PageTitleSetter() {
   usePageTitle()
   return null
+}
+
+function GlobalMusicDockGate() {
+  const location = useLocation()
+  const { current } = useMusicPlayer()
+
+  if (!current || location.pathname.startsWith('/music')) return null
+
+  return (
+    <Suspense fallback={null}>
+      <GlobalMusicDock />
+    </Suspense>
+  )
 }
 
 export default function App() {
@@ -108,9 +121,7 @@ export default function App() {
                   <Route path="*" element={<Navigate to="/" replace />} />
                 </Routes>
               </Suspense>
-              <Suspense fallback={null}>
-                <GlobalMusicDock />
-              </Suspense>
+              <GlobalMusicDockGate />
             </BrowserRouter>
           </MusicPlayerProvider>
         </AuthProvider>

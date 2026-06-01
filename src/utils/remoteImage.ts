@@ -9,7 +9,7 @@ function isLocalHostname() {
   return window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1'
 }
 
-function buildImageProxyUrl(url: string) {
+export function buildImageProxyUrl(url: string) {
   return `${IMAGE_PROXY_PATH}?url=${encodeURIComponent(url)}`
 }
 

@@ -34,9 +34,11 @@ import {
   listAiConversations,
   listAiMessages,
   listAiModels,
+  listAiVoices,
   regenerateAiMessageAudio,
   sendAiMessage,
   sendAiMessageStream,
+  synthesizeAiText,
 } from '../api/ai'
 import { ApiError } from '../api/client'
 import MessageMarkdown from '../components/MessageMarkdown'
@@ -50,6 +52,7 @@ import type {
   AiConversationView,
   AiModelCapability,
   AiModelView,
+  AiVoiceView,
 } from '../types'
 import { groupConversations } from '../utils/groupConversations'
 import '../styles/topbar.css'
@@ -59,13 +62,17 @@ const CONVERSATION_PAGE_SIZE = 100
 const MESSAGE_PAGE_SIZE = 100
 const CHAR_LIMIT = 8000
 const CHAR_WARN = 7500
-const STREAM_REVEAL_MS = 700
-const STREAM_MAX_LEN = 3000
 const TEXTAREA_MIN = 56
 const TEXTAREA_MAX = 240
 const STICK_THRESHOLD = 80
 
 type AudioInputMode = 'none' | 'upload' | 'url'
+type StreamedMessageAudio = {
+  messageId: number
+  audioUrl?: string | null
+  audioMimeType?: string | null
+  audioModel?: string | null
+}
 
 function getDefaultModel(models: AiModelView[]) {
   return (
@@ -93,6 +100,16 @@ function getDefaultTtsModel(models: AiModelView[]) {
 function isDirectAudioSource(value?: string | null) {
   if (!value) return false
   return /^https?:\/\//i.test(value) || value.startsWith('data:audio/')
+}
+
+function getAudioMimeType(format: string) {
+  const normalized = format.trim().toLowerCase()
+  if (normalized === 'mp3') return 'audio/mpeg'
+  if (normalized === 'opus') return 'audio/ogg'
+  if (normalized === 'aac') return 'audio/aac'
+  if (normalized === 'flac') return 'audio/flac'
+  if (normalized === 'wav' || normalized === 'pcm') return 'audio/wav'
+  return 'audio/mpeg'
 }
 
 function readFileAsDataUrl(file: File): Promise<string> {
@@ -274,7 +291,6 @@ function CopyButton({ text, onCopied, onError }: CopyButtonProps) {
 
 interface MessageBubbleProps {
   message: AiChatMessageView
-  isStreaming: boolean
   isRegeneratingAudio: boolean
   onAudioError: (text: string) => void
   onCopySuccess: () => void
@@ -284,7 +300,6 @@ interface MessageBubbleProps {
 
 function MessageBubble({
   message,
-  isStreaming,
   isRegeneratingAudio,
   onAudioError,
   onCopySuccess,
@@ -296,7 +311,6 @@ function MessageBubble({
   const articleClass = [
     'ai-chat__message',
     `ai-chat__message--${sideClass}`,
-    isStreaming ? 'is-streaming' : '',
   ]
     .filter(Boolean)
     .join(' ')
@@ -337,6 +351,43 @@ function MessageBubble({
                 <RefreshCw size={12} />
               )}
             </button>
+          </div>
+        )}
+      </div>
+    </article>
+  )
+}
+
+interface StreamingMessageBubbleProps {
+  content: string
+  elapsed: number
+  model?: string
+}
+
+function StreamingMessageBubble({ content, elapsed, model }: StreamingMessageBubbleProps) {
+  const hasContent = content.trim().length > 0
+
+  return (
+    <article className="ai-chat__message ai-chat__message--assistant is-streaming">
+      <div className="ai-chat__message-avatar" aria-hidden="true">
+        <Bot size={16} />
+      </div>
+      <div className="ai-chat__bubble">
+        <div className="ai-chat__stream-head">
+          <span>{hasContent ? '正在回复' : '正在思考'}</span>
+          {model && <small>{model}</small>}
+          {elapsed > 0 && <small>{elapsed}s</small>}
+        </div>
+        {hasContent ? (
+          <div className="ai-chat__message-content ai-chat__stream-content">
+            <MessageMarkdown content={content} />
+            <span className="ai-chat__stream-cursor" aria-hidden="true" />
+          </div>
+        ) : (
+          <div className="ai-chat__typing" aria-live="polite">
+            <span className="ai-chat__typing-dot" />
+            <span className="ai-chat__typing-dot" />
+            <span className="ai-chat__typing-dot" />
           </div>
         )}
       </div>
@@ -409,12 +460,13 @@ export default function AiChatPage() {
   const { message } = AntApp.useApp()
 
   const [models, setModels] = useState<AiModelView[]>([])
+  const [voices, setVoices] = useState<AiVoiceView[]>([])
   const [conversations, setConversations] = useState<AiConversationView[]>([])
   const [activeConversationId, setActiveConversationId] = useState<number | null>(null)
   const [messages, setMessages] = useState<AiChatMessageView[]>([])
   const [draft, setDraft] = useState('')
   const [selectedModel, setSelectedModel] = useState('')
-  const [streamMode, setStreamMode] = useState(false)
+  const [streamMode, setStreamMode] = useState(true)
   const [responseAudio, setResponseAudio] = useState(false)
   const [ttsModel, setTtsModel] = useState('')
   const [ttsFormat, setTtsFormat] = useState('wav')
@@ -439,11 +491,10 @@ export default function AiChatPage() {
   const [elapsed, setElapsed] = useState(0)
   const [searchQuery, setSearchQuery] = useState('')
   const [isAtBottom, setIsAtBottom] = useState(true)
-  const [streamingMessageId, setStreamingMessageId] = useState<number | null>(null)
   const [streamingDraft, setStreamingDraft] = useState('')
-  const [_streamingModel, setStreamingModel] = useState('')
-  const [_ttsPreviewLoading, setTtsPreviewLoading] = useState(false)
-  const [_ttsPreviewUrl, setTtsPreviewUrl] = useState<string | null>(null)
+  const [streamingModel, setStreamingModel] = useState('')
+  const [ttsPreviewLoading, setTtsPreviewLoading] = useState(false)
+  const [ttsPreviewUrl, setTtsPreviewUrl] = useState<string | null>(null)
   const [regeneratingAudioId, setRegeneratingAudioId] = useState<number | null>(null)
 
   const abortRef = useRef<AbortController | null>(null)
@@ -452,7 +503,6 @@ export default function AiChatPage() {
   const messagesEndRef = useRef<HTMLDivElement | null>(null)
   const messagesContainerRef = useRef<HTMLDivElement | null>(null)
   const textareaRef = useRef<HTMLTextAreaElement | null>(null)
-  const streamingTimerRef = useRef<number | null>(null)
   const audioInputRef = useRef<HTMLInputElement | null>(null)
   const ttsPreviewUrlRef = useRef<string | null>(null)
 
@@ -488,6 +538,10 @@ export default function AiChatPage() {
   const defaultTtsModel = useMemo(
     () => getDefaultTtsModel(audioOutputModels),
     [audioOutputModels],
+  )
+  const selectedVoiceLabel = useMemo(
+    () => voices.find((item) => item.id === ttsVoice)?.label ?? '',
+    [ttsVoice, voices],
   )
   const noModelsConfigured = !bootstrapping && textChatModels.length === 0
   const nextSendModel = useMemo(() => {
@@ -607,11 +661,12 @@ export default function AiChatPage() {
       abortRef.current?.abort()
       ttsPreviewAbortRef.current?.abort()
       setModels([])
+      setVoices([])
       setConversations([])
       setActiveConversationId(null)
       setMessages([])
       setSelectedModel('')
-      setStreamMode(false)
+      setStreamMode(true)
       setResponseAudio(false)
       setTtsModel('')
       setTtsFormat('wav')
@@ -625,7 +680,6 @@ export default function AiChatPage() {
       setPendingRequest(null)
       setSending(false)
       setSearchQuery('')
-      setStreamingMessageId(null)
       setStreamingDraft('')
       setStreamingModel('')
       return
@@ -637,11 +691,13 @@ export default function AiChatPage() {
 
     Promise.all([
       listAiModels(),
+      listAiVoices(),
       listAiConversations(0, CONVERSATION_PAGE_SIZE),
     ])
-      .then(([modelList, conversationPage]) => {
+      .then(([modelList, voiceList, conversationPage]) => {
         if (cancelled) return
         setModels(modelList)
+        setVoices(voiceList)
         setSelectedModel((current) =>
           modelList.some(
             (item) => item.model === current && item.capabilities.includes('text_chat'),
@@ -703,11 +759,6 @@ export default function AiChatPage() {
       setTtsModel(defaultTtsModel)
     }
   }, [responseAudio, defaultTtsModel, modelRegistry, ttsModel])
-
-  useEffect(() => {
-    if (!streamMode || !responseAudio) return
-    setResponseAudio(false)
-  }, [responseAudio, streamMode])
 
   useEffect(() => {
     if (responseAudio && audioOutputModels.length === 0) {
@@ -813,15 +864,51 @@ export default function AiChatPage() {
       abortRef.current?.abort()
       ttsPreviewAbortRef.current?.abort()
       clearTtsPreview()
-      if (streamingTimerRef.current) window.clearTimeout(streamingTimerRef.current)
     }
   }, [clearTtsPreview])
 
   const handleStreamModeChange = (checked: boolean) => {
     setStreamMode(checked)
-    if (checked && responseAudio) {
-      setResponseAudio(false)
-      message.info('流式输出暂不支持语音回放，已关闭 TTS')
+  }
+
+  const handleTtsPreview = async () => {
+    const lastAssistantMessage = [...messages]
+      .reverse()
+      .find((item) => item.role === 'assistant' && item.content.trim())
+    const text = draft.trim() || streamingDraft.trim() || lastAssistantMessage?.content.trim()
+    if (!text) {
+      message.warning('请先输入或选择一段可试听的文本')
+      return
+    }
+
+    ttsPreviewAbortRef.current?.abort()
+    const controller = new AbortController()
+    ttsPreviewAbortRef.current = controller
+    setTtsPreviewLoading(true)
+    clearTtsPreview()
+
+    try {
+      const blob = await synthesizeAiText(
+        {
+          text: text.slice(0, 1200),
+          ...buildTtsPayload(),
+        },
+        controller.signal,
+      )
+      const audioBlob = blob.type
+        ? blob
+        : new Blob([blob], { type: getAudioMimeType(ttsFormat) })
+      const nextUrl = URL.createObjectURL(audioBlob)
+      ttsPreviewUrlRef.current = nextUrl
+      setTtsPreviewUrl(nextUrl)
+    } catch (error) {
+      if (error instanceof ApiError && error.code === -2) return
+      message.error((error as Error).message)
+    } finally {
+      if (ttsPreviewAbortRef.current === controller) {
+        ttsPreviewAbortRef.current = null
+      }
+      setTtsPreviewLoading(false)
     }
   }
 
@@ -924,7 +1011,7 @@ export default function AiChatPage() {
       if (content) sendBody.content = content
       if (modelToUse) sendBody.model = modelToUse
       if (hasInputAudio) sendBody.inputAudioData = inputAudioData
-      if (responseAudio && !streamMode) {
+      if (responseAudio) {
         sendBody.responseAudio = true
         Object.assign(sendBody, buildTtsPayload())
       }
@@ -932,6 +1019,9 @@ export default function AiChatPage() {
       let reply: AiConversationReplyView
       if (streamMode) {
         let finalReply: AiConversationReplyView | null = null
+        const streamedAudioRef: { current: StreamedMessageAudio | null } = {
+          current: null,
+        }
         await sendAiMessageStream(
           conversationId,
           sendBody,
@@ -941,6 +1031,9 @@ export default function AiChatPage() {
             },
             onDelta: (chunk) => {
               setStreamingDraft((current) => current + chunk)
+            },
+            onAudio: (audio) => {
+              streamedAudioRef.current = audio
             },
             onAudioError: (error) => {
               message.warning(error.message || '语音生成失败，但文本回复已完成')
@@ -955,6 +1048,22 @@ export default function AiChatPage() {
           throw new ApiError(-1, '流式请求已结束，但没有收到完整回复')
         }
         reply = finalReply
+        const streamedAudio = streamedAudioRef.current
+        if (
+          streamedAudio &&
+          streamedAudio.messageId === reply.assistantMessage.id
+        ) {
+          reply = {
+            ...reply,
+            assistantMessage: {
+              ...reply.assistantMessage,
+              audioAvailable: true,
+              audioUrl: streamedAudio.audioUrl ?? reply.assistantMessage.audioUrl,
+              audioMimeType: streamedAudio.audioMimeType ?? reply.assistantMessage.audioMimeType,
+              audioModel: streamedAudio.audioModel ?? reply.assistantMessage.audioModel,
+            },
+          }
+        }
       } else {
         reply = await sendAiMessage(conversationId, sendBody, controller.signal)
       }
@@ -969,17 +1078,8 @@ export default function AiChatPage() {
       )
       setMessages((current) => [...current, reply.userMessage, reply.assistantMessage])
       clearAudioInput()
-      setStreamingDraft('')
       setStreamingModel('')
 
-      if (reply.assistantMessage.content.length <= STREAM_MAX_LEN) {
-        setStreamingMessageId(reply.assistantMessage.id)
-        if (streamingTimerRef.current) window.clearTimeout(streamingTimerRef.current)
-        streamingTimerRef.current = window.setTimeout(() => {
-          setStreamingMessageId(null)
-          streamingTimerRef.current = null
-        }, STREAM_REVEAL_MS)
-      }
     } catch (error) {
       setDraft((current) => current || content)
       if (error instanceof ApiError && error.code === -2) {
@@ -1120,7 +1220,6 @@ export default function AiChatPage() {
           <MessageBubble
             key={item.id}
             message={item}
-            isStreaming={streamingMessageId === item.id}
             isRegeneratingAudio={regeneratingAudioId === item.id}
             onAudioError={message.error}
             onCopySuccess={() => message.success('已复制到剪贴板')}
@@ -1145,27 +1244,11 @@ export default function AiChatPage() {
         )}
 
         {sending && (
-          <article
-            className={`ai-chat__message ai-chat__message--assistant${
-              streamingDraft ? ' is-streaming' : ''
-            }`}
-          >
-            <div className="ai-chat__message-avatar" aria-hidden="true">
-              <Bot size={16} />
-            </div>
-            <div className="ai-chat__bubble">
-              {streamingDraft ? (
-                <div className="ai-chat__message-content">
-                  <MessageMarkdown content={streamingDraft} />
-                </div>
-              ) : (
-                <div className="ai-chat__typing">
-                  <LoaderCircle size={16} className="ai-chat__spinner" />
-                  <span>思考中... {elapsed > 0 ? `${elapsed}s` : ''}</span>
-                </div>
-              )}
-            </div>
-          </article>
+          <StreamingMessageBubble
+            content={streamingDraft}
+            elapsed={elapsed}
+            model={streamingModel}
+          />
         )}
 
         <div ref={messagesEndRef} />
@@ -1421,7 +1504,7 @@ export default function AiChatPage() {
                             type="checkbox"
                             checked={responseAudio}
                             onChange={(event) => setResponseAudio(event.target.checked)}
-                            disabled={audioOutputModels.length === 0 || streamMode}
+                            disabled={audioOutputModels.length === 0}
                           />
                           <span>语音回放</span>
                         </label>
@@ -1451,6 +1534,56 @@ export default function AiChatPage() {
                                   placeholder="音色"
                                   list="ai-chat-voice-list"
                                 />
+                                <datalist id="ai-chat-voice-list">
+                                  {voices.map((voice) => (
+                                    <option key={voice.id} value={voice.id}>
+                                      {voice.label}
+                                    </option>
+                                  ))}
+                                </datalist>
+                              </div>
+                              <div className="ai-chat__settings-row">
+                                <select
+                                  value={ttsFormat}
+                                  onChange={(event) => setTtsFormat(event.target.value)}
+                                  aria-label="语音格式"
+                                >
+                                  <option value="wav">wav</option>
+                                  <option value="mp3">mp3</option>
+                                  <option value="opus">opus</option>
+                                  <option value="aac">aac</option>
+                                  <option value="flac">flac</option>
+                                </select>
+                                <input
+                                  type="text"
+                                  value={ttsPrompt}
+                                  onChange={(event) => setTtsPrompt(event.target.value)}
+                                  placeholder="风格提示"
+                                />
+                              </div>
+                              <div className="ai-chat__tts-preview">
+                                <button
+                                  type="button"
+                                  className="ai-chat__button ai-chat__button--secondary"
+                                  onClick={() => void handleTtsPreview()}
+                                  disabled={ttsPreviewLoading}
+                                  title={selectedVoiceLabel || undefined}
+                                >
+                                  {ttsPreviewLoading ? (
+                                    <LoaderCircle size={14} className="ai-chat__spinner" />
+                                  ) : (
+                                    <Play size={14} />
+                                  )}
+                                  <span>试听</span>
+                                </button>
+                                {ttsPreviewUrl && (
+                                  <audio
+                                    controls
+                                    autoPlay
+                                    src={ttsPreviewUrl}
+                                    aria-label="TTS 试听"
+                                  />
+                                )}
                               </div>
                             </div>
                           )}

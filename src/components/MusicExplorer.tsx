@@ -34,8 +34,10 @@ import type {
   MusicHistoryItem,
   MusicPlaylistSourceId,
   MusicQuality,
+  MusicSearchType,
   MusicSourceId,
   PlaylistItem,
+  SearchCollectionItem,
   SongSearchItem,
   ToplistDetailView,
   ToplistItem,
@@ -164,6 +166,31 @@ function songKey(song: Pick<SongSearchItem, 'source' | 'id'>) {
   return `${song.source}:${song.id}`
 }
 
+type SearchCollections = Record<Exclude<MusicSearchType, 'song'>, SearchCollectionItem[]>
+
+const EMPTY_SEARCH_COLLECTIONS: SearchCollections = {
+  artist: [],
+  album: [],
+  playlist: [],
+}
+
+function searchCollectionTotal(collections: SearchCollections) {
+  return collections.artist.length + collections.album.length + collections.playlist.length
+}
+
+function searchCollectionLabel(type: SearchCollectionItem['type']) {
+  switch (type) {
+    case 'artist':
+      return '歌手'
+    case 'album':
+      return '专辑'
+    case 'playlist':
+      return '歌单'
+    default:
+      return ''
+  }
+}
+
 function normalizeImportPlaylistUrl(value: string) {
   const trimmed = value.trim()
   if (!trimmed) return trimmed
@@ -230,10 +257,14 @@ export default function MusicExplorer() {
   const [keyword, setKeyword] = useState('')
   const [searching, setSearching] = useState(false)
   const [searchResults, setSearchResults] = useState<SongSearchItem[]>([])
+  const [searchCollections, setSearchCollections] = useState<SearchCollections>(
+    EMPTY_SEARCH_COLLECTIONS,
+  )
   const [searchPage, setSearchPage] = useState(1)
   const [searchPageSize, setSearchPageSize] = useState(DEFAULT_PAGE_SIZE)
   const [searchHasMore, setSearchHasMore] = useState(false)
   const [lastKeyword, setLastKeyword] = useState('')
+  const searchRequestIdRef = useRef(0)
 
   const [toplistSource, setToplistSource] = useState<MusicSourceId>('qq')
   const [toplists, setToplists] = useState<ToplistItem[]>([])
@@ -314,29 +345,60 @@ export default function MusicExplorer() {
   )
 
   const searchSongs = useCallback(
-    async (nextKeyword: string, nextPage: number, nextPageSize = searchPageSize) => {
+    async (
+      nextKeyword: string,
+      nextPage: number,
+      nextPageSize = searchPageSize,
+      nextSource = searchSource,
+    ) => {
       const trimmed = nextKeyword.trim()
       if (!trimmed) {
         message.warning('请输入关键词')
         return
       }
 
+      const requestId = ++searchRequestIdRef.current
       setSearching(true)
       try {
-        const data = await musicSearch(searchSource, trimmed, nextPage, nextPageSize)
-        setSearchResults(data.list)
+        const [songsData, artistsData, albumsData, playlistsData] = await Promise.all([
+          musicSearch(nextSource, trimmed, nextPage, nextPageSize, 'song'),
+          musicSearch(nextSource, trimmed, 1, 6, 'artist'),
+          musicSearch(nextSource, trimmed, 1, 6, 'album'),
+          musicSearch(nextSource, trimmed, 1, 6, 'playlist'),
+        ])
+        if (requestId !== searchRequestIdRef.current) return
+        setSearchResults(songsData.list)
+        setSearchCollections({
+          artist: artistsData.artists ?? [],
+          album: albumsData.albums ?? [],
+          playlist: playlistsData.playlists ?? [],
+        })
         setSearchPage(nextPage)
         setSearchPageSize(nextPageSize)
-        setSearchHasMore(data.list.length >= nextPageSize)
+        setSearchHasMore(songsData.list.length >= nextPageSize)
         setLastKeyword(trimmed)
-        setPlaylist(data.list)
+        setPlaylist(songsData.list)
       } catch (error) {
+        if (requestId !== searchRequestIdRef.current) return
         message.error((error as Error).message)
       } finally {
+        if (requestId !== searchRequestIdRef.current) return
         setSearching(false)
       }
     },
     [message, searchPageSize, searchSource, setPlaylist],
+  )
+
+  const searchByMeta = useCallback(
+    (nextKeyword: string, nextSource: MusicSourceId) => {
+      const trimmed = nextKeyword.trim()
+      if (!trimmed) return
+      setView('search')
+      setSearchSource(nextSource)
+      setKeyword(trimmed)
+      void searchSongs(trimmed, 1, searchPageSize, nextSource)
+    },
+    [searchPageSize, searchSongs, setView],
   )
 
   const loadToplists = useCallback(async () => {
@@ -551,11 +613,13 @@ export default function MusicExplorer() {
     }
   }, [auth.token, view])
 
+  const searchCollectionsCount = searchCollectionTotal(searchCollections)
+
   const stageMeta = useMemo(() => {
     switch (view) {
       case 'search':
         return lastKeyword
-          ? `${sourceLabel(searchSource)} · ${searchResults.length} 首`
+          ? `${sourceLabel(searchSource)} · ${searchResults.length} 首 · ${searchCollectionsCount} 个相关结果`
           : '输入歌曲、歌手或专辑'
       case 'toplist':
         return `${sourceLabel(toplistSource)} · ${toplists.length} 个榜单`
@@ -580,6 +644,8 @@ export default function MusicExplorer() {
     newSource,
     playlistSource,
     playlists.length,
+    searchCollections,
+    searchCollectionsCount,
     searchResults.length,
     searchSource,
     toplistSource,
@@ -589,7 +655,8 @@ export default function MusicExplorer() {
 
   const activeViewOption = VIEW_OPTIONS.find((item) => item.value === view) ?? VIEW_OPTIONS[0]
   const ActiveViewIcon = activeViewOption.icon
-  const hasSearchResults = searching || lastKeyword.length > 0 || searchResults.length > 0
+  const hasSearchResults =
+    searching || lastKeyword.length > 0 || searchResults.length > 0 || searchCollectionsCount > 0
 
   const handleToggleFavorite = async (song: SongSearchItem) => {
     const nextLiked = await favoriteState.toggleFavorite(song)
@@ -665,6 +732,60 @@ export default function MusicExplorer() {
         </button>
       ) : null}
     </>
+  )
+
+  const renderSearchCollectionGroup = (
+    title: string,
+    items: SearchCollectionItem[],
+    emptyText: string,
+  ) => (
+    <section className="music-search-group" aria-label={title}>
+      <div className="music-search-group__head">
+        <strong>{title}</strong>
+        <span>{items.length} 个</span>
+      </div>
+      {items.length > 0 ? (
+        <div className="music-search-collection-grid">
+          {items.map((item) => (
+            <button
+              key={`${item.source}:${item.type}:${item.id}`}
+              type="button"
+              className="music-search-collection-card"
+              onClick={() => {
+                if (item.type === 'playlist') {
+                  navigate(`/music/playlist/${item.source}/${encodeURIComponent(item.id)}`, {
+                    state: { coverUrl: item.coverUrl },
+                  })
+                  return
+                }
+                const nextKeyword =
+                  item.type === 'album' && item.artist ? `${item.name} ${item.artist}` : item.name
+                searchByMeta(nextKeyword, item.source)
+              }}
+            >
+              <MusicCover src={item.coverUrl} size={64} rounded={14} />
+              <div className="music-search-collection-card__body">
+                <span className="music-search-collection-card__type">
+                  {searchCollectionLabel(item.type)}
+                </span>
+                <strong>{item.name}</strong>
+                <span>
+                  {item.artist || item.creatorName || sourceLabel(item.source)}
+                  {typeof item.trackCount === 'number' ? ` · ${item.trackCount} 首` : ''}
+                  {typeof item.playCount === 'number'
+                    ? ` · ${formatPlayCount(item.playCount)} 次播放`
+                    : ''}
+                </span>
+              </div>
+            </button>
+          ))}
+        </div>
+      ) : (
+        <div className="music-search-group__empty">
+          {searching ? '正在搜索...' : emptyText}
+        </div>
+      )}
+    </section>
   )
 
   return (
@@ -762,8 +883,27 @@ export default function MusicExplorer() {
                       <strong>{lastKeyword ? `“${lastKeyword}”` : '正在搜索'}</strong>
                     </div>
                     <span className="music-search-results__meta">
-                      {lastKeyword ? `${sourceLabel(searchSource)} · ${searchResults.length} 首` : '搜索中'}
+                      {lastKeyword
+                        ? `${sourceLabel(searchSource)} · ${searchResults.length} 首 · ${searchCollectionsCount} 个相关结果`
+                        : '搜索中'}
                     </span>
+                  </div>
+                  <div className="music-search-groups">
+                    {renderSearchCollectionGroup(
+                      '歌手',
+                      searchCollections.artist,
+                      '暂无歌手结果',
+                    )}
+                    {renderSearchCollectionGroup(
+                      '专辑',
+                      searchCollections.album,
+                      '暂无专辑结果',
+                    )}
+                    {renderSearchCollectionGroup(
+                      '歌单',
+                      searchCollections.playlist,
+                      '暂无歌单结果',
+                    )}
                   </div>
                   <MusicSongTable
                     songs={searchResults}
@@ -781,6 +921,8 @@ export default function MusicExplorer() {
                     }}
                     renderActions={renderSongActions}
                     actionColumnWidth={auth.token ? 176 : 132}
+                    onSearchArtist={searchByMeta}
+                    onSearchAlbum={searchByMeta}
                   />
                 </section>
               )}
@@ -975,6 +1117,8 @@ export default function MusicExplorer() {
                 }}
                 renderActions={renderSongActions}
                 actionColumnWidth={auth.token ? 176 : 132}
+                onSearchArtist={searchByMeta}
+                onSearchAlbum={searchByMeta}
               />
             </>
           )}
@@ -1011,6 +1155,8 @@ export default function MusicExplorer() {
                     }}
                     renderActions={renderSongActions}
                     actionColumnWidth={212}
+                    onSearchArtist={searchByMeta}
+                    onSearchAlbum={searchByMeta}
                   />
                 </>
               )}
@@ -1049,6 +1195,8 @@ export default function MusicExplorer() {
                     }}
                     renderActions={renderSongActions}
                     actionColumnWidth={176}
+                    onSearchArtist={searchByMeta}
+                    onSearchAlbum={searchByMeta}
                   />
                 </>
               )}

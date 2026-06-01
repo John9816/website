@@ -17,6 +17,8 @@ type Props = {
   onPageChange?: (nextPage: number, nextPageSize: number) => void
   renderActions?: (row: SongSearchItem) => ReactNode
   actionColumnWidth?: number
+  onSearchArtist?: (artist: string, source: SongSearchItem['source']) => void
+  onSearchAlbum?: (album: string, source: SongSearchItem['source']) => void
 }
 
 function sourceLabel(source: SongSearchItem['source']) {
@@ -50,6 +52,8 @@ export default function MusicSongTable({
   onPageChange,
   renderActions,
   actionColumnWidth = 76,
+  onSearchArtist,
+  onSearchAlbum,
 }: Props) {
   const {
     current,
@@ -127,8 +131,33 @@ export default function MusicSongTable({
                     {name}
                   </div>
                   <Typography.Text type="secondary" style={{ fontSize: 13, opacity: 0.8 }}>
-                    {row.artist}
-                    {row.album ? ` · ${row.album}` : ''}
+                    {row.artist ? (
+                      <button
+                        type="button"
+                        className="music-inline-link"
+                        onClick={(event) => {
+                          event.stopPropagation()
+                          onSearchArtist?.(row.artist, row.source)
+                        }}
+                      >
+                        {row.artist}
+                      </button>
+                    ) : null}
+                    {row.album ? (
+                      <>
+                        {' · '}
+                        <button
+                          type="button"
+                          className="music-inline-link"
+                          onClick={(event) => {
+                            event.stopPropagation()
+                            onSearchAlbum?.(row.album || '', row.source)
+                          }}
+                        >
+                          {row.album}
+                        </button>
+                      </>
+                    ) : ''}
                   </Typography.Text>
                 </div>
               </Space>

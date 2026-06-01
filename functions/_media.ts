@@ -1,12 +1,24 @@
-const FORWARDED_REQUEST_HEADERS = ['accept', 'if-none-match', 'if-modified-since'] as const
+const ALLOWED_HOST_SUFFIX = '.kuwo.cn'
+const FORWARDED_REQUEST_HEADERS = ['accept', 'if-range', 'range'] as const
 const FORWARDED_RESPONSE_HEADERS = [
+  'accept-ranges',
   'cache-control',
   'content-disposition',
   'content-length',
+  'content-range',
   'content-type',
   'etag',
   'last-modified',
 ] as const
+
+type PagesContext = {
+  request: Request
+}
+
+function isAllowedTarget(target: URL) {
+  const hostname = target.hostname.toLowerCase()
+  return hostname === 'kuwo.cn' || hostname.endsWith(ALLOWED_HOST_SUFFIX)
+}
 
 function json(status: number, body: Record<string, string>) {
   return new Response(JSON.stringify(body), {
@@ -16,47 +28,6 @@ function json(status: number, body: Record<string, string>) {
       'Content-Type': 'application/json; charset=utf-8',
     },
   })
-}
-
-function isIpv4(hostname: string) {
-  return /^(\d{1,3}\.){3}\d{1,3}$/.test(hostname)
-}
-
-function parseIpv4(hostname: string) {
-  if (!isIpv4(hostname)) return null
-  const parts = hostname.split('.').map((part) => Number(part))
-  if (parts.some((part) => !Number.isInteger(part) || part < 0 || part > 255)) return null
-  return parts
-}
-
-function isBlockedIpv4(parts: number[]) {
-  const [a, b] = parts
-  if (a === 0 || a === 10 || a === 127) return true
-  if (a === 169 && b === 254) return true
-  if (a === 172 && b >= 16 && b <= 31) return true
-  if (a === 192 && b === 168) return true
-  if (a === 100 && b >= 64 && b <= 127) return true
-  if (a >= 224) return true
-  return false
-}
-
-function hasBlockedHostname(hostname: string) {
-  const lower = hostname.toLowerCase()
-  if (
-    lower === 'localhost' ||
-    lower.endsWith('.localhost') ||
-    lower.endsWith('.local') ||
-    lower === '0.0.0.0'
-  ) {
-    return true
-  }
-
-  if (lower.startsWith('[') && lower.endsWith(']')) {
-    return true
-  }
-
-  const ipv4 = parseIpv4(lower)
-  return ipv4 ? isBlockedIpv4(ipv4) : false
 }
 
 function buildUpstreamHeaders(request: Request) {
@@ -87,11 +58,7 @@ async function proxy(request: Request, method: 'GET' | 'HEAD') {
     return json(400, { message: 'Unsupported target protocol.' })
   }
 
-  if (target.username || target.password) {
-    return json(400, { message: 'Target auth info is not allowed.' })
-  }
-
-  if (hasBlockedHostname(target.hostname)) {
+  if (!isAllowedTarget(target)) {
     return json(403, { message: 'Target host is not allowed.' })
   }
 
@@ -103,7 +70,7 @@ async function proxy(request: Request, method: 'GET' | 'HEAD') {
       redirect: 'follow',
     })
   } catch {
-    return json(502, { message: 'Failed to fetch upstream image.' })
+    return json(502, { message: 'Failed to fetch upstream media.' })
   }
 
   const headers = new Headers()
@@ -113,7 +80,7 @@ async function proxy(request: Request, method: 'GET' | 'HEAD') {
     if (value) headers.set(name, value)
   }
 
-  headers.set('X-Image-Proxy', 'vercel')
+  headers.set('X-Media-Proxy', 'cloudflare-pages')
 
   return new Response(method === 'HEAD' ? null : upstream.body, {
     status: upstream.status,
@@ -121,10 +88,10 @@ async function proxy(request: Request, method: 'GET' | 'HEAD') {
   })
 }
 
-export function GET(request: Request) {
-  return proxy(request, 'GET')
-}
+export function onRequest({ request }: PagesContext) {
+  if (request.method === 'GET' || request.method === 'HEAD') {
+    return proxy(request, request.method)
+  }
 
-export function HEAD(request: Request) {
-  return proxy(request, 'HEAD')
+  return json(405, { message: 'Method not allowed.' })
 }

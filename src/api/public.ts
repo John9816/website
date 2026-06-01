@@ -6,6 +6,7 @@ function normalizeGeneratedImageView(item: GeneratedImageView): GeneratedImageVi
   return {
     ...item,
     imageUrl: normalizeRemoteImageUrl(item.imageUrl, { requireUsableAssetPath: true }) || item.imageUrl,
+    isShared: item.isShared ?? (item as unknown as { shared?: boolean }).shared ?? false,
   }
 }
 
