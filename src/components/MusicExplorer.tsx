@@ -130,7 +130,8 @@ function formatPlayCount(value?: number) {
 
 function pageTotal(page: number, pageSize: number, count: number, total?: number | null) {
   if (typeof total === 'number') return total
-  return count >= pageSize ? page * pageSize + 1 : page * pageSize
+  const seen = (page - 1) * pageSize + count
+  return count >= pageSize ? seen + 1 : seen
 }
 
 function isMusicView(value: string | null): value is MusicView {
@@ -292,7 +293,6 @@ export default function MusicExplorer() {
   })
   const [searchPage, setSearchPage] = useState(1)
   const [searchPageSize, setSearchPageSize] = useState(DEFAULT_PAGE_SIZE)
-  const [searchHasMore, setSearchHasMore] = useState(false)
   const [lastKeyword, setLastKeyword] = useState('')
   const [lastSearchSource, setLastSearchSource] = useState<MusicSourceId>('qq')
   const [lastSearchType, setLastSearchType] = useState<MusicSearchType>('song')
@@ -413,8 +413,6 @@ export default function MusicExplorer() {
         })
         setSearchPage(nextPage)
         setSearchPageSize(nextPageSize)
-        const resultCount = nextType === 'song' ? data.list.length : nextCollections[nextType].length
-        setSearchHasMore(resultCount >= nextPageSize)
         setLastKeyword(trimmed)
         setLastSearchSource(nextSource)
         setLastSearchType(nextType)
@@ -956,7 +954,7 @@ export default function MusicExplorer() {
                       emptyText={lastSearchTypeOption.emptyText}
                       page={searchPage}
                       pageSize={searchPageSize}
-                      total={searchHasMore ? searchPage * searchPageSize + 1 : searchPage * searchPageSize}
+                      total={pageTotal(searchPage, searchPageSize, searchResults.length)}
                       onPageChange={(nextPage, nextPageSize) => {
                         void searchSongs(
                           lastKeyword || keyword,
@@ -981,7 +979,11 @@ export default function MusicExplorer() {
                           <Pagination
                             current={searchPage}
                             pageSize={searchPageSize}
-                            total={searchHasMore ? searchPage * searchPageSize + 1 : searchPage * searchPageSize}
+                            total={pageTotal(
+                              searchPage,
+                              searchPageSize,
+                              activeSearchCollectionItems.length,
+                            )}
                             onChange={(nextPage, nextPageSize) => {
                               void searchSongs(
                                 lastKeyword || keyword,
@@ -993,9 +995,14 @@ export default function MusicExplorer() {
                             }}
                             responsive
                             showLessItems
-                            showSizeChanger
+                            showSizeChanger={{
+                              popupClassName: 'music-pagination-size-dropdown',
+                            }}
                             showQuickJumper={false}
                             pageSizeOptions={PAGE_SIZE_OPTIONS}
+                            showTotal={(totalItems, range) =>
+                              `${range[0]}-${range[1]} / ${totalItems}`
+                            }
                           />
                         </div>
                       )}
@@ -1140,9 +1147,14 @@ export default function MusicExplorer() {
                       }}
                       responsive
                       showLessItems
-                      showSizeChanger
+                      showSizeChanger={{
+                        popupClassName: 'music-pagination-size-dropdown',
+                      }}
                       showQuickJumper={false}
                       pageSizeOptions={PAGE_SIZE_OPTIONS}
+                      showTotal={(totalItems, range) =>
+                        `${range[0]}-${range[1]} / ${totalItems}`
+                      }
                     />
                   </div>
                 </>
@@ -1347,9 +1359,14 @@ export default function MusicExplorer() {
                           }}
                           responsive
                           showLessItems
-                          showSizeChanger
+                          showSizeChanger={{
+                            popupClassName: 'music-pagination-size-dropdown',
+                          }}
                           showQuickJumper={false}
                           pageSizeOptions={PAGE_SIZE_OPTIONS}
+                          showTotal={(totalItems, range) =>
+                            `${range[0]}-${range[1]} / ${totalItems}`
+                          }
                         />
                       </div>
                     </>

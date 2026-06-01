@@ -5,6 +5,7 @@ import TopbarNav from '../components/TopbarNav'
 import TopbarUserMenu from '../components/TopbarUserMenu'
 import ThemeToggle from '../components/ThemeToggle'
 import { useAuth } from '../context/AuthContext'
+import { useMusicPlayer } from '../context/MusicPlayerContext'
 import '../styles/topbar.css'
 import '../styles/music.css'
 
@@ -12,6 +13,7 @@ const MusicPlayerBar = lazy(() => import('../components/MusicPlayerBar'))
 
 export default function MusicLayout() {
   const auth = useAuth()
+  const { current } = useMusicPlayer()
   const pageRef = useRef<HTMLDivElement | null>(null)
   const topbarRef = useRef<HTMLElement | null>(null)
 
@@ -63,7 +65,7 @@ export default function MusicLayout() {
         </div>
       </header>
 
-      <div className={`music-body `}>
+      <div className={`music-body${current ? ' music-body--with-player' : ''}`}>
         <Outlet />
       </div>
 

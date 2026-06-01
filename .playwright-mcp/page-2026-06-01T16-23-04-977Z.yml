@@ -1,0 +1,84 @@
+- generic [ref=e12]:
+  - banner [ref=e13]:
+    - link "我的导航" [ref=e14] [cursor=pointer]:
+      - /url: /
+      - generic [ref=e16]: 我的导航
+    - navigation "主导航" [ref=e17]:
+      - link "导航" [ref=e19] [cursor=pointer]:
+        - /url: /
+        - generic [ref=e20]: 导航
+      - link "音乐" [ref=e21] [cursor=pointer]:
+        - /url: /music
+        - generic [ref=e22]: 音乐
+      - link "AI对话" [ref=e23] [cursor=pointer]:
+        - /url: /ai-chat
+        - generic [ref=e24]: AI对话
+      - link "AI生图" [ref=e25] [cursor=pointer]:
+        - /url: /ai-image
+        - generic [ref=e26]: AI生图
+    - generic [ref=e27]:
+      - link "登录" [ref=e28] [cursor=pointer]:
+        - /url: /login
+        - img [ref=e29]
+        - generic [ref=e32]: 登录
+      - button "切换到深色模式" [ref=e33]:
+        - img [ref=e35]
+  - generic [ref=e40]:
+    - complementary [ref=e41]:
+      - navigation "音乐功能导航" [ref=e45]:
+        - button "榜单" [ref=e46] [cursor=pointer]:
+          - img [ref=e48]
+          - generic [ref=e54]: 榜单
+        - button "歌单" [ref=e55] [cursor=pointer]:
+          - img [ref=e57]
+          - generic [ref=e59]: 歌单
+        - button "我的歌单" [ref=e60] [cursor=pointer]:
+          - img [ref=e62]
+          - generic [ref=e64]: 我的歌单
+        - button "新歌" [ref=e65] [cursor=pointer]:
+          - img [ref=e67]
+          - generic [ref=e69]: 新歌
+        - button "历史" [ref=e70] [cursor=pointer]:
+          - img [ref=e72]
+          - generic [ref=e76]: 历史
+        - button "喜欢" [ref=e77] [cursor=pointer]:
+          - img [ref=e79]
+          - generic [ref=e81]: 喜欢
+        - button "搜索" [pressed] [ref=e82] [cursor=pointer]:
+          - img [ref=e84]
+          - generic [ref=e87]: 搜索
+    - region "独立搜索" [ref=e100]:
+      - generic [ref=e101]:
+        - generic [ref=e102]: 搜索模块
+        - heading "精准搜索音乐库" [level=2] [ref=e103]
+        - paragraph [ref=e104]: 直接返回可播放歌曲，适合搜索歌名、歌词片段或歌手名。
+      - generic [ref=e105]:
+        - radiogroup "segmented control" [ref=e106]:
+          - generic [ref=e107]:
+            - generic [ref=e108] [cursor=pointer]:
+              - radio "QQ 音乐" [checked]
+              - generic "QQ 音乐" [ref=e109]
+            - generic [ref=e110] [cursor=pointer]:
+              - radio "网易云"
+              - generic "网易云" [ref=e111]
+            - generic [ref=e112] [cursor=pointer]:
+              - radio "酷我"
+              - generic "酷我" [ref=e113]
+        - radiogroup "segmented control" [ref=e114]:
+          - generic [ref=e115]:
+            - generic [ref=e116] [cursor=pointer]:
+              - radio "歌曲" [checked]
+              - generic "歌曲" [ref=e117]
+            - generic [ref=e118] [cursor=pointer]:
+              - radio "歌手"
+              - generic "歌手" [ref=e119]
+            - generic [ref=e120] [cursor=pointer]:
+              - radio "专辑"
+              - generic "专辑" [ref=e121]
+            - generic [ref=e122] [cursor=pointer]:
+              - radio "歌单"
+              - generic "歌单" [ref=e123]
+        - generic [ref=e125]:
+          - searchbox "输入歌名、歌手或专辑" [ref=e127]
+          - button "搜 索" [ref=e130] [cursor=pointer]:
+            - generic [ref=e131]: 搜 索

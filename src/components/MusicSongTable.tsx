@@ -39,7 +39,8 @@ function pageTotal(
   total?: number | null,
 ) {
   if (typeof total === 'number') return total
-  return count >= pageSize ? page * pageSize + 1 : page * pageSize
+  const seen = (page - 1) * pageSize + count
+  return count >= pageSize ? seen + 1 : seen
 }
 
 export default function MusicSongTable({
@@ -87,9 +88,12 @@ export default function MusicSongTable({
           onChange={onPageChange}
           responsive
           showLessItems
-          showSizeChanger
+          showSizeChanger={{
+            popupClassName: 'music-pagination-size-dropdown',
+          }}
           showQuickJumper={false}
           pageSizeOptions={PAGE_SIZE_OPTIONS}
+          showTotal={(totalItems, range) => `${range[0]}-${range[1]} / ${totalItems}`}
         />
       </div>
     ) : null
