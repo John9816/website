@@ -47,7 +47,7 @@ export default function ImagePreviewOverlay({
         <X size={20} />
       </button>
 
-      <div className="admin-image__preview-stage">
+      <div className="admin-image__preview-stage" onClick={onClose}>
         <div
           className="admin-image__preview-content"
           onClick={(event) => event.stopPropagation()}

@@ -76,7 +76,7 @@ export default function MusicMyPlaylistDetailPage() {
   const auth = useAuth()
   const navigate = useNavigate()
   const params = useParams()
-  const { setPlaylist, playPlaylist } = useMusicPlayer()
+  const { setPlaylist, playPlaylist, setAutoNextHandler } = useMusicPlayer()
 
   const [loading, setLoading] = useState(false)
   const [page, setPage] = useState(1)
@@ -93,12 +93,13 @@ export default function MusicMyPlaylistDetailPage() {
   const [playingAll, setPlayingAll] = useState(false)
 
   const requestIdRef = useRef(0)
+  const autoplayPendingRef = useRef(false)
 
   const playlistId = params.id ? Number(params.id) : null
   const songs = useMemo(() => (Array.isArray(items) ? items.map(toSongSearchItem) : []), [items])
   const favoriteState = useMusicFavorites(songs)
 
-  const loadDetail = useCallback(async () => {
+  const loadDetail = useCallback(async (options?: { autoplay?: boolean }) => {
     if (!playlistId || Number.isNaN(playlistId)) return
     const requestId = ++requestIdRef.current
     setLoading(true)
@@ -149,7 +150,11 @@ export default function MusicMyPlaylistDetailPage() {
             ? rawData.total
             : (fallbackTrackCount ?? listData.length)
       setTotal(totalCount)
-      setPlaylist(songList)
+      if (options?.autoplay && songList.length) {
+        void playPlaylist(songList)
+      } else {
+        setPlaylist(songList)
+      }
     } catch (error) {
       if (requestId !== requestIdRef.current) return
       message.error((error as Error).message)
@@ -158,7 +163,7 @@ export default function MusicMyPlaylistDetailPage() {
         setLoading(false)
       }
     }
-  }, [playlistId, page, pageSize, setPlaylist, message])
+  }, [playlistId, page, pageSize, playPlaylist, setPlaylist, message])
 
   const handlePlayEntirePlaylist = useCallback(async () => {
     if (!playlistId || Number.isNaN(playlistId)) return
@@ -269,8 +274,39 @@ export default function MusicMyPlaylistDetailPage() {
   }, [playlistId, items, page, message])
 
   useEffect(() => {
-    if (auth.token) void loadDetail()
+    if (!auth.token) return
+    const wantAutoplay = autoplayPendingRef.current
+    autoplayPendingRef.current = false
+    void loadDetail({ autoplay: wantAutoplay })
   }, [auth.token, loadDetail])
+
+  useEffect(() => {
+    if (!auth.token || !playlistId || total <= 0) {
+      setAutoNextHandler(null)
+      return
+    }
+    const hasNextPage = page * pageSize < total
+    if (!hasNextPage) {
+      setAutoNextHandler(null)
+      return
+    }
+    setAutoNextHandler(() => {
+      autoplayPendingRef.current = true
+      setPage((current) => current + 1)
+    })
+    return () => setAutoNextHandler(null)
+  }, [auth.token, page, pageSize, playlistId, setAutoNextHandler, total])
+
+  const searchByMeta = useCallback(
+    (nextKeyword: string, nextSource: MusicSourceId, nextType: 'artist' | 'album' = 'artist') => {
+      const trimmed = nextKeyword.trim()
+      if (!trimmed) return
+      navigate(
+        `/music?view=search&type=${nextType}&source=${nextSource}&keyword=${encodeURIComponent(trimmed)}`,
+      )
+    },
+    [navigate],
+  )
 
   if (!auth.token) {
     return (
@@ -493,6 +529,8 @@ export default function MusicMyPlaylistDetailPage() {
         }}
         renderActions={renderSongActions}
         actionColumnWidth={248}
+        onSearchArtist={(artist, source) => searchByMeta(artist, source, 'artist')}
+        onSearchAlbum={(album, source) => searchByMeta(album, source, 'album')}
       />
 
       <Modal

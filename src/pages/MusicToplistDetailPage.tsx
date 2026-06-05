@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useMemo, useRef, useState, type CSSProperties } from 'react'
 import { App as AntApp, Button } from 'antd'
-import { Link, useLocation, useParams } from 'react-router-dom'
+import { Link, useLocation, useNavigate, useParams } from 'react-router-dom'
 import { ChevronLeft, Heart, Play, RefreshCcw } from 'lucide-react'
 import { musicToplistDetail } from '../api/music'
 import MusicCover from '../components/MusicCover'
@@ -34,6 +34,7 @@ function sourceLabel(source: MusicSourceId) {
 export default function MusicToplistDetailPage() {
   const { message } = AntApp.useApp()
   const location = useLocation()
+  const navigate = useNavigate()
   const { source, id } = useParams()
   const { playPlaylist, setPlaylist, setAutoNextHandler } = useMusicPlayer()
   const [page, setPage] = useState(1)
@@ -138,6 +139,17 @@ export default function MusicToplistDetailPage() {
     </>
   )
 
+  const searchByMeta = useCallback(
+    (nextKeyword: string, nextSource: MusicSourceId, nextType: 'artist' | 'album' = 'artist') => {
+      const trimmed = nextKeyword.trim()
+      if (!trimmed) return
+      navigate(
+        `/music?view=search&type=${nextType}&source=${nextSource}&keyword=${encodeURIComponent(trimmed)}`,
+      )
+    },
+    [navigate],
+  )
+
   if (!validSource || !id) {
     return (
       <div className="music-detail-shell">
@@ -215,6 +227,8 @@ export default function MusicToplistDetailPage() {
         }}
         renderActions={renderSongActions}
         actionColumnWidth={favoriteState.canFavorite ? 176 : 132}
+        onSearchArtist={(artist, source) => searchByMeta(artist, source, 'artist')}
+        onSearchAlbum={(album, source) => searchByMeta(album, source, 'album')}
       />
     </div>
   )

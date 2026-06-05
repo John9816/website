@@ -1,5 +1,5 @@
 import { ApiError, request, setToken } from './client'
-import type { CurrentUserView, LoginResponse } from '../types'
+import type { CurrentUserView, LoginResponse, UserCreditView } from '../types'
 
 export async function login(username: string, password: string) {
   const data = await request<LoginResponse>('/api/auth/login', {
@@ -35,6 +35,17 @@ export async function register(username: string, password: string) {
 
 export function getCurrentUser() {
   return request<CurrentUserView>('/api/user/me', { auth: true })
+}
+
+export function getUserCredits() {
+  return request<UserCreditView>('/api/user/credits', { auth: true })
+}
+
+export function checkInToday() {
+  return request<UserCreditView>('/api/user/check-in', {
+    method: 'POST',
+    auth: true,
+  })
 }
 
 export function changePassword(oldPassword: string, newPassword: string) {

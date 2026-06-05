@@ -18,6 +18,7 @@ const AiImagePage = lazy(() => import('./pages/AiImagePage'))
 const MusicPlaylistDetailPage = lazy(
   () => import('./pages/MusicPlaylistDetailPage'),
 )
+const MusicAlbumDetailPage = lazy(() => import('./pages/MusicAlbumDetailPage'))
 const MusicToplistDetailPage = lazy(() => import('./pages/MusicToplistDetailPage'))
 const MusicMyPlaylistDetailPage = lazy(() => import('./pages/MusicMyPlaylistDetailPage'))
 const MusicSharePage = lazy(() => import('./pages/MusicSharePage'))
@@ -101,6 +102,10 @@ export default function App() {
                     <Route
                       path="playlist/:source/:id"
                       element={<MusicPlaylistDetailPage />}
+                    />
+                    <Route
+                      path="album/:source/:id"
+                      element={<MusicAlbumDetailPage />}
                     />
                     <Route
                       path="my-playlist/:id"

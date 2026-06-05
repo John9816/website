@@ -46,11 +46,24 @@ export interface LoginResponse {
   role?: string
 }
 
+export interface UserCreditView {
+  credits: number
+  imageCreditCost: number
+  dailyCheckInReward: number
+  checkedInToday: boolean
+  lastCheckInDate?: string | null
+}
+
 export interface CurrentUserView {
   id: number
   username: string
   role: 'ADMIN' | 'USER'
   canManageSystemConfig: boolean
+  credits?: number
+  imageCreditCost?: number
+  dailyCheckInReward?: number
+  checkedInToday?: boolean
+  lastCheckInDate?: string | null
 }
 
 export interface ImageGenerateDataItem {
@@ -300,6 +313,20 @@ export interface PlaylistDetailView {
   creatorName?: string
   playCount?: number
   updateTime?: string
+  page: number
+  pageSize: number
+  total: number | null
+  list: SongSearchItem[]
+}
+
+export interface AlbumDetailView {
+  id: string
+  source: MusicSourceId
+  name?: string
+  coverUrl?: string
+  description?: string
+  artist?: string
+  publishTime?: string
   page: number
   pageSize: number
   total: number | null

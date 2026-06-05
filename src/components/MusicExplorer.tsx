@@ -1,6 +1,8 @@
 import { useCallback, useEffect, useMemo, useRef, useState, Fragment } from 'react'
 import { App as AntApp, Button, Card, Input, Modal, Pagination, Segmented } from 'antd'
 import {
+  ChevronLeft,
+  ChevronRight,
   Heart,
   History,
   ListMusic,
@@ -53,7 +55,6 @@ type MusicView = 'toplist' | 'playlist' | 'new' | 'history' | 'favorites' | 'sea
 const VIEW_OPTIONS: Array<{
   label: string
   value: MusicView
-  description: string
   icon: LucideIcon
   searchMode?: boolean
   authRequired?: boolean
@@ -61,44 +62,37 @@ const VIEW_OPTIONS: Array<{
   {
     label: '榜单',
     value: 'toplist',
-    description: '快速查看平台热门榜单和分类榜。',
     icon: Trophy,
   },
   {
     label: '歌单',
     value: 'playlist',
-    description: '按平台和分类浏览推荐歌单。',
     icon: ListMusic,
   },
   {
     label: '我的歌单',
     value: 'my-playlists',
-    description: '管理你从外部导入的歌单。',
     icon: ListMusic,
     authRequired: true,
   },
   {
     label: '新歌',
     value: 'new',
-    description: '跟进平台最近更新的新歌列表。',
     icon: Sparkles,
   },
   {
     label: '历史',
     value: 'history',
-    description: '查看登录用户最近播放过的歌曲。',
     icon: History,
   },
   {
     label: '喜欢',
     value: 'favorites',
-    description: '集中管理你收藏过的歌曲。',
     icon: Heart,
   },
   {
     label: '搜索',
     value: 'search',
-    description: '按歌曲、歌手、专辑直接搜索。',
     icon: Search,
     searchMode: true,
   },
@@ -146,6 +140,19 @@ function isMusicView(value: string | null): value is MusicView {
   )
 }
 
+function isMusicSourceId(value: string | null): value is MusicSourceId {
+  return value === 'qq' || value === 'netease' || value === 'kuwo'
+}
+
+function isMusicSearchType(value: string | null): value is MusicSearchType {
+  return (
+    value === 'song' ||
+    value === 'artist' ||
+    value === 'album' ||
+    value === 'playlist'
+  )
+}
+
 function toSongSearchItem(item: MusicHistoryItem | MusicFavoriteItem): SongSearchItem {
   return {
     id: item.songId,
@@ -172,35 +179,30 @@ type SearchCollections = Record<Exclude<MusicSearchType, 'song'>, SearchCollecti
 const SEARCH_TYPE_OPTIONS: Array<{
   label: string
   value: MusicSearchType
-  description: string
   placeholder: string
   emptyText: string
 }> = [
   {
     label: '歌曲',
     value: 'song',
-    description: '直接返回可播放歌曲，适合搜索歌名、歌词片段或歌手名。',
     placeholder: '输入歌名、歌手或专辑',
     emptyText: '没有找到歌曲，换个关键词或平台试试',
   },
   {
     label: '歌手',
     value: 'artist',
-    description: '只搜索歌手实体，不再混入专辑、歌单或歌曲结果。',
     placeholder: '输入歌手名，例如 林俊杰',
     emptyText: '没有找到歌手',
   },
   {
     label: '专辑',
     value: 'album',
-    description: '只搜索专辑结果，点击专辑可继续查找相关歌曲。',
     placeholder: '输入专辑名或歌手名',
     emptyText: '没有找到专辑',
   },
   {
     label: '歌单',
     value: 'playlist',
-    description: '只搜索公开歌单，点击后进入歌单详情。',
     placeholder: '输入歌单名、主题或创建者',
     emptyText: '没有找到歌单',
   },
@@ -344,6 +346,7 @@ export default function MusicExplorer() {
   const historyRequestIdRef = useRef(0)
   const favoriteRequestIdRef = useRef(0)
   const myPlaylistsRequestIdRef = useRef(0)
+  const urlSearchRef = useRef('')
 
   const view = isMusicView(searchParams.get('view')) ? searchParams.get('view') : 'toplist'
 
@@ -428,15 +431,36 @@ export default function MusicExplorer() {
     [message, searchPageSize, searchSource, searchType, setPlaylist],
   )
 
+  useEffect(() => {
+    if (view !== 'search') return
+
+    const nextKeyword = (searchParams.get('keyword') || searchParams.get('q') || '').trim()
+    if (!nextKeyword) return
+
+    const nextSourceParam = searchParams.get('source')
+    const nextTypeParam = searchParams.get('type')
+    const nextSource = isMusicSourceId(nextSourceParam) ? nextSourceParam : searchSource
+    const nextType = isMusicSearchType(nextTypeParam) ? nextTypeParam : 'song'
+    const nextKey = `${nextSource}:${nextType}:${nextKeyword}`
+
+    if (urlSearchRef.current === nextKey) return
+    urlSearchRef.current = nextKey
+
+    setKeyword(nextKeyword)
+    setSearchSource(nextSource)
+    setSearchType(nextType)
+    void searchSongs(nextKeyword, 1, searchPageSize, nextSource, nextType)
+  }, [searchPageSize, searchParams, searchSongs, searchSource, view])
+
   const searchByMeta = useCallback(
-    (nextKeyword: string, nextSource: MusicSourceId) => {
+    (nextKeyword: string, nextSource: MusicSourceId, nextType: MusicSearchType = 'song') => {
       const trimmed = nextKeyword.trim()
       if (!trimmed) return
       setView('search')
       setSearchSource(nextSource)
-      setSearchType('song')
+      setSearchType(nextType)
       setKeyword(trimmed)
-      void searchSongs(trimmed, 1, searchPageSize, nextSource, 'song')
+      void searchSongs(trimmed, 1, searchPageSize, nextSource, nextType)
     },
     [searchPageSize, searchSongs, setView],
   )
@@ -628,31 +652,6 @@ export default function MusicExplorer() {
     }
   }, [lastKeyword, newSongsDetail?.name, view])
 
-  const stageDescription = useMemo(() => {
-    switch (view) {
-      case 'search':
-        return '集中搜索歌曲、歌手和专辑，搜索结果不会再混入其他浏览模块。'
-      case 'toplist':
-        return '先看平台趋势，再进入榜单详情整组播放。'
-      case 'playlist':
-        return '按平台和分类连续浏览推荐歌单，适合整包收歌。'
-      case 'my-playlists':
-        return auth.token
-          ? '从 QQ 音乐/网易云音乐导入你喜欢的歌单，统一在这管理。'
-          : '我的歌单需要登录后才能导入和管理。'
-      case 'new':
-        return '快速跟进平台最近上新的歌曲，适合补歌和追更。'
-      case 'history':
-        return auth.token
-          ? '这里会自动记录你登录后播放过的歌曲，重复播放会刷新到最前面。'
-          : '播放历史依赖你的个人账户数据，登录后才会开始记录。'
-      case 'favorites':
-        return auth.token
-          ? '收藏会按用户维度永久保存，你可以从任何歌表里把歌曲加入喜欢列表。'
-          : '喜欢列表依赖你的个人账户数据，登录后可跨页面收藏歌曲。'
-    }
-  }, [auth.token, view])
-
   const activeSearchTypeOption =
     SEARCH_TYPE_OPTIONS.find((item) => item.value === searchType) ?? SEARCH_TYPE_OPTIONS[0]
   const lastSearchTypeOption =
@@ -699,10 +698,15 @@ export default function MusicExplorer() {
     view,
   ])
 
-  const activeViewOption = VIEW_OPTIONS.find((item) => item.value === view) ?? VIEW_OPTIONS[0]
-  const ActiveViewIcon = activeViewOption.icon
   const hasSearchResults =
     searching || lastKeyword.length > 0 || searchResults.length > 0 || activeSearchCollectionItems.length > 0
+
+  const handleQuickSearch = useCallback(() => {
+    setView('search')
+    const trimmed = keyword.trim()
+    if (!trimmed) return
+    void searchSongs(trimmed, 1, searchPageSize, searchSource, searchType)
+  }, [keyword, searchPageSize, searchSongs, searchSource, searchType, setView])
 
   const handleToggleFavorite = async (song: SongSearchItem) => {
     const nextLiked = await favoriteState.toggleFavorite(song)
@@ -803,8 +807,13 @@ export default function MusicExplorer() {
                   })
                   return
                 }
-                const nextKeyword = type === 'album' && item.artist ? `${item.name} ${item.artist}` : item.name
-                searchByMeta(nextKeyword, item.source)
+                if (type === 'album') {
+                  navigate(`/music/album/${item.source}/${encodeURIComponent(item.id)}`, {
+                    state: { coverUrl: item.coverUrl },
+                  })
+                  return
+                }
+                searchByMeta(item.name, item.source, type)
               }}
             >
               <MusicCover src={item.coverUrl} size={64} rounded={14} />
@@ -835,66 +844,69 @@ export default function MusicExplorer() {
   return (
     <Fragment>
       <Card className="music-browser" bordered={false} styles={{ body: { padding: 0 } }}>
-      <div
-        className={`music-browser__layout${
-          view === 'search' ? ' music-browser__layout--search' : ''
-        }`}
-      >
-        <aside className="music-browser__sidebar">
-          <div className="music-browser__sidebar-head">
-            <span className="music-browser__sidebar-kicker">功能导航</span>
-            <span className="music-browser__sidebar-meta">{VIEW_OPTIONS.length} 个模块</span>
-          </div>
+        <div
+          className={`music-browser__layout${
+            view === 'search' ? ' music-browser__layout--search' : ''
+          }`}
+        >
+          <aside className="music-browser__sidebar">
+            <nav className="music-browser__side-nav" aria-label="音乐功能导航">
+              {VIEW_OPTIONS.map((item) => {
+                const Icon = item.icon
+                const isActive = item.value === view
 
-          <nav className="music-browser__side-nav" aria-label="音乐功能导航">
-            {VIEW_OPTIONS.map((item) => {
-              const Icon = item.icon
-              const isActive = item.value === view
+                return (
+                  <button
+                    key={item.value}
+                    type="button"
+                    className={`music-browser__side-item${isActive ? ' is-active' : ''}${
+                      item.searchMode ? ' music-browser__side-item--search' : ''
+                    }`}
+                    aria-pressed={isActive}
+                    onClick={() => setView(item.value)}
+                  >
+                    <span className="music-browser__side-item-icon">
+                      <Icon size={18} strokeWidth={isActive ? 2.5 : 2} />
+                    </span>
+                    <span className="music-browser__side-item-name">{item.label}</span>
+                  </button>
+                )
+              })}
+            </nav>
+          </aside>
 
-              return (
-                <button
-                  key={item.value}
-                  type="button"
-                  className={`music-browser__side-item${isActive ? ' is-active' : ''}${
-                    item.searchMode ? ' music-browser__side-item--search' : ''
-                  }`}
-                  aria-pressed={isActive}
-                  onClick={() => setView(item.value)}
-                  title={item.description}
-                >
-                  <span className="music-browser__side-item-icon">
-                    <Icon size={18} strokeWidth={isActive ? 2.5 : 2} />
-                  </span>
-                  <span className="music-browser__side-item-name">{item.label}</span>
+          <div className="music-browser__main">
+            <div className="music-browser__topline">
+              <div className="music-browser__history-controls" aria-label="页面导航">
+                <button type="button" onClick={() => navigate(-1)} aria-label="后退" title="后退">
+                  <ChevronLeft size={18} />
                 </button>
-              )
-            })}
-          </nav>
+                <button type="button" onClick={() => navigate(1)} aria-label="前进" title="前进">
+                  <ChevronRight size={18} />
+                </button>
+              </div>
 
-          <div className="music-browser__sidebar-summary" aria-label="当前模块摘要">
-            <span className="music-browser__sidebar-summary-kicker">2026 Music</span>
-            <div className="music-browser__sidebar-summary-title">
-              <Sparkles size={16} className="music-dock-spin" style={{ color: 'var(--accent)' }} />
-              <span>沉浸式体验</span>
-            </div>
-            <div className="music-browser__sidebar-summary-copy">
-              <strong>现代、流畅、灵动</strong>
-              <span>左侧模块互相独立，切换时不会打断当前播放。</span>
-              <span>基于玻璃拟态设计的 UI，提供最纯粹的听歌环境。</span>
-            </div>
-          </div>
-        </aside>
+              <div className="music-browser__topline-copy">
+                <h1>{stageTitle}</h1>
+                <p>{stageMeta}</p>
+              </div>
 
-        <div className="music-browser__main">
-          <div className="music-browser__content">
+              <Input.Search
+                className="music-browser__quick-search"
+                placeholder="搜索歌曲、歌手、专辑或歌单"
+                value={keyword}
+                onChange={(event) => setKeyword(event.target.value)}
+                onSearch={handleQuickSearch}
+                enterButton={<Search size={16} />}
+                loading={searching}
+                allowClear
+              />
+            </div>
+
+            <div className="music-browser__content">
           {view === 'search' && (
             <>
               <section className="music-search-stage" aria-label="独立搜索">
-                <div className="music-search-stage__copy">
-                  <span className="music-stage-kicker">搜索模块</span>
-                  <h2>精准搜索音乐库</h2>
-                  <p>{activeSearchTypeOption.description}</p>
-                </div>
                 <div className="music-search-stage__controls">
                   <Segmented
                     options={SOURCE_OPTIONS}
@@ -946,6 +958,19 @@ export default function MusicExplorer() {
                         ? `${sourceLabel(lastSearchSource)} · ${lastSearchTypeOption.label} · ${activeSearchResultCount} 个结果`
                         : '搜索中'}
                     </span>
+                    {lastSearchType === 'song' ? (
+                      <Button
+                        type="primary"
+                        size="small"
+                        icon={<Play size={14} />}
+                        disabled={searching || searchResults.length === 0}
+                        onClick={() => {
+                          void playPlaylist(searchResults)
+                        }}
+                      >
+                        播放全部
+                      </Button>
+                    ) : null}
                   </div>
                   {lastSearchType === 'song' ? (
                     <MusicSongTable
@@ -966,8 +991,8 @@ export default function MusicExplorer() {
                       }}
                       renderActions={renderSongActions}
                       actionColumnWidth={auth.token ? 176 : 132}
-                      onSearchArtist={searchByMeta}
-                      onSearchAlbum={searchByMeta}
+                      onSearchArtist={(artist, source) => searchByMeta(artist, source, 'artist')}
+                      onSearchAlbum={(album, source) => searchByMeta(album, source, 'album')}
                     />
                   ) : (
                     <>
@@ -1011,24 +1036,6 @@ export default function MusicExplorer() {
                 </section>
               )}
             </>
-          )}
-
-          {view !== 'search' && (
-            <div className="music-stage-header">
-              <div className="music-stage-header__copy">
-                <span className="music-stage-kicker">{activeViewOption.label}</span>
-                <h1>{stageTitle}</h1>
-                <p>{stageDescription}</p>
-              </div>
-              <div className="music-stage-header__panel" aria-label="当前模块信息">
-                <span className="music-stage-header__panel-icon">
-                  <ActiveViewIcon size={16} />
-                </span>
-                <span className="music-stage-header__panel-text">
-                  {`${activeViewOption.label} · ${stageMeta}`}
-                </span>
-              </div>
-            </div>
           )}
 
           {view === 'toplist' && (
@@ -1206,8 +1213,8 @@ export default function MusicExplorer() {
                 }}
                 renderActions={renderSongActions}
                 actionColumnWidth={auth.token ? 176 : 132}
-                onSearchArtist={searchByMeta}
-                onSearchAlbum={searchByMeta}
+                onSearchArtist={(artist, source) => searchByMeta(artist, source, 'artist')}
+                onSearchAlbum={(album, source) => searchByMeta(album, source, 'album')}
               />
             </>
           )}
@@ -1244,8 +1251,8 @@ export default function MusicExplorer() {
                     }}
                     renderActions={renderSongActions}
                     actionColumnWidth={212}
-                    onSearchArtist={searchByMeta}
-                    onSearchAlbum={searchByMeta}
+                    onSearchArtist={(artist, source) => searchByMeta(artist, source, 'artist')}
+                    onSearchAlbum={(album, source) => searchByMeta(album, source, 'album')}
                   />
                 </>
               )}
@@ -1284,8 +1291,8 @@ export default function MusicExplorer() {
                     }}
                     renderActions={renderSongActions}
                     actionColumnWidth={176}
-                    onSearchArtist={searchByMeta}
-                    onSearchAlbum={searchByMeta}
+                    onSearchArtist={(artist, source) => searchByMeta(artist, source, 'artist')}
+                    onSearchAlbum={(album, source) => searchByMeta(album, source, 'album')}
                   />
                 </>
               )}

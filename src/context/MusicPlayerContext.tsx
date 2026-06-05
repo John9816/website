@@ -89,6 +89,7 @@ export function MusicPlayerProvider({ children }: { children: ReactNode }) {
   const { message } = AntApp.useApp()
   const audioRef = useRef<HTMLAudioElement | null>(null)
   const autoNextHandlerRef = useRef<AutoNextHandler | null>(null)
+  const [hasAutoNextHandler, setHasAutoNextHandler] = useState(false)
 
   const [current, setCurrent] = useState<PlayInfo | null>(null)
   const [isPlaying, setIsPlaying] = useState(false)
@@ -115,10 +116,11 @@ export function MusicPlayerProvider({ children }: { children: ReactNode }) {
   }, [current, playlist])
 
   const canPrev = currentIndex > 0
+  const hasQueueNext = currentIndex >= 0 && currentIndex < playlist.length - 1
   const canNext =
     playMode === 'shuffle'
-      ? playlist.length > 1
-      : currentIndex >= 0 && currentIndex < playlist.length - 1
+      ? playlist.length > 1 || hasAutoNextHandler
+      : hasQueueNext || hasAutoNextHandler
 
   const setPlaylist = useCallback((items: SongSearchItem[]) => {
     setPlaylistState(items)
@@ -202,9 +204,14 @@ export function MusicPlayerProvider({ children }: { children: ReactNode }) {
       void playSong(playlist[nextIndex], preferredQuality)
       return
     }
-    if (!canNext) return
+    if (!hasQueueNext) {
+      if (autoNextHandlerRef.current) {
+        void autoNextHandlerRef.current()
+      }
+      return
+    }
     void playSong(playlist[currentIndex + 1], preferredQuality)
-  }, [canNext, currentIndex, playMode, playSong, playlist, preferredQuality])
+  }, [currentIndex, hasQueueNext, playMode, playSong, playlist, preferredQuality])
 
   const togglePlay = useCallback(() => {
     const el = audioRef.current
@@ -249,6 +256,7 @@ export function MusicPlayerProvider({ children }: { children: ReactNode }) {
   const setAutoNextHandler = useCallback(
     (handler: AutoNextHandler | null) => {
       autoNextHandlerRef.current = handler
+      setHasAutoNextHandler(!!handler)
     },
     [],
   )
@@ -267,7 +275,7 @@ export function MusicPlayerProvider({ children }: { children: ReactNode }) {
         return true
       }
     }
-    if (canNext) {
+    if (hasQueueNext) {
       void playSong(playlist[currentIndex + 1], preferredQuality)
       return true
     }
@@ -277,8 +285,8 @@ export function MusicPlayerProvider({ children }: { children: ReactNode }) {
     }
     return false
   }, [
-    canNext,
     currentIndex,
+    hasQueueNext,
     playMode,
     playSong,
     playlist,

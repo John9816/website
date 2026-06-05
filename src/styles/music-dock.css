@@ -19,9 +19,9 @@
     rgba(var(--dominant-rgb, var(--accent-rgb)), 0.15),
     transparent 50%
   );
-  backdrop-filter: saturate(180%) blur(24px);
-  -webkit-backdrop-filter: saturate(180%) blur(24px);
-  box-shadow: 0 12px 40px rgba(0, 0, 0, 0.4);
+  backdrop-filter: blur(12px);
+  -webkit-backdrop-filter: blur(12px);
+  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.25);
   z-index: 60;
   cursor: default;
   touch-action: auto;

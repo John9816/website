@@ -34,6 +34,12 @@ export const getAiConversation = (id: number) =>
     auth: true,
   })
 
+export const deleteAiConversation = (id: number) =>
+  request<void>(`/api/user/ai/conversations/${id}`, {
+    method: 'DELETE',
+    auth: true,
+  })
+
 export const listAiMessages = (conversationId: number, page = 0, size = 50) =>
   request<PageView<AiChatMessageView>>(
     `/api/user/ai/conversations/${conversationId}/messages`,

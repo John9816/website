@@ -1,6 +1,6 @@
 import { useState } from 'react'
-import { Popover } from 'antd'
-import { ChevronDown, LogOut, Shield, UserRound } from 'lucide-react'
+import { App as AntApp, Popover } from 'antd'
+import { CalendarCheck, ChevronDown, Coins, LogOut, Shield, UserRound } from 'lucide-react'
 import { useAuth } from '../context/AuthContext'
 
 function getDisplayName(username?: string | null) {
@@ -20,15 +20,31 @@ function getRoleLabel(role?: 'ADMIN' | 'USER') {
 
 export default function TopbarUserMenu() {
   const auth = useAuth()
+  const { message } = AntApp.useApp()
   const [open, setOpen] = useState(false)
+  const [checkingIn, setCheckingIn] = useState(false)
 
   const username = auth.user?.username ?? auth.username
   const role = auth.user?.role
   const canManageSystemConfig = !!auth.user?.canManageSystemConfig
+  const credits = auth.credits
 
   const handleLogout = () => {
     auth.logout()
     setOpen(false)
+  }
+
+  const handleCheckIn = async () => {
+    setCheckingIn(true)
+    try {
+      const nextCredits = await auth.checkIn()
+      message.success(`签到成功，积分 +${nextCredits.dailyCheckInReward}`)
+    } catch (e) {
+      message.error((e as Error).message)
+      void auth.refreshCredits().catch(() => undefined)
+    } finally {
+      setCheckingIn(false)
+    }
   }
 
   const content = (
@@ -42,6 +58,22 @@ export default function TopbarUserMenu() {
       </div>
 
       <div className="topbar-user-card__meta">
+        {credits && (
+          <>
+            <div className="topbar-user-card__meta-item">
+              <span>积分余额</span>
+              <b>{credits.credits}</b>
+            </div>
+            <div className="topbar-user-card__meta-item">
+              <span>生图消耗</span>
+              <b>{credits.imageCreditCost}/张</b>
+            </div>
+            <div className="topbar-user-card__meta-item">
+              <span>签到奖励</span>
+              <b>{credits.dailyCheckInReward}/天</b>
+            </div>
+          </>
+        )}
         <div className="topbar-user-card__meta-item">
           <span>用户 ID</span>
           <b>{auth.user?.id ?? '--'}</b>
@@ -51,6 +83,18 @@ export default function TopbarUserMenu() {
           <b>{canManageSystemConfig ? '可管理' : '无权限'}</b>
         </div>
       </div>
+
+      {credits && (
+        <button
+          type="button"
+          className="topbar-user-card__checkin"
+          onClick={() => void handleCheckIn()}
+          disabled={credits.checkedInToday || checkingIn}
+        >
+          {credits.checkedInToday ? <CalendarCheck size={15} /> : <Coins size={15} />}
+          <span>{credits.checkedInToday ? '今日已签到' : `签到领取 ${credits.dailyCheckInReward} 积分`}</span>
+        </button>
+      )}
 
       <button
         type="button"

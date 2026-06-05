@@ -1,11 +1,12 @@
 import { type CSSProperties, useEffect, useMemo, useState } from 'react'
 import { App as AntApp } from 'antd'
-import { ImageIcon, LoaderCircle, LogIn, RefreshCw, Sparkles } from 'lucide-react'
+import { Copy, ImageIcon, LoaderCircle, LogIn, RefreshCw, Settings, Sparkles } from 'lucide-react'
 import { Link as RouterLink } from 'react-router-dom'
 import { listSharedImages } from '../api/public'
 import ImageStudio from '../components/ImageStudio'
 import ImagePreviewOverlay from '../components/ImagePreviewOverlay'
 import TopbarNav from '../components/TopbarNav'
+import TopbarUserMenu from '../components/TopbarUserMenu'
 import ThemeToggle from '../components/ThemeToggle'
 import { DEFAULT_PAGE_SIZE } from '../constants/pagination'
 import { useAuth } from '../context/AuthContext'
@@ -47,6 +48,20 @@ export default function AiImagePage() {
     }
   }
 
+  const handleCopyPrompt = async (prompt?: string | null) => {
+    const text = prompt?.trim()
+    if (!text) {
+      message.warning('没有可复制的提示词')
+      return
+    }
+    try {
+      await navigator.clipboard.writeText(text)
+      message.success('提示词已复制')
+    } catch {
+      message.error('复制失败，请手动复制提示词')
+    }
+  }
+
   useEffect(() => {
     if (auth.token) return
     void loadShared(1)
@@ -55,24 +70,30 @@ export default function AiImagePage() {
 
   return (
     <div className={pageClassName}>
-      {!auth.token && (
-        <header className="topbar">
-          <RouterLink to="/" className="topbar-brand" aria-label="返回首页">
-            <span className="brand-dot" />
-            <span>我的导航</span>
-          </RouterLink>
+      <header className="topbar">
+        <RouterLink to="/" className="topbar-brand" aria-label="返回首页">
+          <span className="brand-dot" />
+          <span>我的导航</span>
+        </RouterLink>
 
-          <TopbarNav />
+        <TopbarNav />
 
-          <div className="topbar-actions" aria-label="站点操作">
+        <div className="topbar-actions" aria-label="站点操作">
+          {auth.token ? (
+            <RouterLink to="/admin" className="topbar-action">
+              <Settings size={16} />
+              <span>管理</span>
+            </RouterLink>
+          ) : (
             <RouterLink to="/login" className="topbar-action" state={{ from: '/ai-image' }}>
               <LogIn size={16} />
               <span>登录</span>
             </RouterLink>
-            <ThemeToggle />
-          </div>
-        </header>
-      )}
+          )}
+          <ThemeToggle />
+          {auth.token && <TopbarUserMenu />}
+        </div>
+      </header>
 
       <main className={mainClassName}>
         {auth.token ? (
@@ -180,9 +201,22 @@ export default function AiImagePage() {
                           </div>
                         )}
                         <div className="ai-image-page__gallery-body">
-                          <p className="ai-image-page__gallery-prompt" title={item.prompt}>
-                            {item.prompt || '未命名图片'}
-                          </p>
+                          <div className="ai-image-page__gallery-prompt-row">
+                            <p className="ai-image-page__gallery-prompt" title={item.prompt}>
+                              {item.prompt || '未命名图片'}
+                            </p>
+                            {item.prompt ? (
+                              <button
+                                type="button"
+                                className="ai-image-page__copy-prompt"
+                                onClick={() => void handleCopyPrompt(item.prompt)}
+                                aria-label="复制提示词"
+                                title="复制提示词"
+                              >
+                                <Copy size={15} />
+                              </button>
+                            ) : null}
+                          </div>
                           <div className="ai-image-page__gallery-meta">
                             <span>{item.model || 'image model'}</span>
                             {item.size && <span>{item.size}</span>}

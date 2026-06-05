@@ -13,6 +13,7 @@ import {
   ArrowLeft,
   CheckSquare,
   Clipboard,
+  Coins,
   Download,
   ImagePlus,
   LoaderCircle,
@@ -39,6 +40,7 @@ import {
 } from '../api/admin'
 import ImagePreviewOverlay from '../components/ImagePreviewOverlay'
 import { DEFAULT_PAGE_SIZE } from '../constants/pagination'
+import { useAuth } from '../context/AuthContext'
 import type {
   GeneratedImageView,
   ImageGenerateDataItem,
@@ -128,6 +130,29 @@ function clampNumber(value: number, min: number, max: number) {
   return Math.min(max, Math.max(min, value))
 }
 
+function normalizeLayoutWidths(widths: LayoutWidths, viewportWidth = typeof window === 'undefined' ? 1440 : window.innerWidth): LayoutWidths {
+  const history = clampNumber(widths.history, HISTORY_WIDTH_MIN, HISTORY_WIDTH_MAX)
+  const controls = clampNumber(widths.controls, CONTROLS_WIDTH_MIN, CONTROLS_WIDTH_MAX)
+  const available = viewportWidth - GRID_PADDING_X - RESIZE_HANDLE_TOTAL
+
+  if (viewportWidth <= RESIZE_BREAKPOINT || available <= HISTORY_WIDTH_MIN + CONTROLS_WIDTH_MIN + WORKSPACE_WIDTH_MIN) {
+    return {
+      history: HISTORY_WIDTH_MIN,
+      controls: clampNumber(Math.min(controls, 380), CONTROLS_WIDTH_MIN, CONTROLS_WIDTH_MAX),
+    }
+  }
+
+  const maxControls = Math.max(CONTROLS_WIDTH_MIN, available - history - WORKSPACE_WIDTH_MIN)
+  const nextControls = clampNumber(controls, CONTROLS_WIDTH_MIN, Math.min(CONTROLS_WIDTH_MAX, maxControls))
+  const maxHistory = Math.max(HISTORY_WIDTH_MIN, available - nextControls - WORKSPACE_WIDTH_MIN)
+  const nextHistory = clampNumber(history, HISTORY_WIDTH_MIN, Math.min(HISTORY_WIDTH_MAX, maxHistory))
+
+  return {
+    history: nextHistory,
+    controls: nextControls,
+  }
+}
+
 function loadLayoutWidths(): LayoutWidths {
   if (typeof window === 'undefined') {
     return { history: 280, controls: 380 }
@@ -135,17 +160,18 @@ function loadLayoutWidths(): LayoutWidths {
 
   try {
     const parsed = JSON.parse(window.localStorage.getItem(IMAGE_LAYOUT_STORAGE_KEY) || '{}') as Partial<LayoutWidths>
-    return {
+    return normalizeLayoutWidths({
       history: clampNumber(Number(parsed.history) || 280, HISTORY_WIDTH_MIN, HISTORY_WIDTH_MAX),
       controls: clampNumber(Number(parsed.controls) || 380, CONTROLS_WIDTH_MIN, CONTROLS_WIDTH_MAX),
-    }
+    })
   } catch {
-    return { history: 280, controls: 380 }
+    return normalizeLayoutWidths({ history: 280, controls: 380 })
   }
 }
 
 export default function ImageStudio({ layout = 'admin' }: ImageStudioProps) {
   const { message } = AntApp.useApp()
+  const auth = useAuth()
   const [prompt, setPrompt] = useState('')
   const [selectedModel, setSelectedModel] = useState(MODEL_OPTIONS[0])
   const [quality, setQuality] = useState('auto')
@@ -155,11 +181,13 @@ export default function ImageStudio({ layout = 'admin' }: ImageStudioProps) {
   const [imageCount, setImageCount] = useState(1)
   const [loading, setLoading] = useState(false)
   const [elapsed, setElapsed] = useState(0)
+  const [pendingImageCount, setPendingImageCount] = useState(0)
   const [result, setResult] = useState<ImageGenerateResult | null>(null)
   const [task, setTask] = useState<ImageTaskView | null>(null)
   const abortRef = useRef<AbortController | null>(null)
   const pollAbortRef = useRef<AbortController | null>(null)
   const pollTimerRef = useRef<number | null>(null)
+  const pendingStartedAtRef = useRef<number | null>(null)
   const activeRef = useRef(true)
   const imageInputRef = useRef<HTMLInputElement | null>(null)
   const resizeStateRef = useRef<{
@@ -200,6 +228,14 @@ export default function ImageStudio({ layout = 'admin' }: ImageStudioProps) {
     [result, selectedGroup],
   )
   const visibleImageCount = displayImages.length
+  const creditCostPerImage = auth.credits?.imageCreditCost ?? 1
+  const creditBalance = auth.credits?.credits
+  const estimatedCreditCost = Math.max(1, imageCount) * creditCostPerImage
+  const hasEnoughCredits = creditBalance === undefined || creditBalance >= estimatedCreditCost
+  const isAwaitingImages = (loading || (!!task && !isTerminalTask(task.status))) && !result
+  const pendingSlots = isAwaitingImages
+    ? Array.from({ length: Math.max(pendingImageCount, imageCount, 1) }, (_, index) => index + 1)
+    : []
   const workspaceTitle = result
     ? '本次生成'
     : selectedGroup
@@ -227,6 +263,7 @@ export default function ImageStudio({ layout = 'admin' }: ImageStudioProps) {
 
   useEffect(() => {
     void loadHistory(1)
+    void auth.refreshCredits().catch(() => undefined)
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [])
 
@@ -250,14 +287,18 @@ export default function ImageStudio({ layout = 'admin' }: ImageStudioProps) {
   }, [items, page])
 
   useEffect(() => {
-    if (!loading) return
-    setElapsed(0)
-    const started = Date.now()
+    if (!loading && !pendingImageCount) {
+      pendingStartedAtRef.current = null
+      return
+    }
+    const started = pendingStartedAtRef.current ?? Date.now()
+    pendingStartedAtRef.current = started
+    setElapsed(Math.floor((Date.now() - started) / 1000))
     const id = window.setInterval(() => {
       setElapsed(Math.floor((Date.now() - started) / 1000))
     }, 500)
     return () => window.clearInterval(id)
-  }, [loading])
+  }, [loading, pendingImageCount])
 
   useEffect(() => {
     activeRef.current = true
@@ -286,6 +327,15 @@ export default function ImageStudio({ layout = 'admin' }: ImageStudioProps) {
     window.localStorage.setItem(IMAGE_LAYOUT_STORAGE_KEY, JSON.stringify(layoutWidths))
   }, [layoutWidths])
 
+  useEffect(() => {
+    const handleResize = () => {
+      setLayoutWidths((current) => normalizeLayoutWidths(current))
+    }
+
+    window.addEventListener('resize', handleResize)
+    return () => window.removeEventListener('resize', handleResize)
+  }, [])
+
   const clearTaskPolling = () => {
     pollAbortRef.current?.abort()
     pollAbortRef.current = null
@@ -304,6 +354,7 @@ export default function ImageStudio({ layout = 'admin' }: ImageStudioProps) {
     if (nextTask.status === 'COMPLETED') {
       const nextResult = nextTask.result ?? null
       setResult(nextResult)
+      setPendingImageCount(0)
       setSelectedHistoryId(null)
       setLoading(false)
       if (nextResult?.data?.length) {
@@ -312,10 +363,12 @@ export default function ImageStudio({ layout = 'admin' }: ImageStudioProps) {
         message.success('任务已完成，可在历史记录中查看结果')
       }
       void loadHistory(1)
+      void auth.refreshCredits().catch(() => undefined)
       return
     }
 
     setResult(null)
+    setPendingImageCount(0)
     setLoading(false)
     message.error(nextTask.errorMessage || '生成失败')
   }
@@ -332,6 +385,7 @@ export default function ImageStudio({ layout = 'admin' }: ImageStudioProps) {
 
       if (isTerminalTask(nextTask.status)) {
         finishTask(nextTask)
+        void auth.refreshCredits().catch(() => undefined)
         return
       }
 
@@ -427,6 +481,12 @@ export default function ImageStudio({ layout = 'admin' }: ImageStudioProps) {
       return
     }
 
+    if (!hasEnoughCredits) {
+      message.warning(`积分不足，本次需要 ${estimatedCreditCost} 积分，当前剩余 ${creditBalance ?? 0} 积分`)
+      void auth.refreshCredits().catch(() => undefined)
+      return
+    }
+
     clearTaskPolling()
     abortRef.current?.abort()
     const ctrl = new AbortController()
@@ -435,6 +495,9 @@ export default function ImageStudio({ layout = 'admin' }: ImageStudioProps) {
     setLoading(true)
     setResult(null)
     setTask(null)
+    pendingStartedAtRef.current = Date.now()
+    setElapsed(0)
+    setPendingImageCount(imageCount)
 
     try {
       const payload = {
@@ -467,6 +530,7 @@ export default function ImageStudio({ layout = 'admin' }: ImageStudioProps) {
       message.success(`生成任务已提交，任务 ID #${nextTask.id}`)
       setLoading(false)
       void loadHistory(1)
+      void auth.refreshCredits().catch(() => undefined)
       void pollTaskStatus(nextTask.id)
     } catch (e) {
       const err = e as Error & { code?: number }
@@ -474,7 +538,9 @@ export default function ImageStudio({ layout = 'admin' }: ImageStudioProps) {
         message.info('已取消提交')
       } else {
         message.error(err.message)
+        void auth.refreshCredits().catch(() => undefined)
       }
+      setPendingImageCount(0)
     } finally {
       if (abortRef.current === ctrl) {
         abortRef.current = null
@@ -487,6 +553,7 @@ export default function ImageStudio({ layout = 'admin' }: ImageStudioProps) {
     if (task && !isTerminalTask(task.status)) {
       clearTaskPolling()
       setLoading(false)
+      setPendingImageCount(0)
       message.info('已停止当前页面等待，后台任务仍会继续执行')
       return
     }
@@ -504,6 +571,7 @@ export default function ImageStudio({ layout = 'admin' }: ImageStudioProps) {
     setPrompt('')
     setResult(null)
     setTask(null)
+    setPendingImageCount(0)
     setSelectedHistoryId(null)
     setSelectedGroupIds(new Set())
     clearReferenceFile(imageInputRef)
@@ -566,7 +634,7 @@ export default function ImageStudio({ layout = 'admin' }: ImageStudioProps) {
     try {
       const updated = await adminToggleImageHistoryShare(item.id, !item.isShared)
       setItems((prev) => prev.map((entry) => (entry.id === item.id ? updated : entry)))
-      message.success(updated.isShared ? '已添加到素材/分享区' : '已取消公开分享')
+      message.success(updated.isShared ? '已公开' : '已取消公开分享')
     } catch (e) {
       message.error((e as Error).message)
     } finally {
@@ -576,7 +644,7 @@ export default function ImageStudio({ layout = 'admin' }: ImageStudioProps) {
 
   const handleAddToMaterial = async (image: DisplayImage) => {
     if (!image.historyItem) {
-      message.info('生成结果同步进历史后即可添加到素材')
+      message.info('生成结果同步进历史后即可公开分享')
       return
     }
     await handleToggleShare(image.historyItem)
@@ -795,7 +863,7 @@ export default function ImageStudio({ layout = 'admin' }: ImageStudioProps) {
         type="button"
         className="admin-image__history-scrim"
         onClick={() => setHistoryCollapsed(true)}
-        aria-label="鏀惰捣鐢熸垚璁板綍"
+        aria-label="收起生成记录"
       />
 
       <button
@@ -983,6 +1051,21 @@ export default function ImageStudio({ layout = 'admin' }: ImageStudioProps) {
           </div>
         </section>
 
+        <section className="admin-image__credit-panel">
+          <div>
+            <span>积分余额</span>
+            <strong>{creditBalance ?? '--'}</strong>
+          </div>
+          <div>
+            <span>本次预计消耗</span>
+            <strong>{estimatedCreditCost}</strong>
+          </div>
+          <div>
+            <Coins size={14} />
+            <span>{creditCostPerImage} 积分/张</span>
+          </div>
+        </section>
+
         </div>
 
         <div className="admin-image__submit-row">
@@ -1001,7 +1084,7 @@ export default function ImageStudio({ layout = 'admin' }: ImageStudioProps) {
               type="button"
               className="admin-image__generate-btn"
               onClick={() => void handleSubmit()}
-              disabled={!prompt.trim()}
+              disabled={!prompt.trim() || !hasEnoughCredits}
             >
               <SendHorizontal size={16} />
               开始生成
@@ -1027,7 +1110,9 @@ export default function ImageStudio({ layout = 'admin' }: ImageStudioProps) {
             <p>
               {visibleImageCount
                 ? `${visibleImageCount} 张图片`
-                : task
+                : pendingSlots.length
+                  ? `正在生成 ${pendingSlots.length} 张，已等待 ${elapsed}s`
+                  : task
                   ? taskStatusLabel(task.status)
                   : '等待生成'}
             </p>
@@ -1051,13 +1136,36 @@ export default function ImageStudio({ layout = 'admin' }: ImageStudioProps) {
           </div>
         )}
 
-        {displayImages.length ? (
+        {pendingSlots.length ? (
+          <div className="admin-image__result-grid">
+            {pendingSlots.map((slot) => (
+              <article key={`pending-${slot}`} className="admin-image__result-card admin-image__result-card--pending">
+                <div className="admin-image__result-image admin-image__result-image--pending">
+                  <div className="admin-image__pending-visual">
+                    <LoaderCircle size={24} className="admin-image__spinner" />
+                    <span>#{slot}</span>
+                  </div>
+                </div>
+                <div className="admin-image__result-meta admin-image__result-meta--pending">
+                  <span>{normalizedSize || task?.size || 'auto'}</span>
+                  <span>{task?.model || selectedModel}</span>
+                  <span>已等待 {elapsed}s</span>
+                </div>
+                <div className="admin-image__pending-copy">
+                  <strong>{task ? taskStatusLabel(task.status) : '提交中'}</strong>
+                  <span>{task ? `任务 #${task.id}` : '正在提交生成任务'}</span>
+                </div>
+              </article>
+            ))}
+          </div>
+        ) : displayImages.length ? (
           <div className="admin-image__result-grid">
             {displayImages.map((image) => (
               <article key={image.key} className="admin-image__result-card">
                 <button
                   type="button"
                   className="admin-image__result-image"
+                  style={imageAspectStyle(image.size || normalizedSize)}
                   onClick={() => setPreviewUrl(image.src)}
                 >
                   <img src={image.src} alt={image.prompt} loading="lazy" />
@@ -1074,7 +1182,7 @@ export default function ImageStudio({ layout = 'admin' }: ImageStudioProps) {
                     disabled={shareUpdatingId === image.historyItem?.id}
                   >
                     <ImagePlus size={14} />
-                    添加到素材
+                    {image.historyItem?.isShared ? '已公开' : '公开分享'}
                   </button>
                   <button
                     type="button"
@@ -1263,6 +1371,15 @@ function formatTime(value: string) {
 
 function buildImageDownloadName(item: GeneratedImageView, mimeType: string) {
   return `image-${item.id}.${getImageExtension(item.imageUrl || '', mimeType)}`
+}
+
+function imageAspectStyle(size?: string | null): CSSProperties {
+  const match = size?.match(/(\d+)\s*[xX*]\s*(\d+)/)
+  if (!match) return { aspectRatio: '4 / 3' }
+  const width = Number(match[1])
+  const height = Number(match[2])
+  if (!width || !height) return { aspectRatio: '4 / 3' }
+  return { aspectRatio: `${width} / ${height}` }
 }
 
 async function fetchImageBlobForDownload(url: string) {

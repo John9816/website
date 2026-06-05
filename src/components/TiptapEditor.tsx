@@ -111,13 +111,28 @@ type EditorViewLike = {
 
 interface TiptapEditorProps {
   content: string
-  onChange: (content: string) => void
+  onChange: (content: string, contentJson?: string) => void
+  uploadImage?: (file: File) => Promise<string>
   minHeight?: number | string
   maxHeight?: number | string
   fillHeight?: boolean
   slotBeforeMenu?: React.ReactNode
   slotAfterMenu?: React.ReactNode
   toolbarContainer?: HTMLElement | null
+}
+
+function normalizeEditorContent(content: string) {
+  const trimmed = content.trim()
+  if (!trimmed.startsWith('{') && !trimmed.startsWith('[')) return content
+
+  try {
+    const parsed = JSON.parse(trimmed)
+    if (parsed && typeof parsed === 'object') return parsed
+  } catch {
+    return content
+  }
+
+  return content
 }
 
 interface ToolbarButtonProps {
@@ -528,6 +543,7 @@ function MenuBar({
 export default function TiptapEditor({
   content,
   onChange,
+  uploadImage,
   minHeight,
   maxHeight,
   fillHeight = false,
@@ -566,10 +582,10 @@ export default function TiptapEditor({
       try {
         let nextPos = dropPos
         for (const file of imageFiles) {
-          const dataUrl = await imageFileToDataUrl(file)
-          insertImageIntoView(view, dataUrl, file.name.replace(/\.[^.]+$/, ''), nextPos)
+          const src = uploadImage ? await uploadImage(file) : await imageFileToDataUrl(file)
+          insertImageIntoView(view, src, file.name.replace(/\.[^.]+$/, ''), nextPos)
           if (typeof nextPos === 'number' && view?.state?.schema?.nodes?.image) {
-            const imageNode = view.state.schema.nodes.image.create({ src: dataUrl })
+            const imageNode = view.state.schema.nodes.image.create({ src })
             nextPos += imageNode.nodeSize
           }
         }
@@ -582,7 +598,7 @@ export default function TiptapEditor({
         setImageUploading(false)
       }
     },
-    [insertImageIntoView, message],
+    [insertImageIntoView, message, uploadImage],
   )
 
   const editor = useEditor({
@@ -618,7 +634,7 @@ export default function TiptapEditor({
         lowlight,
       }),
     ],
-    content,
+    content: normalizeEditorContent(content || ''),
     editorProps: {
       handlePaste: (view, event) => {
         const files = event.clipboardData?.files
@@ -642,7 +658,7 @@ export default function TiptapEditor({
       },
     },
     onUpdate: ({ editor: nextEditor }) => {
-      onChange(nextEditor.getHTML())
+      onChange(nextEditor.getHTML(), JSON.stringify(nextEditor.getJSON()))
     },
   })
 
@@ -650,7 +666,7 @@ export default function TiptapEditor({
     if (!editor) return
     const nextContent = content || ''
     if (editor.getHTML() !== nextContent) {
-      editor.commands.setContent(nextContent, { emitUpdate: false })
+      editor.commands.setContent(normalizeEditorContent(nextContent), { emitUpdate: false })
     }
   }, [content, editor])
 

@@ -43,6 +43,15 @@ function pageTotal(
   return count >= pageSize ? seen + 1 : seen
 }
 
+function splitArtistNames(artist: string) {
+  const names = artist
+    .split('/')
+    .map((name) => name.trim())
+    .filter(Boolean)
+
+  return names.length > 0 ? names : [artist]
+}
+
 export default function MusicSongTable({
   songs,
   loading,
@@ -118,7 +127,12 @@ export default function MusicSongTable({
             dataIndex: 'name',
             render: (name: string, row) => (
               <Space size={14}>
-                <MusicCover src={row.coverUrl} size={44} rounded={12} className={isPlayingRow(row) && isPlaying ? 'music-dock-spin' : ''} />
+                <MusicCover
+                  src={row.coverUrl}
+                  size={44}
+                  rounded={12}
+                  className={isPlayingRow(row) && isPlaying ? 'music-dock-spin' : ''}
+                />
                 <div style={{ minWidth: 0 }}>
                   <div
                     style={{
@@ -135,18 +149,23 @@ export default function MusicSongTable({
                     {name}
                   </div>
                   <Typography.Text type="secondary" style={{ fontSize: 13, opacity: 0.8 }}>
-                    {row.artist ? (
-                      <button
-                        type="button"
-                        className="music-inline-link"
-                        onClick={(event) => {
-                          event.stopPropagation()
-                          onSearchArtist?.(row.artist, row.source)
-                        }}
-                      >
-                        {row.artist}
-                      </button>
-                    ) : null}
+                    {row.artist
+                      ? splitArtistNames(row.artist).map((artist, index) => (
+                          <span key={`${row.source}:${row.id}:artist:${artist}`}>
+                            {index > 0 ? ' / ' : null}
+                            <button
+                              type="button"
+                              className="music-inline-link"
+                              onClick={(event) => {
+                                event.stopPropagation()
+                                onSearchArtist?.(artist, row.source)
+                              }}
+                            >
+                              {artist}
+                            </button>
+                          </span>
+                        ))
+                      : null}
                     {row.album ? (
                       <>
                         {' · '}
@@ -161,7 +180,9 @@ export default function MusicSongTable({
                           {row.album}
                         </button>
                       </>
-                    ) : ''}
+                    ) : (
+                      ''
+                    )}
                   </Typography.Text>
                 </div>
               </Space>

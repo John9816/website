@@ -73,6 +73,7 @@ export interface KbContextState {
   editTitle: string
   editSummary: string
   editContentHtml: string
+  editContentJson: string
   editInitialContent: string
   shareModalOpen: boolean
   shareLoading: boolean
@@ -116,6 +117,7 @@ export interface KbContextState {
   setEditTitle: (title: string) => void
   setEditSummary: (summary: string) => void
   setEditContentHtml: (html: string) => void
+  setEditContentJson: (json: string) => void
   setTreeContextMenu: (state: TreeContextMenuState | null) => void
 
   // Async Actions

@@ -10,6 +10,7 @@ import type {
   MusicSourceId,
   PageView,
   PlaylistDetailView,
+  AlbumDetailView,
   PlaylistListView,
   PlayInfo,
   SearchResultView,
@@ -86,6 +87,16 @@ export const musicPlaylistDetail = (
   pageSize = DEFAULT_PAGE_SIZE,
 ) =>
   request<PlaylistDetailView>('/api/v1/music/playlist/detail', {
+    query: { source, id, page, pageSize },
+  })
+
+export const musicAlbumDetail = (
+  source: MusicSourceId,
+  id: string,
+  page = 1,
+  pageSize = DEFAULT_PAGE_SIZE,
+) =>
+  request<AlbumDetailView>('/api/v1/music/album/detail', {
     query: { source, id, page, pageSize },
   })
 

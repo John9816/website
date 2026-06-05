@@ -2,14 +2,14 @@ import { useCallback, useEffect, useMemo, useRef, useState, type CSSProperties }
 import { App as AntApp, Button } from 'antd'
 import { Link, useLocation, useNavigate, useParams } from 'react-router-dom'
 import { ChevronLeft, Heart, Play, RefreshCcw } from 'lucide-react'
-import { musicPlaylistDetail } from '../api/music'
+import { musicAlbumDetail } from '../api/music'
 import MusicCover from '../components/MusicCover'
 import MusicShareAction from '../components/MusicShareAction'
 import MusicSongTable from '../components/MusicSongTable'
 import { DEFAULT_PAGE_SIZE } from '../constants/pagination'
 import { useMusicPlayer } from '../context/MusicPlayerContext'
 import { useMusicFavorites } from '../hooks/useMusicFavorites'
-import type { MusicSourceId, PlaylistDetailView } from '../types'
+import type { AlbumDetailView, MusicSourceId } from '../types'
 import { hydrateCollectionCovers, normalizeCoverUrl } from '../utils/musicPlayer'
 
 type MusicCollectionRouteState = {
@@ -23,22 +23,15 @@ function isMusicSourceId(value: string | undefined): value is MusicSourceId {
 function sourceLabel(source: MusicSourceId) {
   switch (source) {
     case 'qq':
-      return 'QQ 音乐'
+      return 'QQ Music'
     case 'netease':
-      return '网易云'
+      return 'NetEase Music'
     case 'kuwo':
-      return '酷我'
+      return 'Kuwo Music'
   }
 }
 
-function formatPlayCount(value?: number) {
-  if (!value || value <= 0) return '0'
-  if (value >= 100000000) return `${(value / 100000000).toFixed(1)} 亿`
-  if (value >= 10000) return `${(value / 10000).toFixed(1)} 万`
-  return String(value)
-}
-
-export default function MusicPlaylistDetailPage() {
+export default function MusicAlbumDetailPage() {
   const { message } = AntApp.useApp()
   const location = useLocation()
   const navigate = useNavigate()
@@ -47,7 +40,7 @@ export default function MusicPlaylistDetailPage() {
   const [page, setPage] = useState(1)
   const [pageSize, setPageSize] = useState(DEFAULT_PAGE_SIZE)
   const [loading, setLoading] = useState(false)
-  const [detail, setDetail] = useState<PlaylistDetailView | null>(null)
+  const [detail, setDetail] = useState<AlbumDetailView | null>(null)
   const requestIdRef = useRef(0)
   const autoplayPendingRef = useRef(false)
 
@@ -61,7 +54,7 @@ export default function MusicPlaylistDetailPage() {
       const requestId = ++requestIdRef.current
       setLoading(true)
       try {
-        const data = await musicPlaylistDetail(validSource, id, targetPage, pageSize)
+        const data = await musicAlbumDetail(validSource, id, targetPage, pageSize)
         if (requestId !== requestIdRef.current) return
         const hydrated = hydrateCollectionCovers(data.coverUrl, data.list, routeCoverUrl)
         const nextDetail = {
@@ -112,12 +105,9 @@ export default function MusicPlaylistDetailPage() {
 
   const metaText = useMemo(() => {
     if (!validSource) return ''
-
-    const creator = detail?.creatorName || sourceLabel(validSource)
-    const count = `${detail?.list.length ?? 0} 首`
-    const playCount = detail?.playCount ? ` · 播放 ${formatPlayCount(detail.playCount)}` : ''
-    return `${creator} · ${count}${playCount}`
-  }, [detail?.creatorName, detail?.list.length, detail?.playCount, validSource])
+    const artist = detail?.artist || sourceLabel(validSource)
+    return `${artist} · ${detail?.list.length ?? 0} tracks`
+  }, [detail?.artist, detail?.list.length, validSource])
 
   const heroCoverUrl = normalizeCoverUrl(detail?.coverUrl)
   const heroStyle = heroCoverUrl
@@ -126,7 +116,7 @@ export default function MusicPlaylistDetailPage() {
       } as CSSProperties)
     : undefined
 
-  const renderSongActions = (song: PlaylistDetailView['list'][number]) => (
+  const renderSongActions = (song: AlbumDetailView['list'][number]) => (
     <>
       {favoriteState.canFavorite ? (
         <button
@@ -137,8 +127,8 @@ export default function MusicPlaylistDetailPage() {
             event.stopPropagation()
             void favoriteState.toggleFavorite(song)
           }}
-          aria-label={favoriteState.isFavorite(song) ? '取消喜欢' : '加入喜欢'}
-          title={favoriteState.isFavorite(song) ? '取消喜欢' : '加入喜欢'}
+          aria-label={favoriteState.isFavorite(song) ? 'Cancel favorite' : 'Add favorite'}
+          title={favoriteState.isFavorite(song) ? 'Cancel favorite' : 'Add favorite'}
         >
           <Heart
             size={16}
@@ -164,7 +154,7 @@ export default function MusicPlaylistDetailPage() {
   if (!validSource || !id) {
     return (
       <div className="music-detail-shell">
-        <div className="music-empty-state">歌单参数无效</div>
+        <div className="music-empty-state">Invalid album parameters</div>
       </div>
     )
   }
@@ -175,18 +165,18 @@ export default function MusicPlaylistDetailPage() {
         className={`music-detail-hero${heroCoverUrl ? ' music-detail-hero--with-cover' : ''}`}
         style={heroStyle}
       >
-        <Link to="/music?view=playlist" className="music-hero-back" title="返回歌单">
+        <Link to="/music?view=search&type=album" className="music-hero-back" title="Back">
           <ChevronLeft size={20} />
         </Link>
 
         <MusicCover src={detail?.coverUrl} size={148} rounded={32} loading="eager" />
         <div className="music-detail-hero__copy">
-          <span className="music-stage-kicker">歌单详情</span>
-          <h2>{detail?.name || '加载中...'}</h2>
+          <span className="music-stage-kicker">Album detail</span>
+          <h2>{detail?.name || 'Loading...'}</h2>
           <p>{detail?.description || metaText}</p>
           <div className="music-detail-meta">
             <span>{metaText}</span>
-            {detail?.updateTime && <span>{detail.updateTime}</span>}
+            {detail?.publishTime && <span>{detail.publishTime}</span>}
           </div>
 
           <div className="music-hero-actions">
@@ -201,7 +191,7 @@ export default function MusicPlaylistDetailPage() {
               }}
               className="music-hero-play-btn"
             >
-              播放全部
+              Play all
             </Button>
             <Button
               ghost
@@ -212,7 +202,7 @@ export default function MusicPlaylistDetailPage() {
               }}
               className="music-hero-refresh-btn"
             >
-              刷新
+              Refresh
             </Button>
           </div>
         </div>
@@ -220,15 +210,15 @@ export default function MusicPlaylistDetailPage() {
 
       <div className="music-detail-list-head">
         <div className="music-detail-list-copy">
-          <h3>歌曲列表</h3>
-          <p>{detail?.total ? `共 ${detail.total} 首` : metaText}</p>
+          <h3>Tracks</h3>
+          <p>{detail?.total ? `${detail.total} tracks total` : metaText}</p>
         </div>
       </div>
 
       <MusicSongTable
         songs={detail?.list ?? []}
         loading={loading}
-        emptyText="暂无歌单歌曲"
+        emptyText="No album tracks"
         page={page}
         pageSize={pageSize}
         total={detail?.total}

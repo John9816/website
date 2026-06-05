@@ -6,7 +6,7 @@ import {
   useRef,
   useState,
 } from 'react'
-import { App as AntApp } from 'antd'
+import { App as AntApp, Popconfirm } from 'antd'
 import {
   ArrowDown,
   Bot,
@@ -25,11 +25,13 @@ import {
   Settings,
   Sparkles,
   StopCircle,
+  Trash2,
   Upload,
 } from 'lucide-react'
 import { Link as RouterLink } from 'react-router-dom'
 import {
   createAiConversation,
+  deleteAiConversation,
   fetchAiMessageAudio,
   listAiConversations,
   listAiMessages,
@@ -399,33 +401,62 @@ interface ConversationButtonProps {
   conversation: AiConversationView
   isActive: boolean
   disabled: boolean
+  deleting: boolean
   onSelect: (id: number) => void
+  onDelete: (id: number) => Promise<void>
 }
 
 function ConversationButton({
   conversation,
   isActive,
   disabled,
+  deleting,
   onSelect,
+  onDelete,
 }: ConversationButtonProps) {
   return (
-    <button
-      type="button"
-      className={`ai-chat__conversation${isActive ? ' is-active' : ''}`}
-      onClick={() => onSelect(conversation.id)}
-      disabled={disabled}
-    >
-      <div className="ai-chat__conversation-top">
-        <span className="ai-chat__conversation-title">{conversation.title}</span>
-        <time
-          className="ai-chat__conversation-time"
-          dateTime={conversation.lastMessageAt}
-          title={conversation.lastMessageAt}
+    <div className={`ai-chat__conversation${isActive ? ' is-active' : ''}`}>
+      <button
+        type="button"
+        className="ai-chat__conversation-select"
+        onClick={() => onSelect(conversation.id)}
+        disabled={disabled || deleting}
+      >
+        <div className="ai-chat__conversation-top">
+          <span className="ai-chat__conversation-title">{conversation.title}</span>
+          <time
+            className="ai-chat__conversation-time"
+            dateTime={conversation.lastMessageAt}
+            title={conversation.lastMessageAt}
+          >
+            {formatTimeLabel(conversation.lastMessageAt)}
+          </time>
+        </div>
+      </button>
+      <Popconfirm
+        title="删除这个对话？"
+        description="删除后不可恢复。"
+        okText="删除"
+        cancelText="取消"
+        okButtonProps={{ danger: true, loading: deleting }}
+        onConfirm={() => onDelete(conversation.id)}
+      >
+        <button
+          type="button"
+          className="ai-chat__conversation-delete"
+          disabled={disabled || deleting}
+          aria-label="删除对话"
+          title="删除对话"
+          onClick={(event) => event.stopPropagation()}
         >
-          {formatTimeLabel(conversation.lastMessageAt)}
-        </time>
-      </div>
-    </button>
+          {deleting ? (
+            <LoaderCircle size={14} className="ai-chat__spinner" />
+          ) : (
+            <Trash2 size={14} />
+          )}
+        </button>
+      </Popconfirm>
+    </div>
   )
 }
 
@@ -483,6 +514,7 @@ export default function AiChatPage() {
   const [_conversationsLoading, setConversationsLoading] = useState(false)
   const [messagesLoading, setMessagesLoading] = useState(false)
   const [creatingConversation, setCreatingConversation] = useState(false)
+  const [deletingConversationId, setDeletingConversationId] = useState<number | null>(null)
   const [sending, setSending] = useState(false)
   const [pendingRequest, setPendingRequest] = useState<{
     content: string
@@ -1121,6 +1153,36 @@ export default function AiChatPage() {
     messagesEndRef.current?.scrollIntoView({ behavior: 'smooth', block: 'end' })
   }
 
+  const handleDeleteConversation = async (conversationId: number) => {
+    if (deletingConversationId) return
+    setDeletingConversationId(conversationId)
+    try {
+      await deleteAiConversation(conversationId)
+      const nextConversations = conversations.filter((item) => item.id !== conversationId)
+      setConversations(nextConversations)
+
+      if (activeConversationId === conversationId) {
+        abortRef.current?.abort()
+        messageLoadSeqRef.current += 1
+        setActiveConversationId(nextConversations[0]?.id ?? null)
+        if (!nextConversations.length) {
+          setMessages([])
+          setMessagesLoading(false)
+        }
+        setPendingRequest(null)
+        setSending(false)
+        setStreamingDraft('')
+        setStreamingModel('')
+      }
+
+      message.success('对话已删除')
+    } catch (error) {
+      message.error((error as Error).message)
+    } finally {
+      setDeletingConversationId(null)
+    }
+  }
+
   const renderConversationItems = (items: AiConversationView[]) =>
     items.map((item) => (
       <ConversationButton
@@ -1128,7 +1190,9 @@ export default function AiChatPage() {
         conversation={item}
         isActive={item.id === activeConversationId}
         disabled={sending}
+        deleting={deletingConversationId === item.id}
         onSelect={setActiveConversationId}
+        onDelete={handleDeleteConversation}
       />
     ))
 

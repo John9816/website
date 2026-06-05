@@ -1,14 +1,17 @@
 import { createContext, useContext, useEffect, useState, type ReactNode } from 'react'
-import { getCurrentUser } from '../api/auth'
-import { AUTH_CHANGE_EVENT, getToken, setToken } from '../api/client'
-import type { CurrentUserView } from '../types'
+import { checkInToday, getCurrentUser, getUserCredits } from '../api/auth'
+import { ApiError, AUTH_CHANGE_EVENT, getToken, setToken } from '../api/client'
+import type { CurrentUserView, UserCreditView } from '../types'
 
 interface AuthState {
   token: string | null
   username: string | null
   user: CurrentUserView | null
+  credits: UserCreditView | null
   profileLoading: boolean
   refreshProfile: () => Promise<void>
+  refreshCredits: () => Promise<UserCreditView | null>
+  checkIn: () => Promise<UserCreditView>
   login: (token: string, username: string, tokenType?: string) => void
   logout: () => void
 }
@@ -23,7 +26,24 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     () => localStorage.getItem(USER_KEY),
   )
   const [user, setUser] = useState<CurrentUserView | null>(null)
+  const [credits, setCredits] = useState<UserCreditView | null>(null)
   const [profileLoading, setProfileLoading] = useState(() => !!getToken())
+
+  const applyProfile = (profile: CurrentUserView) => {
+    setUser(profile)
+    setUsername(profile.username)
+    localStorage.setItem(USER_KEY, profile.username)
+    const profileCredits = profile.credits
+    if (typeof profileCredits === 'number') {
+      setCredits((previous) => ({
+        credits: profileCredits,
+        imageCreditCost: profile.imageCreditCost ?? previous?.imageCreditCost ?? 1,
+        dailyCheckInReward: profile.dailyCheckInReward ?? previous?.dailyCheckInReward ?? 5,
+        checkedInToday: profile.checkedInToday ?? previous?.checkedInToday ?? false,
+        lastCheckInDate: profile.lastCheckInDate ?? previous?.lastCheckInDate ?? null,
+      }))
+    }
+  }
 
   useEffect(() => {
     const syncAuthState = () => {
@@ -32,6 +52,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       setUsername(token ? localStorage.getItem(USER_KEY) : null)
       if (!token) {
         setUser(null)
+        setCredits(null)
         setProfileLoading(false)
       }
     }
@@ -47,6 +68,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const refreshProfile = async () => {
     if (!getToken()) {
       setUser(null)
+      setCredits(null)
       setProfileLoading(false)
       return
     }
@@ -54,17 +76,39 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     setProfileLoading(true)
     try {
       const profile = await getCurrentUser()
-      setUser(profile)
-      setUsername(profile.username)
-      localStorage.setItem(USER_KEY, profile.username)
+      applyProfile(profile)
     } finally {
       setProfileLoading(false)
     }
   }
 
+  const refreshCredits = async () => {
+    if (!getToken()) {
+      setCredits(null)
+      return null
+    }
+    try {
+      const nextCredits = await getUserCredits()
+      setCredits(nextCredits)
+      return nextCredits
+    } catch (error) {
+      if (error instanceof ApiError && (error.code === 404 || error.code === 405)) {
+        return null
+      }
+      throw error
+    }
+  }
+
+  const checkIn = async () => {
+    const nextCredits = await checkInToday()
+    setCredits(nextCredits)
+    return nextCredits
+  }
+
   useEffect(() => {
     if (!token) {
       setUser(null)
+      setCredits(null)
       setProfileLoading(false)
       return
     }
@@ -74,13 +118,13 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     getCurrentUser()
       .then((profile) => {
         if (cancelled) return
-        setUser(profile)
-        setUsername(profile.username)
-        localStorage.setItem(USER_KEY, profile.username)
+        applyProfile(profile)
+        void refreshCredits().catch(() => undefined)
       })
       .catch(() => {
         if (cancelled) return
         setUser(null)
+        setCredits(null)
       })
       .finally(() => {
         if (!cancelled) setProfileLoading(false)
@@ -95,8 +139,11 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     token,
     username,
     user,
+    credits,
     profileLoading,
     refreshProfile,
+    refreshCredits,
+    checkIn,
     login(t, u, tokenType) {
       setToken(t, tokenType)
       localStorage.setItem(USER_KEY, u)
@@ -110,6 +157,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       setTok(null)
       setUsername(null)
       setUser(null)
+      setCredits(null)
       setProfileLoading(false)
     },
   }

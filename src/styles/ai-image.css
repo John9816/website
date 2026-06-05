@@ -105,16 +105,17 @@
 }
 
 .ai-image-page__gallery {
-  columns: 4 220px;
-  column-gap: 14px;
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(220px, 1fr));
+  gap: 14px;
+  align-items: start;
 }
 
 .ai-image-page__gallery-card {
-  display: inline-block;
+  display: block;
   width: 100%;
-  margin: 0 0 14px;
+  margin: 0;
   overflow: hidden;
-  break-inside: avoid;
   border: 1px solid var(--border);
   border-radius: 8px;
   background: var(--bg);
@@ -159,8 +160,16 @@
   padding: 12px;
 }
 
+.ai-image-page__gallery-prompt-row {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) 36px;
+  align-items: start;
+  gap: 8px;
+  margin-bottom: 10px;
+}
+
 .ai-image-page__gallery-prompt {
-  margin: 0 0 10px;
+  margin: 0;
   color: var(--text);
   font-size: 14px;
   font-weight: 700;
@@ -169,6 +178,32 @@
   -webkit-line-clamp: 3;
   -webkit-box-orient: vertical;
   overflow: hidden;
+}
+
+.ai-image-page__copy-prompt {
+  width: 36px;
+  height: 36px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  background: var(--panel);
+  color: var(--text-dim);
+  cursor: pointer;
+  transition: background 0.16s ease, border-color 0.16s ease, color 0.16s ease;
+}
+
+.ai-image-page__copy-prompt:hover,
+.ai-image-page__copy-prompt:focus-visible {
+  border-color: var(--text);
+  background: var(--text);
+  color: var(--bg);
+}
+
+.ai-image-page__copy-prompt:focus-visible {
+  outline: 2px solid color-mix(in srgb, var(--accent) 42%, transparent);
+  outline-offset: 2px;
 }
 
 .ai-image-page__gallery-meta {
@@ -278,7 +313,7 @@
   }
 
   .ai-image-page__gallery {
-    columns: 3 190px;
+    grid-template-columns: repeat(auto-fill, minmax(190px, 1fr));
   }
 }
 
@@ -305,12 +340,12 @@
   }
 
   .ai-image-page__gallery {
-    columns: 2 156px;
-    column-gap: 10px;
+    grid-template-columns: repeat(auto-fill, minmax(156px, 1fr));
+    gap: 10px;
   }
 
   .ai-image-page__gallery-card {
-    margin-bottom: 10px;
+    margin: 0;
   }
 
   .ai-image-page__gallery-body {
@@ -320,6 +355,6 @@
 
 @media (max-width: 480px) {
   .ai-image-page__gallery {
-    columns: 1;
+    grid-template-columns: 1fr;
   }
 }

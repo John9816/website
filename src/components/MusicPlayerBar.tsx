@@ -11,6 +11,7 @@ import {
   Captions,
   ChevronDown,
   ChevronLeft,
+  Heart,
   ListMusic,
   Loader2,
   Pause,
@@ -29,6 +30,7 @@ import type { MusicQuality, SongSearchItem } from '../types'
 import MusicCover from './MusicCover'
 import { useMusicPlayer, type PlayMode } from '../context/MusicPlayerContext'
 import { useActiveLyric } from '../hooks/useActiveLyric'
+import { useMusicFavorites } from '../hooks/useMusicFavorites'
 import { formatDuration, normalizeCoverUrl } from '../utils/musicPlayer'
 
 const fac = new FastAverageColor()
@@ -199,6 +201,10 @@ export default function MusicPlayerBar() {
   }, [currentRow, playlist])
 
   const activeQueueIndex = playlist.length ? currentIndex : queueItems.length ? 0 : -1
+  const favoriteSongs = useMemo(() => (currentRow ? [currentRow] : []), [currentRow])
+  const favoriteState = useMusicFavorites(favoriteSongs)
+  const isCurrentFavorite = currentRow ? favoriteState.isFavorite(currentRow) : false
+  const isFavoriteLoading = currentRow ? favoriteState.isFavoriteLoading(currentRow) : false
 
   const switchQuality = useCallback(
     (quality: MusicQuality) => {
@@ -208,6 +214,11 @@ export default function MusicPlayerBar() {
     },
     [currentRow, playSong, setPreferredQuality],
   )
+
+  const toggleCurrentFavorite = useCallback(() => {
+    if (!currentRow || isFavoriteLoading) return
+    void favoriteState.toggleFavorite(currentRow)
+  }, [currentRow, favoriteState, isFavoriteLoading])
 
   useEffect(() => {
     if (!seeking) return
@@ -437,24 +448,11 @@ export default function MusicPlayerBar() {
   const progressValueText = `${formatDuration(
     Math.min(currentTime, duration || currentTime),
   )} / ${formatDuration(duration)}`
-  const isLyricsViewOpen = expanded && fullscreenTab === 'lyrics'
-  const isQueueViewOpen = expanded && fullscreenTab === 'queue'
-
   const openFullscreen = (target: FullscreenTab = 'lyrics') => {
     setFullscreenTab(target)
     setQualityPopoverOpen(false)
     setQueuePopoverOpen(false)
     setExpanded(true)
-  }
-
-  const toggleFullscreenPanel = (target: FullscreenTab) => {
-    if (expanded && fullscreenTab === target) {
-      setQualityPopoverOpen(false)
-      setQueuePopoverOpen(false)
-      setExpanded(false)
-      return
-    }
-    openFullscreen(target)
   }
 
   const qualityPopoverContent = (
@@ -520,7 +518,7 @@ export default function MusicPlayerBar() {
                 </span>
                 <span className="music-player-fullscreen__queue-artist">
                   {item.artist || '未知歌手'}
-                  {item.album ? ` 路 ${item.album}` : ''}
+                  {item.album ? ` · ${item.album}` : ''}
                 </span>
               </span>
               {index === activeQueueIndex && (
@@ -738,6 +736,19 @@ export default function MusicPlayerBar() {
             </div>
           </div>
 
+          <button
+            type="button"
+            className={`music-player-bar__lyric-chip${
+              activeLyricText ? ' has-lyric' : ''
+            }`}
+            onClick={() => openFullscreen('lyrics')}
+            title={activeLyricText || '打开动态歌词'}
+            aria-label={activeLyricText ? `当前歌词：${activeLyricText}` : '打开动态歌词'}
+          >
+            <Captions size={15} />
+            <span>{activeLyricText || '暂无歌词'}</span>
+          </button>
+
           <div className="music-player-bar__center">
             <div className="music-player-bar__controls">
               <button
@@ -782,6 +793,41 @@ export default function MusicPlayerBar() {
           <div className="music-player-bar__aside">
             <button
               type="button"
+              className={`ctrl-btn music-player-bar__icon-btn music-player-bar__like-btn${
+                isCurrentFavorite ? ' is-active' : ''
+              }`}
+              disabled={!currentRow || isFavoriteLoading}
+              onClick={toggleCurrentFavorite}
+              aria-label={isCurrentFavorite ? '取消喜欢当前歌曲' : '喜欢当前歌曲'}
+              title={isCurrentFavorite ? '取消喜欢' : '喜欢'}
+            >
+              <Heart size={16} fill={isCurrentFavorite ? 'currentColor' : 'none'} />
+            </button>
+            <Popover
+              trigger="click"
+              placement="top"
+              overlayClassName="music-player-fullscreen__popover"
+              content={qualityPopoverContent}
+              open={qualityPopoverOpen && !expanded}
+              onOpenChange={(open) => {
+                setQualityPopoverOpen(open)
+                if (open) setQueuePopoverOpen(false)
+              }}
+            >
+              <button
+                type="button"
+                className={`ctrl-btn music-player-bar__icon-btn music-player-bar__quality-btn${
+                  qualityPopoverOpen && !expanded ? ' is-active' : ''
+                }`}
+                aria-label={`音质切换，当前 ${current.actualQuality || preferredQuality}`}
+                title={`音质：${current.actualQuality || preferredQuality}`}
+              >
+                <AudioLines size={16} />
+                <span>{current.actualQuality || preferredQuality}</span>
+              </button>
+            </Popover>
+            <button
+              type="button"
               className={`ctrl-btn music-player-bar__icon-btn${
                 playMode !== 'sequence' ? ' is-active' : ''
               }`}
@@ -791,29 +837,29 @@ export default function MusicPlayerBar() {
             >
               <PlayModeIcon size={16} />
             </button>
-            <button
-              type="button"
-              className={`ctrl-btn music-player-bar__icon-btn${
-                isLyricsViewOpen ? ' is-active' : ''
-              }`}
-              onClick={() => toggleFullscreenPanel('lyrics')}
-              aria-label={isLyricsViewOpen ? '收起歌词视图' : '打开歌词视图'}
-              title={isLyricsViewOpen ? '收起歌词' : '打开歌词'}
+            <Popover
+              trigger="click"
+              placement="topRight"
+              overlayClassName="music-player-fullscreen__popover"
+              content={queuePopoverContent}
+              open={queuePopoverOpen && !expanded}
+              onOpenChange={(open) => {
+                setQueuePopoverOpen(open)
+                if (open) setQualityPopoverOpen(false)
+              }}
             >
-              <Captions size={16} />
-            </button>
-            <button
-              type="button"
-              className={`ctrl-btn music-player-bar__icon-btn${
-                isQueueViewOpen ? ' is-active' : ''
-              }`}
-              onClick={() => toggleFullscreenPanel('queue')}
-              aria-label="打开当前播放列表"
-              title={`当前播放列表 (${queueItems.length})`}
-            >
-              <ListMusic size={16} />
-              <span>{queueItems.length}</span>
-            </button>
+              <button
+                type="button"
+                className={`ctrl-btn music-player-bar__icon-btn${
+                  queuePopoverOpen && !expanded ? ' is-active' : ''
+                }`}
+                aria-label={`当前播放列表，共 ${queueItems.length} 首`}
+                title={`当前播放列表 (${queueItems.length})`}
+              >
+                <ListMusic size={16} />
+                <span>{queueItems.length}</span>
+              </button>
+            </Popover>
             <button
               type="button"
               className="ctrl-btn"
@@ -1129,6 +1175,18 @@ export default function MusicPlayerBar() {
                     </div>
 
                     <div className="music-player-fullscreen__volume">
+                      <button
+                        type="button"
+                        className={`ctrl-btn music-player-fullscreen__tool-trigger music-player-fullscreen__like-trigger${
+                          isCurrentFavorite ? ' is-active' : ''
+                        }`}
+                        disabled={!currentRow || isFavoriteLoading}
+                        onClick={toggleCurrentFavorite}
+                        aria-label={isCurrentFavorite ? '取消喜欢当前歌曲' : '喜欢当前歌曲'}
+                        title={isCurrentFavorite ? '取消喜欢' : '喜欢'}
+                      >
+                        <Heart size={16} fill={isCurrentFavorite ? 'currentColor' : 'none'} />
+                      </button>
                       <button
                         type="button"
                         className={`ctrl-btn music-player-fullscreen__tool-trigger${

@@ -66,6 +66,13 @@ export interface KbDocSharePayload {
   rotateToken?: boolean
 }
 
+export interface KbAssetUploadResult {
+  url: string
+  key?: string
+  contentType?: string
+  size?: number
+}
+
 export const listKbSpaces = (signal?: AbortSignal) => request<KbSpace[]>('/api/user/kb/spaces', { auth: true, signal })
 
 export const getKbSpace = (id: number, signal?: AbortSignal) =>
@@ -197,3 +204,15 @@ export const deleteKbDocShare = (id: number) =>
 
 export const getPublicKbShare = (token: string) =>
   request<KbPublicDoc>(`/api/public/kb/share/${encodeURIComponent(token)}`)
+
+export const uploadKbAsset = (file: File, docId?: number) => {
+  const formData = new FormData()
+  formData.append('file', file)
+  if (docId) formData.append('docId', String(docId))
+
+  return request<KbAssetUploadResult>('/api/user/kb/assets', {
+    method: 'POST',
+    auth: true,
+    body: formData,
+  })
+}

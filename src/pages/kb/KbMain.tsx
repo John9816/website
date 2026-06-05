@@ -10,6 +10,7 @@ import {
 } from '@ant-design/icons'
 import { useKbContext } from './context'
 import ErrorBoundary from '../../components/ErrorBoundary'
+import { uploadKbAsset } from '../../api/kb'
 import type { KbDocSummary } from '../../types'
 
 const TiptapEditor = React.lazy(() => import('../../components/TiptapEditor'))
@@ -56,6 +57,7 @@ const KbMain: React.FC = () => {
     setEditSummary,
     editInitialContent,
     setEditContentHtml,
+    setEditContentJson,
     keyword,
     setKeyword,
     tagFilterId,
@@ -162,6 +164,14 @@ const KbMain: React.FC = () => {
     (selectedDoc?.contentJson
       ? `<pre style="white-space: pre-wrap; word-break: break-word;">${escapeHtml(selectedDoc.contentJson)}</pre>`
       : '')
+
+  const handleUploadEditorImage = React.useCallback(
+    async (file: File) => {
+      const result = await uploadKbAsset(file, selectedDoc?.id)
+      return result.url
+    },
+    [selectedDoc?.id],
+  )
 
   return (
     <section className="kb-admin-main">
@@ -317,7 +327,11 @@ const KbMain: React.FC = () => {
                       <TiptapEditor
                         key={selectedDoc.id}
                         content={editInitialContent}
-                        onChange={setEditContentHtml}
+                        onChange={(html, json) => {
+                          setEditContentHtml(html)
+                          setEditContentJson(json ?? '')
+                        }}
+                        uploadImage={handleUploadEditorImage}
                         minHeight={400}
                         maxHeight="none"
                         toolbarContainer={toolbarContainer}

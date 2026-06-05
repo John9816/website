@@ -14,6 +14,25 @@ const NAV_ITEMS: TopbarNavItem[] = [
   { to: '/ai-image', label: 'AI生图' },
 ]
 
+const preloaders: Record<string, () => Promise<unknown>> = {
+  '/': () => import('../pages/HomePage'),
+  '/music': () => Promise.all([import('../pages/MusicLayout'), import('../pages/MusicPage')]),
+  '/ai-chat': () => import('../pages/AiChatPage'),
+  '/ai-image': () => import('../pages/AiImagePage'),
+}
+
+const preloadedRoutes = new Set<string>()
+
+function preloadRoute(to: string) {
+  if (preloadedRoutes.has(to)) return
+  const preload = preloaders[to]
+  if (!preload) return
+  preloadedRoutes.add(to)
+  void preload().catch(() => {
+    preloadedRoutes.delete(to)
+  })
+}
+
 function getActiveIndex(pathname: string, items: TopbarNavItem[]) {
   return Math.max(
     items.findIndex((item) => {
@@ -59,6 +78,22 @@ export default function TopbarNav() {
     return () => observer.disconnect()
   }, [activeIndex])
 
+  useLayoutEffect(() => {
+    const preloadInactiveRoutes = () => {
+      for (const item of NAV_ITEMS) {
+        if (item.to !== NAV_ITEMS[activeIndex]?.to) preloadRoute(item.to)
+      }
+    }
+
+    if ('requestIdleCallback' in window) {
+      const id = window.requestIdleCallback(preloadInactiveRoutes, { timeout: 2500 })
+      return () => window.cancelIdleCallback(id)
+    }
+
+    const id = globalThis.setTimeout(preloadInactiveRoutes, 800)
+    return () => globalThis.clearTimeout(id)
+  }, [activeIndex])
+
   return (
     <nav
       ref={navRef}
@@ -81,7 +116,8 @@ export default function TopbarNav() {
           }}
           to={item.to}
           end={item.end}
-          viewTransition
+          onPointerEnter={() => preloadRoute(item.to)}
+          onFocus={() => preloadRoute(item.to)}
           className={({ isActive, isTransitioning }) =>
             [
               'topbar-nav__link',
