@@ -1,5 +1,5 @@
 import { Empty, Pagination, Space, Table, Typography } from 'antd'
-import type { ReactNode } from 'react'
+import { useCallback, useMemo, type ReactNode } from 'react'
 import { Pause, Play } from 'lucide-react'
 import { PAGE_SIZE_OPTIONS } from '../constants/pagination'
 import MusicCover from './MusicCover'
@@ -75,19 +75,21 @@ export default function MusicSongTable({
     togglePlay,
   } = useMusicPlayer()
 
-  const isPlayingRow = (row: SongSearchItem) =>
-    current?.id === row.id && current?.source === row.source
+  const isPlayingRow = useCallback(
+    (row: SongSearchItem) => current?.id === row.id && current?.source === row.source,
+    [current?.id, current?.source],
+  )
 
-  const handleRowActivate = (row: SongSearchItem) => {
+  const handleRowActivate = useCallback((row: SongSearchItem) => {
     if (isPlayingRow(row) && !unsupportedFormat) {
       togglePlay()
       return
     }
 
     void playSong(row, preferredQuality)
-  }
+  }, [isPlayingRow, playSong, preferredQuality, togglePlay, unsupportedFormat])
 
-  const paginationNode =
+  const paginationNode = useMemo(() => (
     onPageChange && songs.length > 0 ? (
       <div className="music-pagination music-pagination--bottom">
         <Pagination
@@ -106,6 +108,24 @@ export default function MusicSongTable({
         />
       </div>
     ) : null
+  ), [onPageChange, page, pageSize, songs.length, total])
+
+  const rowClassName = useCallback(
+    (row: SongSearchItem) => (isPlayingRow(row) ? 'music-row-active' : ''),
+    [isPlayingRow],
+  )
+
+  const tableLocale = useMemo(
+    () => ({ emptyText: <Empty description={emptyText} /> }),
+    [emptyText],
+  )
+
+  const handleTableRow = useCallback((row: SongSearchItem) => ({
+    onClick: () => {
+      handleRowActivate(row)
+    },
+    style: { cursor: 'pointer' },
+  }), [handleRowActivate])
 
   return (
     <>
@@ -116,7 +136,7 @@ export default function MusicSongTable({
         pagination={false}
         size="middle"
         className="music-song-table"
-        columns={[
+        columns={useMemo(() => [
           {
             title: '#',
             width: 52,
@@ -238,15 +258,22 @@ export default function MusicSongTable({
               </Space>
             ),
           },
-        ]}
-        rowClassName={(row) => (isPlayingRow(row) ? 'music-row-active' : '')}
-        onRow={(row) => ({
-          onClick: () => {
-            handleRowActivate(row)
-          },
-          style: { cursor: 'pointer' },
-        })}
-        locale={{ emptyText: <Empty description={emptyText} /> }}
+        ], [
+          actionColumnWidth,
+          handleRowActivate,
+          isPlaying,
+          isPlayingRow,
+          onSearchAlbum,
+          onSearchArtist,
+          page,
+          pageSize,
+          playLoading,
+          renderActions,
+          togglePlay,
+        ])}
+        rowClassName={rowClassName}
+        onRow={handleTableRow}
+        locale={tableLocale}
       />
       {paginationNode}
     </>

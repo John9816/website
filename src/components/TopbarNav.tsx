@@ -78,22 +78,6 @@ export default function TopbarNav() {
     return () => observer.disconnect()
   }, [activeIndex])
 
-  useLayoutEffect(() => {
-    const preloadInactiveRoutes = () => {
-      for (const item of NAV_ITEMS) {
-        if (item.to !== NAV_ITEMS[activeIndex]?.to) preloadRoute(item.to)
-      }
-    }
-
-    if ('requestIdleCallback' in window) {
-      const id = window.requestIdleCallback(preloadInactiveRoutes, { timeout: 2500 })
-      return () => window.cancelIdleCallback(id)
-    }
-
-    const id = globalThis.setTimeout(preloadInactiveRoutes, 800)
-    return () => globalThis.clearTimeout(id)
-  }, [activeIndex])
-
   return (
     <nav
       ref={navRef}

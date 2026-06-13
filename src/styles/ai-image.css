@@ -60,7 +60,7 @@
 }
 
 .ai-image-page__refresh {
-  min-height: 38px;
+  min-height: 44px;
   display: inline-flex;
   align-items: center;
   justify-content: center;
@@ -92,7 +92,7 @@
   align-items: center;
   justify-content: space-between;
   gap: 12px;
-  min-height: 38px;
+  min-height: 44px;
   margin-bottom: 16px;
   padding: 9px 12px;
   border: 1px solid var(--border);
@@ -184,8 +184,8 @@
 }
 
 .ai-image-page__copy-prompt {
-  width: 36px;
-  height: 36px;
+  width: 44px;
+  height: 44px;
   display: inline-flex;
   align-items: center;
   justify-content: center;
@@ -278,8 +278,8 @@
 }
 
 .ai-image-page__pagination button {
-  width: 34px;
-  height: 34px;
+  width: 44px;
+  height: 44px;
   border: 1px solid var(--border);
   border-radius: 999px;
   background: var(--bg);

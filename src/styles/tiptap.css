@@ -199,7 +199,7 @@
 }
 
 .tiptap-editor-container--fullscreen .editor-content {
-  max-height: calc(100vh - 72px);
+  max-height: calc(100dvh - 72px);
 }
 
 .editor-content--fill {

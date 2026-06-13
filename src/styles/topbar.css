@@ -467,6 +467,7 @@
 
   .topbar-brand {
     justify-self: start;
+    min-height: 44px;
   }
 
   .topbar-nav {
@@ -478,6 +479,7 @@
   .topbar-nav__link {
     flex: 1;
     min-width: 0;
+    min-height: 44px;
     white-space: nowrap;
   }
 
@@ -491,7 +493,12 @@
   .topbar-actions .theme-toggle,
   .topbar-user-trigger {
     flex: 0 0 auto;
+    min-height: 44px;
     padding-inline: 12px;
+  }
+
+  .topbar-actions .theme-toggle {
+    min-width: 44px;
   }
 
   .topbar-user-trigger__name {

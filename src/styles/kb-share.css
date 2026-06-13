@@ -1,6 +1,6 @@
 .kb-share-page {
-  min-height: 100vh;
-  height: 100vh;
+  min-height: 100dvh;
+  height: 100dvh;
   overflow: hidden;
   background:
     radial-gradient(circle at top left, rgba(211, 58, 49, 0.14), transparent 32%),
@@ -17,7 +17,7 @@
 
 .kb-share-shell {
   --kb-share-sidebar-width: 312px;
-  height: 100vh;
+  height: 100dvh;
   display: grid;
   grid-template-columns: minmax(248px, var(--kb-share-sidebar-width)) 16px minmax(0, 1fr);
   overflow: hidden;
@@ -298,14 +298,14 @@
 }
 
 .kb-share-content__loading {
-  min-height: calc(100vh - 48px);
+  min-height: calc(100dvh - 48px);
   display: grid;
   place-items: center;
 }
 
 .kb-share-article {
   width: 100%;
-  min-height: calc(100vh - 36px);
+  min-height: calc(100dvh - 36px);
   padding: clamp(24px, 4vw, 42px);
   border: 1px solid var(--border);
   border-radius: 30px;

@@ -1,5 +1,5 @@
 .ai-chat {
-  height: 100vh;
+  height: 100dvh;
   overflow: hidden;
   display: grid;
   grid-template-rows: auto minmax(0, 1fr);
@@ -1383,6 +1383,31 @@
 
   .ai-chat__sidebar {
     padding: 10px;
+  }
+
+  .ai-chat__new-chat,
+  .ai-chat__search,
+  .ai-chat__conversation-select,
+  .ai-chat__button {
+    min-height: 44px;
+  }
+
+  .ai-chat__new-chat {
+    height: 44px !important;
+  }
+
+  .ai-chat__sidebar-toggle,
+  .ai-chat__conversation-delete,
+  .ai-chat__icon-button,
+  .ai-chat__send-button,
+  .ai-chat__jump-bottom {
+    width: 44px;
+    height: 44px;
+  }
+
+  .ai-chat__sidebar-toggle {
+    width: 44px !important;
+    height: 44px !important;
   }
 
   .ai-chat__messages {

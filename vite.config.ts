@@ -11,14 +11,55 @@ export default defineConfig(({ mode }) => {
       rollupOptions: {
         output: {
           manualChunks(id) {
-            if (!id.includes('node_modules')) return
-            if (id.includes('antd') || id.includes('@ant-design') || id.includes('rc-')) {
+            const normalizedId = id.replace(/\\/g, '/')
+            if (!normalizedId.includes('/node_modules/')) return
+            if (
+              normalizedId.includes('/node_modules/react/') ||
+              normalizedId.includes('/node_modules/react-dom/') ||
+              normalizedId.includes('/node_modules/react-router-dom/') ||
+              normalizedId.includes('/node_modules/@remix-run/router/') ||
+              normalizedId.includes('/node_modules/scheduler/')
+            ) {
+              return 'vendor-react'
+            }
+            if (
+              normalizedId.includes('/node_modules/antd/') ||
+              normalizedId.includes('/node_modules/@ant-design/') ||
+              normalizedId.includes('/node_modules/rc-')
+            ) {
               return 'vendor-antd'
             }
-            if (id.includes('@tiptap') || id.includes('prosemirror')) {
+            if (normalizedId.includes('/node_modules/@tiptap/') || normalizedId.includes('/node_modules/prosemirror')) {
               return 'vendor-editor'
             }
-            if (id.includes('react-markdown') || id.includes('remark-') || id.includes('unified')) {
+            if (
+              normalizedId.includes('/node_modules/react-markdown/') ||
+              normalizedId.includes('/node_modules/remark-') ||
+              normalizedId.includes('/node_modules/rehype-') ||
+              normalizedId.includes('/node_modules/unified/') ||
+              normalizedId.includes('/node_modules/micromark') ||
+              normalizedId.includes('/node_modules/mdast-') ||
+              normalizedId.includes('/node_modules/hast-') ||
+              normalizedId.includes('/node_modules/unist-') ||
+              normalizedId.includes('/node_modules/vfile') ||
+              normalizedId.includes('/node_modules/bail/') ||
+              normalizedId.includes('/node_modules/ccount/') ||
+              normalizedId.includes('/node_modules/character-') ||
+              normalizedId.includes('/node_modules/comma-separated-tokens/') ||
+              normalizedId.includes('/node_modules/decode-named-character-reference/') ||
+              normalizedId.includes('/node_modules/devlop/') ||
+              normalizedId.includes('/node_modules/html-url-attributes/') ||
+              normalizedId.includes('/node_modules/is-alphabetical/') ||
+              normalizedId.includes('/node_modules/is-alphanumerical/') ||
+              normalizedId.includes('/node_modules/is-decimal/') ||
+              normalizedId.includes('/node_modules/is-hexadecimal/') ||
+              normalizedId.includes('/node_modules/markdown-table/') ||
+              normalizedId.includes('/node_modules/property-information/') ||
+              normalizedId.includes('/node_modules/space-separated-tokens/') ||
+              normalizedId.includes('/node_modules/trim-lines/') ||
+              normalizedId.includes('/node_modules/trough/') ||
+              normalizedId.includes('/node_modules/zwitch/')
+            ) {
               return 'vendor-markdown'
             }
           },

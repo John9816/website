@@ -120,7 +120,7 @@ function LayoutContent({
   const { token } = antdTheme.useToken()
 
   return (
-    <Layout hasSider style={{ minHeight: '100vh', background: token.colorBgLayout }}>
+    <Layout hasSider style={{ minHeight: '100dvh', background: token.colorBgLayout }}>
       <Sider
         theme={mode === 'dark' ? 'dark' : 'light'}
         breakpoint="lg"
@@ -128,7 +128,7 @@ function LayoutContent({
         width={240}
         style={{
           borderRight: `1px solid ${token.colorBorderSecondary}`,
-          height: '100vh',
+          height: '100dvh',
           position: 'fixed',
           left: 0,
           top: 0,
@@ -169,7 +169,7 @@ function LayoutContent({
         />
       </Sider>
 
-      <Layout style={{ marginLeft: 240, transition: 'all 0.2s', minWidth: 0, minHeight: '100vh', display: 'flex', flexDirection: 'column' }}>
+      <Layout style={{ marginLeft: 240, transition: 'all 0.2s', minWidth: 0, minHeight: '100dvh', display: 'flex', flexDirection: 'column' }}>
         <Header
           style={{
             position: 'sticky',
@@ -214,7 +214,7 @@ function LayoutContent({
         <Content
           style={{
             padding: '32px',
-            minHeight: 'calc(100vh - 64px)',
+            minHeight: 'calc(100dvh - 64px)',
           }}
         >
           <Outlet />
