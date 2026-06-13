@@ -42,8 +42,6 @@ const QUALITY_OPTIONS: Array<{ value: MusicQuality; label: string }> = [
   { value: 'flac24bit', label: 'Hi-Res' },
 ]
 
-type FullscreenTab = 'lyrics' | 'queue'
-
 function getPlayModeMeta(mode: PlayMode) {
   switch (mode) {
     case 'repeat-one':
@@ -78,7 +76,6 @@ function sourceLabel(source: 'qq' | 'netease' | 'kuwo') {
 export default function MusicPlayerBar() {
   const [seeking, setSeeking] = useState(false)
   const [expanded, setExpanded] = useState(false)
-  const [fullscreenTab, setFullscreenTab] = useState<FullscreenTab>('lyrics')
   const [queuePopoverOpen, setQueuePopoverOpen] = useState(false)
   const [qualityPopoverOpen, setQualityPopoverOpen] = useState(false)
   const [progressPreview, setProgressPreview] = useState<{
@@ -448,8 +445,7 @@ export default function MusicPlayerBar() {
   const progressValueText = `${formatDuration(
     Math.min(currentTime, duration || currentTime),
   )} / ${formatDuration(duration)}`
-  const openFullscreen = (target: FullscreenTab = 'lyrics') => {
-    setFullscreenTab(target)
+  const openFullscreen = () => {
     setQualityPopoverOpen(false)
     setQueuePopoverOpen(false)
     setExpanded(true)
@@ -708,7 +704,7 @@ export default function MusicPlayerBar() {
             <button
               type="button"
               className={`music-player-bar__cover-button${isPlaying ? ' is-playing' : ''}`}
-              onClick={() => openFullscreen('lyrics')}
+              onClick={openFullscreen}
               aria-label="打开全屏播放器"
               title="打开全屏播放器"
             >
@@ -741,7 +737,7 @@ export default function MusicPlayerBar() {
             className={`music-player-bar__lyric-chip${
               activeLyricText ? ' has-lyric' : ''
             }`}
-            onClick={() => openFullscreen('lyrics')}
+            onClick={openFullscreen}
             title={activeLyricText || '打开动态歌词'}
             aria-label={activeLyricText ? `当前歌词：${activeLyricText}` : '打开动态歌词'}
           >
@@ -939,7 +935,12 @@ export default function MusicPlayerBar() {
                     className={`music-player-fullscreen__needle ${
                       isPlaying ? 'is-playing' : ''
                     }`}
-                  />
+                  >
+                    <span className="music-player-fullscreen__needle-counterweight" />
+                    <span className="music-player-fullscreen__needle-arm" />
+                    <span className="music-player-fullscreen__needle-headshell" />
+                    <span className="music-player-fullscreen__needle-stylus" />
+                  </div>
                   <div
                     className={`music-player-fullscreen__disc ${
                       isPlaying ? 'is-playing' : ''
@@ -997,135 +998,68 @@ export default function MusicPlayerBar() {
                 </div>
 
                 <div className="music-player-fullscreen__lyrics-head">
-                  <div className="music-player-fullscreen__panel-tabs" role="tablist">
-                    <button
-                      type="button"
-                      role="tab"
-                      aria-selected={fullscreenTab === 'lyrics'}
-                      className={`music-player-fullscreen__panel-tab${
-                        fullscreenTab === 'lyrics' ? ' is-active' : ''
-                      }`}
-                      onClick={() => setFullscreenTab('lyrics')}
-                    >
+                  <div className="music-player-fullscreen__panel-tabs">
+                    <span className="music-player-fullscreen__panel-tab is-active">
                       歌词
-                    </button>
-                    <button
-                      type="button"
-                      role="tab"
-                      aria-selected={fullscreenTab === 'queue'}
-                      className={`music-player-fullscreen__panel-tab${
-                        fullscreenTab === 'queue' ? ' is-active' : ''
-                      }`}
-                      onClick={() => setFullscreenTab('queue')}
-                    >
-                      列表 {queueItems.length}
-                    </button>
+                    </span>
                   </div>
                 </div>
 
-                {fullscreenTab === 'lyrics' ? (
-                  <div className="music-player-fullscreen__lyrics-shell">
-                    <div ref={lyricScrollRef} className="music-player-fullscreen__lyrics">
-                      {lrcLines.length === 0 ? (
-                        current.lyric?.lineLyrics ? (
-                          <pre className="music-player-fullscreen__lyrics-plain">
-                            {current.lyric.lineLyrics}
-                          </pre>
-                        ) : (
-                          <div className="music-player-fullscreen__lyrics-empty">
-                            暂无歌词
-                          </div>
-                        )
+                <div className="music-player-fullscreen__lyrics-shell">
+                  <div ref={lyricScrollRef} className="music-player-fullscreen__lyrics">
+                    {lrcLines.length === 0 ? (
+                      current.lyric?.lineLyrics ? (
+                        <pre className="music-player-fullscreen__lyrics-plain">
+                          {current.lyric.lineLyrics}
+                        </pre>
                       ) : (
-                        lrcLines.map((line, index) => {
-                          const distance =
-                            activeLrcIndex >= 0 ? Math.abs(index - activeLrcIndex) : Infinity
-
-                          return (
-                            <div
-                              key={index}
-                              data-lrc-idx={index}
-                              className={`music-player-fullscreen__lyrics-line ${
-                                index === activeLrcIndex ? 'is-active' : ''
-                              }${distance === 1 ? ' is-near' : ''}${
-                                distance >= 2 && distance <= 3 ? ' is-mid' : ''
-                              }${distance >= 4 ? ' is-far' : ''}`}
-                              onClick={() => {
-                                seekToTime(line.time)
-                              }}
-                              role="button"
-                              tabIndex={0}
-                              aria-label={`跳转到 ${formatDuration(line.time)} ${line.text || '歌词位置'}`}
-                              title={`跳转到 ${formatDuration(line.time)}`}
-                              onKeyDown={(e) => {
-                                if (e.key === 'Enter' || e.key === ' ') {
-                                  seekToTime(line.time)
-                                  e.preventDefault()
-                                }
-                              }}
-                            >
-                              <span className="music-player-fullscreen__lyrics-text">
-                                {line.text || '\u00A0'}
-                              </span>
-                              <span
-                                className="music-player-fullscreen__lyrics-action"
-                                aria-hidden="true"
-                              >
-                                <Play size={12} />
-                              </span>
-                            </div>
-                          )
-                        })
-                      )}
-                    </div>
-                  </div>
-                ) : (
-                  <div className="music-player-fullscreen__queue-shell">
-                    <div ref={queueScrollRef} className="music-player-fullscreen__queue">
-                      {queueItems.length === 0 ? (
                         <div className="music-player-fullscreen__lyrics-empty">
-                          暂无播放列表
+                          暂无歌词
                         </div>
-                      ) : (
-                        queueItems.map((item, index) => (
-                          <button
-                            key={`${item.source}:${item.id}:${index}`}
-                            type="button"
-                            data-player-queue-idx={index}
-                            className={`music-player-fullscreen__queue-item${
-                              index === activeQueueIndex ? ' is-active' : ''
-                            }`}
+                      )
+                    ) : (
+                      lrcLines.map((line, index) => {
+                        const distance =
+                          activeLrcIndex >= 0 ? Math.abs(index - activeLrcIndex) : Infinity
+
+                        return (
+                          <div
+                            key={index}
+                            data-lrc-idx={index}
+                            className={`music-player-fullscreen__lyrics-line ${
+                              index === activeLrcIndex ? 'is-active' : ''
+                            }${distance === 1 ? ' is-near' : ''}${
+                              distance >= 2 && distance <= 3 ? ' is-mid' : ''
+                            }${distance >= 4 ? ' is-far' : ''}`}
                             onClick={() => {
-                              if (playlist.length) {
-                                void playFromQueue(index)
-                                return
+                              seekToTime(line.time)
+                            }}
+                            role="button"
+                            tabIndex={0}
+                            aria-label={`跳转到 ${formatDuration(line.time)} ${line.text || '歌词位置'}`}
+                            title={`跳转到 ${formatDuration(line.time)}`}
+                            onKeyDown={(e) => {
+                              if (e.key === 'Enter' || e.key === ' ') {
+                                seekToTime(line.time)
+                                e.preventDefault()
                               }
-                              void playSong(item, preferredQuality)
                             }}
                           >
-                            <span className="music-player-fullscreen__queue-index">
-                              {String(index + 1).padStart(2, '0')}
+                            <span className="music-player-fullscreen__lyrics-text">
+                              {line.text || '\u00A0'}
                             </span>
-                            <span className="music-player-fullscreen__queue-copy">
-                              <span className="music-player-fullscreen__queue-title">
-                                {item.name || '未知歌曲'}
-                              </span>
-                              <span className="music-player-fullscreen__queue-artist">
-                                {item.artist || '未知歌手'}
-                                {item.album ? ` · ${item.album}` : ''}
-                              </span>
+                            <span
+                              className="music-player-fullscreen__lyrics-action"
+                              aria-hidden="true"
+                            >
+                              <Play size={12} />
                             </span>
-                            {index === activeQueueIndex && (
-                              <span className="music-player-fullscreen__queue-pill">
-                                {isPlaying ? 'Playing' : 'Paused'}
-                              </span>
-                            )}
-                          </button>
-                        ))
-                      )}
-                    </div>
+                          </div>
+                        )
+                      })
+                    )}
                   </div>
-                )}
+                </div>
 
                 <div className="music-player-fullscreen__footer">
                   <div className="music-player-fullscreen__progress">
