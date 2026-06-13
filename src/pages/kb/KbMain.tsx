@@ -409,7 +409,7 @@ const KbMain: React.FC = () => {
         </div>
       </div>
 
-      <div className="kb-admin-canvas">
+      <div className={`kb-admin-canvas${isEditing ? ' kb-admin-canvas--editing' : ''}`}>
         {selectedParentId ? (
           selectedDocLoading ? (
             <div className="kb-admin-loading">
