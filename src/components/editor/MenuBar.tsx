@@ -138,7 +138,7 @@ function MenuBarInner({
   return (
     <div className="editor-menu-bar">
       <div className="editor-menu-bar__groups">
-        <div className="menu-group">
+        <div className="menu-group menu-group--history">
           <ToolbarButton
             title={EDITOR_TEXT.undo}
             icon={<UndoOutlined />}
@@ -196,7 +196,7 @@ function MenuBarInner({
           />
         </div>
 
-        <div className="menu-group">
+        <div className="menu-group menu-group--color">
           <Tooltip title={EDITOR_TEXT.textColor}>
             <ColorPicker
               size="small"
@@ -234,7 +234,7 @@ function MenuBarInner({
           </Tooltip>
         </div>
 
-        <div className="menu-group">
+        <div className="menu-group menu-group--marks">
           <ToolbarButton
             title={EDITOR_TEXT.bold}
             icon={<BoldOutlined />}
@@ -261,7 +261,7 @@ function MenuBarInner({
           />
         </div>
 
-        <div className="menu-group">
+        <div className="menu-group menu-group--align">
           <ToolbarButton
             title={EDITOR_TEXT.alignLeft}
             icon={<AlignLeftOutlined />}
@@ -282,7 +282,7 @@ function MenuBarInner({
           />
         </div>
 
-        <div className="menu-group">
+        <div className="menu-group menu-group--lists">
           <ToolbarButton
             title={EDITOR_TEXT.bulletList}
             icon={<UnorderedListOutlined />}
@@ -303,7 +303,7 @@ function MenuBarInner({
           />
         </div>
 
-        <div className="menu-group">
+        <div className="menu-group menu-group--indent">
           <ToolbarButton
             title={EDITOR_TEXT.outdent}
             icon={<LeftOutlined />}
@@ -316,7 +316,7 @@ function MenuBarInner({
           />
         </div>
 
-        <div className="menu-group">
+        <div className="menu-group menu-group--insert">
           <input
             ref={fileInputRef}
             hidden
@@ -348,7 +348,7 @@ function MenuBarInner({
           />
         </div>
 
-        <div className="menu-group">
+        <div className="menu-group menu-group--table-edit">
           <ToolbarButton
             title={EDITOR_TEXT.addRowBefore}
             icon={<VerticalLeftOutlined />}

@@ -108,6 +108,7 @@
   background: transparent;
   color: var(--editor-text-dim);
   box-shadow: none;
+  touch-action: manipulation;
   transition:
     transform 0.16s ease,
     color 0.16s ease,
@@ -432,10 +433,28 @@
     width: 100%;
     justify-content: flex-start;
     flex-wrap: wrap;
+    min-height: 52px;
   }
 
   .editor-toolbar-hint {
     display: none;
+  }
+
+  .editor-toolbar-btn.ant-btn,
+  .editor-toolbar-color .ant-color-picker-trigger {
+    width: 44px;
+    min-width: 44px;
+    height: 44px;
+    border-radius: 12px;
+  }
+
+  .editor-toolbar-select {
+    min-width: 98px;
+  }
+
+  .editor-toolbar-select.ant-select .ant-select-selector {
+    min-height: 44px !important;
+    border-radius: 12px !important;
   }
 
   .ProseMirror {

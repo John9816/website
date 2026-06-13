@@ -878,9 +878,12 @@
 
 .kb-admin-edit__tiptap-toolbar-wrapper {
   min-width: 0;
+  overflow-x: auto;
+  scrollbar-width: thin;
 }
 
 .kb-admin-edit__tiptap-toolbar-wrapper .editor-menu-bar {
+  min-width: max-content;
   border: 0;
   border-radius: 0;
   background: transparent;
@@ -897,10 +900,12 @@
 .kb-admin-editor-toolbar .editor-menu-bar__groups {
   align-items: center;
   gap: 6px;
+  flex-wrap: nowrap;
 }
 
 .kb-admin-editor-toolbar .editor-menu-bar__actions {
   gap: 4px;
+  flex-wrap: nowrap;
 }
 
 .kb-admin-editor-toolbar .menu-group {
@@ -1069,6 +1074,23 @@
 
   .kb-admin-editor-toolbar {
     top: 0;
+    overflow-x: auto;
+  }
+
+  .kb-admin-editor-toolbar .editor-menu-bar {
+    flex-direction: row;
+    align-items: center;
+  }
+
+  .kb-admin-editor-toolbar .editor-menu-bar__groups,
+  .kb-admin-editor-toolbar .editor-menu-bar__actions {
+    flex: 0 0 auto;
+    flex-wrap: nowrap;
+  }
+
+  .kb-admin-editor-toolbar .menu-group {
+    width: auto;
+    flex-wrap: nowrap;
   }
 
   .kb-admin-editor-paper {
@@ -1109,5 +1131,30 @@
   .kb-admin-article__title.ant-typography,
   .kb-admin-edit__title {
     font-size: 28px;
+  }
+
+  .kb-admin-editor-toolbar {
+    padding: 8px 10px;
+  }
+
+  .kb-admin-editor-toolbar .menu-group {
+    min-height: 48px;
+  }
+
+  .kb-admin-editor-toolbar .editor-toolbar-btn.ant-btn,
+  .kb-admin-editor-toolbar .editor-toolbar-color .ant-color-picker-trigger {
+    width: 44px;
+    min-width: 44px;
+    height: 44px;
+    border-radius: 10px;
+  }
+
+  .kb-admin-editor-toolbar .editor-toolbar-select.ant-select .ant-select-selector {
+    min-height: 44px !important;
+    border-radius: 10px !important;
+  }
+
+  .kb-admin-editor-paper {
+    padding-inline: 14px;
   }
 }

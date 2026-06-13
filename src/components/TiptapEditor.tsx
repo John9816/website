@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useMemo, useRef, useState, type CSSProperties } from 'react'
+import { useCallback, useEffect, useMemo, useState, type CSSProperties } from 'react'
 import { createPortal } from 'react-dom'
 import { EditorContent, useEditor, type Editor } from '@tiptap/react'
 import StarterKit from '@tiptap/starter-kit'
@@ -18,42 +18,13 @@ import CodeBlockLowlight from '@tiptap/extension-code-block-lowlight'
 import Highlight from '@tiptap/extension-highlight'
 import TextAlign from '@tiptap/extension-text-align'
 import { all, createLowlight } from 'lowlight'
-import {
-  AlignCenterOutlined,
-  AlignLeftOutlined,
-  AlignRightOutlined,
-  BgColorsOutlined,
-  BoldOutlined,
-  CheckOutlined,
-  ClearOutlined,
-  CodeOutlined,
-  DeleteOutlined,
-  FullscreenExitOutlined,
-  FullscreenOutlined,
-  HighlightOutlined,
-  ItalicOutlined,
-  LeftOutlined,
-  LinkOutlined,
-  LoadingOutlined,
-  MinusOutlined,
-  OrderedListOutlined,
-  PictureOutlined,
-  RedoOutlined,
-  RightOutlined,
-  TableOutlined,
-  UnderlineOutlined,
-  UndoOutlined,
-  UnorderedListOutlined,
-  UploadOutlined,
-  VerticalLeftOutlined,
-  VerticalRightOutlined,
-} from '@ant-design/icons'
-import { App as AntApp, Button, ColorPicker, Select, Tooltip } from 'antd'
+import { App as AntApp } from 'antd'
+import { MenuBar } from './editor/MenuBar'
+import { isJsonEqual, safeParseJson } from './editor/serialize'
 import '../styles/tiptap.css'
 
 const lowlight = createLowlight(all)
 const MAX_IMAGE_EDGE = 1600
-type HeadingLevel = 1 | 2 | 3 | 4 | 5 | 6
 
 const TEXT = {
   undo: '\u64a4\u9500',
@@ -122,50 +93,19 @@ interface TiptapEditorProps {
 }
 
 function normalizeEditorContent(content: string) {
-  const trimmed = content.trim()
-  if (!trimmed.startsWith('{') && !trimmed.startsWith('[')) return content
-
-  try {
-    const parsed = JSON.parse(trimmed)
-    if (parsed && typeof parsed === 'object') return parsed
-  } catch {
-    return content
-  }
-
-  return content
+  return safeParseJson(content.trim()) ?? content
 }
 
-interface ToolbarButtonProps {
-  active?: boolean
-  danger?: boolean
-  disabled?: boolean
-  icon: React.ReactNode
-  onClick: () => void
-  title: string
+function isBlankEditorHtml(html: string) {
+  return html === '<p></p>' || html === ''
 }
 
-function ToolbarButton({
-  active = false,
-  danger = false,
-  disabled = false,
-  icon,
-  onClick,
-  title,
-}: ToolbarButtonProps) {
-  return (
-    <Tooltip title={title}>
-      <Button
-        size="small"
-        type="text"
-        className={`editor-toolbar-btn${active ? ' is-active' : ''}${
-          danger ? ' is-danger' : ''
-        }`}
-        icon={icon}
-        onClick={onClick}
-        disabled={disabled}
-      />
-    </Tooltip>
-  )
+function isSameEditorContent(editor: Editor, content: string) {
+  const nextContent = content || ''
+  const parsedJson = safeParseJson(nextContent.trim())
+  if (parsedJson) return isJsonEqual(editor.getJSON(), parsedJson)
+  if (!nextContent.trim()) return isBlankEditorHtml(editor.getHTML())
+  return editor.getHTML() === nextContent
 }
 
 function fileToDataUrl(file: File) {
@@ -220,324 +160,6 @@ async function imageFileToDataUrl(file: File) {
   } finally {
     URL.revokeObjectURL(objectUrl)
   }
-}
-
-function getHeadingValue(editor: Editor): HeadingLevel | undefined {
-  if (editor.isActive('heading', { level: 1 })) return 1
-  if (editor.isActive('heading', { level: 2 })) return 2
-  if (editor.isActive('heading', { level: 3 })) return 3
-  if (editor.isActive('heading', { level: 4 })) return 4
-  if (editor.isActive('heading', { level: 5 })) return 5
-  if (editor.isActive('heading', { level: 6 })) return 6
-  return undefined
-}
-
-function getBlockValue(editor: Editor) {
-  if (editor.isActive('blockquote')) return 'blockquote'
-  if (editor.isActive('codeBlock')) return 'codeBlock'
-  return 'paragraph'
-}
-
-function MenuBar({
-  editor,
-  imageUploading,
-  isFullscreen,
-  onInsertImageUrl,
-  onInsertLink,
-  onSelectImageFiles,
-  toggleFullscreen,
-}: {
-  editor: Editor
-  imageUploading: boolean
-  isFullscreen: boolean
-  onInsertImageUrl: () => void
-  onInsertLink: () => void
-  onSelectImageFiles: (files: FileList | null) => void
-  toggleFullscreen: () => void
-}) {
-  const fileInputRef = useRef<HTMLInputElement | null>(null)
-  const headingValue = getHeadingValue(editor)
-  const blockValue = getBlockValue(editor)
-
-  return (
-    <div className="editor-menu-bar">
-      <div className="editor-menu-bar__groups">
-        <div className="menu-group menu-group--history">
-          <ToolbarButton
-            title={TEXT.undo}
-            icon={<UndoOutlined />}
-            onClick={() => editor.chain().focus().undo().run()}
-            disabled={!editor.can().chain().focus().undo().run()}
-          />
-          <ToolbarButton
-            title={TEXT.redo}
-            icon={<RedoOutlined />}
-            onClick={() => editor.chain().focus().redo().run()}
-            disabled={!editor.can().chain().focus().redo().run()}
-          />
-        </div>
-
-        <div className="menu-group menu-group--field">
-          <Select
-            size="small"
-            className="editor-toolbar-select"
-            placeholder={TEXT.heading}
-            popupMatchSelectWidth={false}
-            value={headingValue}
-            onChange={(level: HeadingLevel) =>
-              editor.chain().focus().toggleHeading({ level }).run()
-            }
-            options={[
-              { value: 1, label: 'H1' },
-              { value: 2, label: 'H2' },
-              { value: 3, label: 'H3' },
-              { value: 4, label: 'H4' },
-              { value: 5, label: 'H5' },
-              { value: 6, label: 'H6' },
-            ]}
-          />
-          <Select
-            size="small"
-            className="editor-toolbar-select"
-            popupMatchSelectWidth={false}
-            value={blockValue}
-            onChange={(block: string) => {
-              if (block === 'paragraph') {
-                editor.chain().focus().setParagraph().run()
-                return
-              }
-              if (block === 'blockquote') {
-                editor.chain().focus().toggleBlockquote().run()
-                return
-              }
-              editor.chain().focus().toggleCodeBlock().run()
-            }}
-            options={[
-              { value: 'paragraph', label: TEXT.paragraph },
-              { value: 'blockquote', label: TEXT.quote },
-              { value: 'codeBlock', label: TEXT.codeBlock },
-            ]}
-          />
-        </div>
-
-        <div className="menu-group menu-group--color">
-          <Tooltip title={TEXT.textColor}>
-            <ColorPicker
-              size="small"
-              className="editor-toolbar-color"
-              value={editor.getAttributes('textStyle').color}
-              trigger="click"
-              onChange={(color) => editor.chain().focus().setColor(color.toHexString()).run()}
-            >
-              <Button
-                size="small"
-                type="text"
-                className="editor-toolbar-btn"
-                icon={<BgColorsOutlined />}
-              />
-            </ColorPicker>
-          </Tooltip>
-          <Tooltip title={TEXT.highlightColor}>
-            <ColorPicker
-              size="small"
-              className="editor-toolbar-color"
-              trigger="click"
-              onChange={(color) =>
-                editor.chain().focus().toggleHighlight({ color: color.toHexString() }).run()
-              }
-            >
-              <Button
-                size="small"
-                type="text"
-                className={`editor-toolbar-btn${editor.isActive('highlight') ? ' is-active' : ''}`}
-                icon={<HighlightOutlined />}
-              />
-            </ColorPicker>
-          </Tooltip>
-        </div>
-
-        <div className="menu-group menu-group--marks">
-          <ToolbarButton
-            title={TEXT.bold}
-            icon={<BoldOutlined />}
-            active={editor.isActive('bold')}
-            onClick={() => editor.chain().focus().toggleBold().run()}
-          />
-          <ToolbarButton
-            title={TEXT.italic}
-            icon={<ItalicOutlined />}
-            active={editor.isActive('italic')}
-            onClick={() => editor.chain().focus().toggleItalic().run()}
-          />
-          <ToolbarButton
-            title={TEXT.underline}
-            icon={<UnderlineOutlined />}
-            active={editor.isActive('underline')}
-            onClick={() => editor.chain().focus().toggleUnderline().run()}
-          />
-          <ToolbarButton
-            title={TEXT.inlineCode}
-            icon={<CodeOutlined />}
-            active={editor.isActive('code')}
-            onClick={() => editor.chain().focus().toggleCode().run()}
-          />
-        </div>
-
-        <div className="menu-group menu-group--align">
-          <ToolbarButton
-            title={TEXT.alignLeft}
-            icon={<AlignLeftOutlined />}
-            active={editor.isActive({ textAlign: 'left' })}
-            onClick={() => editor.chain().focus().setTextAlign('left').run()}
-          />
-          <ToolbarButton
-            title={TEXT.alignCenter}
-            icon={<AlignCenterOutlined />}
-            active={editor.isActive({ textAlign: 'center' })}
-            onClick={() => editor.chain().focus().setTextAlign('center').run()}
-          />
-          <ToolbarButton
-            title={TEXT.alignRight}
-            icon={<AlignRightOutlined />}
-            active={editor.isActive({ textAlign: 'right' })}
-            onClick={() => editor.chain().focus().setTextAlign('right').run()}
-          />
-        </div>
-
-        <div className="menu-group menu-group--lists">
-          <ToolbarButton
-            title={TEXT.bulletList}
-            icon={<UnorderedListOutlined />}
-            active={editor.isActive('bulletList')}
-            onClick={() => editor.chain().focus().toggleBulletList().run()}
-          />
-          <ToolbarButton
-            title={TEXT.orderedList}
-            icon={<OrderedListOutlined />}
-            active={editor.isActive('orderedList')}
-            onClick={() => editor.chain().focus().toggleOrderedList().run()}
-          />
-          <ToolbarButton
-            title={TEXT.taskList}
-            icon={<CheckOutlined />}
-            active={editor.isActive('taskList')}
-            onClick={() => editor.chain().focus().toggleTaskList().run()}
-          />
-        </div>
-
-        <div className="menu-group menu-group--indent">
-          <ToolbarButton
-            title={TEXT.outdent}
-            icon={<LeftOutlined />}
-            onClick={() => editor.chain().focus().liftListItem('listItem').run()}
-          />
-          <ToolbarButton
-            title={TEXT.indent}
-            icon={<RightOutlined />}
-            onClick={() => editor.chain().focus().sinkListItem('listItem').run()}
-          />
-        </div>
-
-        <div className="menu-group menu-group--insert">
-          <input
-            ref={fileInputRef}
-            hidden
-            type="file"
-            accept="image/*"
-            onChange={(event) => {
-              onSelectImageFiles(event.target.files)
-              event.currentTarget.value = ''
-            }}
-          />
-          <ToolbarButton
-            title={imageUploading ? TEXT.uploadingImage : TEXT.uploadImage}
-            icon={imageUploading ? <LoadingOutlined /> : <UploadOutlined />}
-            onClick={() => fileInputRef.current?.click()}
-            disabled={imageUploading}
-          />
-          <ToolbarButton
-            title={TEXT.insertImageByUrl}
-            icon={<PictureOutlined />}
-            onClick={onInsertImageUrl}
-            disabled={imageUploading}
-          />
-          <ToolbarButton
-            title={TEXT.insertTable}
-            icon={<TableOutlined />}
-            onClick={() =>
-              editor.chain().focus().insertTable({ rows: 3, cols: 3, withHeaderRow: true }).run()
-            }
-          />
-        </div>
-
-        <div className="menu-group menu-group--table-edit">
-          <ToolbarButton
-            title={TEXT.addRowBefore}
-            icon={<VerticalLeftOutlined />}
-            onClick={() => editor.chain().focus().addRowBefore().run()}
-            disabled={!editor.can().addRowBefore()}
-          />
-          <ToolbarButton
-            title={TEXT.addRowAfter}
-            icon={<VerticalRightOutlined />}
-            onClick={() => editor.chain().focus().addRowAfter().run()}
-            disabled={!editor.can().addRowAfter()}
-          />
-          <ToolbarButton
-            title={TEXT.deleteRow}
-            icon={<MinusOutlined />}
-            onClick={() => editor.chain().focus().deleteRow().run()}
-            disabled={!editor.can().deleteRow()}
-          />
-          <ToolbarButton
-            title={TEXT.addColumnBefore}
-            icon={<LeftOutlined />}
-            onClick={() => editor.chain().focus().addColumnBefore().run()}
-            disabled={!editor.can().addColumnBefore()}
-          />
-          <ToolbarButton
-            title={TEXT.addColumnAfter}
-            icon={<RightOutlined />}
-            onClick={() => editor.chain().focus().addColumnAfter().run()}
-            disabled={!editor.can().addColumnAfter()}
-          />
-          <ToolbarButton
-            title={TEXT.deleteColumn}
-            icon={<MinusOutlined />}
-            onClick={() => editor.chain().focus().deleteColumn().run()}
-            disabled={!editor.can().deleteColumn()}
-          />
-          <ToolbarButton
-            title={TEXT.deleteTable}
-            icon={<DeleteOutlined />}
-            onClick={() => editor.chain().focus().deleteTable().run()}
-            disabled={!editor.can().deleteTable()}
-            danger
-          />
-        </div>
-      </div>
-
-      <div className="editor-menu-bar__actions">
-        <span className="editor-toolbar-hint">{TEXT.toolbarHint}</span>
-        <ToolbarButton
-          title={TEXT.insertLink}
-          icon={<LinkOutlined />}
-          active={editor.isActive('link')}
-          onClick={onInsertLink}
-        />
-        <ToolbarButton
-          title={TEXT.clearFormatting}
-          icon={<ClearOutlined />}
-          onClick={() => editor.chain().focus().unsetAllMarks().clearNodes().run()}
-        />
-        <ToolbarButton
-          title={isFullscreen ? TEXT.exitFullscreen : TEXT.fullscreen}
-          icon={isFullscreen ? <FullscreenExitOutlined /> : <FullscreenOutlined />}
-          onClick={toggleFullscreen}
-        />
-      </div>
-    </div>
-  )
 }
 
 export default function TiptapEditor({
@@ -665,7 +287,7 @@ export default function TiptapEditor({
   useEffect(() => {
     if (!editor) return
     const nextContent = content || ''
-    if (editor.getHTML() !== nextContent) {
+    if (!isSameEditorContent(editor, nextContent)) {
       editor.commands.setContent(normalizeEditorContent(nextContent), { emitUpdate: false })
     }
   }, [content, editor])
