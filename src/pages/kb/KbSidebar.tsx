@@ -1,24 +1,62 @@
 import React from 'react'
-import { Button, Dropdown, Tooltip, Tree, Typography } from 'antd'
+import { Button, Dropdown, Input, Tooltip, Tree, Typography } from 'antd'
 import {
   DeleteOutlined,
+  FileTextOutlined,
+  FolderOpenOutlined,
   PlusOutlined,
   ShareAltOutlined,
   TagsOutlined,
 } from '@ant-design/icons'
 import { useKbContext } from './context'
+import type { KbDocTreeNode } from '../../types'
 
 const ROOT_TREE_KEY = '__kb_root__'
 
-function buildTreeData(nodes: any[]): any[] {
-  return nodes.map((node) => ({
-    key: node.id,
-    title: node.title,
-    children: buildTreeData(node.children ?? []),
-  }))
+type KbTreeDataNode = {
+  key: string | number
+  title: React.ReactNode
+  rawTitle?: string
+  children?: KbTreeDataNode[]
+}
+
+function countDocs(nodes: KbDocTreeNode[]): number {
+  return nodes.reduce((total, node) => total + 1 + countDocs(node.children ?? []), 0)
+}
+
+function filterTree(nodes: KbDocTreeNode[], keyword: string): KbDocTreeNode[] {
+  if (!keyword) return nodes
+  const normalizedKeyword = keyword.trim().toLowerCase()
+
+  return nodes.flatMap((node) => {
+    const children = filterTree(node.children ?? [], normalizedKeyword)
+    const matched = node.title.toLowerCase().includes(normalizedKeyword)
+    if (!matched && !children.length) return []
+    return [{ ...node, children }]
+  })
+}
+
+function buildTreeData(nodes: KbDocTreeNode[]): KbTreeDataNode[] {
+  return nodes.map((node) => {
+    const childCount = countDocs(node.children ?? [])
+    return {
+      key: node.id,
+      rawTitle: node.title,
+      title: (
+        <div className="kb-admin-tree-node">
+          <span className={`kb-admin-tree-node__status is-${node.status}`} />
+          <FileTextOutlined className="kb-admin-tree-node__icon" />
+          <span className="kb-admin-tree-node__title">{node.title || '未命名文档'}</span>
+          {childCount > 0 ? <span className="kb-admin-tree-node__count">{childCount}</span> : null}
+        </div>
+      ),
+      children: buildTreeData(node.children ?? []),
+    }
+  })
 }
 
 const KbSidebar: React.FC = () => {
+  const [treeKeyword, setTreeKeyword] = React.useState('')
   const {
     tree,
     treeLoading,
@@ -30,10 +68,53 @@ const KbSidebar: React.FC = () => {
     setTagModalOpen,
   } = useKbContext()
 
+  const filteredTree = React.useMemo(() => filterTree(tree, treeKeyword), [tree, treeKeyword])
+  const totalDocs = React.useMemo(() => countDocs(tree), [tree])
+  const visibleDocs = React.useMemo(() => countDocs(filteredTree), [filteredTree])
+
+  const treeData: KbTreeDataNode[] = React.useMemo(
+    () => [
+      {
+        key: ROOT_TREE_KEY,
+        rawTitle: '个人空间',
+        title: (
+          <Dropdown
+            menu={{
+              items: [
+                {
+                  key: 'add',
+                  label: '新建顶层文档',
+                  icon: <PlusOutlined />,
+                  onClick: () => openCreateDoc(null),
+                },
+              ],
+            }}
+            trigger={['contextMenu']}
+          >
+            <div className="kb-admin-tree-node kb-admin-tree-node--root">
+              <FolderOpenOutlined className="kb-admin-tree-node__icon" />
+              <span className="kb-admin-tree-node__title">全部文档</span>
+              <span className="kb-admin-tree-node__count">{totalDocs}</span>
+            </div>
+          </Dropdown>
+        ),
+        children: buildTreeData(filteredTree),
+      },
+    ],
+    [filteredTree, openCreateDoc, totalDocs],
+  )
+
   return (
     <aside className="kb-admin-sidebar">
       <div className="kb-admin-sidebar__header">
-        <span className="kb-admin-sidebar__title">个人空间</span>
+        <button
+          type="button"
+          className="kb-admin-sidebar__title-button"
+          onClick={() => setSelectedParentId(null)}
+        >
+          <span className="kb-admin-sidebar__title">个人知识库</span>
+          <span className="kb-admin-sidebar__subtitle">{totalDocs} 篇文档</span>
+        </button>
         <div className="kb-admin-sidebar__actions">
           <Tooltip title="新建顶层文档">
             <Button
@@ -41,6 +122,7 @@ const KbSidebar: React.FC = () => {
               type="text"
               icon={<PlusOutlined />}
               onClick={() => void openCreateDoc(null)}
+              aria-label="新建顶层文档"
             />
           </Tooltip>
           <Tooltip title="管理标签">
@@ -49,44 +131,40 @@ const KbSidebar: React.FC = () => {
               type="text"
               icon={<TagsOutlined />}
               onClick={() => setTagModalOpen(true)}
+              aria-label="管理标签"
             />
           </Tooltip>
         </div>
       </div>
 
+      <div className="kb-admin-sidebar__search">
+        <Input.Search
+          allowClear
+          size="middle"
+          placeholder="搜索目录"
+          value={treeKeyword}
+          onChange={(event) => setTreeKeyword(event.target.value)}
+        />
+      </div>
+
+      <div className="kb-admin-sidebar__meta">
+        <span>{treeKeyword ? `匹配 ${visibleDocs} 篇` : '目录结构'}</span>
+        <button type="button" onClick={() => setSelectedParentId(null)}>
+          打开列表
+        </button>
+      </div>
+
       <div className="kb-admin-sidebar__tree">
         {treeLoading ? (
-          <Typography.Text type="secondary" style={{ paddingLeft: 8 }}>
-            加载中...
+          <Typography.Text type="secondary" className="kb-admin-sidebar__loading">
+            正在加载目录...
           </Typography.Text>
         ) : (
           <Tree
             blockNode
             defaultExpandAll
-            selectedKeys={selectedParentId ? [selectedParentId] : []}
-            treeData={[
-              {
-                key: ROOT_TREE_KEY,
-                title: (
-                  <Dropdown
-                    menu={{
-                      items: [
-                        {
-                          key: 'add',
-                          label: '新建顶层文档',
-                          icon: <PlusOutlined />,
-                          onClick: () => openCreateDoc(null),
-                        },
-                      ],
-                    }}
-                    trigger={['contextMenu']}
-                  >
-                    <span style={{ fontWeight: 600 }}>个人空间</span>
-                  </Dropdown>
-                ),
-                children: buildTreeData(tree),
-              },
-            ]}
+            selectedKeys={selectedParentId ? [selectedParentId] : [ROOT_TREE_KEY]}
+            treeData={treeData}
             onSelect={(keys) => {
               const key = keys[0]
               if (key === undefined || key === ROOT_TREE_KEY) {
@@ -98,7 +176,7 @@ const KbSidebar: React.FC = () => {
             titleRender={(node: any) => {
               if (node.key === ROOT_TREE_KEY) return node.title
               const docId = Number(node.key)
-              const title = node.title as string
+              const title = node.rawTitle || '未命名文档'
               return (
                 <Dropdown
                   menu={{
@@ -127,7 +205,7 @@ const KbSidebar: React.FC = () => {
                   }}
                   trigger={['contextMenu']}
                 >
-                  <div style={{ width: '100%' }}>{title}</div>
+                  <div className="kb-admin-tree-node-wrap">{node.title}</div>
                 </Dropdown>
               )
             }}
@@ -136,7 +214,7 @@ const KbSidebar: React.FC = () => {
       </div>
 
       <div className="kb-admin-sidebar__hint">
-        右键文档可新建子文档、分享或删除。
+        右键文档可新增子文档、分享或删除；顶部搜索只筛选当前目录，不影响文档列表。
       </div>
     </aside>
   )

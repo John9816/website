@@ -14,8 +14,8 @@ export function logout() {
   setToken(null)
 }
 
-export async function register(username: string, password: string) {
-  const body = { username, password }
+export async function register(username: string, password: string, email: string) {
+  const body = { username, password, email }
 
   try {
     return await request<LoginResponse>('/api/auth/register', {

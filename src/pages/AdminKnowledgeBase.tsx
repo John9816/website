@@ -1,5 +1,5 @@
 import { useEffect } from 'react'
-import { Card, Empty, Space, Button } from 'antd'
+import { Button, Empty, Space } from 'antd'
 import { PlusOutlined } from '@ant-design/icons'
 import { KbContextProvider } from './kb/KbContextProvider'
 import { useKbContext } from './kb/context'
@@ -45,16 +45,15 @@ function AdminKnowledgeBaseContent() {
 
   useEffect(() => {
     const controller = new AbortController()
-    void loadDocs({ signal: controller.signal })
+    void loadDocs({ signal: controller.signal, tagId: tagFilterId })
     return () => controller.abort()
   }, [activeSpaceId, deferredKeyword, docPage, docPageSize, loadDocs, tagFilterId])
 
   useEffect(() => {
-    const handleBeforeUnload = (e: BeforeUnloadEvent) => {
-      if (isDirty) {
-        e.preventDefault()
-        e.returnValue = ''
-      }
+    const handleBeforeUnload = (event: BeforeUnloadEvent) => {
+      if (!isDirty) return
+      event.preventDefault()
+      event.returnValue = ''
     }
     window.addEventListener('beforeunload', handleBeforeUnload)
     return () => window.removeEventListener('beforeunload', handleBeforeUnload)
@@ -62,8 +61,15 @@ function AdminKnowledgeBaseContent() {
 
   if (!spaces.length && !spacesLoading) {
     return (
-      <Card title="知识库">
-        <Empty description="还没有知识库空间" image={Empty.PRESENTED_IMAGE_SIMPLE}>
+      <div className="kb-admin-empty">
+        <Empty
+          description={
+            <span>
+              还没有知识库空间。创建个人空间后，就可以沉淀文档、标签、版本和公开分享。
+            </span>
+          }
+          image={Empty.PRESENTED_IMAGE_SIMPLE}
+        >
           <Button
             type="primary"
             icon={<PlusOutlined />}
@@ -73,7 +79,7 @@ function AdminKnowledgeBaseContent() {
             创建个人空间
           </Button>
         </Empty>
-      </Card>
+      </div>
     )
   }
 

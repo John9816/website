@@ -262,7 +262,7 @@ function MenuBar({
   return (
     <div className="editor-menu-bar">
       <div className="editor-menu-bar__groups">
-        <div className="menu-group">
+        <div className="menu-group menu-group--history">
           <ToolbarButton
             title={TEXT.undo}
             icon={<UndoOutlined />}
@@ -320,7 +320,7 @@ function MenuBar({
           />
         </div>
 
-        <div className="menu-group">
+        <div className="menu-group menu-group--color">
           <Tooltip title={TEXT.textColor}>
             <ColorPicker
               size="small"
@@ -356,7 +356,7 @@ function MenuBar({
           </Tooltip>
         </div>
 
-        <div className="menu-group">
+        <div className="menu-group menu-group--marks">
           <ToolbarButton
             title={TEXT.bold}
             icon={<BoldOutlined />}
@@ -383,7 +383,7 @@ function MenuBar({
           />
         </div>
 
-        <div className="menu-group">
+        <div className="menu-group menu-group--align">
           <ToolbarButton
             title={TEXT.alignLeft}
             icon={<AlignLeftOutlined />}
@@ -404,7 +404,7 @@ function MenuBar({
           />
         </div>
 
-        <div className="menu-group">
+        <div className="menu-group menu-group--lists">
           <ToolbarButton
             title={TEXT.bulletList}
             icon={<UnorderedListOutlined />}
@@ -425,7 +425,7 @@ function MenuBar({
           />
         </div>
 
-        <div className="menu-group">
+        <div className="menu-group menu-group--indent">
           <ToolbarButton
             title={TEXT.outdent}
             icon={<LeftOutlined />}
@@ -438,7 +438,7 @@ function MenuBar({
           />
         </div>
 
-        <div className="menu-group">
+        <div className="menu-group menu-group--insert">
           <input
             ref={fileInputRef}
             hidden
@@ -470,7 +470,7 @@ function MenuBar({
           />
         </div>
 
-        <div className="menu-group">
+        <div className="menu-group menu-group--table-edit">
           <ToolbarButton
             title={TEXT.addRowBefore}
             icon={<VerticalLeftOutlined />}

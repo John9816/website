@@ -9,7 +9,7 @@ import {
   Typography,
   theme as antdTheme,
 } from 'antd'
-import { LockOutlined, UserOutlined } from '@ant-design/icons'
+import { LockOutlined, MailOutlined, UserOutlined } from '@ant-design/icons'
 import { register as apiRegister } from '../api/auth'
 import ThemeToggle from '../components/ThemeToggle'
 import { useAuth } from '../context/AuthContext'
@@ -23,9 +23,12 @@ function authBackground(mode: 'light' | 'dark') {
 
 type RegisterValues = {
   username: string
+  email: string
   password: string
   confirmPassword: string
 }
+
+const QQ_EMAIL_PATTERN = /^[1-9]\d{4,10}@qq\.com$/i
 
 export default function RegisterPage() {
   const [loading, setLoading] = useState(false)
@@ -38,7 +41,11 @@ export default function RegisterPage() {
   const onFinish = async (values: RegisterValues) => {
     setLoading(true)
     try {
-      const result = await apiRegister(values.username, values.password)
+      const result = await apiRegister(
+        values.username.trim(),
+        values.password,
+        values.email.trim().toLowerCase(),
+      )
       auth.login(result.token, result.username, result.tokenType)
       message.success('注册成功，已自动登录')
       nav('/', { replace: true })
@@ -73,7 +80,7 @@ export default function RegisterPage() {
           type="secondary"
           style={{ textAlign: 'center', marginBottom: 28 }}
         >
-          创建普通用户账号，注册完成后可前往登录
+          使用 QQ 邮箱创建普通用户账号
         </Typography.Paragraph>
 
         <Form<RegisterValues> size="large" layout="vertical" onFinish={onFinish}>
@@ -85,6 +92,23 @@ export default function RegisterPage() {
               prefix={<UserOutlined />}
               placeholder="用户名"
               autoComplete="username"
+            />
+          </Form.Item>
+
+          <Form.Item
+            name="email"
+            rules={[
+              { required: true, message: '请输入 QQ 邮箱' },
+              {
+                pattern: QQ_EMAIL_PATTERN,
+                message: '请输入有效的 QQ 邮箱，例如 123456@qq.com',
+              },
+            ]}
+          >
+            <Input
+              prefix={<MailOutlined />}
+              placeholder="QQ 邮箱"
+              autoComplete="email"
             />
           </Form.Item>
 

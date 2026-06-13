@@ -130,12 +130,18 @@ function clampNumber(value: number, min: number, max: number) {
   return Math.min(max, Math.max(min, value))
 }
 
-function normalizeLayoutWidths(widths: LayoutWidths, viewportWidth = typeof window === 'undefined' ? 1440 : window.innerWidth): LayoutWidths {
+function normalizeLayoutWidths(
+  widths: LayoutWidths,
+  containerWidth = typeof window === 'undefined' ? 1440 : window.innerWidth,
+): LayoutWidths {
   const history = clampNumber(widths.history, HISTORY_WIDTH_MIN, HISTORY_WIDTH_MAX)
   const controls = clampNumber(widths.controls, CONTROLS_WIDTH_MIN, CONTROLS_WIDTH_MAX)
-  const available = viewportWidth - GRID_PADDING_X - RESIZE_HANDLE_TOTAL
+  const available = containerWidth - GRID_PADDING_X - RESIZE_HANDLE_TOTAL
 
-  if (viewportWidth <= RESIZE_BREAKPOINT || available <= HISTORY_WIDTH_MIN + CONTROLS_WIDTH_MIN + WORKSPACE_WIDTH_MIN) {
+  if (
+    (typeof window !== 'undefined' && window.innerWidth <= RESIZE_BREAKPOINT)
+    || available <= HISTORY_WIDTH_MIN + CONTROLS_WIDTH_MIN + WORKSPACE_WIDTH_MIN
+  ) {
     return {
       history: HISTORY_WIDTH_MIN,
       controls: clampNumber(Math.min(controls, 380), CONTROLS_WIDTH_MIN, CONTROLS_WIDTH_MAX),
@@ -190,6 +196,7 @@ export default function ImageStudio({ layout = 'admin' }: ImageStudioProps) {
   const pendingStartedAtRef = useRef<number | null>(null)
   const activeRef = useRef(true)
   const imageInputRef = useRef<HTMLInputElement | null>(null)
+  const rootRef = useRef<HTMLDivElement | null>(null)
   const resizeStateRef = useRef<{
     target: ResizeTarget
     startX: number
@@ -328,12 +335,26 @@ export default function ImageStudio({ layout = 'admin' }: ImageStudioProps) {
   }, [layoutWidths])
 
   useEffect(() => {
-    const handleResize = () => {
-      setLayoutWidths((current) => normalizeLayoutWidths(current))
+    const syncLayoutWidths = () => {
+      const rootWidth = rootRef.current?.clientWidth || window.innerWidth
+      setLayoutWidths((current) => normalizeLayoutWidths(current, rootWidth))
     }
 
-    window.addEventListener('resize', handleResize)
-    return () => window.removeEventListener('resize', handleResize)
+    syncLayoutWidths()
+
+    if (typeof ResizeObserver === 'undefined' || !rootRef.current) {
+      window.addEventListener('resize', syncLayoutWidths)
+      return () => window.removeEventListener('resize', syncLayoutWidths)
+    }
+
+    const observer = new ResizeObserver(syncLayoutWidths)
+    observer.observe(rootRef.current)
+    window.addEventListener('resize', syncLayoutWidths)
+
+    return () => {
+      observer.disconnect()
+      window.removeEventListener('resize', syncLayoutWidths)
+    }
   }, [])
 
   const clearTaskPolling = () => {
@@ -691,20 +712,20 @@ export default function ImageStudio({ layout = 'admin' }: ImageStudioProps) {
           Math.min(HISTORY_WIDTH_MAX, available - state.startControls - WORKSPACE_WIDTH_MIN),
         )
         const nextControls = clampNumber(state.startControls, CONTROLS_WIDTH_MIN, Math.min(CONTROLS_WIDTH_MAX, controlsMaxByWorkspace))
-        return {
+        return normalizeLayoutWidths({
           history: nextHistory,
           controls: nextControls,
-        }
+        }, state.containerWidth)
       }
 
-      return {
+      return normalizeLayoutWidths({
         history: state.startHistory,
         controls: clampNumber(
           state.startControls + delta,
           CONTROLS_WIDTH_MIN,
           Math.min(CONTROLS_WIDTH_MAX, available - state.startHistory - WORKSPACE_WIDTH_MIN),
         ),
-      }
+      }, state.containerWidth)
     })
   }
 
@@ -746,6 +767,7 @@ export default function ImageStudio({ layout = 'admin' }: ImageStudioProps) {
 
   return (
     <div
+      ref={rootRef}
       className={`${rootClassName}${historyCollapsed ? ' admin-image--history-collapsed' : ''}${resizingTarget ? ' admin-image--resizing' : ''}`}
       style={layoutStyle}
     >

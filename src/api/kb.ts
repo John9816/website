@@ -73,6 +73,58 @@ export interface KbAssetUploadResult {
   size?: number
 }
 
+function asRecord(value: unknown): Record<string, unknown> | null {
+  return value && typeof value === 'object' && !Array.isArray(value)
+    ? (value as Record<string, unknown>)
+    : null
+}
+
+function hasPageItems(value: unknown) {
+  const record = asRecord(value)
+  if (!record) return false
+  return ['items', 'content', 'records', 'list', 'rows'].some((key) => Array.isArray(record[key]))
+}
+
+function getNumberField(record: Record<string, unknown> | null, keys: string[], fallback: number) {
+  if (!record) return fallback
+  for (const key of keys) {
+    const value = record[key]
+    if (value === undefined || value === null || value === '') continue
+    const numberValue = Number(value)
+    if (Number.isFinite(numberValue)) return numberValue
+  }
+  return fallback
+}
+
+function normalizePageView<T>(value: unknown, fallbackPage: number, fallbackSize: number): PageView<T> {
+  const record = asRecord(value)
+  const nested = record?.data
+
+  if (!hasPageItems(value) && (Array.isArray(nested) || hasPageItems(nested))) {
+    const nestedPage = normalizePageView<T>(nested, fallbackPage, fallbackSize)
+    return {
+      ...nestedPage,
+      total: getNumberField(record, ['total', 'totalElements', 'totalCount', 'count'], nestedPage.total),
+      page: getNumberField(record, ['page', 'pageNumber', 'current'], nestedPage.page),
+      size: getNumberField(record, ['size', 'pageSize'], nestedPage.size),
+    }
+  }
+
+  const items =
+    (Array.isArray(value)
+      ? value
+      : ['items', 'content', 'records', 'list', 'rows']
+          .map((key) => record?.[key])
+          .find(Array.isArray)) ?? []
+
+  return {
+    items: items as T[],
+    total: getNumberField(record, ['total', 'totalElements', 'totalCount', 'count'], items.length),
+    page: getNumberField(record, ['page', 'pageNumber', 'current'], fallbackPage),
+    size: getNumberField(record, ['size', 'pageSize'], fallbackSize),
+  }
+}
+
 export const listKbSpaces = (signal?: AbortSignal) => request<KbSpace[]>('/api/user/kb/spaces', { auth: true, signal })
 
 export const getKbSpace = (id: number, signal?: AbortSignal) =>
@@ -123,12 +175,14 @@ export const deleteKbTag = (id: number) =>
     auth: true,
   })
 
-export const searchKbDocs = (query: KbDocSearchQuery = {}, signal?: AbortSignal) =>
-  request<PageView<KbDocSummary>>('/api/user/kb/docs', {
+export const searchKbDocs = async (query: KbDocSearchQuery = {}, signal?: AbortSignal) => {
+  const data = await request<unknown>('/api/user/kb/docs', {
     auth: true,
     query: query as Record<string, string | number | undefined>,
     signal,
   })
+  return normalizePageView<KbDocSummary>(data, query.page ?? 0, query.size ?? 20)
+}
 
 export const createKbDoc = (body: KbDocPayload) =>
   request<KbDoc>('/api/user/kb/docs', {
@@ -167,12 +221,14 @@ export const replaceKbDocTags = (id: number, tagIds: number[]) =>
     body: { tagIds },
   })
 
-export const listKbDocVersions = (id: number, page = 0, size = 20, signal?: AbortSignal) =>
-  request<PageView<KbDocVersion>>(`/api/user/kb/docs/${id}/versions`, {
+export const listKbDocVersions = async (id: number, page = 0, size = 20, signal?: AbortSignal) => {
+  const data = await request<unknown>(`/api/user/kb/docs/${id}/versions`, {
     auth: true,
     query: { page, size },
     signal,
   })
+  return normalizePageView<KbDocVersion>(data, page, size)
+}
 
 export const getKbDocVersion = (id: number, versionId: number, signal?: AbortSignal) =>
   request<KbDocVersionDetail>(`/api/user/kb/docs/${id}/versions/${versionId}`, {
