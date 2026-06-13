@@ -456,13 +456,20 @@ export default function MusicExplorer() {
     (nextKeyword: string, nextSource: MusicSourceId, nextType: MusicSearchType = 'song') => {
       const trimmed = nextKeyword.trim()
       if (!trimmed) return
-      setView('search')
+      const nextParams = new URLSearchParams(searchParams)
+      nextParams.set('view', 'search')
+      nextParams.set('source', nextSource)
+      nextParams.set('type', nextType)
+      nextParams.set('keyword', trimmed)
+      nextParams.delete('q')
+      urlSearchRef.current = `${nextSource}:${nextType}:${trimmed}`
+      setSearchParams(nextParams, { replace: true })
       setSearchSource(nextSource)
       setSearchType(nextType)
       setKeyword(trimmed)
       void searchSongs(trimmed, 1, searchPageSize, nextSource, nextType)
     },
-    [searchPageSize, searchSongs, setView],
+    [searchPageSize, searchParams, searchSongs, setSearchParams],
   )
 
   const loadToplists = useCallback(async () => {
@@ -813,7 +820,7 @@ export default function MusicExplorer() {
                   })
                   return
                 }
-                searchByMeta(item.name, item.source, type)
+                searchByMeta(item.name, item.source, 'song')
               }}
             >
               <MusicCover src={item.coverUrl} size={64} rounded={14} />
@@ -991,7 +998,7 @@ export default function MusicExplorer() {
                       }}
                       renderActions={renderSongActions}
                       actionColumnWidth={auth.token ? 176 : 132}
-                      onSearchArtist={(artist, source) => searchByMeta(artist, source, 'artist')}
+                      onSearchArtist={(artist, source) => searchByMeta(artist, source, 'song')}
                       onSearchAlbum={(album, source) => searchByMeta(album, source, 'album')}
                     />
                   ) : (
