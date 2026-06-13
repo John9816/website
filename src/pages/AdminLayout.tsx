@@ -1,4 +1,6 @@
+import type { ReactNode } from 'react'
 import { Layout, Menu, Button, Typography, ConfigProvider, Space, theme as antdTheme } from 'antd'
+import type { MenuProps } from 'antd'
 import {
   AppstoreOutlined,
   BookOutlined,
@@ -12,8 +14,15 @@ import { Link, Navigate, Outlet, useLocation, useNavigate } from 'react-router-d
 import { useAuth } from '../context/AuthContext'
 import { useTheme } from '../context/ThemeContext'
 import ThemeToggle from '../components/ThemeToggle'
+import '../styles/admin-shell.css'
 
 const { Header, Sider, Content } = Layout
+
+type AdminNavItem = {
+  key: string
+  title: string
+  icon: ReactNode
+}
 
 export default function AdminLayout() {
   const auth = useAuth()
@@ -25,34 +34,34 @@ export default function AdminLayout() {
     return <Navigate to="/admin/login" state={{ from: location.pathname }} replace />
   }
 
-  const items = [
+  const navItems: AdminNavItem[] = [
     {
       key: '/admin/categories',
       icon: <AppstoreOutlined />,
-      label: <Link to="/admin/categories">分类</Link>,
+      title: '分类',
     },
     {
       key: '/admin/links',
       icon: <LinkOutlined />,
-      label: <Link to="/admin/links">链接</Link>,
+      title: '链接',
     },
     {
       key: '/admin/kb',
       icon: <BookOutlined />,
-      label: <Link to="/admin/kb">知识库</Link>,
+      title: '知识库',
     },
     {
       key: '/admin/password',
       icon: <KeyOutlined />,
-      label: <Link to="/admin/password">修改密码</Link>,
+      title: '修改密码',
     },
   ]
 
   if (auth.user?.canManageSystemConfig) {
-    items.splice(2, 0, {
+    navItems.splice(2, 0, {
       key: '/admin/configs',
       icon: <SettingOutlined />,
-      label: <Link to="/admin/configs">系统配置</Link>,
+      title: '系统配置',
     })
   }
 
@@ -65,7 +74,13 @@ export default function AdminLayout() {
   }
 
   const selectedKey =
-    items.find((item) => location.pathname.startsWith(item.key))?.key ?? '/admin/categories'
+    navItems.find((item) => location.pathname.startsWith(item.key))?.key ?? '/admin/categories'
+  const selectedTitle = navItems.find((item) => item.key === selectedKey)?.title ?? '管理'
+  const menuItems: MenuProps['items'] = navItems.map((item) => ({
+    key: item.key,
+    icon: item.icon,
+    label: <Link to={item.key}>{item.title}</Link>,
+  }))
 
   const doLogout = () => {
     auth.logout()
@@ -77,18 +92,20 @@ export default function AdminLayout() {
       theme={{
         algorithm: mode === 'dark' ? antdTheme.darkAlgorithm : antdTheme.defaultAlgorithm,
         token: {
-          colorPrimary: '#e11d48',
+          colorPrimary: '#0f766e',
           borderRadius: 8,
           fontFamily:
             "-apple-system, BlinkMacSystemFont, 'Segoe UI', 'PingFang SC', 'Hiragino Sans GB', 'Microsoft YaHei', sans-serif",
         },
         components: {
           Layout: {
-            headerBg: mode === 'dark' ? '#181315' : '#ffffff',
-            siderBg: mode === 'dark' ? '#181315' : '#ffffff',
+            headerBg: 'transparent',
+            siderBg: 'transparent',
           },
           Menu: {
             itemBg: 'transparent',
+            itemSelectedBg: 'transparent',
+            itemHoverBg: 'transparent',
           },
         },
       }}
@@ -96,7 +113,8 @@ export default function AdminLayout() {
       <LayoutContent
         mode={mode}
         selectedKey={selectedKey}
-        items={items}
+        selectedTitle={selectedTitle}
+        menuItems={menuItems}
         auth={auth}
         doLogout={doLogout}
       />
@@ -107,116 +125,63 @@ export default function AdminLayout() {
 function LayoutContent({
   mode,
   selectedKey,
-  items,
+  selectedTitle,
+  menuItems,
   auth,
   doLogout,
 }: {
   mode: string
   selectedKey: string
-  items: any[]
+  selectedTitle: string
+  menuItems: MenuProps['items']
   auth: any
   doLogout: () => void
 }) {
-  const { token } = antdTheme.useToken()
-
   return (
-    <Layout hasSider style={{ minHeight: '100dvh', background: token.colorBgLayout }}>
+    <Layout hasSider className="admin-shell">
       <Sider
         theme={mode === 'dark' ? 'dark' : 'light'}
         breakpoint="lg"
         collapsedWidth="0"
         width={240}
-        style={{
-          borderRight: `1px solid ${token.colorBorderSecondary}`,
-          height: '100dvh',
-          position: 'fixed',
-          left: 0,
-          top: 0,
-          bottom: 0,
-          zIndex: 100,
-          overflow: 'auto',
-        }}
+        className="admin-shell__sider"
       >
-        <div
-          style={{
-            height: 64,
-            display: 'flex',
-            alignItems: 'center',
-            padding: '0 24px',
-            fontSize: 18,
-            fontWeight: 700,
-            color: token.colorPrimary,
-            borderBottom: `1px solid ${token.colorBorderSecondary}`,
-          }}
-        >
-          <div
-            style={{
-              width: 8,
-              height: 8,
-              borderRadius: '50%',
-              background: token.colorPrimary,
-              marginRight: 10,
-            }}
-          />
-          管理后台
+        <div className="admin-shell__brand">
+          <span className="admin-shell__brand-mark" />
+          <span className="admin-shell__brand-text">管理后台</span>
         </div>
         <Menu
           theme={mode === 'dark' ? 'dark' : 'light'}
           mode="inline"
           selectedKeys={[selectedKey]}
-          items={items}
-          style={{ borderRight: 0, marginTop: 16 }}
+          items={menuItems}
+          className="admin-shell__menu"
         />
       </Sider>
 
-      <Layout style={{ marginLeft: 240, transition: 'all 0.2s', minWidth: 0, minHeight: '100dvh', display: 'flex', flexDirection: 'column' }}>
-        <Header
-          style={{
-            position: 'sticky',
-            top: 0,
-            zIndex: 20,
-            background: token.colorBgContainer,
-            padding: '0 32px',
-            display: 'flex',
-            alignItems: 'center',
-            justifyContent: 'space-between',
-            borderBottom: `1px solid ${token.colorBorderSecondary}`,
-            height: 64,
-            flexShrink: 0,
-          }}
-        >
-          <Typography.Title level={5} style={{ margin: 0, fontWeight: 500 }}>
-            {items.find((item) => item.key === selectedKey)?.label?.props?.children || '管理'}
+      <Layout className="admin-shell__body">
+        <Header className="admin-shell__header">
+          <Typography.Title level={5} className="admin-shell__title">
+            {selectedTitle}
           </Typography.Title>
-          <div
-            style={{
-              display: 'flex',
-              gap: 16,
-              alignItems: 'center',
-            }}
-          >
-            <Typography.Text type="secondary" style={{ marginRight: 8 }}>
+          <div className="admin-shell__header-actions">
+            <Typography.Text type="secondary" className="admin-shell__welcome">
               {auth.username ? `欢迎，${auth.username}` : ''}
             </Typography.Text>
-            <Space size={8}>
+            <Space size={8} className="admin-shell__actions">
               <Link to="/">
-                <Button variant="text" color="default" icon={<HomeOutlined />}>
+                <Button type="text" icon={<HomeOutlined />}>
                   首页
                 </Button>
               </Link>
-              <Button variant="text" color="danger" icon={<LogoutOutlined />} onClick={doLogout}>
+              <Button type="text" danger icon={<LogoutOutlined />} onClick={doLogout}>
                 退出
               </Button>
               <ThemeToggle bare />
             </Space>
           </div>
         </Header>
-        <Content
-          style={{
-            padding: '32px',
-            minHeight: 'calc(100dvh - 64px)',
-          }}
-        >
+        <Content className="admin-shell__content">
           <Outlet />
         </Content>
       </Layout>

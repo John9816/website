@@ -1,5 +1,5 @@
 import { useEffect } from 'react'
-import { Button, Empty, Space } from 'antd'
+import { Button, Empty } from 'antd'
 import { PlusOutlined } from '@ant-design/icons'
 import { KbContextProvider } from './kb/KbContextProvider'
 import { useKbContext } from './kb/context'
@@ -98,9 +98,9 @@ function AdminKnowledgeBaseContent() {
 export default function AdminKnowledgeBase() {
   return (
     <KbContextProvider>
-      <Space direction="vertical" size={16} style={{ width: '100%' }}>
+      <div className="admin-kb-page">
         <AdminKnowledgeBaseContent />
-      </Space>
+      </div>
     </KbContextProvider>
   )
 }
