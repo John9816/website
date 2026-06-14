@@ -38,6 +38,82 @@ export interface SysConfig {
   updatedAt?: string
 }
 
+export interface ContentStatusConfig {
+  key: string
+  label: string
+  ready: boolean
+}
+
+export interface ContentFactoryStatus {
+  aiReady: boolean
+  imageReady: boolean
+  wechatReady: boolean
+  configs: ContentStatusConfig[]
+}
+
+export interface ContentHotSource {
+  id: string
+  name: string
+}
+
+export interface ContentHotTopic {
+  id: string
+  source: string
+  sourceName: string
+  rank: number
+  title: string
+  url?: string | null
+  hot?: string | null
+  summary?: string | null
+  capturedAt: string
+}
+
+export interface ContentHotTopicsView {
+  capturedAt: string
+  sources: ContentHotSource[]
+  items: ContentHotTopic[]
+}
+
+export type ContentArticleStatus = 'DRAFT' | 'WECHAT_DRAFT' | 'PUBLISHED'
+export type ContentArticleLength = 'short' | 'standard' | 'long'
+
+export interface ContentArticle {
+  id: number
+  title: string
+  digest?: string | null
+  contentMarkdown?: string | null
+  contentHtml: string
+  coverPrompt?: string | null
+  coverImageUrl?: string | null
+  topics: ContentHotTopic[]
+  tags: string[]
+  riskTips: string[]
+  model?: string | null
+  status: ContentArticleStatus
+  wechatMediaId?: string | null
+  wechatPublishId?: string | null
+  wechatUrl?: string | null
+  errorMessage?: string | null
+  createdAt?: string
+  updatedAt?: string
+}
+
+export interface ContentArticleGeneratePayload {
+  topics?: ContentHotTopic[]
+  angle?: string
+  audience?: string
+  tone?: string
+  length?: ContentArticleLength
+  generateCover?: boolean
+  coverStyle?: string
+  model?: string
+}
+
+export interface ContentWechatDraftResult {
+  mediaId: string
+  url?: string | null
+}
+
 export interface LoginResponse {
   token: string
   tokenType: string

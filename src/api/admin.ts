@@ -1,6 +1,11 @@
 import { request } from './client'
 import type {
   Category,
+  ContentArticle,
+  ContentArticleGeneratePayload,
+  ContentFactoryStatus,
+  ContentHotTopicsView,
+  ContentWechatDraftResult,
   GeneratedImageView,
   ImageGenerateResult,
   ImageTaskView,
@@ -92,6 +97,48 @@ export const adminUpdateConfig = (id: number, body: Partial<SysConfig>) =>
   request<SysConfig>(`/api/admin/configs/${id}`, { method: 'PUT', auth: true, body })
 export const adminDeleteConfig = (id: number) =>
   request<void>(`/api/admin/configs/${id}`, { method: 'DELETE', auth: true })
+
+// Content factory
+export const adminGetContentStatus = () =>
+  request<ContentFactoryStatus>('/api/admin/content/status', { auth: true })
+
+export const adminGetHotTopics = (limit = 12) =>
+  request<ContentHotTopicsView>('/api/admin/content/hot', { auth: true, query: { limit } })
+
+export const adminListContentArticles = (page = 0, size = DEFAULT_PAGE_SIZE) =>
+  request<PageView<ContentArticle>>('/api/admin/content/articles', {
+    auth: true,
+    query: { page, size },
+  })
+
+export const adminGenerateContentArticle = (body: ContentArticleGeneratePayload) =>
+  request<ContentArticle>('/api/admin/content/articles/generate', {
+    method: 'POST',
+    auth: true,
+    body,
+  })
+
+export const adminUpdateContentArticle = (
+  id: number,
+  body: Pick<ContentArticle, 'title' | 'digest' | 'contentMarkdown' | 'contentHtml' | 'coverImageUrl'>,
+) =>
+  request<ContentArticle>(`/api/admin/content/articles/${id}`, {
+    method: 'PUT',
+    auth: true,
+    body,
+  })
+
+export const adminCreateWechatDraft = (id: number) =>
+  request<{ article: ContentArticle; draft: ContentWechatDraftResult }>(
+    `/api/admin/content/articles/${id}/wechat-draft`,
+    { method: 'POST', auth: true },
+  )
+
+export const adminPublishWechatArticle = (id: number) =>
+  request<{ article: ContentArticle; draft: ContentWechatDraftResult; publish: Record<string, unknown> }>(
+    `/api/admin/content/articles/${id}/publish`,
+    { method: 'POST', auth: true },
+  )
 
 // Image
 export const adminGenerateImage = async (body: GenerateImagePayload, signal?: AbortSignal) =>

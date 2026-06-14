@@ -19,6 +19,7 @@ const titleMap: Record<string, string> = {
   '/admin/categories': '分类管理',
   '/admin/links': '链接管理',
   '/admin/configs': '站点配置',
+  '/admin/content': '内容工厂',
   '/admin/kb': '知识库管理',
   '/admin/password': '密码管理',
 }

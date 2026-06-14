@@ -26,6 +26,7 @@ const AdminLayout = lazy(() => import('./pages/AdminLayout'))
 const AdminCategories = lazy(() => import('./pages/AdminCategories'))
 const AdminLinks = lazy(() => import('./pages/AdminLinks'))
 const AdminConfigs = lazy(() => import('./pages/AdminConfigs'))
+const AdminContentFactory = lazy(() => import('./pages/AdminContentFactory'))
 const AdminPassword = lazy(() => import('./pages/AdminPassword'))
 const AdminKnowledgeBase = lazy(() => import('./pages/AdminKnowledgeBase'))
 const KbSharePage = lazy(() => import('./pages/KbSharePage'))
@@ -120,6 +121,7 @@ export default function App() {
                     <Route path="categories" element={<AdminCategories />} />
                     <Route path="links" element={<AdminLinks />} />
                     <Route path="configs" element={<AdminConfigs />} />
+                    <Route path="content" element={<AdminContentFactory />} />
                     <Route path="kb" element={<AdminKnowledgeBase />} />
                     <Route path="password" element={<AdminPassword />} />
                   </Route>
