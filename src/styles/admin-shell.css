@@ -1,4 +1,5 @@
 .admin-shell {
+  --admin-header-height: 68px;
   min-height: 100dvh;
   background:
     linear-gradient(180deg, color-mix(in srgb, var(--panel) 60%, transparent), transparent 280px),
@@ -15,14 +16,16 @@
   background: color-mix(in srgb, var(--panel) 94%, var(--bg)) !important;
   box-shadow: 10px 0 28px rgba(20, 32, 28, 0.04);
   overflow: auto;
+  overscroll-behavior: contain;
+  scrollbar-width: thin;
 }
 
 .admin-shell__brand {
-  height: 72px;
+  min-height: calc(72px + var(--safe-top));
   display: flex;
   align-items: center;
   gap: 12px;
-  padding: 0 20px;
+  padding: var(--safe-top) 20px 0;
   border-bottom: 1px solid var(--border);
 }
 
@@ -53,11 +56,15 @@
 
 .admin-shell__menu.ant-menu .ant-menu-item {
   position: relative;
-  height: 42px;
+  height: 44px;
   margin: 4px 0;
   border-radius: 8px;
   color: var(--text-dim);
-  line-height: 42px;
+  line-height: 44px;
+  transition:
+    background var(--motion-fast),
+    color var(--motion-fast),
+    transform var(--motion-fast);
 }
 
 .admin-shell__menu.ant-menu .ant-menu-item::before {
@@ -72,6 +79,10 @@
 .admin-shell__menu.ant-menu .ant-menu-item:hover {
   background: var(--hover) !important;
   color: var(--text);
+}
+
+.admin-shell__menu.ant-menu .ant-menu-item:active {
+  transform: scale(0.985);
 }
 
 .admin-shell__menu.ant-menu .ant-menu-item-selected {
@@ -102,7 +113,7 @@
   position: sticky;
   top: 0;
   z-index: 20;
-  height: 68px;
+  min-height: var(--admin-header-height);
   display: flex;
   align-items: center;
   justify-content: space-between;
@@ -142,13 +153,14 @@
 }
 
 .admin-shell__actions .ant-btn {
-  min-width: 36px;
+  min-width: 40px;
+  min-height: 40px;
   border-radius: 8px;
 }
 
 .admin-shell .theme-toggle {
-  width: 36px;
-  height: 36px;
+  width: 40px;
+  height: 40px;
   display: inline-flex;
   align-items: center;
   justify-content: center;
@@ -161,13 +173,18 @@
   transition:
     background 0.16s ease,
     border-color 0.16s ease,
-    color 0.16s ease;
+    color 0.16s ease,
+    transform 0.14s ease;
 }
 
 .admin-shell .theme-toggle:hover {
   border-color: var(--border);
   background: var(--hover);
   color: var(--text);
+}
+
+.admin-shell .theme-toggle:active {
+  transform: scale(0.96);
 }
 
 .admin-shell .theme-toggle__icon {
@@ -178,8 +195,9 @@
 
 .admin-shell__content.ant-layout-content {
   min-width: 0;
-  min-height: calc(100dvh - 68px);
+  min-height: calc(100dvh - var(--admin-header-height));
   padding: 20px;
+  overflow-x: clip;
 }
 
 .admin-shell__content > * {
@@ -213,6 +231,10 @@
 }
 
 @media (max-width: 991.98px) {
+  .admin-shell {
+    --admin-header-height: 64px;
+  }
+
   .admin-shell__body.ant-layout {
     margin-left: 0;
   }
@@ -227,6 +249,10 @@
 }
 
 @media (max-width: 640px) {
+  .admin-shell {
+    --admin-header-height: 112px;
+  }
+
   .admin-shell__header.ant-layout-header {
     height: auto;
     min-height: 64px;
@@ -239,8 +265,9 @@
 
   .admin-shell__header-actions {
     width: 100%;
-    align-items: flex-start;
-    flex-direction: column;
+    align-items: center;
+    flex-direction: row;
+    justify-content: space-between;
     gap: 8px;
   }
 
@@ -249,7 +276,23 @@
   }
 
   .admin-shell__content.ant-layout-content {
-    min-height: calc(100dvh - 92px);
+    min-height: calc(100dvh - var(--admin-header-height));
     padding: 12px;
+  }
+
+  .admin-shell__actions {
+    min-width: 0;
+    overflow-x: auto;
+    scrollbar-width: none;
+  }
+
+  .admin-shell__actions::-webkit-scrollbar {
+    display: none;
+  }
+
+  .admin-shell__actions .ant-btn,
+  .admin-shell .theme-toggle {
+    min-width: 44px;
+    min-height: 44px;
   }
 }

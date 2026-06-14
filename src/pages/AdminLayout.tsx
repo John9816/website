@@ -163,6 +163,7 @@ function LayoutContent({
         collapsedWidth="0"
         width={240}
         className="admin-shell__sider"
+        aria-label="后台导航"
       >
         <div className="admin-shell__brand">
           <span className="admin-shell__brand-mark" />
@@ -174,12 +175,13 @@ function LayoutContent({
           selectedKeys={[selectedKey]}
           items={menuItems}
           className="admin-shell__menu"
+          aria-label="后台功能菜单"
         />
       </Sider>
 
       <Layout className="admin-shell__body">
         <Header className="admin-shell__header">
-          <Typography.Title level={5} className="admin-shell__title">
+          <Typography.Title id="admin-page-title" level={5} className="admin-shell__title">
             {selectedTitle}
           </Typography.Title>
           <div className="admin-shell__header-actions">
@@ -199,7 +201,7 @@ function LayoutContent({
             </Space>
           </div>
         </Header>
-        <Content className="admin-shell__content">
+        <Content className="admin-shell__content" role="main" aria-labelledby="admin-page-title">
           <Outlet />
         </Content>
       </Layout>

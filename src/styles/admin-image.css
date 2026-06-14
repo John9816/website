@@ -1,5 +1,5 @@
 .admin-image {
-  --image-shell-bg: #f7f7f5;
+  --image-shell-bg: #f6f8f7;
   --image-panel-bg: #fff;
   --image-soft: #f1f1ee;
   --image-soft-2: #fafaf8;
@@ -89,6 +89,8 @@
 .admin-image__history,
 .admin-image__controls {
   overflow-y: auto;
+  overscroll-behavior: contain;
+  scrollbar-width: thin;
 }
 
 .admin-image__history {
@@ -134,8 +136,8 @@
 }
 
 .admin-image__icon-btn {
-  width: 30px;
-  height: 30px;
+  width: 36px;
+  height: 36px;
   border: 1px solid var(--image-line);
   border-radius: 7px;
   background: #fff;
@@ -225,6 +227,7 @@
 }
 
 .admin-image__resize-handle:hover::before,
+.admin-image__resize-handle:focus-visible::before,
 .admin-image__resize-handle.is-active::before {
   inset: 8px 1px;
   background: #111;
@@ -265,14 +268,18 @@
   align-items: center;
   justify-content: center;
   gap: 5px;
-  min-height: 28px;
+  min-height: 34px;
   border: 1px solid var(--image-line);
   border-radius: 5px;
   background: #fff;
   color: var(--image-text);
   font-size: 13px;
   cursor: pointer;
-  transition: border-color 0.15s ease, background 0.15s ease, color 0.15s ease;
+  transition:
+    border-color 0.15s ease,
+    background 0.15s ease,
+    color 0.15s ease,
+    transform 0.15s ease;
 }
 
 .admin-image__small-btn {
@@ -284,6 +291,12 @@
 .admin-image__result-actions button:hover:not(:disabled) {
   background: var(--image-soft);
   border-color: var(--image-line-strong);
+}
+
+.admin-image__small-btn:active:not(:disabled),
+.admin-image__pager-btn:active:not(:disabled),
+.admin-image__result-actions button:active:not(:disabled) {
+  transform: scale(0.97);
 }
 
 .admin-image__small-btn:disabled,
@@ -315,12 +328,22 @@
   color: var(--image-text);
   text-align: left;
   cursor: pointer;
+  transition:
+    border-color var(--motion-fast),
+    background var(--motion-fast),
+    transform var(--motion-fast),
+    box-shadow var(--motion-fast);
 }
 
 .admin-image__history-card:hover,
+.admin-image__history-card:focus-visible,
 .admin-image__history-card--active {
   border-color: #111;
   background: #f7fbff;
+}
+
+.admin-image__history-card:active {
+  transform: scale(0.99);
 }
 
 .admin-image__history-card--selected {
@@ -440,6 +463,8 @@
   flex: 1;
   min-height: 0;
   overflow-y: auto;
+  overscroll-behavior: contain;
+  scrollbar-width: thin;
   padding: 12px 12px 0;
 }
 
@@ -490,12 +515,16 @@
   line-height: 1.45;
   resize: vertical;
   outline: none;
+  transition:
+    border-color var(--motion-fast),
+    box-shadow var(--motion-fast);
 }
 
 .admin-image__prompt-field textarea:focus,
 .admin-image__select:focus,
 .admin-image__size-row input:focus {
   border-color: #111;
+  box-shadow: 0 0 0 4px rgba(17, 17, 17, 0.08);
 }
 
 .admin-image__section {
@@ -604,7 +633,10 @@
   background: #fff;
   color: var(--image-text);
   cursor: pointer;
-  transition: border-color 0.15s ease, background 0.15s ease;
+  transition:
+    border-color 0.15s ease,
+    background 0.15s ease,
+    transform 0.15s ease;
 }
 
 .admin-image__segmented button.is-active,
@@ -612,6 +644,12 @@
 .admin-image__aspect-grid button.is-active {
   border-color: #111;
   background: #fff;
+}
+
+.admin-image__segmented button:active:not(:disabled),
+.admin-image__count-grid button:active:not(:disabled),
+.admin-image__aspect-grid button:active:not(:disabled) {
+  transform: scale(0.97);
 }
 
 .admin-image__size-row {
@@ -753,14 +791,14 @@
 
 .admin-image__submit-row {
   flex-shrink: 0;
-  padding: 8px 12px 12px;
+  padding: 8px 12px max(12px, calc(var(--safe-bottom) + 10px));
   border-top: 1px solid var(--image-line);
   background: var(--image-panel-bg);
 }
 
 .admin-image__generate-btn,
 .admin-image__cancel-btn {
-  height: 40px;
+  min-height: 44px;
   border: 1px solid #111;
   border-radius: 20px;
   background: #111;
@@ -770,6 +808,9 @@
   justify-content: center;
   gap: 8px;
   cursor: pointer;
+  transition:
+    opacity var(--motion-fast),
+    transform var(--motion-fast);
 }
 
 .admin-image__generate-btn {
@@ -787,9 +828,16 @@
   border-color: #b91c1c;
 }
 
+.admin-image__generate-btn:active:not(:disabled),
+.admin-image__cancel-btn:active:not(:disabled) {
+  transform: scale(0.97);
+}
+
 .admin-image__workspace {
   position: relative;
   overflow-y: auto;
+  overscroll-behavior: contain;
+  scrollbar-width: thin;
   padding: 0 16px 16px;
 }
 
@@ -833,7 +881,7 @@
 }
 
 .admin-image__workspace-tools button {
-  min-height: 30px;
+  min-height: 36px;
   display: inline-flex;
   align-items: center;
   gap: 6px;
@@ -843,6 +891,19 @@
   color: var(--image-text);
   padding: 0 12px;
   cursor: pointer;
+  transition:
+    background var(--motion-fast),
+    border-color var(--motion-fast),
+    transform var(--motion-fast);
+}
+
+.admin-image__workspace-tools button:hover:not(:disabled) {
+  background: var(--image-soft);
+  border-color: var(--image-line-strong);
+}
+
+.admin-image__workspace-tools button:active:not(:disabled) {
+  transform: scale(0.97);
 }
 
 .admin-image__task-banner {
@@ -878,6 +939,16 @@
   background: #fff;
   overflow: hidden;
   box-shadow: 0 1px 2px rgba(17, 24, 39, 0.04);
+  transition:
+    border-color var(--motion-fast),
+    box-shadow var(--motion-fast),
+    transform var(--motion-fast);
+}
+
+.admin-image__result-card:hover,
+.admin-image__result-card:focus-within {
+  border-color: #111;
+  box-shadow: 0 12px 24px rgba(17, 24, 39, 0.08);
 }
 
 .admin-image__result-card--pending {
@@ -893,6 +964,10 @@
   background: var(--image-soft);
   cursor: zoom-in;
   overflow: hidden;
+}
+
+.admin-image__result-image:active {
+  transform: scale(0.997);
 }
 
 .admin-image__result-image--pending {
@@ -1224,8 +1299,8 @@
 
   .admin-image__controls {
     order: 2;
-    height: calc(100dvh - 66px);
-    min-height: 560px;
+    height: auto;
+    min-height: min(560px, calc(100dvh - 66px));
   }
 
   .admin-image__workspace {

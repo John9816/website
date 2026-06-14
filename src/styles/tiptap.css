@@ -16,6 +16,7 @@
   overflow: hidden;
   display: flex;
   flex-direction: column;
+  min-height: 0;
   background: var(--editor-bg);
   box-shadow: var(--editor-shadow);
 }
@@ -44,6 +45,7 @@
     var(--editor-panel);
   backdrop-filter: saturate(140%) blur(14px);
   -webkit-backdrop-filter: saturate(140%) blur(14px);
+  flex: 0 0 auto;
 }
 
 .editor-menu-bar__groups {
@@ -140,6 +142,7 @@
 
 .editor-toolbar-btn.ant-btn:disabled {
   opacity: 0.45;
+  cursor: not-allowed;
 }
 
 .editor-toolbar-select {
@@ -182,6 +185,9 @@
   min-height: var(--editor-min-height);
   max-height: var(--editor-max-height);
   overflow-y: auto;
+  overscroll-behavior: contain;
+  -webkit-overflow-scrolling: touch;
+  scrollbar-gutter: stable;
 }
 
 .tiptap-editor-container--fullscreen {
@@ -215,6 +221,7 @@
   box-sizing: border-box;
   outline: none;
   color: var(--editor-text);
+  scroll-margin-bottom: 96px;
 }
 
 .editor-content--fill .ProseMirror {

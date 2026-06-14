@@ -3,6 +3,7 @@
   flex-direction: column;
   gap: 16px;
   color: var(--text);
+  min-width: 0;
 }
 
 .content-factory__header {
@@ -135,7 +136,9 @@
 .content-factory__hot-list {
   max-height: 420px;
   overflow: auto;
+  overscroll-behavior: contain;
   padding-right: 2px;
+  scrollbar-width: thin;
 }
 
 .content-factory__topic-row.ant-list-item {
@@ -158,6 +161,16 @@
   color: inherit;
   text-align: left;
   cursor: pointer;
+  border-radius: 8px;
+  min-height: 44px;
+  transition:
+    background var(--motion-fast),
+    color var(--motion-fast);
+}
+
+.content-factory__topic-main:hover,
+.content-factory__topic-main:focus-visible {
+  background: color-mix(in srgb, var(--hover) 74%, transparent);
 }
 
 .content-factory__topic-title {
@@ -210,6 +223,8 @@
 .content-factory__article-list {
   max-height: 650px;
   overflow: auto;
+  overscroll-behavior: contain;
+  scrollbar-width: thin;
 }
 
 .content-factory__article-row.ant-list-item {
@@ -218,6 +233,14 @@
   padding: 12px 0;
   border-color: var(--border);
   cursor: pointer;
+  border-radius: 8px;
+  transition:
+    background var(--motion-fast),
+    color var(--motion-fast);
+}
+
+.content-factory__article-row.ant-list-item:hover {
+  background: var(--hover);
 }
 
 .content-factory__article-row:hover .ant-list-item-meta-title {
@@ -263,14 +286,20 @@
   overflow: hidden;
 }
 
+.content-factory__drawer .ant-drawer-content {
+  min-height: 0;
+}
+
 .content-factory__article-form {
   display: flex;
   height: 100%;
   min-height: 100%;
   flex-direction: column;
   gap: 4px;
-  overflow: auto;
-  padding: 18px;
+  overflow-y: auto;
+  overscroll-behavior: contain;
+  padding: 18px 18px max(24px, calc(var(--safe-bottom) + 18px));
+  scrollbar-width: thin;
 }
 
 .content-factory__cover-preview {
@@ -294,22 +323,33 @@
   height: min(64vh, 680px);
   min-height: 360px;
   overflow-y: auto;
+  overscroll-behavior: contain;
+  scrollbar-gutter: stable;
   resize: vertical;
   font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, 'Liberation Mono', monospace;
   font-size: 13px;
   line-height: 1.65;
+  tab-size: 2;
 }
 
 .content-factory__preview {
   height: min(64vh, 680px);
   min-height: 360px;
   overflow-y: auto;
+  overscroll-behavior: contain;
+  scrollbar-gutter: stable;
   padding: 18px;
   border: 1px solid var(--border);
   border-radius: 8px;
   background: var(--panel);
   color: var(--text);
   line-height: 1.75;
+}
+
+.content-factory__editor.ant-input:focus,
+.content-factory__preview:focus-within {
+  border-color: var(--accent);
+  box-shadow: 0 0 0 4px var(--accent-soft);
 }
 
 .content-factory__preview h1,
@@ -378,5 +418,11 @@
   .content-factory__preview {
     height: 58vh;
     min-height: 320px;
+  }
+
+  .content-factory__header .ant-btn,
+  .content-factory__panel-toolbar .ant-btn,
+  .content-factory__category-strip .ant-btn {
+    min-height: 44px;
   }
 }
