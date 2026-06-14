@@ -1,9 +1,7 @@
 .admin-shell {
-  --admin-header-height: 68px;
+  --admin-header-height: 56px;
   min-height: 100dvh;
-  background:
-    linear-gradient(180deg, color-mix(in srgb, var(--panel) 74%, transparent), transparent 300px),
-    var(--bg);
+  background: var(--bg);
   color: var(--text);
 }
 
@@ -22,7 +20,7 @@
 }
 
 .admin-shell__brand {
-  min-height: calc(72px + var(--safe-top));
+  min-height: calc(60px + var(--safe-top));
   display: flex;
   align-items: center;
   gap: 12px;
@@ -50,7 +48,7 @@
 }
 
 .admin-shell__menu.ant-menu {
-  padding: 14px 10px;
+  padding: 10px;
   border-inline-end: 0 !important;
   background: transparent !important;
 }
@@ -118,19 +116,19 @@
   display: flex;
   align-items: center;
   justify-content: space-between;
-  gap: 20px;
-  padding: 0 30px;
+  gap: 16px;
+  padding: 0 18px;
   border-bottom: 1px solid var(--border);
   background:
     linear-gradient(180deg, color-mix(in srgb, var(--panel) 94%, transparent), color-mix(in srgb, var(--panel) 84%, transparent)),
     var(--panel-glass);
-  backdrop-filter: saturate(160%) blur(18px);
+  backdrop-filter: saturate(140%) blur(12px);
 }
 
 .admin-shell__title.ant-typography {
   margin: 0;
   color: var(--text);
-  font-size: 18px;
+  font-size: 17px;
   font-weight: 800;
   line-height: 1.2;
 }
@@ -199,7 +197,7 @@
 .admin-shell__content.ant-layout-content {
   min-width: 0;
   min-height: calc(100dvh - var(--admin-header-height));
-  padding: 24px;
+  padding: 16px;
   overflow-x: clip;
 }
 
@@ -235,7 +233,7 @@
 
 @media (max-width: 991.98px) {
   .admin-shell {
-    --admin-header-height: 64px;
+    --admin-header-height: 56px;
   }
 
   .admin-shell__body.ant-layout {
@@ -247,7 +245,7 @@
   }
 
   .admin-shell__content.ant-layout-content {
-    padding: 16px;
+    padding: 12px;
   }
 }
 
