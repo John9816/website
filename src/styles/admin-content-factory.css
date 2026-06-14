@@ -110,6 +110,28 @@
   gap: 12px;
 }
 
+.content-factory__category-strip {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 12px;
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  background: var(--panel-alt);
+}
+
+.content-factory__category-control {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 10px;
+}
+
+.content-factory__category-strip .ant-segmented {
+  min-height: 36px;
+}
+
 .content-factory__hot-list {
   max-height: 420px;
   overflow: auto;
@@ -170,6 +192,10 @@
   gap: 12px;
 }
 
+.content-factory__form-grid--three {
+  grid-template-columns: minmax(120px, 0.8fr) minmax(150px, 1fr) minmax(150px, 1fr);
+}
+
 .content-factory__article-list {
   max-height: 650px;
   overflow: auto;
@@ -222,15 +248,18 @@
 }
 
 .content-factory__drawer .ant-drawer-body {
-  padding: 18px;
-  overflow: auto;
+  padding: 0;
+  overflow: hidden;
 }
 
 .content-factory__article-form {
   display: flex;
+  height: 100%;
   min-height: 100%;
   flex-direction: column;
   gap: 4px;
+  overflow: auto;
+  padding: 18px;
 }
 
 .content-factory__cover-preview {
@@ -251,9 +280,9 @@
 }
 
 .content-factory__editor.ant-input {
-  min-height: 48vh;
-  max-height: 62vh;
-  overflow: auto;
+  height: min(64vh, 680px);
+  min-height: 360px;
+  overflow-y: auto;
   resize: vertical;
   font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, 'Liberation Mono', monospace;
   font-size: 13px;
@@ -261,8 +290,9 @@
 }
 
 .content-factory__preview {
-  max-height: 62vh;
-  overflow: auto;
+  height: min(64vh, 680px);
+  min-height: 360px;
+  overflow-y: auto;
   padding: 18px;
   border: 1px solid var(--border);
   border-radius: 8px;
@@ -313,12 +343,14 @@
 
 @media (max-width: 720px) {
   .content-factory__header,
-  .content-factory__panel-toolbar {
+  .content-factory__panel-toolbar,
+  .content-factory__category-strip {
     align-items: stretch;
     flex-direction: column;
   }
 
-  .content-factory__form-grid {
+  .content-factory__form-grid,
+  .content-factory__form-grid--three {
     grid-template-columns: 1fr;
   }
 
@@ -332,7 +364,7 @@
 
   .content-factory__editor.ant-input,
   .content-factory__preview {
-    min-height: 52vh;
-    max-height: 58vh;
+    height: 58vh;
+    min-height: 320px;
   }
 }

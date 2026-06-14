@@ -76,6 +76,9 @@ export interface ContentHotTopicsView {
 
 export type ContentArticleStatus = 'DRAFT' | 'WECHAT_DRAFT' | 'PUBLISHED'
 export type ContentArticleLength = 'short' | 'standard' | 'long'
+export type ContentArticleCategory = 'emotion_psychology' | 'history_philosophy' | 'society_livelihood'
+export type ContentArticleLayoutTheme = 'clean' | 'warm' | 'magazine'
+export type ContentArticleImageMode = 'generate' | 'fetch' | 'none'
 
 export interface ContentArticle {
   id: number
@@ -89,6 +92,10 @@ export interface ContentArticle {
   tags: string[]
   riskTips: string[]
   model?: string | null
+  category?: ContentArticleCategory | null
+  layoutTheme?: ContentArticleLayoutTheme | null
+  imageMode?: ContentArticleImageMode | null
+  automation?: Record<string, unknown> | null
   status: ContentArticleStatus
   wechatMediaId?: string | null
   wechatPublishId?: string | null
@@ -100,6 +107,11 @@ export interface ContentArticle {
 
 export interface ContentArticleGeneratePayload {
   topics?: ContentHotTopic[]
+  category?: ContentArticleCategory
+  layoutTheme?: ContentArticleLayoutTheme
+  imageMode?: ContentArticleImageMode
+  autoWechatDraft?: boolean
+  autoPublish?: boolean
   angle?: string
   audience?: string
   tone?: string

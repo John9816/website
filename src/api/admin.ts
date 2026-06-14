@@ -102,8 +102,8 @@ export const adminDeleteConfig = (id: number) =>
 export const adminGetContentStatus = () =>
   request<ContentFactoryStatus>('/api/admin/content/status', { auth: true })
 
-export const adminGetHotTopics = (limit = 12) =>
-  request<ContentHotTopicsView>('/api/admin/content/hot', { auth: true, query: { limit } })
+export const adminGetHotTopics = (limit = 12, category?: string) =>
+  request<ContentHotTopicsView>('/api/admin/content/hot', { auth: true, query: { limit, category } })
 
 export const adminListContentArticles = (page = 0, size = DEFAULT_PAGE_SIZE) =>
   request<PageView<ContentArticle>>('/api/admin/content/articles', {

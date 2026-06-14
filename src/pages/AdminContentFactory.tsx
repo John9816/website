@@ -11,6 +11,7 @@ import {
   Image,
   Input,
   List,
+  Segmented,
   Select,
   Skeleton,
   Space,
@@ -42,7 +43,10 @@ import {
 } from '../api/admin'
 import type {
   ContentArticle,
+  ContentArticleCategory,
   ContentArticleGeneratePayload,
+  ContentArticleImageMode,
+  ContentArticleLayoutTheme,
   ContentArticleLength,
   ContentArticleStatus,
   ContentFactoryStatus,
@@ -51,6 +55,11 @@ import type {
 import '../styles/admin-content-factory.css'
 
 type GenerateValues = {
+  category: ContentArticleCategory
+  layoutTheme: ContentArticleLayoutTheme
+  imageMode: ContentArticleImageMode
+  autoWechatDraft: boolean
+  autoPublish: boolean
   angle?: string
   audience?: string
   tone?: string
@@ -73,13 +82,71 @@ const statusMeta: Record<ContentArticleStatus, { label: string; color: string }>
   PUBLISHED: { label: '已发布', color: 'success' },
 }
 
+const categoryMeta: Record<
+  ContentArticleCategory,
+  {
+    label: string
+    color: string
+    angle: string
+    audience: string
+    tone: string
+    coverStyle: string
+    note: string
+  }
+> = {
+  emotion_psychology: {
+    label: '情感心理',
+    color: 'magenta',
+    angle: '从真实关系、情绪需求和自我成长切入，给读者可复盘、可练习的理解框架',
+    audience: '正在处理亲密关系、家庭沟通、职场情绪和自我成长的公众号读者',
+    tone: '温暖、清醒、克制，不鸡汤、不诊断',
+    coverStyle: '柔和人文，情绪曲线，温暖但不甜腻',
+    note: '适合关系沟通、情绪成本、自我成长和边界感选题。',
+  },
+  history_philosophy: {
+    label: '历史哲学',
+    color: 'gold',
+    angle: '从历史人物、事件脉络或思想命题切入，把旧问题讲成今天仍然有用的判断力',
+    audience: '喜欢历史故事、思想辨析和长期主义思考的公众号读者',
+    tone: '沉稳、有证据、有思辨感，避免故作玄虚',
+    coverStyle: '纸本文献，时间轴，克制高级的历史感',
+    note: '适合人物命运、时代结构、思想命题和长期判断。',
+  },
+  society_livelihood: {
+    label: '社会民生',
+    color: 'cyan',
+    angle: '从公共议题背后的生活成本、教育就业、城市生活和普通人处境切入',
+    audience: '关心现实生活、公共议题和社会变化的公众号读者',
+    tone: '客观、克制、有温度，不煽动',
+    coverStyle: '城市街景，民生数据，清晰可信的新闻杂志感',
+    note: '适合就业教育、消费变化、城市生活和公共议题。',
+  },
+}
+
+const layoutThemeOptions: Array<{ label: string; value: ContentArticleLayoutTheme }> = [
+  { label: '清爽', value: 'clean' },
+  { label: '温暖', value: 'warm' },
+  { label: '杂志', value: 'magazine' },
+]
+
+const imageModeOptions: Array<{ label: string; value: ContentArticleImageMode }> = [
+  { label: '生成封面', value: 'generate' },
+  { label: '抓取图片', value: 'fetch' },
+  { label: '不配图', value: 'none' },
+]
+
 const defaultGenerateValues: GenerateValues = {
-  angle: '从热点背后的需求和普通人的行动机会切入',
-  audience: '关注效率、AI、内容运营和个人成长的公众号读者',
-  tone: '清醒、克制、有洞察、有行动感',
+  category: 'emotion_psychology',
+  layoutTheme: 'clean',
+  imageMode: 'generate',
+  autoWechatDraft: false,
+  autoPublish: false,
+  angle: categoryMeta.emotion_psychology.angle,
+  audience: categoryMeta.emotion_psychology.audience,
+  tone: categoryMeta.emotion_psychology.tone,
   length: 'standard',
   generateCover: true,
-  coverStyle: '干净的数据感，适合微信公众号封面',
+  coverStyle: categoryMeta.emotion_psychology.coverStyle,
 }
 
 export default function AdminContentFactory() {
@@ -90,6 +157,7 @@ export default function AdminContentFactory() {
   const [hotTopics, setHotTopics] = useState<ContentHotTopic[]>([])
   const [articles, setArticles] = useState<ContentArticle[]>([])
   const [selectedTopicIds, setSelectedTopicIds] = useState<string[]>([])
+  const [activeCategory, setActiveCategory] = useState<ContentArticleCategory>(defaultGenerateValues.category)
   const [activeArticle, setActiveArticle] = useState<ContentArticle | null>(null)
   const [drawerOpen, setDrawerOpen] = useState(false)
   const [statusLoading, setStatusLoading] = useState(false)
@@ -100,6 +168,8 @@ export default function AdminContentFactory() {
   const [wechatAction, setWechatAction] = useState<'draft' | 'publish' | null>(null)
 
   const watchedHtml = Form.useWatch('contentHtml', articleForm)
+  const watchedCoverImage = Form.useWatch('coverImageUrl', articleForm)
+  const watchedAutoPublish = Form.useWatch('autoPublish', generateForm)
 
   const selectedTopics = useMemo(() => {
     const selected = hotTopics.filter((topic) => selectedTopicIds.includes(topic.id))
@@ -117,10 +187,10 @@ export default function AdminContentFactory() {
     }
   }
 
-  const loadHotTopics = async () => {
+  const loadHotTopics = async (category = activeCategory) => {
     setHotLoading(true)
     try {
-      const data = await adminGetHotTopics(18)
+      const data = await adminGetHotTopics(18, category)
       setHotTopics(data.items)
       setSelectedTopicIds((previous) =>
         previous.filter((id) => data.items.some((topic) => topic.id === id)),
@@ -147,7 +217,7 @@ export default function AdminContentFactory() {
   useEffect(() => {
     generateForm.setFieldsValue(defaultGenerateValues)
     void loadStatus()
-    void loadHotTopics()
+    void loadHotTopics(defaultGenerateValues.category)
     void loadArticles()
   }, [])
 
@@ -173,10 +243,26 @@ export default function AdminContentFactory() {
     )
   }
 
+  const changeCategory = (category: ContentArticleCategory) => {
+    const meta = categoryMeta[category]
+    setActiveCategory(category)
+    setSelectedTopicIds([])
+    generateForm.setFieldsValue({
+      category,
+      angle: meta.angle,
+      audience: meta.audience,
+      tone: meta.tone,
+      coverStyle: meta.coverStyle,
+    })
+    void loadHotTopics(category)
+  }
+
   const generateArticle = async () => {
     const values = await generateForm.validateFields()
     const payload: ContentArticleGeneratePayload = {
       ...values,
+      category: activeCategory,
+      generateCover: values.imageMode !== 'none',
       topics: selectedTopics,
     }
 
@@ -185,7 +271,7 @@ export default function AdminContentFactory() {
       const article = await adminGenerateContentArticle(payload)
       upsertArticle(article)
       setDrawerOpen(true)
-      message.success('文章已生成')
+      message.success(values.autoPublish ? '文章已生成，已提交自动发布流程' : values.autoWechatDraft ? '文章已生成，已提交微信草稿流程' : '文章已生成')
     } catch (error) {
       message.error((error as Error).message)
     } finally {
@@ -258,6 +344,7 @@ export default function AdminContentFactory() {
 
   const allSelected = hotTopics.length > 0 && selectedTopicIds.length === hotTopics.length
   const articleStatus = activeArticle ? statusMeta[activeArticle.status] : null
+  const activeArticleCategory = activeArticle?.category ? categoryMeta[activeArticle.category] : null
 
   return (
     <div className="content-factory">
@@ -306,6 +393,21 @@ export default function AdminContentFactory() {
 
       <section className="content-factory__workspace">
         <Card className="content-factory__panel" title="热点与生成参数">
+          <div className="content-factory__category-strip">
+            <div className="content-factory__category-control">
+              <Typography.Text strong>内容栏目</Typography.Text>
+              <Segmented
+                value={activeCategory}
+                options={(Object.keys(categoryMeta) as ContentArticleCategory[]).map((key) => ({
+                  label: categoryMeta[key].label,
+                  value: key,
+                }))}
+                onChange={(value) => changeCategory(value as ContentArticleCategory)}
+              />
+            </div>
+            <Typography.Text type="secondary">{categoryMeta[activeCategory].note}</Typography.Text>
+          </div>
+
           <div className="content-factory__panel-toolbar">
             <Space wrap>
               <Button icon={<FireOutlined />} onClick={() => void loadHotTopics()} loading={hotLoading}>
@@ -321,9 +423,12 @@ export default function AdminContentFactory() {
                 清空
               </Button>
             </Space>
-            <Tag color={selectedTopicIds.length ? 'processing' : 'default'}>
-              已选 {selectedTopicIds.length || Math.min(5, hotTopics.length)}
-            </Tag>
+            <Space size={8} wrap>
+              <Tag color={categoryMeta[activeCategory].color}>{categoryMeta[activeCategory].label}</Tag>
+              <Tag color={selectedTopicIds.length ? 'processing' : 'default'}>
+                已选 {selectedTopicIds.length || Math.min(5, hotTopics.length)}
+              </Tag>
+            </Space>
           </div>
 
           <div className="content-factory__hot-list">
@@ -368,6 +473,14 @@ export default function AdminContentFactory() {
             initialValues={defaultGenerateValues}
             className="content-factory__generate-form"
           >
+            <div className="content-factory__form-grid">
+              <Form.Item name="layoutTheme" label="微信排版">
+                <Segmented block options={layoutThemeOptions} />
+              </Form.Item>
+              <Form.Item name="imageMode" label="图片模式">
+                <Segmented block options={imageModeOptions} />
+              </Form.Item>
+            </div>
             <Form.Item name="angle" label="切入角度">
               <Input placeholder="例如：从普通人的机会和风险切入" />
             </Form.Item>
@@ -379,7 +492,7 @@ export default function AdminContentFactory() {
                 <Input placeholder="例如：清醒、有洞察、有行动感" />
               </Form.Item>
             </div>
-            <div className="content-factory__form-grid">
+            <div className="content-factory__form-grid content-factory__form-grid--three">
               <Form.Item name="length" label="篇幅">
                 <Select
                   options={[
@@ -389,8 +502,22 @@ export default function AdminContentFactory() {
                   ]}
                 />
               </Form.Item>
-              <Form.Item name="generateCover" label="生成封面" valuePropName="checked">
-                <Switch checkedChildren="开启" unCheckedChildren="关闭" />
+              <Form.Item name="autoWechatDraft" label="生成后存草稿" valuePropName="checked">
+                <Switch
+                  checkedChildren="开启"
+                  unCheckedChildren="关闭"
+                  disabled={Boolean(watchedAutoPublish) || !status?.wechatReady}
+                />
+              </Form.Item>
+              <Form.Item name="autoPublish" label="生成后发布" valuePropName="checked">
+                <Switch
+                  checkedChildren="开启"
+                  unCheckedChildren="关闭"
+                  disabled={!status?.wechatReady}
+                  onChange={(checked) => {
+                    if (checked) generateForm.setFieldValue('autoWechatDraft', false)
+                  }}
+                />
               </Form.Item>
             </div>
             <Form.Item name="coverStyle" label="封面风格">
@@ -419,6 +546,7 @@ export default function AdminContentFactory() {
               dataSource={articles}
               renderItem={(article) => {
                 const meta = statusMeta[article.status]
+                const category = article.category ? categoryMeta[article.category] : null
                 return (
                   <List.Item
                     className="content-factory__article-row"
@@ -451,6 +579,7 @@ export default function AdminContentFactory() {
                       title={
                         <Space size={8} wrap>
                           <span>{article.title}</span>
+                          {category ? <Tag color={category.color}>{category.label}</Tag> : null}
                           <Tag color={meta.color}>{meta.label}</Tag>
                         </Space>
                       }
@@ -471,6 +600,7 @@ export default function AdminContentFactory() {
           activeArticle ? (
             <Space wrap>
               <span>编辑公众号文章</span>
+              {activeArticleCategory ? <Tag color={activeArticleCategory.color}>{activeArticleCategory.label}</Tag> : null}
               {articleStatus ? <Tag color={articleStatus.color}>{articleStatus.label}</Tag> : null}
             </Space>
           ) : (
@@ -526,9 +656,9 @@ export default function AdminContentFactory() {
               <Input placeholder="https:// 或 /api/v1/content/assets/..." />
             </Form.Item>
 
-            {activeArticle.coverImageUrl ? (
+            {(watchedCoverImage || activeArticle.coverImageUrl) ? (
               <div className="content-factory__cover-preview">
-                <Image src={activeArticle.coverImageUrl} alt="文章封面" />
+                <Image src={watchedCoverImage || activeArticle.coverImageUrl || ''} alt="文章封面" />
               </div>
             ) : null}
 
