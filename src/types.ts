@@ -79,6 +79,7 @@ export type ContentArticleLength = 'short' | 'standard' | 'long'
 export type ContentArticleCategory = 'emotion_psychology' | 'history_philosophy' | 'society_livelihood'
 export type ContentArticleLayoutTheme = 'clean' | 'warm' | 'magazine'
 export type ContentArticleImageMode = 'generate' | 'fetch' | 'none'
+export type ContentArticleResearchDepth = 'quick' | 'standard' | 'deep'
 
 export interface ContentArticle {
   id: number
@@ -107,9 +108,13 @@ export interface ContentArticle {
 
 export interface ContentArticleGeneratePayload {
   topics?: ContentHotTopic[]
+  topic?: string
   category?: ContentArticleCategory
   layoutTheme?: ContentArticleLayoutTheme
   imageMode?: ContentArticleImageMode
+  researchEnabled?: boolean
+  researchDepth?: ContentArticleResearchDepth
+  searchQueries?: string[]
   autoWechatDraft?: boolean
   autoPublish?: boolean
   angle?: string

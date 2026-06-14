@@ -186,6 +186,17 @@
   border-top: 1px solid var(--border);
 }
 
+.content-factory__research-grid {
+  display: grid;
+  grid-template-columns: minmax(150px, 0.7fr) minmax(0, 1.3fr);
+  gap: 12px;
+  align-items: end;
+}
+
+.content-factory__research-grid .ant-form-item-control-input {
+  min-height: 40px;
+}
+
 .content-factory__form-grid {
   display: grid;
   grid-template-columns: repeat(2, minmax(0, 1fr));
@@ -349,6 +360,7 @@
     flex-direction: column;
   }
 
+  .content-factory__research-grid,
   .content-factory__form-grid,
   .content-factory__form-grid--three {
     grid-template-columns: 1fr;

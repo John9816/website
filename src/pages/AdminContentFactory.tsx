@@ -48,6 +48,7 @@ import type {
   ContentArticleImageMode,
   ContentArticleLayoutTheme,
   ContentArticleLength,
+  ContentArticleResearchDepth,
   ContentArticleStatus,
   ContentFactoryStatus,
   ContentHotTopic,
@@ -56,8 +57,11 @@ import '../styles/admin-content-factory.css'
 
 type GenerateValues = {
   category: ContentArticleCategory
+  topic?: string
   layoutTheme: ContentArticleLayoutTheme
   imageMode: ContentArticleImageMode
+  researchEnabled: boolean
+  researchDepth: ContentArticleResearchDepth
   autoWechatDraft: boolean
   autoPublish: boolean
   angle?: string
@@ -135,10 +139,19 @@ const imageModeOptions: Array<{ label: string; value: ContentArticleImageMode }>
   { label: '不配图', value: 'none' },
 ]
 
+const researchDepthOptions: Array<{ label: string; value: ContentArticleResearchDepth }> = [
+  { label: '快搜', value: 'quick' },
+  { label: '标准', value: 'standard' },
+  { label: '深搜', value: 'deep' },
+]
+
 const defaultGenerateValues: GenerateValues = {
   category: 'emotion_psychology',
+  topic: '',
   layoutTheme: 'clean',
   imageMode: 'generate',
+  researchEnabled: true,
+  researchDepth: 'standard',
   autoWechatDraft: false,
   autoPublish: false,
   angle: categoryMeta.emotion_psychology.angle,
@@ -170,6 +183,7 @@ export default function AdminContentFactory() {
   const watchedHtml = Form.useWatch('contentHtml', articleForm)
   const watchedCoverImage = Form.useWatch('coverImageUrl', articleForm)
   const watchedAutoPublish = Form.useWatch('autoPublish', generateForm)
+  const watchedTopic = Form.useWatch('topic', generateForm)
 
   const selectedTopics = useMemo(() => {
     const selected = hotTopics.filter((topic) => selectedTopicIds.includes(topic.id))
@@ -259,8 +273,10 @@ export default function AdminContentFactory() {
 
   const generateArticle = async () => {
     const values = await generateForm.validateFields()
+    const topic = values.topic?.trim()
     const payload: ContentArticleGeneratePayload = {
       ...values,
+      topic: topic || undefined,
       category: activeCategory,
       generateCover: values.imageMode !== 'none',
       topics: selectedTopics,
@@ -352,7 +368,7 @@ export default function AdminContentFactory() {
         <div>
           <Typography.Title level={3}>内容工厂</Typography.Title>
           <Typography.Paragraph type="secondary">
-            热点采集、爆文草稿、封面生成和微信公众号推送集中处理。
+            输入话题或选择热点，联网搜索资料后生成可直接编辑和推送的公众号正文。
           </Typography.Paragraph>
         </div>
         <Space wrap>
@@ -392,7 +408,7 @@ export default function AdminContentFactory() {
       ) : null}
 
       <section className="content-factory__workspace">
-        <Card className="content-factory__panel" title="热点与生成参数">
+        <Card className="content-factory__panel" title="话题研究与生成">
           <div className="content-factory__category-strip">
             <div className="content-factory__category-control">
               <Typography.Text strong>内容栏目</Typography.Text>
@@ -408,71 +424,88 @@ export default function AdminContentFactory() {
             <Typography.Text type="secondary">{categoryMeta[activeCategory].note}</Typography.Text>
           </div>
 
-          <div className="content-factory__panel-toolbar">
-            <Space wrap>
-              <Button icon={<FireOutlined />} onClick={() => void loadHotTopics()} loading={hotLoading}>
-                采集热点
-              </Button>
-              <Button
-                onClick={() => setSelectedTopicIds(hotTopics.map((topic) => topic.id))}
-                disabled={allSelected || hotTopics.length === 0}
-              >
-                全选
-              </Button>
-              <Button onClick={() => setSelectedTopicIds([])} disabled={selectedTopicIds.length === 0}>
-                清空
-              </Button>
-            </Space>
-            <Space size={8} wrap>
-              <Tag color={categoryMeta[activeCategory].color}>{categoryMeta[activeCategory].label}</Tag>
-              <Tag color={selectedTopicIds.length ? 'processing' : 'default'}>
-                已选 {selectedTopicIds.length || Math.min(5, hotTopics.length)}
-              </Tag>
-            </Space>
-          </div>
-
-          <div className="content-factory__hot-list">
-            {hotLoading && hotTopics.length === 0 ? (
-              <Skeleton active paragraph={{ rows: 8 }} />
-            ) : hotTopics.length ? (
-              <List
-                dataSource={hotTopics}
-                renderItem={(topic) => (
-                  <List.Item className="content-factory__topic-row">
-                    <Checkbox
-                      checked={selectedTopicIds.includes(topic.id)}
-                      onChange={(event) => toggleTopic(topic.id, event.target.checked)}
-                    />
-                    <button
-                      type="button"
-                      className="content-factory__topic-main"
-                      onClick={() => toggleTopic(topic.id, !selectedTopicIds.includes(topic.id))}
-                    >
-                      <span className="content-factory__topic-title">{topic.title}</span>
-                      <span className="content-factory__topic-meta">
-                        {topic.sourceName} · #{topic.rank}
-                        {topic.hot ? ` · ${topic.hot}` : ''}
-                      </span>
-                    </button>
-                    {topic.url ? (
-                      <a className="content-factory__topic-link" href={topic.url} target="_blank" rel="noreferrer">
-                        来源
-                      </a>
-                    ) : null}
-                  </List.Item>
-                )}
-              />
-            ) : (
-              <Empty image={Empty.PRESENTED_IMAGE_SIMPLE} description="暂无热点数据" />
-            )}
-          </div>
-
           <Form
             form={generateForm}
             layout="vertical"
             initialValues={defaultGenerateValues}
             className="content-factory__generate-form"
           >
+            <Form.Item
+              name="topic"
+              label="核心话题"
+              extra="填写后会优先围绕这个话题搜索和写作；不填则使用下方选中的热点作为选题灵感。"
+            >
+              <Input placeholder="例如：年轻人为什么越来越不愿意结婚" allowClear maxLength={80} showCount />
+            </Form.Item>
+            <div className="content-factory__research-grid">
+              <Form.Item name="researchEnabled" label="网页搜索" valuePropName="checked">
+                <Switch checkedChildren="开启" unCheckedChildren="关闭" />
+              </Form.Item>
+              <Form.Item name="researchDepth" label="搜索深度">
+                <Segmented block options={researchDepthOptions} />
+              </Form.Item>
+            </div>
+
+            <div className="content-factory__panel-toolbar">
+              <Space wrap>
+                <Typography.Text strong>选题灵感</Typography.Text>
+                <Button icon={<FireOutlined />} onClick={() => void loadHotTopics()} loading={hotLoading}>
+                  采集热点
+                </Button>
+                <Button
+                  onClick={() => setSelectedTopicIds(hotTopics.map((topic) => topic.id))}
+                  disabled={allSelected || hotTopics.length === 0}
+                >
+                  全选
+                </Button>
+                <Button onClick={() => setSelectedTopicIds([])} disabled={selectedTopicIds.length === 0}>
+                  清空
+                </Button>
+              </Space>
+              <Space size={8} wrap>
+                <Tag color={categoryMeta[activeCategory].color}>{categoryMeta[activeCategory].label}</Tag>
+                <Tag color={selectedTopicIds.length ? 'processing' : 'default'}>
+                  已选 {selectedTopicIds.length || Math.min(5, hotTopics.length)}
+                </Tag>
+              </Space>
+            </div>
+
+            <div className="content-factory__hot-list">
+              {hotLoading && hotTopics.length === 0 ? (
+                <Skeleton active paragraph={{ rows: 8 }} />
+              ) : hotTopics.length ? (
+                <List
+                  dataSource={hotTopics}
+                  renderItem={(topic) => (
+                    <List.Item className="content-factory__topic-row">
+                      <Checkbox
+                        checked={selectedTopicIds.includes(topic.id)}
+                        onChange={(event) => toggleTopic(topic.id, event.target.checked)}
+                      />
+                      <button
+                        type="button"
+                        className="content-factory__topic-main"
+                        onClick={() => toggleTopic(topic.id, !selectedTopicIds.includes(topic.id))}
+                      >
+                        <span className="content-factory__topic-title">{topic.title}</span>
+                        <span className="content-factory__topic-meta">
+                          {topic.sourceName} · #{topic.rank}
+                          {topic.hot ? ` · ${topic.hot}` : ''}
+                        </span>
+                      </button>
+                      {topic.url ? (
+                        <a className="content-factory__topic-link" href={topic.url} target="_blank" rel="noreferrer">
+                          来源
+                        </a>
+                      ) : null}
+                    </List.Item>
+                  )}
+                />
+              ) : (
+                <Empty image={Empty.PRESENTED_IMAGE_SIMPLE} description="暂无热点数据" />
+              )}
+            </div>
+
             <div className="content-factory__form-grid">
               <Form.Item name="layoutTheme" label="微信排版">
                 <Segmented block options={layoutThemeOptions} />
@@ -530,9 +563,9 @@ export default function AdminContentFactory() {
               icon={<RocketOutlined />}
               onClick={() => void generateArticle()}
               loading={generating}
-              disabled={hotLoading || hotTopics.length === 0}
+              disabled={hotLoading || (!watchedTopic?.trim() && hotTopics.length === 0)}
             >
-              生成公众号文章
+              搜索并生成公众号正文
             </Button>
           </Form>
         </Card>
