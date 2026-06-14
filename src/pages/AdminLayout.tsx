@@ -110,7 +110,7 @@ export default function AdminLayout() {
       theme={{
         algorithm: mode === 'dark' ? antdTheme.darkAlgorithm : antdTheme.defaultAlgorithm,
         token: {
-          colorPrimary: '#0f766e',
+          colorPrimary: mode === 'dark' ? '#fb7185' : '#e11d48',
           borderRadius: 8,
           fontFamily:
             "-apple-system, BlinkMacSystemFont, 'Segoe UI', 'PingFang SC', 'Hiragino Sans GB', 'Microsoft YaHei', sans-serif",

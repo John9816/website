@@ -54,7 +54,7 @@ function RouteFallback() {
 function ThemedAntd({ children }: { children: ReactNode }) {
   const { mode } = useTheme()
   const isDark = mode === 'dark'
-  const colorPrimary = mode === 'dark' ? '#5eead4' : '#0f766e'
+  const colorPrimary = mode === 'dark' ? '#fb7185' : '#e11d48'
   return (
     <ConfigProvider
       locale={zhCN}
@@ -68,15 +68,15 @@ function ThemedAntd({ children }: { children: ReactNode }) {
           controlHeightSM: 32,
           fontFamily:
             "-apple-system, BlinkMacSystemFont, 'Segoe UI', 'PingFang SC', 'Hiragino Sans GB', 'Microsoft YaHei', sans-serif",
-          colorText: isDark ? '#edf7f2' : '#14201c',
-          colorTextSecondary: isDark ? '#a9bbb3' : '#53635e',
-          colorBgContainer: isDark ? '#17201d' : '#ffffff',
-          colorBgElevated: isDark ? '#1f2b27' : '#ffffff',
-          colorBorder: isDark ? '#2d3b36' : '#dbe5e0',
-          colorBorderSecondary: isDark ? '#26342f' : '#e7eee9',
-          colorFillTertiary: isDark ? 'rgba(255,255,255,0.08)' : 'rgba(15,118,110,0.08)',
+          colorText: isDark ? '#f5f6fb' : '#171720',
+          colorTextSecondary: isDark ? '#aeb5c6' : '#626879',
+          colorBgContainer: isDark ? '#171a23' : '#ffffff',
+          colorBgElevated: isDark ? '#202431' : '#ffffff',
+          colorBorder: isDark ? '#303543' : '#e1e4ec',
+          colorBorderSecondary: isDark ? '#2a2f3d' : '#edf0f5',
+          colorFillTertiary: isDark ? 'rgba(255,255,255,0.08)' : 'rgba(225,29,72,0.08)',
           boxShadow:
-            isDark ? '0 18px 48px rgba(0,0,0,0.36)' : '0 18px 48px rgba(15,118,110,0.12)',
+            isDark ? '0 18px 48px rgba(0,0,0,0.36)' : '0 18px 48px rgba(18,24,40,0.12)',
           motionDurationFast: '0.12s',
           motionDurationMid: '0.18s',
           motionEaseOut: 'cubic-bezier(0.2, 0.82, 0.2, 1)',
@@ -91,7 +91,7 @@ function ThemedAntd({ children }: { children: ReactNode }) {
           },
           Input: {
             borderRadius: 8,
-            activeShadow: `0 0 0 4px ${isDark ? 'rgba(94,234,212,0.14)' : 'rgba(15,118,110,0.12)'}`,
+            activeShadow: `0 0 0 4px ${isDark ? 'rgba(251,113,133,0.14)' : 'rgba(225,29,72,0.12)'}`,
           },
           Select: {
             borderRadius: 8,
@@ -108,8 +108,8 @@ function ThemedAntd({ children }: { children: ReactNode }) {
             borderRadiusLG: 8,
           },
           Table: {
-            headerBg: isDark ? '#1f2b27' : '#eef3f0',
-            rowHoverBg: isDark ? '#23322d' : '#edf7f4',
+            headerBg: isDark ? '#202431' : '#f0f2f7',
+            rowHoverBg: isDark ? '#252a37' : '#f6f7fb',
           },
         },
         algorithm: isDark ? antdTheme.darkAlgorithm : antdTheme.defaultAlgorithm,

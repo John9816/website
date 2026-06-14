@@ -1,13 +1,13 @@
 .admin-image {
-  --image-shell-bg: #f6f8f7;
-  --image-panel-bg: #fff;
-  --image-soft: #f1f1ee;
-  --image-soft-2: #fafaf8;
-  --image-line: #e5e5e0;
-  --image-line-strong: #c8c8c1;
-  --image-text: #161614;
-  --image-muted: #6c6c66;
-  --image-accent: #111;
+  --image-shell-bg: var(--bg);
+  --image-panel-bg: var(--panel);
+  --image-soft: var(--panel-alt);
+  --image-soft-2: color-mix(in srgb, var(--panel-alt) 58%, var(--panel));
+  --image-line: var(--border);
+  --image-line-strong: var(--border-strong);
+  --image-text: var(--text);
+  --image-muted: var(--text-dim);
+  --image-accent: var(--accent);
   --image-history-width: clamp(260px, 16vw, 320px);
   --image-controls-width: clamp(330px, 22vw, 430px);
   --image-handle-width: 8px;
@@ -23,7 +23,9 @@
   min-height: 0;
   padding: 8px;
   position: relative;
-  background: var(--image-shell-bg);
+  background:
+    linear-gradient(135deg, color-mix(in srgb, var(--accent) 7%, transparent), transparent 42%),
+    var(--image-shell-bg);
   color: var(--image-text);
   overflow: hidden;
 }
@@ -63,7 +65,7 @@
   background: var(--image-panel-bg);
   border: 1px solid var(--image-line);
   border-radius: 8px;
-  box-shadow: 0 1px 2px rgba(17, 24, 39, 0.06);
+  box-shadow: var(--shadow-md);
 }
 
 .admin-image__history,
@@ -140,7 +142,7 @@
   height: 36px;
   border: 1px solid var(--image-line);
   border-radius: 7px;
-  background: #fff;
+  background: var(--image-panel-bg);
   color: var(--image-muted);
   display: inline-flex;
   align-items: center;
@@ -160,7 +162,7 @@
   align-self: stretch;
   border: 1px solid var(--image-line);
   border-radius: 8px;
-  background: #fff;
+  background: var(--image-panel-bg);
   color: var(--image-muted);
   display: none;
   flex-direction: column;
@@ -168,7 +170,7 @@
   gap: 6px;
   padding: 14px 6px;
   cursor: pointer;
-  box-shadow: 0 1px 2px rgba(17, 24, 39, 0.06);
+  box-shadow: var(--shadow-md);
 }
 
 .admin-image--history-collapsed .admin-image__history-rail {
@@ -230,7 +232,7 @@
 .admin-image__resize-handle:focus-visible::before,
 .admin-image__resize-handle.is-active::before {
   inset: 8px 1px;
-  background: #111;
+  background: var(--image-accent);
   opacity: 1;
 }
 
@@ -271,7 +273,7 @@
   min-height: 34px;
   border: 1px solid var(--image-line);
   border-radius: 5px;
-  background: #fff;
+  background: var(--image-panel-bg);
   color: var(--image-text);
   font-size: 13px;
   cursor: pointer;
@@ -324,7 +326,7 @@
   padding: 10px 10px 9px 8px;
   border: 1px solid transparent;
   border-radius: 9px;
-  background: #fff;
+  background: var(--image-panel-bg);
   color: var(--image-text);
   text-align: left;
   cursor: pointer;
@@ -338,8 +340,10 @@
 .admin-image__history-card:hover,
 .admin-image__history-card:focus-visible,
 .admin-image__history-card--active {
-  border-color: #111;
-  background: #f7fbff;
+  border-color: color-mix(in srgb, var(--image-accent) 44%, var(--image-line));
+  background:
+    linear-gradient(90deg, var(--accent-soft), transparent 88%),
+    var(--image-panel-bg);
 }
 
 .admin-image__history-card:active {
@@ -347,7 +351,7 @@
 }
 
 .admin-image__history-card--selected {
-  border-color: #111;
+  border-color: var(--image-accent);
 }
 
 .admin-image__history-check {
@@ -355,15 +359,15 @@
   height: 15px;
   border: 1px solid var(--image-line);
   border-radius: 4px;
-  background: #fff;
+  background: var(--image-panel-bg);
   grid-row: 1 / span 3;
   margin-top: 2px;
 }
 
 .admin-image__history-card--selected .admin-image__history-check {
-  border-color: #111;
-  box-shadow: inset 0 0 0 4px #fff;
-  background: #111;
+  border-color: var(--image-accent);
+  box-shadow: inset 0 0 0 4px var(--image-panel-bg);
+  background: var(--image-accent);
 }
 
 .admin-image__history-prompt {
@@ -431,7 +435,7 @@
 .admin-image__history-skeleton {
   height: 98px;
   border-radius: 9px;
-  background: linear-gradient(90deg, #f2f2ef 25%, #fff 50%, #f2f2ef 75%);
+  background: var(--skeleton);
   background-size: 200% 100%;
   animation: admin-image-shimmer 1.4s linear infinite;
 }
@@ -448,9 +452,9 @@
 }
 
 .admin-image__pager-btn.is-active {
-  background: #111;
+  background: var(--image-accent);
   color: #fff;
-  border-color: #111;
+  border-color: var(--image-accent);
 }
 
 .admin-image__controls {
@@ -509,7 +513,7 @@
   padding: 8px 10px;
   border: 1px solid var(--image-line);
   border-radius: 7px;
-  background: #fff;
+  background: var(--image-panel-bg);
   color: var(--image-text);
   font-size: 14px;
   line-height: 1.45;
@@ -523,8 +527,8 @@
 .admin-image__prompt-field textarea:focus,
 .admin-image__select:focus,
 .admin-image__size-row input:focus {
-  border-color: #111;
-  box-shadow: 0 0 0 4px rgba(17, 17, 17, 0.08);
+  border-color: color-mix(in srgb, var(--image-accent) 45%, var(--image-line));
+  box-shadow: 0 0 0 4px var(--accent-soft);
 }
 
 .admin-image__section {
@@ -550,7 +554,7 @@
   overflow-x: auto;
   border: 1px solid var(--image-line);
   border-radius: 9px;
-  background: #fff;
+  background: var(--image-panel-bg);
   padding: 8px;
 }
 
@@ -592,7 +596,7 @@
   height: 22px;
   border-radius: 50%;
   border: 1px solid var(--image-line);
-  background: #fff;
+  background: var(--image-panel-bg);
   display: inline-flex;
   align-items: center;
   justify-content: center;
@@ -609,7 +613,7 @@
   padding: 0 38px 0 12px;
   border: 1px solid var(--image-line);
   border-radius: 18px;
-  background: #fff;
+  background: var(--image-panel-bg);
   color: var(--image-text);
   outline: none;
 }
@@ -630,7 +634,7 @@
   min-height: 38px;
   border: 1px solid var(--image-line);
   border-radius: 18px;
-  background: #fff;
+  background: var(--image-panel-bg);
   color: var(--image-text);
   cursor: pointer;
   transition:
@@ -642,8 +646,9 @@
 .admin-image__segmented button.is-active,
 .admin-image__count-grid button.is-active,
 .admin-image__aspect-grid button.is-active {
-  border-color: #111;
-  background: #fff;
+  border-color: var(--image-accent);
+  background: var(--accent-soft);
+  color: var(--image-accent);
 }
 
 .admin-image__segmented button:active:not(:disabled),
@@ -666,7 +671,7 @@
   gap: 8px;
   padding: 0 12px;
   border-radius: 18px;
-  background: #e7e5df;
+  background: var(--image-soft);
 }
 
 .admin-image__size-row span {
@@ -711,7 +716,7 @@
   display: block;
   width: 20px;
   height: 20px;
-  border: 2px solid #111;
+  border: 2px solid currentColor;
 }
 
 .admin-image__aspect-icon--landscape {
@@ -749,9 +754,9 @@
   gap: 8px;
   margin-bottom: 10px;
   padding: 10px;
-  border: 1px solid #d8e7d8;
+  border: 1px solid color-mix(in srgb, var(--accent-green, #059669) 24%, var(--image-line));
   border-radius: 10px;
-  background: #f3faf3;
+  background: color-mix(in srgb, var(--accent-green, #059669) 10%, var(--image-panel-bg));
   color: var(--image-text);
 }
 
@@ -764,7 +769,7 @@
   gap: 3px;
   padding: 7px 8px;
   border-radius: 8px;
-  background: rgba(255, 255, 255, 0.68);
+  background: color-mix(in srgb, var(--image-panel-bg) 76%, transparent);
 }
 
 .admin-image__credit-panel > div:last-child {
@@ -773,7 +778,7 @@
   flex-direction: row;
   align-items: center;
   justify-content: center;
-  color: #15803d;
+  color: var(--accent-green, #059669);
   font-size: 12px;
   font-weight: 700;
 }
@@ -784,7 +789,7 @@
 }
 
 .admin-image__credit-panel strong {
-  color: #15803d;
+  color: var(--accent-green, #059669);
   font-size: 18px;
   line-height: 1;
 }
@@ -799,9 +804,9 @@
 .admin-image__generate-btn,
 .admin-image__cancel-btn {
   min-height: 44px;
-  border: 1px solid #111;
+  border: 1px solid var(--image-accent);
   border-radius: 20px;
-  background: #111;
+  background: linear-gradient(135deg, var(--accent), var(--accent-2));
   color: #fff;
   display: inline-flex;
   align-items: center;
@@ -853,7 +858,7 @@
   margin: 0 -16px 14px;
   padding: 8px 16px;
   border-bottom: 1px solid var(--image-line);
-  background: rgba(255, 255, 255, 0.94);
+  background: color-mix(in srgb, var(--image-panel-bg) 94%, transparent);
   backdrop-filter: blur(8px);
 }
 
@@ -887,7 +892,7 @@
   gap: 6px;
   border: 1px solid var(--image-line);
   border-radius: 999px;
-  background: #fff;
+  background: var(--image-panel-bg);
   color: var(--image-text);
   padding: 0 12px;
   cursor: pointer;
@@ -936,7 +941,7 @@
   min-width: 0;
   border: 1px solid var(--image-line);
   border-radius: 8px;
-  background: #fff;
+  background: var(--image-panel-bg);
   overflow: hidden;
   box-shadow: 0 1px 2px rgba(17, 24, 39, 0.04);
   transition:
@@ -947,13 +952,13 @@
 
 .admin-image__result-card:hover,
 .admin-image__result-card:focus-within {
-  border-color: #111;
+  border-color: color-mix(in srgb, var(--image-accent) 45%, var(--image-line));
   box-shadow: 0 12px 24px rgba(17, 24, 39, 0.08);
 }
 
 .admin-image__result-card--pending {
   border-style: dashed;
-  background: linear-gradient(180deg, #fff, var(--image-soft-2));
+  background: linear-gradient(180deg, var(--image-panel-bg), var(--image-soft-2));
 }
 
 .admin-image__result-image {

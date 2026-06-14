@@ -2,7 +2,7 @@
   --admin-header-height: 68px;
   min-height: 100dvh;
   background:
-    linear-gradient(180deg, color-mix(in srgb, var(--panel) 60%, transparent), transparent 280px),
+    linear-gradient(180deg, color-mix(in srgb, var(--panel) 74%, transparent), transparent 300px),
     var(--bg);
   color: var(--text);
 }
@@ -12,9 +12,10 @@
   inset: 0 auto 0 0;
   z-index: 100;
   height: 100dvh;
-  border-right: 1px solid var(--border);
-  background: color-mix(in srgb, var(--panel) 94%, var(--bg)) !important;
-  box-shadow: 10px 0 28px rgba(20, 32, 28, 0.04);
+  border-right: 1px solid rgba(255, 255, 255, 0.08);
+  background:
+    linear-gradient(180deg, #171923 0%, #10131d 100%) !important;
+  box-shadow: 18px 0 42px rgba(15, 23, 42, 0.16);
   overflow: auto;
   overscroll-behavior: contain;
   scrollbar-width: thin;
@@ -26,14 +27,14 @@
   align-items: center;
   gap: 12px;
   padding: var(--safe-top) 20px 0;
-  border-bottom: 1px solid var(--border);
+  border-bottom: 1px solid rgba(255, 255, 255, 0.08);
 }
 
 .admin-shell__brand-mark {
   width: 30px;
   height: 30px;
   flex: 0 0 auto;
-  border: 1px solid color-mix(in srgb, var(--accent) 22%, transparent);
+  border: 1px solid rgba(255, 255, 255, 0.18);
   border-radius: 8px;
   background:
     linear-gradient(135deg, rgba(var(--accent-rgb), 0.14), transparent 56%),
@@ -43,7 +44,7 @@
 
 .admin-shell__brand-text {
   min-width: 0;
-  color: var(--text);
+  color: #fff;
   font-size: 16px;
   font-weight: 750;
 }
@@ -59,7 +60,7 @@
   height: 44px;
   margin: 4px 0;
   border-radius: 8px;
-  color: var(--text-dim);
+  color: rgba(255, 255, 255, 0.62);
   line-height: 44px;
   transition:
     background var(--motion-fast),
@@ -77,8 +78,8 @@
 }
 
 .admin-shell__menu.ant-menu .ant-menu-item:hover {
-  background: var(--hover) !important;
-  color: var(--text);
+  background: rgba(255, 255, 255, 0.075) !important;
+  color: #fff;
 }
 
 .admin-shell__menu.ant-menu .ant-menu-item:active {
@@ -87,14 +88,14 @@
 
 .admin-shell__menu.ant-menu .ant-menu-item-selected {
   background:
-    linear-gradient(90deg, var(--accent-soft), transparent 78%),
-    color-mix(in srgb, var(--panel-alt) 56%, transparent) !important;
-  color: var(--accent) !important;
+    linear-gradient(90deg, rgba(var(--accent-rgb), 0.22), transparent 78%),
+    rgba(255, 255, 255, 0.08) !important;
+  color: #fff !important;
   font-weight: 650;
 }
 
 .admin-shell__menu.ant-menu .ant-menu-item-selected::before {
-  background: var(--accent);
+  background: linear-gradient(180deg, var(--accent), var(--accent-2));
 }
 
 .admin-shell__menu.ant-menu .ant-menu-item .anticon {
@@ -118,17 +119,19 @@
   align-items: center;
   justify-content: space-between;
   gap: 20px;
-  padding: 0 28px;
+  padding: 0 30px;
   border-bottom: 1px solid var(--border);
-  background: var(--panel-glass);
-  backdrop-filter: blur(18px);
+  background:
+    linear-gradient(180deg, color-mix(in srgb, var(--panel) 94%, transparent), color-mix(in srgb, var(--panel) 84%, transparent)),
+    var(--panel-glass);
+  backdrop-filter: saturate(160%) blur(18px);
 }
 
 .admin-shell__title.ant-typography {
   margin: 0;
   color: var(--text);
-  font-size: 17px;
-  font-weight: 700;
+  font-size: 18px;
+  font-weight: 800;
   line-height: 1.2;
 }
 
@@ -196,7 +199,7 @@
 .admin-shell__content.ant-layout-content {
   min-width: 0;
   min-height: calc(100dvh - var(--admin-header-height));
-  padding: 20px;
+  padding: 24px;
   overflow-x: clip;
 }
 

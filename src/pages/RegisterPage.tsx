@@ -17,8 +17,8 @@ import { useTheme } from '../context/ThemeContext'
 
 function authBackground(mode: 'light' | 'dark') {
   return mode === 'dark'
-    ? 'linear-gradient(135deg, #140f11 0%, #261517 52%, #100d0e 100%)'
-    : 'linear-gradient(135deg, #fff3f1 0%, #fdf8f7 50%, #f8eded 100%)'
+    ? 'linear-gradient(135deg, #0f1117 0%, #1b1f2a 50%, #111827 100%)'
+    : 'linear-gradient(135deg, #fff1f4 0%, #f7f7fb 48%, #eef4ff 100%)'
 }
 
 type RegisterValues = {
@@ -72,7 +72,15 @@ export default function RegisterPage() {
         <ThemeToggle bare />
       </div>
 
-      <Card style={{ width: 420, background: token.colorBgContainer }} bordered={false}>
+      <Card
+        style={{
+          width: 420,
+          background: token.colorBgContainer,
+          borderRadius: 8,
+          boxShadow: token.boxShadow,
+        }}
+        bordered={false}
+      >
         <Typography.Title level={3} style={{ textAlign: 'center', marginBottom: 8 }}>
           用户注册
         </Typography.Title>

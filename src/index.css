@@ -1,30 +1,31 @@
 :root,
 [data-theme='light'] {
-  --bg: #f6f8f7;
+  --bg: #f7f7fb;
   --bg-grad: linear-gradient(
       135deg,
-      rgba(15, 118, 110, 0.08) 0%,
-      rgba(37, 99, 235, 0.04) 38%,
-      rgba(217, 119, 6, 0.06) 100%
+      rgba(225, 29, 72, 0.075) 0%,
+      rgba(37, 99, 235, 0.052) 43%,
+      rgba(245, 158, 11, 0.07) 100%
     );
   --panel: #ffffff;
-  --panel-alt: #eef3f0;
-  --panel-glass: rgba(255, 255, 255, 0.84);
-  --text: #14201c;
-  --text-dim: #53635e;
-  --border: #dbe5e0;
-  --border-strong: #b7c8c1;
-  --accent: #0f766e;
-  --accent-rgb: 15, 118, 110;
-  --accent-hover: #0b5f59;
+  --panel-alt: #f0f2f7;
+  --panel-glass: rgba(255, 255, 255, 0.88);
+  --text: #171720;
+  --text-dim: #626879;
+  --border: #e1e4ec;
+  --border-strong: #c7ccd8;
+  --accent: #e11d48;
+  --accent-rgb: 225, 29, 72;
+  --accent-hover: #be123c;
   --accent-2: #2563eb;
-  --accent-warm: #d97706;
-  --accent-soft: rgba(15, 118, 110, 0.12);
+  --accent-warm: #f59e0b;
+  --accent-green: #059669;
+  --accent-soft: rgba(225, 29, 72, 0.11);
   --accent-2-soft: rgba(37, 99, 235, 0.1);
-  --hover: #edf7f4;
-  --shadow-sm: 0 1px 2px rgba(20, 32, 28, 0.06);
-  --shadow-md: 0 10px 26px rgba(20, 32, 28, 0.1);
-  --shadow-lg: 0 18px 48px rgba(15, 118, 110, 0.14);
+  --hover: #f3f5f9;
+  --shadow-sm: 0 1px 2px rgba(18, 24, 40, 0.06);
+  --shadow-md: 0 12px 30px rgba(18, 24, 40, 0.1);
+  --shadow-lg: 0 24px 64px rgba(18, 24, 40, 0.14);
   --error-bg: #fef2f2;
   --error-fg: #b91c1c;
   --error-border: #fecaca;
@@ -41,28 +42,29 @@
 }
 
 [data-theme='dark'] {
-  --bg: #101513;
+  --bg: #0f1117;
   --bg-grad: linear-gradient(
       135deg,
-      rgba(94, 234, 212, 0.1) 0%,
-      rgba(147, 197, 253, 0.06) 40%,
+      rgba(251, 113, 133, 0.12) 0%,
+      rgba(96, 165, 250, 0.075) 45%,
       rgba(251, 191, 36, 0.08) 100%
     );
-  --panel: #17201d;
-  --panel-alt: #1f2b27;
-  --panel-glass: rgba(23, 32, 29, 0.84);
-  --text: #edf7f2;
-  --text-dim: #a9bbb3;
-  --border: #2d3b36;
-  --border-strong: #445850;
-  --accent: #5eead4;
-  --accent-rgb: 94, 234, 212;
-  --accent-hover: #99f6e4;
-  --accent-2: #93c5fd;
+  --panel: #171a23;
+  --panel-alt: #202431;
+  --panel-glass: rgba(23, 26, 35, 0.86);
+  --text: #f5f6fb;
+  --text-dim: #aeb5c6;
+  --border: #303543;
+  --border-strong: #4a5164;
+  --accent: #fb7185;
+  --accent-rgb: 251, 113, 133;
+  --accent-hover: #fda4af;
+  --accent-2: #60a5fa;
   --accent-warm: #fbbf24;
-  --accent-soft: rgba(94, 234, 212, 0.14);
-  --accent-2-soft: rgba(147, 197, 253, 0.12);
-  --hover: #23322d;
+  --accent-green: #34d399;
+  --accent-soft: rgba(251, 113, 133, 0.16);
+  --accent-2-soft: rgba(96, 165, 250, 0.14);
+  --hover: #252a37;
   --shadow-sm: 0 1px 3px rgba(0, 0, 0, 0.4);
   --shadow-md: 0 12px 28px rgba(0, 0, 0, 0.38);
   --shadow-lg: 0 20px 54px rgba(0, 0, 0, 0.48);
@@ -271,9 +273,9 @@ svg {
 .brand-dot {
   width: 10px;
   height: 10px;
-  border-radius: 3px;
+  border-radius: 4px;
   background:
-    linear-gradient(135deg, var(--accent), var(--accent-2));
+    linear-gradient(135deg, var(--accent), var(--accent-2) 58%, var(--accent-warm));
   box-shadow: 0 0 0 4px var(--accent-soft);
   transition: transform 0.28s ease;
 }

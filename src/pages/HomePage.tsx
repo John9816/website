@@ -189,26 +189,37 @@ export default function HomePage() {
 
       <main ref={contentRef} className="content">
         <header className="hero">
-          <label className="search-box">
-            <Search size={18} className="search-icon" />
-            <input
-              type="search"
-              value={query}
-              onChange={(event) => setQuery(event.target.value)}
-              placeholder="搜索链接、描述或网址"
-              aria-label="搜索链接"
-            />
-            {query && (
-              <button
-                type="button"
-                className="search-clear"
-                onClick={() => setQuery('')}
-                aria-label="清除搜索"
-              >
-                <X size={15} />
-              </button>
-            )}
-          </label>
+          <div className="hero-copy">
+            <span className="hero-kicker">Creator Workspace</span>
+            <h1>常用入口，一次到位</h1>
+            <p>把网站、音乐、AI 工具和后台能力整理成一个高效工作台。</p>
+          </div>
+          <div className="hero-tools">
+            <label className="search-box">
+              <Search size={18} className="search-icon" />
+              <input
+                type="search"
+                value={query}
+                onChange={(event) => setQuery(event.target.value)}
+                placeholder="搜索链接、描述或网址"
+                aria-label="搜索链接"
+              />
+              {query && (
+                <button
+                  type="button"
+                  className="search-clear"
+                  onClick={() => setQuery('')}
+                  aria-label="清除搜索"
+                >
+                  <X size={15} />
+                </button>
+              )}
+            </label>
+            <div className="hero-stats" aria-label="导航内容概览">
+              <span>{visibleCategories.length} 个分类</span>
+              <span>{visibleLinkCount} 个链接</span>
+            </div>
+          </div>
         </header>
 
         {error && <div className="error-box">加载失败：{error}</div>}
