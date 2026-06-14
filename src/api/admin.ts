@@ -128,6 +128,9 @@ export const adminUpdateContentArticle = (
     body,
   })
 
+export const adminDeleteContentArticle = (id: number) =>
+  request<void>(`/api/admin/content/articles/${id}`, { method: 'DELETE', auth: true })
+
 export const adminCreateWechatDraft = (id: number) =>
   request<{ article: ContentArticle; draft: ContentWechatDraftResult }>(
     `/api/admin/content/articles/${id}/wechat-draft`,

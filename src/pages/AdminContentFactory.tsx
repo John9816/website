@@ -24,6 +24,7 @@ import {
 import {
   CheckCircleOutlined,
   CloudUploadOutlined,
+  DeleteOutlined,
   EditOutlined,
   FireOutlined,
   PictureOutlined,
@@ -34,6 +35,7 @@ import {
 } from '@ant-design/icons'
 import {
   adminCreateWechatDraft,
+  adminDeleteContentArticle,
   adminGenerateContentArticle,
   adminGetContentStatus,
   adminGetHotTopics,
@@ -178,6 +180,7 @@ export default function AdminContentFactory() {
   const [articlesLoading, setArticlesLoading] = useState(false)
   const [generating, setGenerating] = useState(false)
   const [saving, setSaving] = useState(false)
+  const [deletingArticleId, setDeletingArticleId] = useState<number | null>(null)
   const [wechatAction, setWechatAction] = useState<'draft' | 'publish' | null>(null)
 
   const watchedHtml = Form.useWatch('contentHtml', articleForm)
@@ -353,6 +356,35 @@ export default function AdminContentFactory() {
           message.error((error as Error).message)
         } finally {
           setWechatAction(null)
+        }
+      },
+    })
+  }
+
+  const deleteArticle = (article: ContentArticle, event?: { stopPropagation: () => void }) => {
+    event?.stopPropagation()
+    modal.confirm({
+      title: '删除生成内容',
+      content: article.status === 'PUBLISHED'
+        ? '这会删除本站后台中的文章记录，不会撤回微信公众号里已发布的内容。确认删除吗？'
+        : '这会删除本站后台中的文章记录，不会删除微信公众号中已创建的草稿。确认删除吗？',
+      okText: '确认删除',
+      cancelText: '取消',
+      okButtonProps: { danger: true, icon: <DeleteOutlined /> },
+      onOk: async () => {
+        setDeletingArticleId(article.id)
+        try {
+          await adminDeleteContentArticle(article.id)
+          setArticles((previous) => previous.filter((item) => item.id !== article.id))
+          if (activeArticle?.id === article.id) {
+            setActiveArticle(null)
+            setDrawerOpen(false)
+          }
+          message.success('已删除')
+        } catch (error) {
+          message.error((error as Error).message)
+        } finally {
+          setDeletingArticleId(null)
         }
       },
     })
@@ -597,6 +629,17 @@ export default function AdminContentFactory() {
                       >
                         编辑
                       </Button>,
+                      <Button
+                        key="delete"
+                        type="text"
+                        size="small"
+                        danger
+                        icon={<DeleteOutlined />}
+                        loading={deletingArticleId === article.id}
+                        onClick={(event) => deleteArticle(article, event)}
+                      >
+                        删除
+                      </Button>,
                     ]}
                   >
                     <List.Item.Meta
@@ -648,6 +691,15 @@ export default function AdminContentFactory() {
           <Space wrap>
             <Button icon={<SaveOutlined />} onClick={() => void saveArticle()} loading={saving} disabled={!activeArticle}>
               保存
+            </Button>
+            <Button
+              danger
+              icon={<DeleteOutlined />}
+              onClick={(event) => activeArticle && deleteArticle(activeArticle, event)}
+              loading={activeArticle ? deletingArticleId === activeArticle.id : false}
+              disabled={!activeArticle}
+            >
+              删除
             </Button>
             <Tooltip title={status?.wechatReady ? '' : '请先配置微信公众号 AppID 和 AppSecret'}>
               <Button
