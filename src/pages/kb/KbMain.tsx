@@ -172,7 +172,6 @@ const KbMain: React.FC = () => {
     setDocPageSize,
     docTotal,
     isDirty,
-    autosaveStatus,
     inlineDocSaving,
   } = useKbContext()
 
@@ -341,13 +340,6 @@ const KbMain: React.FC = () => {
         <div className="kb-admin-toolbar__actions">
           {selectedDoc ? (
             <>
-              {isEditing && autosaveStatus !== 'idle' ? (
-                <span className={`kb-admin-edit__autosave is-${autosaveStatus}`}>
-                  {autosaveStatus === 'saving' && '正在自动保存...'}
-                  {autosaveStatus === 'saved' && '草稿已保存'}
-                  {autosaveStatus === 'error' && '自动保存失败'}
-                </span>
-              ) : null}
               <Segmented
                 options={['预览', '编辑']}
                 value={isEditing ? '编辑' : '预览'}
@@ -356,11 +348,7 @@ const KbMain: React.FC = () => {
                     enterInlineEdit(selectedDoc)
                     return
                   }
-                  if (isDirty) {
-                    handleSaveInlineDoc().then(() => exitInlineEdit())
-                  } else {
-                    exitInlineEdit()
-                  }
+                  exitInlineEdit()
                 }}
               />
               <span className="kb-admin-toolbar__divider" />
@@ -471,7 +459,7 @@ const KbMain: React.FC = () => {
                   <div className="kb-admin-inspector__section">
                     <span className="kb-admin-inspector__label">编辑状态</span>
                     <strong>{inlineDocSaving ? '正在保存' : isDirty ? '有未保存改动' : '已同步'}</strong>
-                    <small>{autosaveStatus === 'saving' ? '自动保存中' : autosaveStatus === 'error' ? '自动保存失败，请手动保存' : '内容会自动保存为草稿'}</small>
+                    <small>内容只会在手动点击保存时提交</small>
                   </div>
                   <Button block type="primary" onClick={() => void handleSaveInlineDoc()} loading={inlineDocSaving}>
                     保存并退出编辑

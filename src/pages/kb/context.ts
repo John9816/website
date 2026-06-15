@@ -92,7 +92,6 @@ export interface KbContextState {
   versionDetailLoading: boolean
   selectedRowKeys: React.Key[]
   isDirty: boolean
-  autosaveStatus: 'idle' | 'saving' | 'saved' | 'error'
 
   // Computed
   inlineDocParentOptions: Array<{ value: number; label: string }>

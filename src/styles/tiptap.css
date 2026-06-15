@@ -37,8 +37,8 @@
   display: flex;
   align-items: flex-start;
   justify-content: space-between;
-  gap: 12px;
-  padding: 12px;
+  gap: 10px;
+  padding: 10px;
   border-bottom: 1px solid var(--editor-border);
   background:
     linear-gradient(180deg, rgba(255, 255, 255, 0.5), transparent 100%),
@@ -52,7 +52,7 @@
   display: flex;
   flex: 1;
   flex-wrap: wrap;
-  gap: 10px;
+  gap: 8px;
   min-width: 0;
 }
 
@@ -61,15 +61,15 @@
   align-items: center;
   justify-content: flex-end;
   flex-wrap: wrap;
-  gap: 8px;
+  gap: 6px;
   flex-shrink: 0;
 }
 
 .editor-toolbar-hint {
   display: inline-flex;
   align-items: center;
-  min-height: 32px;
-  padding: 0 12px;
+  min-height: 30px;
+  padding: 0 10px;
   border-radius: 999px;
   background: var(--editor-panel-strong);
   color: var(--editor-text-dim);
@@ -82,8 +82,8 @@
   display: inline-flex;
   align-items: center;
   gap: 4px;
-  min-height: 40px;
-  padding: 4px;
+  min-height: 36px;
+  padding: 3px;
   border: 1px solid var(--editor-border);
   border-radius: 14px;
   background: rgba(255, 255, 255, 0.7);
@@ -96,14 +96,14 @@
 }
 
 .menu-group--field {
-  gap: 8px;
-  padding-inline: 8px;
+  gap: 6px;
+  padding-inline: 6px;
 }
 
 .editor-toolbar-btn.ant-btn {
-  width: 32px;
-  min-width: 32px;
-  height: 32px;
+  width: 30px;
+  min-width: 30px;
+  height: 30px;
   padding: 0;
   border: 0;
   border-radius: 10px;
@@ -146,11 +146,11 @@
 }
 
 .editor-toolbar-select {
-  min-width: 86px;
+  min-width: 80px;
 }
 
 .editor-toolbar-select.ant-select .ant-select-selector {
-  min-height: 32px !important;
+  min-height: 30px !important;
   border-radius: 10px !important;
   border-color: transparent !important;
   background: transparent !important;
@@ -172,9 +172,9 @@
 }
 
 .editor-toolbar-color .ant-color-picker-trigger {
-  width: 32px;
-  min-width: 32px;
-  height: 32px;
+  width: 30px;
+  min-width: 30px;
+  height: 30px;
   border: 0;
   border-radius: 10px;
   background: transparent;
@@ -217,7 +217,7 @@
 
 .ProseMirror {
   min-height: var(--editor-min-height);
-  padding: 18px 20px 28px;
+  padding: 14px 16px 22px;
   box-sizing: border-box;
   outline: none;
   color: var(--editor-text);
@@ -238,7 +238,7 @@
 
 .ProseMirror ul,
 .ProseMirror ol {
-  padding: 0 0 0 1.2rem;
+  padding: 0 0 0 1rem;
 }
 
 .ProseMirror ul[data-type='taskList'] {
@@ -265,7 +265,7 @@
   border-collapse: collapse;
   table-layout: fixed;
   width: 100%;
-  margin: 1rem 0;
+  margin: 0.8rem 0;
   overflow: hidden;
   border-radius: 14px;
 }
@@ -274,7 +274,7 @@
 .ProseMirror th {
   min-width: 1em;
   border: 1px solid var(--editor-border);
-  padding: 8px 10px;
+  padding: 7px 8px;
   vertical-align: top;
   box-sizing: border-box;
   position: relative;
@@ -313,7 +313,7 @@
   display: block;
   max-width: min(100%, 920px);
   height: auto;
-  margin: 1.2rem auto;
+  margin: 1rem auto;
   border-radius: 16px;
   box-shadow: 0 18px 36px rgba(15, 23, 42, 0.12);
 }
@@ -339,7 +339,7 @@
 .ProseMirror pre {
   background: #0f172a;
   color: #e2e8f0;
-  padding: 1rem 1.1rem;
+  padding: 0.9rem 1rem;
   border-radius: 14px;
   overflow-x: auto;
   font-family: 'SFMono-Regular', Consolas, 'Liberation Mono', Menlo, monospace;
@@ -370,8 +370,8 @@
 .ProseMirror h4,
 .ProseMirror h5,
 .ProseMirror h6 {
-  margin-top: 1.5em;
-  margin-bottom: 0.5em;
+  margin-top: 1.3em;
+  margin-bottom: 0.45em;
   font-weight: 700;
   line-height: 1.2;
   color: var(--editor-text);
@@ -402,7 +402,7 @@
 }
 
 .ProseMirror p {
-  margin: 0.7em 0;
+  margin: 0.62em 0;
 }
 
 .ProseMirror a {
@@ -429,18 +429,18 @@
 
 @media (max-width: 640px) {
   .editor-menu-bar {
-    padding: 10px;
+    padding: 8px;
   }
 
   .editor-menu-bar__groups {
-    gap: 8px;
+    gap: 6px;
   }
 
   .menu-group {
     width: 100%;
     justify-content: flex-start;
     flex-wrap: wrap;
-    min-height: 52px;
+    min-height: 46px;
   }
 
   .editor-toolbar-hint {
@@ -449,22 +449,22 @@
 
   .editor-toolbar-btn.ant-btn,
   .editor-toolbar-color .ant-color-picker-trigger {
-    width: 44px;
-    min-width: 44px;
-    height: 44px;
-    border-radius: 12px;
+    width: 40px;
+    min-width: 40px;
+    height: 40px;
+    border-radius: 10px;
   }
 
   .editor-toolbar-select {
-    min-width: 98px;
+    min-width: 92px;
   }
 
   .editor-toolbar-select.ant-select .ant-select-selector {
-    min-height: 44px !important;
-    border-radius: 12px !important;
+    min-height: 40px !important;
+    border-radius: 10px !important;
   }
 
   .ProseMirror {
-    padding-inline: 14px;
+    padding-inline: 12px;
   }
 }

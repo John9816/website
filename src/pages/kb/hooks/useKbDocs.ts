@@ -83,7 +83,6 @@ export function useKbDocs(activeSpaceId: number | null) {
   const [editContentHtml, setEditContentHtml] = useState('')
   const [editContentJson, setEditContentJson] = useState('')
   const [editInitialContent, setEditInitialContent] = useState('')
-  const [autosaveStatus, setAutosaveStatus] = useState<'idle' | 'saving' | 'saved' | 'error'>('idle')
 
   const lastSavedValuesRef = useRef<any>(null)
 
@@ -188,7 +187,6 @@ export function useKbDocs(activeSpaceId: number | null) {
     setEditInitialContent('')
     inlineDocForm.resetFields()
     lastSavedValuesRef.current = null
-    setAutosaveStatus('idle')
   }, [inlineDocForm])
 
   const openCreateDoc = useCallback(async (parentIdOverride?: number | null, loadSpaces?: any) => {
@@ -243,7 +241,6 @@ export function useKbDocs(activeSpaceId: number | null) {
     const nextTagIds = [...(values.tagIds ?? [])].sort((a, b) => a - b)
 
     setInlineDocSaving(true)
-    setAutosaveStatus('idle')
     try {
       await updateKbDoc(selectedDoc.id, {
         title: trimmedTitle,
@@ -348,48 +345,6 @@ export function useKbDocs(activeSpaceId: number | null) {
     }
   }, [selectedParentId, loadSelectedDoc])
 
-  useEffect(() => {
-    if (!isDirty || !selectedDoc || inlineDocSaving) {
-      if (autosaveStatus === 'saved') {
-        const timer = setTimeout(() => setAutosaveStatus('idle'), 3000)
-        return () => clearTimeout(timer)
-      }
-      return
-    }
-
-    const timer = setTimeout(async () => {
-      setAutosaveStatus('saving')
-      try {
-        const savedDoc = await updateKbDoc(selectedDoc.id, {
-          title: editTitle.trim() || '未命名文档',
-          summary: editSummary,
-          contentJson: editContentJson,
-          contentHtml: editContentHtml,
-        })
-        setAutosaveStatus('saved')
-        setSelectedDoc((current) => {
-          if (!current || current.id !== selectedDoc.id) return current
-          return {
-            ...current,
-            ...savedDoc,
-            contentHtml: savedDoc.contentHtml ?? editContentHtml,
-            contentJson: savedDoc.contentJson ?? editContentJson,
-            tags: savedDoc.tags ?? current.tags,
-            share: savedDoc.share ?? current.share,
-          }
-        })
-        await Promise.all([
-          loadTree(selectedDoc.spaceId),
-          loadDocs({ spaceId: selectedDoc.spaceId }),
-        ])
-      } catch (error) {
-        setAutosaveStatus('error')
-      }
-    }, 3000)
-
-    return () => clearTimeout(timer)
-  }, [isDirty, editTitle, editSummary, editContentHtml, editContentJson, selectedDoc, inlineDocSaving, autosaveStatus, loadDocs, loadTree])
-
   return {
     tree, treeLoading, selectedParentId, setSelectedParentId,
     selectedDoc, selectedDocLoading, treeContextMenu, setTreeContextMenu,
@@ -398,7 +353,7 @@ export function useKbDocs(activeSpaceId: number | null) {
     inlineDocForm, propertyDrawerOpen, setPropertyDrawerOpen,
     editTitle, setEditTitle, editSummary, setEditSummary,
     editContentHtml, setEditContentHtml, editContentJson, setEditContentJson,
-    editInitialContent, autosaveStatus,
+    editInitialContent,
     isDirty, inlineDocParentOptions,
     keyword, setKeyword, deferredKeyword,
     loadTree, loadDocs, loadSelectedDoc, openCreateDoc, openEditDoc,
