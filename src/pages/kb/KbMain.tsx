@@ -128,7 +128,7 @@ function DocTags({ tags }: { tags: KbTag[] }) {
 
 const KbMain: React.FC = () => {
   const [toolbarContainer, setToolbarContainer] = React.useState<HTMLElement | null>(null)
-  const [listView, setListView] = React.useState<'table' | 'cards'>('cards')
+  const [listView, setListView] = React.useState<'table' | 'cards'>('table')
   const { message } = AntApp.useApp()
 
   const {
