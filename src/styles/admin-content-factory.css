@@ -6,6 +6,184 @@
   min-width: 0;
 }
 
+.content-factory__pipeline {
+  display: grid;
+  gap: 10px;
+  padding: 12px 14px;
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  background: linear-gradient(180deg, color-mix(in srgb, var(--panel) 96%, transparent), var(--panel));
+  box-shadow: var(--shadow-sm);
+}
+
+.content-factory__pipeline .ant-steps-item-title {
+  font-weight: 650;
+}
+
+.content-factory__pipeline .ant-steps-item-description {
+  color: var(--text-dim);
+  font-size: 12px;
+}
+
+.content-factory__pipeline-score {
+  display: grid;
+  gap: 6px;
+}
+
+.content-factory__preset-strip {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 10px;
+}
+
+.content-factory__preset {
+  min-height: 92px;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  padding: 12px;
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  background: var(--panel-alt);
+  color: var(--text);
+  text-align: left;
+  cursor: pointer;
+  transition:
+    border-color var(--motion-fast),
+    background var(--motion-fast),
+    transform var(--motion-fast),
+    box-shadow var(--motion-fast);
+}
+
+.content-factory__preset:hover,
+.content-factory__preset:focus-visible {
+  border-color: color-mix(in srgb, var(--accent) 30%, var(--border));
+  background: var(--panel);
+  box-shadow: var(--shadow-sm);
+}
+
+.content-factory__preset:active {
+  transform: scale(0.988);
+}
+
+.content-factory__preset.is-active {
+  border-color: color-mix(in srgb, var(--accent) 42%, var(--border));
+  background: linear-gradient(180deg, var(--accent-soft), var(--panel));
+}
+
+.content-factory__preset-title {
+  font-weight: 750;
+}
+
+.content-factory__preset-desc {
+  color: var(--text-dim);
+  font-size: 12px;
+  line-height: 1.5;
+}
+
+.content-factory__guardrail {
+  padding: 12px;
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  background: color-mix(in srgb, var(--panel) 96%, var(--bg));
+}
+
+.content-factory__guardrail-list {
+  margin: 8px 0 0;
+  padding-left: 18px;
+  color: var(--text-dim);
+  font-size: 13px;
+  line-height: 1.6;
+}
+
+.content-factory__quality {
+  display: grid;
+  gap: 10px;
+  padding: 12px;
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  background: var(--panel-alt);
+}
+
+.content-factory__quality-summary {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 12px;
+}
+
+.content-factory__quality-summary .ant-typography {
+  margin: 0;
+}
+
+.content-factory__quality-checks {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px 12px;
+}
+
+.content-factory__divider.ant-divider {
+  margin: 4px 0 0;
+}
+
+.content-factory__automation {
+  width: 100%;
+}
+
+.content-factory__automation-block {
+  display: grid;
+  gap: 8px;
+  padding: 10px;
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  background: var(--panel-alt);
+}
+
+.content-factory__automation-item.ant-list-item {
+  align-items: flex-start;
+  gap: 10px;
+  padding: 8px 0;
+  border-color: var(--border);
+}
+
+.content-factory__automation-item > div {
+  min-width: 0;
+  display: grid;
+  gap: 5px;
+}
+
+.content-factory__automation-title {
+  color: var(--text);
+  font-size: 13px;
+  font-weight: 650;
+  line-height: 1.45;
+}
+
+.content-factory__automation-meta {
+  color: var(--text-dim);
+  font-size: 12px;
+  line-height: 1.45;
+}
+
+.content-factory__automation-summary {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 10px 12px;
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  background: var(--panel-alt);
+}
+
+.content-factory__drawer-automation {
+  min-height: 320px;
+  max-height: 60vh;
+  overflow: auto;
+  padding: 4px 0;
+  scrollbar-width: thin;
+}
+
 .content-factory__header {
   display: flex;
   align-items: flex-start;
@@ -394,12 +572,18 @@
   .content-factory__article-list {
     max-height: none;
   }
+
+  .content-factory__preset-strip {
+    grid-template-columns: 1fr;
+  }
 }
 
 @media (max-width: 720px) {
   .content-factory__header,
   .content-factory__panel-toolbar,
-  .content-factory__category-strip {
+  .content-factory__category-strip,
+  .content-factory__quality-summary,
+  .content-factory__automation-summary {
     align-items: stretch;
     flex-direction: column;
   }

@@ -80,6 +80,47 @@ export type ContentArticleCategory = 'emotion_psychology' | 'history_philosophy'
 export type ContentArticleLayoutTheme = 'clean' | 'warm' | 'magazine'
 export type ContentArticleImageMode = 'generate' | 'fetch' | 'none'
 export type ContentArticleResearchDepth = 'quick' | 'standard' | 'deep'
+export type ContentAutomationStage = 'topic' | 'research' | 'generate' | 'review' | 'wechat_draft' | 'publish'
+export type ContentAutomationStatus = 'PENDING' | 'RUNNING' | 'SUCCESS' | 'FAILED' | 'SKIPPED'
+
+export interface ContentAutomationLog {
+  id: string
+  stage: ContentAutomationStage
+  status: ContentAutomationStatus
+  message: string
+  detail?: string | null
+  createdAt: string
+}
+
+export interface ContentAutomationJob {
+  id: string
+  stage: ContentAutomationStage
+  status: ContentAutomationStatus
+  attempts: number
+  maxAttempts: number
+  nextRunAt?: string | null
+  errorMessage?: string | null
+  createdAt?: string
+  updatedAt?: string
+}
+
+export interface ContentWechatPublishRecord {
+  id: string
+  action: 'draft' | 'publish'
+  status: ContentAutomationStatus
+  mediaId?: string | null
+  publishId?: string | null
+  url?: string | null
+  errorMessage?: string | null
+  createdAt: string
+}
+
+export interface ContentAutomationView {
+  currentStage?: ContentAutomationStage | null
+  logs: ContentAutomationLog[]
+  jobs: ContentAutomationJob[]
+  publishRecords: ContentWechatPublishRecord[]
+}
 
 export interface ContentArticle {
   id: number
@@ -96,7 +137,7 @@ export interface ContentArticle {
   category?: ContentArticleCategory | null
   layoutTheme?: ContentArticleLayoutTheme | null
   imageMode?: ContentArticleImageMode | null
-  automation?: Record<string, unknown> | null
+  automation?: ContentAutomationView | Record<string, unknown> | null
   status: ContentArticleStatus
   wechatMediaId?: string | null
   wechatPublishId?: string | null

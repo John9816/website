@@ -1,6 +1,7 @@
 import { request } from './client'
 import type {
   Category,
+  ContentAutomationView,
   ContentArticle,
   ContentArticleGeneratePayload,
   ContentFactoryStatus,
@@ -101,6 +102,19 @@ export const adminDeleteConfig = (id: number) =>
 // Content factory
 export const adminGetContentStatus = () =>
   request<ContentFactoryStatus>('/api/admin/content/status', { auth: true })
+
+export const adminGetContentAutomation = (articleId?: number) =>
+  request<ContentAutomationView | null>('/api/admin/content/automation', {
+    auth: true,
+    query: { articleId },
+  })
+
+export const adminRetryContentAutomationJob = (jobId: string) =>
+  request<ContentAutomationView>('/api/admin/content/automation/jobs/retry', {
+    method: 'POST',
+    auth: true,
+    body: { jobId },
+  })
 
 export const adminGetHotTopics = (limit = 12, category?: string) =>
   request<ContentHotTopicsView>('/api/admin/content/hot', { auth: true, query: { limit, category } })

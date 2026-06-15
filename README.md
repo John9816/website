@@ -35,7 +35,14 @@ Frontend endpoint conventions:
 - public read routes: `/api/public/*`
 - logged-in user routes: `/api/user/*`
 - admin-only system config routes: `/api/admin/configs/*`
+- content factory routes: `/api/admin/content/*`
 - music BFF routes: `/api/v1/music/*`
+
+Content factory automation contract:
+
+- `GET /api/admin/content/automation?articleId=123`
+- `POST /api/admin/content/automation/jobs/retry`
+- article payloads may include `automation.logs`, `automation.jobs`, `automation.publishRecords`, and `automation.currentStage`
 
 Do not hardcode the public backend domain into the frontend bundle unless you explicitly want browsers to call it directly.
 

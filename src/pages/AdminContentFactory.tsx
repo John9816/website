@@ -2,19 +2,23 @@ import { useEffect, useMemo, useState } from 'react'
 import {
   Alert,
   App as AntApp,
+  Badge,
   Button,
   Card,
   Checkbox,
+  Divider,
   Drawer,
   Empty,
   Form,
   Image,
   Input,
   List,
+  Progress,
   Segmented,
   Select,
   Skeleton,
   Space,
+  Steps,
   Switch,
   Tabs,
   Tag,
@@ -37,13 +41,20 @@ import {
   adminCreateWechatDraft,
   adminDeleteContentArticle,
   adminGenerateContentArticle,
+  adminGetContentAutomation,
   adminGetContentStatus,
   adminGetHotTopics,
   adminListContentArticles,
   adminPublishWechatArticle,
+  adminRetryContentAutomationJob,
   adminUpdateContentArticle,
 } from '../api/admin'
 import type {
+  ContentAutomationJob,
+  ContentAutomationLog,
+  ContentAutomationStage,
+  ContentAutomationStatus,
+  ContentAutomationView,
   ContentArticle,
   ContentArticleCategory,
   ContentArticleGeneratePayload,
@@ -80,6 +91,17 @@ type ArticleFormValues = {
   contentHtml: string
   contentMarkdown?: string | null
   coverImageUrl?: string | null
+}
+
+type StrategyPreset = {
+  key: string
+  title: string
+  description: string
+  values: Partial<GenerateValues>
+}
+
+type NormalizedAutomation = ContentAutomationView & {
+  source: 'backend' | 'derived'
 }
 
 const statusMeta: Record<ContentArticleStatus, { label: string; color: string }> = {
@@ -147,6 +169,79 @@ const researchDepthOptions: Array<{ label: string; value: ContentArticleResearch
   { label: '深搜', value: 'deep' },
 ]
 
+const strategyPresets: StrategyPreset[] = [
+  {
+    key: 'trend_digest',
+    title: '热点快反',
+    description: '抓取多源热榜，快速生成观点清晰、适合当天发布的短中篇。',
+    values: {
+      researchDepth: 'quick',
+      length: 'short',
+      layoutTheme: 'clean',
+      imageMode: 'fetch',
+      tone: '直接、清醒、信息密度高，避免标题党和情绪煽动',
+    },
+  },
+  {
+    key: 'evidence_feature',
+    title: '深度长文',
+    description: '强调证据链、结构化论证和可复盘结论，适合周更主文。',
+    values: {
+      researchDepth: 'deep',
+      length: 'long',
+      layoutTheme: 'magazine',
+      imageMode: 'generate',
+      tone: '克制、扎实、有判断力，引用事实后再给观点',
+    },
+  },
+  {
+    key: 'wechat_safe',
+    title: '稳妥草稿',
+    description: '参考开源发布工具的保守策略：先入草稿箱，人工复核后再发布。',
+    values: {
+      researchDepth: 'standard',
+      length: 'standard',
+      layoutTheme: 'warm',
+      autoWechatDraft: true,
+      autoPublish: false,
+      tone: '自然、有温度、有边界感，不夸大、不制造对立',
+    },
+  },
+]
+
+const pipelineSteps = [
+  { title: '选题', description: '热榜 / 自定义话题' },
+  { title: '检索', description: '资料与证据链' },
+  { title: '生成', description: '正文 / 摘要 / 封面' },
+  { title: '审稿', description: '标题、事实、风险' },
+  { title: '入草稿', description: '素材上传与草稿箱' },
+  { title: '发布', description: '人工确认或自动提交' },
+]
+
+const stageMeta: Record<ContentAutomationStage, { label: string; tone: string }> = {
+  topic: { label: '选题', tone: 'blue' },
+  research: { label: '检索', tone: 'cyan' },
+  generate: { label: '生成', tone: 'purple' },
+  review: { label: '审稿', tone: 'gold' },
+  wechat_draft: { label: '入草稿', tone: 'geekblue' },
+  publish: { label: '发布', tone: 'green' },
+}
+
+const automationStatusMeta: Record<ContentAutomationStatus, { label: string; badge: 'default' | 'processing' | 'success' | 'error' | 'warning' }> = {
+  PENDING: { label: '等待中', badge: 'default' },
+  RUNNING: { label: '执行中', badge: 'processing' },
+  SUCCESS: { label: '成功', badge: 'success' },
+  FAILED: { label: '失败', badge: 'error' },
+  SKIPPED: { label: '跳过', badge: 'warning' },
+}
+
+const wechatGuardrails = [
+  '封面建议使用 2.35:1 比例，避免重要文字贴边。',
+  '外链、二维码、诱导分享等内容在发布前需要人工复核。',
+  '自动发布前先检查标题、摘要、封面、正文首屏和图片可访问性。',
+  '微信接口受 IP 白名单、access_token、素材 media_id 等配置影响，失败后优先保留本站草稿。',
+]
+
 const defaultGenerateValues: GenerateValues = {
   category: 'emotion_psychology',
   topic: '',
@@ -164,6 +259,160 @@ const defaultGenerateValues: GenerateValues = {
   coverStyle: categoryMeta.emotion_psychology.coverStyle,
 }
 
+function stripHtml(html?: string | null) {
+  return (html || '')
+    .replace(/<style[\s\S]*?<\/style>/gi, '')
+    .replace(/<script[\s\S]*?<\/script>/gi, '')
+    .replace(/<[^>]+>/g, '')
+    .replace(/&nbsp;/g, ' ')
+    .trim()
+}
+
+function getArticleQuality(article: ContentArticle | null) {
+  if (!article) {
+    return {
+      score: 0,
+      words: 0,
+      checks: [] as Array<{ label: string; passed: boolean; hint: string }>,
+    }
+  }
+
+  const text = stripHtml(article.contentHtml || article.contentMarkdown)
+  const words = text.length
+  const checks = [
+    { label: '标题完整', passed: article.title.trim().length >= 8, hint: '标题建议 8-32 字，别太短也别塞满关键词。' },
+    { label: '摘要可用', passed: Boolean(article.digest && article.digest.trim().length >= 24), hint: '摘要会影响分享卡片和草稿可读性。' },
+    { label: '正文充足', passed: words >= 1200, hint: '标准公众号正文建议至少 1200 字。' },
+    { label: '封面就绪', passed: Boolean(article.coverImageUrl), hint: '没有封面时可先存草稿，发布前补齐。' },
+    { label: '选题来源', passed: article.topics.length > 0, hint: '保留热榜来源方便回看选题依据。' },
+    { label: '风险较低', passed: article.riskTips.length === 0, hint: '存在风险提示时建议人工审稿。' },
+  ]
+  const score = Math.round((checks.filter((item) => item.passed).length / checks.length) * 100)
+
+  return { score, words, checks }
+}
+
+function isAutomationView(value: unknown): value is ContentAutomationView {
+  if (!value || typeof value !== 'object') return false
+  const candidate = value as Partial<ContentAutomationView>
+  return Array.isArray(candidate.logs) || Array.isArray(candidate.jobs) || Array.isArray(candidate.publishRecords)
+}
+
+function nowIso() {
+  return new Date().toISOString()
+}
+
+function deriveAutomation(article: ContentArticle | null): NormalizedAutomation {
+  if (!article) {
+    return { source: 'derived', currentStage: 'topic', logs: [], jobs: [], publishRecords: [] }
+  }
+
+  const backendAutomation = isAutomationView(article.automation) ? article.automation : null
+  if (backendAutomation) {
+    return {
+      source: 'backend',
+      currentStage: backendAutomation.currentStage ?? inferStage(article),
+      logs: backendAutomation.logs ?? [],
+      jobs: backendAutomation.jobs ?? [],
+      publishRecords: backendAutomation.publishRecords ?? [],
+    }
+  }
+
+  const createdAt = article.createdAt || nowIso()
+  const updatedAt = article.updatedAt || createdAt
+  const logs: ContentAutomationLog[] = [
+    {
+      id: `${article.id}-topic`,
+      stage: 'topic',
+      status: 'SUCCESS',
+      message: article.topics.length ? `已关联 ${article.topics.length} 个选题来源` : '使用自定义话题生成',
+      createdAt,
+    },
+    {
+      id: `${article.id}-generate`,
+      stage: 'generate',
+      status: article.errorMessage ? 'FAILED' : 'SUCCESS',
+      message: article.errorMessage || '正文、摘要和封面信息已生成',
+      createdAt: updatedAt,
+    },
+  ]
+
+  if (article.status === 'WECHAT_DRAFT' || article.status === 'PUBLISHED') {
+    logs.push({
+      id: `${article.id}-draft`,
+      stage: 'wechat_draft',
+      status: 'SUCCESS',
+      message: article.wechatMediaId ? `微信草稿已创建：${article.wechatMediaId}` : '微信草稿已创建',
+      createdAt: updatedAt,
+    })
+  }
+
+  if (article.status === 'PUBLISHED') {
+    logs.push({
+      id: `${article.id}-publish`,
+      stage: 'publish',
+      status: 'SUCCESS',
+      message: article.wechatUrl ? '微信发布已完成' : '微信发布已提交',
+      createdAt: updatedAt,
+    })
+  }
+
+  const jobs: ContentAutomationJob[] = [
+    {
+      id: `${article.id}-review`,
+      stage: 'review',
+      status: article.riskTips.length ? 'PENDING' : 'SUCCESS',
+      attempts: 1,
+      maxAttempts: 1,
+      errorMessage: article.riskTips.length ? article.riskTips.join('；') : null,
+      createdAt,
+      updatedAt,
+    },
+  ]
+
+  const publishRecords = article.wechatMediaId || article.wechatPublishId || article.wechatUrl
+    ? [
+        {
+          id: `${article.id}-wechat`,
+          action: article.status === 'PUBLISHED' ? 'publish' as const : 'draft' as const,
+          status: article.errorMessage ? 'FAILED' as const : 'SUCCESS' as const,
+          mediaId: article.wechatMediaId || null,
+          publishId: article.wechatPublishId || null,
+          url: article.wechatUrl || null,
+          errorMessage: article.errorMessage || null,
+          createdAt: updatedAt,
+        },
+      ]
+    : []
+
+  return {
+    source: 'derived',
+    currentStage: inferStage(article),
+    logs,
+    jobs,
+    publishRecords,
+  }
+}
+
+function inferStage(article: ContentArticle): ContentAutomationStage {
+  if (article.status === 'PUBLISHED') return 'publish'
+  if (article.status === 'WECHAT_DRAFT') return 'wechat_draft'
+  if (article.riskTips.length) return 'review'
+  return 'generate'
+}
+
+function formatDateTime(value?: string | null) {
+  if (!value) return '未记录'
+  const date = new Date(value)
+  if (Number.isNaN(date.getTime())) return value
+  return date.toLocaleString('zh-CN', {
+    month: '2-digit',
+    day: '2-digit',
+    hour: '2-digit',
+    minute: '2-digit',
+  })
+}
+
 export default function AdminContentFactory() {
   const { message, modal } = AntApp.useApp()
   const [generateForm] = Form.useForm<GenerateValues>()
@@ -178,10 +427,13 @@ export default function AdminContentFactory() {
   const [statusLoading, setStatusLoading] = useState(false)
   const [hotLoading, setHotLoading] = useState(false)
   const [articlesLoading, setArticlesLoading] = useState(false)
+  const [automationLoading, setAutomationLoading] = useState(false)
   const [generating, setGenerating] = useState(false)
   const [saving, setSaving] = useState(false)
   const [deletingArticleId, setDeletingArticleId] = useState<number | null>(null)
   const [wechatAction, setWechatAction] = useState<'draft' | 'publish' | null>(null)
+  const [activePresetKey, setActivePresetKey] = useState(strategyPresets[0].key)
+  const [automation, setAutomation] = useState<NormalizedAutomation | null>(null)
 
   const watchedHtml = Form.useWatch('contentHtml', articleForm)
   const watchedCoverImage = Form.useWatch('coverImageUrl', articleForm)
@@ -192,6 +444,22 @@ export default function AdminContentFactory() {
     const selected = hotTopics.filter((topic) => selectedTopicIds.includes(topic.id))
     return selected.length ? selected : hotTopics.slice(0, 5)
   }, [hotTopics, selectedTopicIds])
+
+  const activePreset = useMemo(
+    () => strategyPresets.find((preset) => preset.key === activePresetKey) || strategyPresets[0],
+    [activePresetKey],
+  )
+
+  const quality = useMemo(() => getArticleQuality(activeArticle), [activeArticle])
+  const progressPercent = activeArticle
+    ? activeArticle.status === 'PUBLISHED'
+      ? 100
+      : activeArticle.status === 'WECHAT_DRAFT'
+        ? 80
+        : 56
+    : 18
+  const riskCount = activeArticle?.riskTips.length ?? 0
+  const publishBlocked = !status?.wechatReady || generating || saving || Boolean(wechatAction)
 
   const loadStatus = async () => {
     setStatusLoading(true)
@@ -231,11 +499,34 @@ export default function AdminContentFactory() {
     }
   }
 
+  const loadAutomation = async (articleId?: number) => {
+    setAutomationLoading(true)
+    try {
+      const data = await adminGetContentAutomation(articleId)
+      setAutomation(data ? { ...data, source: 'backend' } : null)
+    } catch {
+      setAutomation(activeArticle ? deriveAutomation(activeArticle) : null)
+    } finally {
+      setAutomationLoading(false)
+    }
+  }
+
+  const retryJob = async (jobId: string) => {
+    try {
+      const data = await adminRetryContentAutomationJob(jobId)
+      setAutomation({ ...data, source: 'backend' })
+      message.success('已重新进入队列')
+    } catch (error) {
+      message.error((error as Error).message)
+    }
+  }
+
   useEffect(() => {
     generateForm.setFieldsValue(defaultGenerateValues)
     void loadStatus()
     void loadHotTopics(defaultGenerateValues.category)
     void loadArticles()
+    void loadAutomation()
   }, [])
 
   useEffect(() => {
@@ -249,9 +540,18 @@ export default function AdminContentFactory() {
     })
   }, [activeArticle, articleForm])
 
+  useEffect(() => {
+    if (!activeArticle) {
+      setAutomation(null)
+      return
+    }
+    void loadAutomation(activeArticle.id)
+  }, [activeArticle?.id])
+
   const upsertArticle = (article: ContentArticle) => {
     setArticles((previous) => [article, ...previous.filter((item) => item.id !== article.id)])
     setActiveArticle(article)
+    setAutomation(deriveAutomation(article))
   }
 
   const toggleTopic = (topicId: string, checked: boolean) => {
@@ -272,6 +572,20 @@ export default function AdminContentFactory() {
       coverStyle: meta.coverStyle,
     })
     void loadHotTopics(category)
+  }
+
+  const applyPreset = (preset: StrategyPreset) => {
+    setActivePresetKey(preset.key)
+    generateForm.setFieldsValue({
+      ...preset.values,
+      category: activeCategory,
+    })
+    if (preset.values.autoPublish) {
+      generateForm.setFieldValue('autoWechatDraft', false)
+    }
+    if (preset.values.autoWechatDraft) {
+      generateForm.setFieldValue('autoPublish', false)
+    }
   }
 
   const generateArticle = async () => {
@@ -400,7 +714,7 @@ export default function AdminContentFactory() {
         <div>
           <Typography.Title level={3}>内容工厂</Typography.Title>
           <Typography.Paragraph type="secondary">
-            输入话题或选择热点，联网搜索资料后生成可直接编辑和推送的公众号正文。
+            参考公众号自动化开源项目的常见流程，把选题、检索、审稿、草稿和发布放到同一条链路里。
           </Typography.Paragraph>
         </div>
         <Space wrap>
@@ -411,6 +725,20 @@ export default function AdminContentFactory() {
             刷新文章
           </Button>
         </Space>
+      </section>
+
+      <section className="content-factory__pipeline" aria-label="内容工厂流程">
+        <div className="content-factory__pipeline-main">
+          <Steps
+            current={activeArticle ? Math.min(5, activeArticle.status === 'PUBLISHED' ? 5 : activeArticle.status === 'WECHAT_DRAFT' ? 4 : 3) : 0}
+            items={pipelineSteps}
+            size="small"
+          />
+        </div>
+        <div className="content-factory__pipeline-score">
+          <Typography.Text type="secondary">自动化进度</Typography.Text>
+          <Progress percent={progressPercent} size="small" />
+        </div>
       </section>
 
       <section className="content-factory__status" aria-label="内容工厂能力状态">
@@ -435,7 +763,7 @@ export default function AdminContentFactory() {
           type="warning"
           showIcon
           message="微信公众号未配置"
-          description="在系统配置中补齐 wechat.appId、wechat.appSecret；没有封面时可先配置 wechat.coverMediaId。"
+          description="在系统配置中补齐 wechat.appId、wechat.appSecret；没有封面时可先配置 wechat.coverMediaId。自动发布会被锁定，但本站草稿仍可继续生成。"
         />
       ) : null}
 
@@ -476,6 +804,20 @@ export default function AdminContentFactory() {
               <Form.Item name="researchDepth" label="搜索深度">
                 <Segmented block options={researchDepthOptions} />
               </Form.Item>
+            </div>
+
+            <div className="content-factory__preset-strip">
+              {strategyPresets.map((preset) => (
+                <button
+                  key={preset.key}
+                  type="button"
+                  className={`content-factory__preset ${preset.key === activePreset.key ? 'is-active' : ''}`}
+                  onClick={() => applyPreset(preset)}
+                >
+                  <span className="content-factory__preset-title">{preset.title}</span>
+                  <span className="content-factory__preset-desc">{preset.description}</span>
+                </button>
+              ))}
             </div>
 
             <div className="content-factory__panel-toolbar">
@@ -588,6 +930,16 @@ export default function AdminContentFactory() {
             <Form.Item name="coverStyle" label="封面风格">
               <Input placeholder="例如：数据感、干净、适合公众号头图" />
             </Form.Item>
+
+            <div className="content-factory__guardrail">
+              <Typography.Text strong>发布前守护</Typography.Text>
+              <ul className="content-factory__guardrail-list">
+                {wechatGuardrails.map((item) => (
+                  <li key={item}>{item}</li>
+                ))}
+              </ul>
+            </div>
+
             <Button
               type="primary"
               size="large"
@@ -603,6 +955,26 @@ export default function AdminContentFactory() {
         </Card>
 
         <Card className="content-factory__panel" title="最近生成">
+          <div className="content-factory__quality">
+            <div className="content-factory__quality-summary">
+              <Typography.Text type="secondary">文章质量评分</Typography.Text>
+              <Typography.Title level={4}>{quality.score}</Typography.Title>
+              <Typography.Text type="secondary">{quality.words} 字</Typography.Text>
+            </div>
+            <Progress percent={quality.score} showInfo={false} />
+            <div className="content-factory__quality-checks">
+              {quality.checks.map((check) => (
+                <Badge
+                  key={check.label}
+                  status={check.passed ? 'success' : 'warning'}
+                  text={check.passed ? check.label : `${check.label} · ${check.hint}`}
+                />
+              ))}
+            </div>
+          </div>
+
+          <Divider className="content-factory__divider" />
+
           {articlesLoading && articles.length === 0 ? (
             <Skeleton active paragraph={{ rows: 8 }} />
           ) : articles.length ? (
@@ -669,6 +1041,103 @@ export default function AdminContentFactory() {
             <Empty image={Empty.PRESENTED_IMAGE_SIMPLE} description="暂无文章草稿" />
           )}
         </Card>
+
+        <Card className="content-factory__panel" title="任务流与发布记录">
+          {automationLoading && !automation ? (
+            <Skeleton active paragraph={{ rows: 6 }} />
+          ) : automation ? (
+            <Space direction="vertical" size={12} className="content-factory__automation">
+              <Space wrap>
+                <Tag color={automation.source === 'backend' ? 'success' : 'default'}>
+                  {automation.source === 'backend' ? '后端同步' : '前端推导'}
+                </Tag>
+                <Tag color={automation.currentStage ? stageMeta[automation.currentStage].tone : 'default'}>
+                  {automation.currentStage ? stageMeta[automation.currentStage].label : '未开始'}
+                </Tag>
+              </Space>
+
+              <div className="content-factory__automation-block">
+                <Typography.Text strong>执行日志</Typography.Text>
+                <List
+                  size="small"
+                  dataSource={automation.logs}
+                  renderItem={(item) => {
+                    const meta = automationStatusMeta[item.status]
+                    return (
+                      <List.Item className="content-factory__automation-item">
+                        <Badge status={meta.badge} text={meta.label} />
+                        <div>
+                          <div className="content-factory__automation-title">
+                            {stageMeta[item.stage].label} · {item.message}
+                          </div>
+                          <div className="content-factory__automation-meta">{formatDateTime(item.createdAt)}</div>
+                        </div>
+                      </List.Item>
+                    )
+                  }}
+                  locale={{ emptyText: '暂无日志' }}
+                />
+              </div>
+
+              <div className="content-factory__automation-block">
+                <Typography.Text strong>任务队列</Typography.Text>
+                <List
+                  size="small"
+                  dataSource={automation.jobs}
+                  renderItem={(job) => {
+                    const meta = automationStatusMeta[job.status]
+                    return (
+                      <List.Item className="content-factory__automation-item">
+                        <Badge status={meta.badge} text={meta.label} />
+                        <div>
+                          <div className="content-factory__automation-title">
+                            {stageMeta[job.stage].label} · {job.attempts}/{job.maxAttempts}
+                          </div>
+                          <div className="content-factory__automation-meta">
+                            {job.errorMessage || job.nextRunAt ? [job.errorMessage, job.nextRunAt && `下次重试 ${formatDateTime(job.nextRunAt)}`].filter(Boolean).join(' · ') : '无待执行任务'}
+                          </div>
+                          {job.status === 'FAILED' ? (
+                            <Button size="small" onClick={() => void retryJob(job.id)}>
+                              重试
+                            </Button>
+                          ) : null}
+                        </div>
+                      </List.Item>
+                    )
+                  }}
+                  locale={{ emptyText: '暂无队列任务' }}
+                />
+              </div>
+
+              <div className="content-factory__automation-block">
+                <Typography.Text strong>微信记录</Typography.Text>
+                <List
+                  size="small"
+                  dataSource={automation.publishRecords}
+                  renderItem={(record) => {
+                    const meta = automationStatusMeta[record.status]
+                    return (
+                      <List.Item className="content-factory__automation-item">
+                        <Badge status={meta.badge} text={meta.label} />
+                        <div>
+                          <div className="content-factory__automation-title">
+                            {record.action === 'publish' ? '发布' : '草稿'} · {record.publishId || record.mediaId || '待生成'}
+                          </div>
+                          <div className="content-factory__automation-meta">
+                            {record.url || record.errorMessage || formatDateTime(record.createdAt)}
+                          </div>
+                        </div>
+                      </List.Item>
+                    )
+                  }}
+                  locale={{ emptyText: '暂无微信记录' }}
+                />
+              </div>
+            </Space>
+          ) : (
+            <Empty image={Empty.PRESENTED_IMAGE_SIMPLE} description="暂无自动化信息" />
+          )}
+        </Card>
       </section>
 
       <Drawer
@@ -689,6 +1158,9 @@ export default function AdminContentFactory() {
         className="content-factory__drawer"
         extra={
           <Space wrap>
+            <Tag color={publishBlocked ? 'warning' : 'success'}>
+              {publishBlocked ? '发布待检查' : '发布就绪'}
+            </Tag>
             <Button icon={<SaveOutlined />} onClick={() => void saveArticle()} loading={saving} disabled={!activeArticle}>
               保存
             </Button>
@@ -730,6 +1202,29 @@ export default function AdminContentFactory() {
             {activeArticle.errorMessage ? (
               <Alert type="warning" showIcon message={activeArticle.errorMessage} />
             ) : null}
+
+            {riskCount > 0 ? (
+              <Alert
+                type="warning"
+                showIcon
+                message="已检测到审稿风险"
+                description={`当前文章包含 ${riskCount} 条风险提示，建议先人工核对再入微信草稿。`}
+              />
+            ) : null}
+
+            <div className="content-factory__automation-summary">
+              <Space wrap>
+                <Tag color={automation?.source === 'backend' ? 'success' : 'default'}>
+                  {automation?.source === 'backend' ? '任务流已接入' : '本地推导'}
+                </Tag>
+                <Tag color={automation?.currentStage ? stageMeta[automation.currentStage].tone : 'default'}>
+                  {automation?.currentStage ? stageMeta[automation.currentStage].label : '未开始'}
+                </Tag>
+              </Space>
+              <Typography.Text type="secondary">
+                {automation?.logs.length || 0} 条日志 · {automation?.jobs.length || 0} 个任务 · {automation?.publishRecords.length || 0} 条记录
+              </Typography.Text>
+            </div>
 
             <Form.Item name="title" label="标题" rules={[{ required: true, message: '请输入标题' }]}>
               <Input maxLength={96} showCount />
@@ -778,6 +1273,28 @@ export default function AdminContentFactory() {
                     <Form.Item name="contentMarkdown">
                       <Input.TextArea className="content-factory__editor" />
                     </Form.Item>
+                  ),
+                },
+                {
+                  key: 'automation',
+                  label: '任务流',
+                  children: automation ? (
+                    <div className="content-factory__drawer-automation">
+                      <List
+                        size="small"
+                        dataSource={automation.logs}
+                        renderItem={(item) => (
+                          <List.Item className="content-factory__automation-item">
+                            <Badge status={automationStatusMeta[item.status].badge} text={item.message} />
+                            <span className="content-factory__automation-meta">
+                              {stageMeta[item.stage].label} · {formatDateTime(item.createdAt)}
+                            </span>
+                          </List.Item>
+                        )}
+                      />
+                    </div>
+                  ) : (
+                    <Empty image={Empty.PRESENTED_IMAGE_SIMPLE} description="暂无任务流信息" />
                   ),
                 },
               ]}
