@@ -208,7 +208,7 @@ export const SlashCommand = Extension.create<SlashCommandOptions, SlashCommandSt
 
   addStorage() {
     return {
-      onInsertImage: undefined,
+      onInsertImage: this.options.onInsertImage,
     }
   },
 

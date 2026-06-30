@@ -20,6 +20,11 @@ import TextAlign from '@tiptap/extension-text-align'
 import { all, createLowlight } from 'lowlight'
 import { App as AntApp } from 'antd'
 import { MenuBar } from './editor/MenuBar'
+import { BubbleMenuBar } from './editor/BubbleMenuBar'
+import { FloatingMenuBar } from './editor/FloatingMenuBar'
+import { ImagePromptModal } from './editor/ImagePromptModal'
+import { LinkPromptModal, type LinkPromptValue } from './editor/LinkPromptModal'
+import { SlashCommand } from './editor/SlashCommand'
 import { isJsonEqual, safeParseJson } from './editor/serialize'
 import '../styles/tiptap.css'
 
@@ -176,6 +181,12 @@ export default function TiptapEditor({
   const { message } = AntApp.useApp()
   const [isFullscreen, setIsFullscreen] = useState(false)
   const [imageUploading, setImageUploading] = useState(false)
+  const [imageModalOpen, setImageModalOpen] = useState(false)
+  const [linkModalOpen, setLinkModalOpen] = useState(false)
+
+  const openImageModal = useCallback(() => {
+    setImageModalOpen(true)
+  }, [])
 
   const insertImageIntoView = useCallback(
     (view: EditorViewLike | null | undefined, src: string, alt?: string, pos?: number) => {
@@ -255,6 +266,9 @@ export default function TiptapEditor({
       CodeBlockLowlight.configure({
         lowlight,
       }),
+      SlashCommand.configure({
+        onInsertImage: openImageModal,
+      }),
     ],
     content: normalizeEditorContent(content || ''),
     editorProps: {
@@ -310,24 +324,56 @@ export default function TiptapEditor({
 
   const handleInsertImageUrl = useCallback(() => {
     if (!editor) return
-    const url = window.prompt(TEXT.imageUrlPrompt)
-    if (!url) return
-    editor.chain().focus().setImage({ src: url }).run()
+    openImageModal()
+  }, [editor, openImageModal])
+
+  const handleConfirmImageUrl = useCallback(
+    (url: string) => {
+      if (!editor) return
+      editor.chain().focus().setImage({ src: url }).run()
+      setImageModalOpen(false)
+    },
+    [editor],
+  )
+
+  const handleCancelImageUrl = useCallback(() => {
+    setImageModalOpen(false)
+    editor?.chain().focus().run()
   }, [editor])
 
   const handleInsertLink = useCallback(() => {
     if (!editor) return
-    const previousUrl = editor.getAttributes('link').href
-    const url = window.prompt(TEXT.linkUrlPrompt, previousUrl)
+    setLinkModalOpen(true)
+  }, [editor])
 
-    if (url === null) return
+  const handleConfirmLink = useCallback(
+    (value: LinkPromptValue | null) => {
+      if (!editor) return
 
-    if (url === '') {
-      editor.chain().focus().extendMarkRange('link').unsetLink().run()
-      return
-    }
+      if (!value || !value.url) {
+        editor.chain().focus().extendMarkRange('link').unsetLink().run()
+        setLinkModalOpen(false)
+        return
+      }
 
-    editor.chain().focus().extendMarkRange('link').setLink({ href: url }).run()
+      editor
+        .chain()
+        .focus()
+        .extendMarkRange('link')
+        .setLink({
+          href: value.url,
+          target: value.openInNewTab ? '_blank' : null,
+          rel: value.openInNewTab ? 'noopener noreferrer' : null,
+        })
+        .run()
+      setLinkModalOpen(false)
+    },
+    [editor],
+  )
+
+  const handleCancelLink = useCallback(() => {
+    setLinkModalOpen(false)
+    editor?.chain().focus().run()
   }, [editor])
 
   const menuBarContent = useMemo(() => {
@@ -365,9 +411,26 @@ export default function TiptapEditor({
       {slotBeforeMenu}
       {toolbarContainer && !isFullscreen ? createPortal(menuBarContent, toolbarContainer) : menuBarContent}
       {slotAfterMenu}
+      {editor ? (
+        <>
+          <BubbleMenuBar editor={editor} onInsertLink={handleInsertLink} />
+          <FloatingMenuBar editor={editor} onInsertImage={handleInsertImageUrl} />
+        </>
+      ) : null}
       <EditorContent
         editor={editor}
         className={`editor-content${fillHeight ? ' editor-content--fill' : ''}`}
+      />
+      <ImagePromptModal
+        open={imageModalOpen}
+        onCancel={handleCancelImageUrl}
+        onConfirm={handleConfirmImageUrl}
+      />
+      <LinkPromptModal
+        open={linkModalOpen}
+        initialUrl={editor?.getAttributes('link').href ?? ''}
+        onCancel={handleCancelLink}
+        onConfirm={handleConfirmLink}
       />
     </div>
   )

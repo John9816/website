@@ -16,11 +16,13 @@ import {
   Typography,
 } from 'antd'
 import {
+  CloseOutlined,
   DeleteOutlined,
   EditOutlined,
   FileAddOutlined,
   HistoryOutlined,
   PlusOutlined,
+  SaveOutlined,
   SearchOutlined,
   SettingOutlined,
   ShareAltOutlined,
@@ -38,6 +40,7 @@ type OutlineItem = {
   id: string
   text: string
   level: number
+  index?: number
 }
 
 function formatDateTime(value?: string | null) {
@@ -97,6 +100,51 @@ function buildArticleContent(doc?: KbDoc | null): { html: string; outline: Outli
   }
 }
 
+function getTiptapNodeText(node: any): string {
+  if (!node) return ''
+  if (typeof node.text === 'string') return node.text
+  if (!Array.isArray(node.content)) return ''
+  return node.content.map(getTiptapNodeText).join('')
+}
+
+function buildEditorOutline(contentJson: string): OutlineItem[] {
+  if (!contentJson?.trim()) return []
+
+  try {
+    const root = JSON.parse(contentJson)
+    const outline: OutlineItem[] = []
+    const walk = (node: any) => {
+      if (!node) return
+      if (node.type === 'heading') {
+        const text = getTiptapNodeText(node).trim()
+        const level = Number(node.attrs?.level ?? 1)
+        if (text && level <= 3) {
+          outline.push({
+            id: `kb-editor-heading-${outline.length + 1}`,
+            index: outline.length,
+            text,
+            level,
+          })
+        }
+      }
+      if (Array.isArray(node.content)) node.content.forEach(walk)
+    }
+
+    walk(root)
+    return outline
+  } catch {
+    return []
+  }
+}
+
+function scrollEditorHeadingIntoView(index?: number) {
+  if (typeof index !== 'number') return
+  const headings = document.querySelectorAll(
+    '.kb-admin-edit__editor .ProseMirror h1, .kb-admin-edit__editor .ProseMirror h2, .kb-admin-edit__editor .ProseMirror h3',
+  )
+  headings[index]?.scrollIntoView({ behavior: 'smooth', block: 'center' })
+}
+
 function countTreeDocs(nodes: KbDocTreeNode[]): number {
   return nodes.reduce((total, node) => total + 1 + countTreeDocs(node.children ?? []), 0)
 }
@@ -154,6 +202,7 @@ const KbMain: React.FC = () => {
     editSummary,
     setEditSummary,
     editInitialContent,
+    editContentJson,
     setEditContentHtml,
     setEditContentJson,
     keyword,
@@ -177,6 +226,7 @@ const KbMain: React.FC = () => {
 
   const activeSpace = spaces.find((space) => space.id === activeSpaceId)
   const articleContent = React.useMemo(() => buildArticleContent(selectedDoc), [selectedDoc])
+  const editorOutline = React.useMemo(() => buildEditorOutline(editContentJson), [editContentJson])
   const totalTreeDocs = React.useMemo(() => countTreeDocs(tree), [tree])
   const publishedInPage = docs.filter((doc) => doc.status === 'published').length
   const draftInPage = docs.filter((doc) => doc.status !== 'published').length
@@ -455,6 +505,38 @@ const KbMain: React.FC = () => {
                     </div>
                   </div>
                 </div>
+                <aside className="kb-admin-editor-actionbar" aria-label={'\u7f16\u8f91\u64cd\u4f5c'}>
+                  <span className={`kb-admin-editor-save-state${isDirty ? ' is-dirty' : ''}`}>
+                    {inlineDocSaving ? '\u6b63\u5728\u4fdd\u5b58' : isDirty ? '\u672a\u4fdd\u5b58' : '\u5df2\u4fdd\u5b58'}
+                  </span>
+                  <Tooltip title={'\u6587\u6863\u5c5e\u6027'}>
+                    <Button
+                      type="text"
+                      icon={<SettingOutlined />}
+                      onClick={() => setPropertyDrawerOpen(true)}
+                      aria-label={'\u6587\u6863\u5c5e\u6027'}
+                    />
+                  </Tooltip>
+                  {isDirty ? (
+                    <Popconfirm title={'\u6709\u672a\u4fdd\u5b58\u4fee\u6539\uff0c\u786e\u5b9a\u9000\u51fa\u7f16\u8f91\u5417\uff1f'} onConfirm={exitInlineEdit}>
+                      <Button type="text" icon={<CloseOutlined />}>
+                        {'\u9000\u51fa'}
+                      </Button>
+                    </Popconfirm>
+                  ) : (
+                    <Button type="text" icon={<CloseOutlined />} onClick={exitInlineEdit}>
+                      {'\u9000\u51fa'}
+                    </Button>
+                  )}
+                  <Button
+                    type="primary"
+                    icon={<SaveOutlined />}
+                    onClick={() => void handleSaveInlineDoc()}
+                    loading={inlineDocSaving}
+                  >
+                    {'\u4fdd\u5b58'}
+                  </Button>
+                </aside>
                 <aside className="kb-admin-inspector kb-admin-inspector--editor">
                   <div className="kb-admin-inspector__section">
                     <span className="kb-admin-inspector__label">编辑状态</span>
@@ -467,6 +549,28 @@ const KbMain: React.FC = () => {
                   <Button block icon={<SettingOutlined />} onClick={() => setPropertyDrawerOpen(true)}>
                     状态、排序与标签
                   </Button>
+                </aside>
+                <aside className="kb-admin-editor-outline" aria-label="文档大纲">
+                  <div className="kb-admin-editor-outline__head">
+                    <span>文档大纲</span>
+                    <small>{editorOutline.length || '无'}</small>
+                  </div>
+                  {editorOutline.length ? (
+                    <nav className="kb-admin-editor-outline__nav">
+                      {editorOutline.map((item) => (
+                        <button
+                          key={item.id}
+                          type="button"
+                          className={`is-level-${item.level}`}
+                          onClick={() => scrollEditorHeadingIntoView(item.index)}
+                        >
+                          {item.text}
+                        </button>
+                      ))}
+                    </nav>
+                  ) : (
+                    <p>输入标题后自动生成目录</p>
+                  )}
                 </aside>
               </div>
             ) : (
