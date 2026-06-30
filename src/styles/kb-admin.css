@@ -2332,7 +2332,8 @@
 .admin-kb-page .kb-admin-workspace--editing {
   height: 100%;
   display: grid;
-  grid-template-columns: minmax(0, 1fr) 216px;
+  grid-template-columns: minmax(0, 1fr) 220px;
+  grid-template-rows: 48px minmax(0, 1fr);
   gap: 0;
   background: var(--panel);
   overflow: hidden;
@@ -2344,6 +2345,7 @@
 
 .admin-kb-page .kb-admin-workspace--editing > .kb-admin-editor-shell {
   grid-column: 1;
+  grid-row: 2;
   min-width: 0;
   height: 100%;
   overflow-y: auto;
@@ -2351,19 +2353,23 @@
 }
 
 .admin-kb-page .kb-admin-editor-actionbar {
-  position: absolute;
-  top: 8px;
-  right: 232px;
+  grid-column: 1 / -1;
+  grid-row: 1;
+  position: sticky;
+  top: 0;
   z-index: 16;
-  min-height: 36px;
-  display: inline-flex;
+  min-width: 0;
+  min-height: 48px;
+  display: flex;
   align-items: center;
+  justify-content: flex-end;
   gap: 6px;
-  padding: 0 8px;
-  border: 1px solid color-mix(in srgb, var(--border) 78%, transparent);
-  border-radius: 8px;
+  padding: 6px 12px 6px 18px;
+  border: 0;
+  border-bottom: 1px solid color-mix(in srgb, var(--border) 78%, transparent);
+  border-radius: 0;
   background: color-mix(in srgb, var(--panel) 96%, transparent);
-  box-shadow: 0 10px 28px rgba(15, 23, 42, 0.08);
+  box-shadow: none;
   backdrop-filter: saturate(160%) blur(14px);
   -webkit-backdrop-filter: saturate(160%) blur(14px);
 }
@@ -2385,6 +2391,7 @@
 .admin-kb-page .kb-admin-editor-save-state {
   display: inline-flex;
   align-items: center;
+  margin-right: auto;
   min-height: 24px;
   padding: 0 8px;
   border-radius: 999px;
@@ -2403,7 +2410,7 @@
 .admin-kb-page .kb-admin-workspace--editing .kb-admin-editor-head {
   width: min(100%, 860px);
   margin: 0 auto;
-  padding: 18px 24px 12px;
+  padding: 22px 24px 12px;
 }
 
 .admin-kb-page .kb-admin-workspace--editing .kb-admin-edit__title {
@@ -2420,15 +2427,25 @@
   position: sticky;
   top: 0;
   z-index: 12;
-  height: 40px;
+  min-height: 42px;
+  height: auto;
   border-top: 1px solid color-mix(in srgb, var(--border) 70%, transparent);
 }
 
 .admin-kb-page .kb-admin-workspace--editing .kb-admin-edit__tiptap-toolbar-wrapper,
 .admin-kb-page .kb-admin-workspace--editing .kb-admin-edit__editor {
-  width: min(100%, 860px);
+  width: min(100%, 900px);
   margin-inline: auto;
   padding-inline: 24px;
+}
+
+.admin-kb-page .kb-admin-workspace--editing .kb-admin-edit__tiptap-toolbar-wrapper {
+  scrollbar-width: thin;
+  scroll-snap-type: x proximity;
+}
+
+.admin-kb-page .kb-admin-workspace--editing .kb-admin-edit__tiptap-toolbar-wrapper .menu-group {
+  scroll-snap-align: start;
 }
 
 .admin-kb-page .kb-admin-workspace--editing .kb-admin-editor-paper {
@@ -2436,23 +2453,35 @@
 }
 
 .admin-kb-page .kb-admin-workspace--editing .kb-admin-edit__editor .ProseMirror {
-  min-height: calc(100dvh - var(--admin-header-height, 56px) - 174px);
+  min-height: calc(100dvh - var(--admin-header-height, 56px) - 222px);
   padding-bottom: 96px;
   font-size: 16px;
   line-height: 1.78;
+}
+
+.admin-kb-page .kb-admin-workspace--editing .kb-admin-edit__editor .ProseMirror > * {
+  max-width: 100%;
+}
+
+.admin-kb-page .kb-admin-workspace--editing .kb-admin-edit__editor .ProseMirror p,
+.admin-kb-page .kb-admin-workspace--editing .kb-admin-edit__editor .ProseMirror li {
+  overflow-wrap: anywhere;
 }
 
 .admin-kb-page .kb-admin-workspace--editing .kb-admin-editor-outline {
   position: sticky;
   top: 0;
   grid-column: 2;
+  grid-row: 2;
   align-self: start;
   width: auto;
   height: 100%;
   max-height: none;
-  padding: 18px 12px;
+  overflow-y: auto;
+  padding: 22px 12px 18px;
   border-left: 1px solid color-mix(in srgb, var(--border) 78%, transparent);
   background: color-mix(in srgb, var(--panel) 98%, var(--bg));
+  scrollbar-width: thin;
 }
 
 .admin-kb-page .kb-admin-workspace--editing .kb-admin-editor-outline__head {
@@ -2462,6 +2491,14 @@
 .admin-kb-page .kb-admin-workspace--editing .kb-admin-editor-outline__nav button {
   min-height: 28px;
   border-radius: 5px;
+  transition:
+    background var(--motion-fast),
+    color var(--motion-fast),
+    border-color var(--motion-fast);
+}
+
+.admin-kb-page .kb-admin-workspace--editing .kb-admin-editor-outline p {
+  padding: 8px 4px;
 }
 
 @media (max-width: 1180px) {
@@ -2470,7 +2507,7 @@
   }
 
   .admin-kb-page .kb-admin-editor-actionbar {
-    right: 12px;
+    grid-column: 1;
   }
 
   .admin-kb-page .kb-admin-workspace--editing .kb-admin-editor-outline {
@@ -2478,7 +2515,7 @@
   }
 
   .admin-kb-page .kb-admin-workspace--editing .kb-admin-editor-head {
-    padding-right: 260px;
+    padding-right: 18px;
   }
 }
 
@@ -2492,15 +2529,17 @@
   }
 
   .admin-kb-page .kb-admin-editor-actionbar {
-    position: sticky;
-    top: 0;
     grid-row: 1;
     grid-column: 1;
-    right: auto;
     justify-content: flex-end;
-    border-width: 0 0 1px;
-    border-radius: 0;
-    box-shadow: none;
+    gap: 4px;
+    padding-inline: 10px;
+  }
+
+  .admin-kb-page .kb-admin-editor-save-state {
+    max-width: 72px;
+    overflow: hidden;
+    text-overflow: ellipsis;
   }
 
   .admin-kb-page .kb-admin-workspace--editing .kb-admin-editor-head {
@@ -2510,5 +2549,12 @@
   .admin-kb-page .kb-admin-workspace--editing .kb-admin-edit__tiptap-toolbar-wrapper,
   .admin-kb-page .kb-admin-workspace--editing .kb-admin-edit__editor {
     padding-inline: 18px;
+  }
+
+  .admin-kb-page .kb-admin-workspace--editing .kb-admin-editor-toolbar .menu-group--color,
+  .admin-kb-page .kb-admin-workspace--editing .kb-admin-editor-toolbar .menu-group--align,
+  .admin-kb-page .kb-admin-workspace--editing .kb-admin-editor-toolbar .menu-group--indent,
+  .admin-kb-page .kb-admin-workspace--editing .kb-admin-editor-toolbar .menu-group--table-edit {
+    display: none;
   }
 }
