@@ -12,6 +12,7 @@ const NAV_ITEMS: TopbarNavItem[] = [
   { to: '/music', label: '音乐' },
   { to: '/ai-chat', label: 'AI对话' },
   { to: '/ai-image', label: 'AI生图' },
+  { to: '/resume', label: '个人简历' },
 ]
 
 const preloaders: Record<string, () => Promise<unknown>> = {
@@ -19,6 +20,7 @@ const preloaders: Record<string, () => Promise<unknown>> = {
   '/music': () => Promise.all([import('../pages/MusicLayout'), import('../pages/MusicPage')]),
   '/ai-chat': () => import('../pages/AiChatPage'),
   '/ai-image': () => import('../pages/AiImagePage'),
+  '/resume': () => import('../pages/ResumePage'),
 }
 
 const preloadedRoutes = new Set<string>()

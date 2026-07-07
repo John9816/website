@@ -7,6 +7,7 @@ const titleMap: Record<string, string> = {
   '/': '首页',
   '/ai-chat': 'AI 对话',
   '/ai-image': 'AI 生图',
+  '/resume': '个人简历',
   '/music': '音乐',
   '/music/share': '音乐分享',
   '/music/toplist': '榜单详情',

@@ -1,0 +1,15 @@
+[Unit]
+Description=Website frontend and proxy runtime
+After=network.target
+
+[Service]
+Type=simple
+WorkingDirectory=/opt/website
+EnvironmentFile=/opt/website/.env.ecs
+Environment=HOST=127.0.0.1
+ExecStart=/usr/local/bin/node /opt/website/server/ecs-server.mjs
+Restart=always
+RestartSec=5
+
+[Install]
+WantedBy=multi-user.target

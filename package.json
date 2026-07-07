@@ -8,6 +8,7 @@
     "build": "tsc --noEmit && vite build",
     "preview": "vite preview",
     "lint": "tsc --noEmit",
+    "ecs:serve": "node server/ecs-server.mjs",
     "pages:dev": "npm run build && npx wrangler pages dev dist",
     "pages:deploy": "npm run build && npx wrangler pages deploy dist"
   },

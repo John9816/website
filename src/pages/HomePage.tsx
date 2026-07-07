@@ -6,6 +6,7 @@ import type { CategoryWithLinks, NavLink } from '../types'
 import { useAuth } from '../context/AuthContext'
 import CategoryIcon from '../components/CategoryIcon'
 import LinkCard from '../components/LinkCard'
+import BeianFooter from '../components/BeianFooter'
 import TopbarNav from '../components/TopbarNav'
 import TopbarUserMenu from '../components/TopbarUserMenu'
 import ThemeToggle from '../components/ThemeToggle'
@@ -272,6 +273,7 @@ export default function HomePage() {
             )}
           </section>
         ))}
+        <BeianFooter />
       </main>
 
       <button

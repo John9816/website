@@ -6,6 +6,7 @@ import { AuthProvider } from './context/AuthContext'
 import { MusicPlayerProvider, useMusicPlayer } from './context/MusicPlayerContext'
 import { ThemeProvider, useTheme } from './context/ThemeContext'
 import { usePageTitle } from './hooks/usePageTitle'
+import BeianFooter from './components/BeianFooter'
 
 const HomePage = lazy(() => import('./pages/HomePage'))
 const GlobalMusicDock = lazy(() => import('./components/GlobalMusicDock'))
@@ -15,6 +16,7 @@ const MusicLayout = lazy(() => import('./pages/MusicLayout'))
 const MusicPage = lazy(() => import('./pages/MusicPage'))
 const AiChatPage = lazy(() => import('./pages/AiChatPage'))
 const AiImagePage = lazy(() => import('./pages/AiImagePage'))
+const ResumePage = lazy(() => import('./pages/ResumePage'))
 const MusicPlaylistDetailPage = lazy(
   () => import('./pages/MusicPlaylistDetailPage'),
 )
@@ -150,6 +152,16 @@ function RouteFocusManager() {
   return null
 }
 
+function GlobalBeianFooterGate() {
+  const location = useLocation()
+
+  if (location.pathname === '/' || location.pathname.startsWith('/admin')) {
+    return null
+  }
+
+  return <BeianFooter />
+}
+
 export default function App() {
   return (
     <ThemeProvider>
@@ -168,6 +180,7 @@ export default function App() {
                   <Route path="/" element={<HomePage />} />
                   <Route path="/ai-chat" element={<AiChatPage />} />
                   <Route path="/ai-image" element={<AiImagePage />} />
+                  <Route path="/resume" element={<ResumePage />} />
                   <Route path="/kb/share/:token" element={<KbSharePage />} />
                   <Route path="/music" element={<MusicLayout />}>
                     <Route index element={<MusicPage />} />
@@ -204,6 +217,7 @@ export default function App() {
                   <Route path="*" element={<Navigate to="/" replace />} />
                 </Routes>
               </Suspense>
+              <GlobalBeianFooterGate />
               <GlobalMusicDockGate />
             </BrowserRouter>
           </MusicPlayerProvider>

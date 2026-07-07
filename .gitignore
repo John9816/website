@@ -7,3 +7,9 @@ dist
 .claude
 *.log
 .codex-screenshots/
+.codex_resume/
+.playwright-mcp/
+.wrangler/
+.wrangler-config/
+output/
+*.png
