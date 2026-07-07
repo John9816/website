@@ -167,10 +167,26 @@ export interface ContentArticleGeneratePayload {
   model?: string
 }
 
+export interface ContentAgentRunPayload {
+  category?: ContentArticleCategory
+  topic?: string
+  instruction?: string
+  length?: ContentArticleLength
+  generateCover?: boolean
+  autoWechatDraft?: boolean
+}
+
 export interface ContentWechatDraftResult {
   mediaId: string
   url?: string | null
   mode?: 'wechat' | 'local'
+}
+
+export interface ContentAgentRunResult {
+  article: ContentArticle
+  automation: ContentAutomationView
+  topic: ContentHotTopic & Record<string, unknown>
+  draft: ContentWechatDraftResult
 }
 
 export interface LoginResponse {

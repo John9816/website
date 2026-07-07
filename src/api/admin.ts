@@ -1,6 +1,8 @@
 import { request } from './client'
 import type {
   Category,
+  ContentAgentRunPayload,
+  ContentAgentRunResult,
   ContentAutomationView,
   ContentArticle,
   ContentArticleGeneratePayload,
@@ -114,6 +116,13 @@ export const adminRetryContentAutomationJob = (jobId: string) =>
     method: 'POST',
     auth: true,
     body: { jobId },
+  })
+
+export const adminRunContentAgent = (body: ContentAgentRunPayload) =>
+  request<ContentAgentRunResult>('/api/admin/content/automation/run', {
+    method: 'POST',
+    auth: true,
+    body,
   })
 
 export const adminGetHotTopics = (limit = 12, category?: string) =>

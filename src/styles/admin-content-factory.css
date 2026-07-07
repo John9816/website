@@ -96,6 +96,12 @@
   line-height: 1.6;
 }
 
+.content-factory__action-row {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
+  gap: 10px;
+}
+
 .content-factory__quality {
   display: grid;
   gap: 10px;

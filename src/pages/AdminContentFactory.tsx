@@ -50,6 +50,7 @@ import {
   adminListContentArticles,
   adminPublishWechatArticle,
   adminRetryContentAutomationJob,
+  adminRunContentAgent,
   adminUpdateContentArticle,
 } from '../api/admin'
 import type {
@@ -461,6 +462,7 @@ export default function AdminContentFactory() {
   const [articlesLoading, setArticlesLoading] = useState(false)
   const [automationLoading, setAutomationLoading] = useState(false)
   const [generating, setGenerating] = useState(false)
+  const [agentRunning, setAgentRunning] = useState(false)
   const [saving, setSaving] = useState(false)
   const [deletingArticleId, setDeletingArticleId] = useState<number | null>(null)
   const [wechatAction, setWechatAction] = useState<'draft' | 'publish' | null>(null)
@@ -659,6 +661,34 @@ export default function AdminContentFactory() {
       message.error((error as Error).message)
     } finally {
       setGenerating(false)
+    }
+  }
+
+  const runContentAgent = async () => {
+    const values = generateForm.getFieldsValue()
+    const topic = values.topic?.trim()
+    setAgentRunning(true)
+    try {
+      const result = await adminRunContentAgent({
+        category: activeCategory,
+        topic: topic || undefined,
+        instruction: values.angle || activePreset.description,
+        length: values.length || 'standard',
+        generateCover: false,
+        autoWechatDraft: true,
+      })
+      upsertArticle(result.article)
+      setAutomation({ ...result.automation, source: 'backend' })
+      setDrawerOpen(true)
+      if (result.draft.mode === 'wechat') {
+        message.success('Agent 已完成：文章已生成并进入微信草稿箱')
+      } else {
+        message.warning('Agent 已完成：文章已生成，微信草稿失败时已保留为本站本地草稿')
+      }
+    } catch (error) {
+      message.error((error as Error).message)
+    } finally {
+      setAgentRunning(false)
     }
   }
 
@@ -1032,17 +1062,27 @@ export default function AdminContentFactory() {
               </ul>
             </div>
 
-            <Button
-              type="primary"
-              size="large"
-              block
-              icon={<RocketOutlined />}
-              onClick={() => void generateArticle()}
-              loading={generating}
-              disabled={hotLoading || (!watchedTopic?.trim() && hotTopics.length === 0)}
-            >
-              搜索并生成公众号正文
-            </Button>
+            <div className="content-factory__action-row">
+              <Button
+                type="primary"
+                size="large"
+                icon={<RocketOutlined />}
+                onClick={() => void runContentAgent()}
+                loading={agentRunning}
+                disabled={generating}
+              >
+                运行自动化 Agent
+              </Button>
+              <Button
+                size="large"
+                icon={<EditOutlined />}
+                onClick={() => void generateArticle()}
+                loading={generating}
+                disabled={agentRunning || hotLoading || (!watchedTopic?.trim() && hotTopics.length === 0)}
+              >
+                手动生成正文
+              </Button>
+            </div>
           </Form>
         </Card>
 
