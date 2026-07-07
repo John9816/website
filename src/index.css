@@ -1,12 +1,7 @@
 :root,
 [data-theme='light'] {
   --bg: #f7f7fb;
-  --bg-grad: linear-gradient(
-      135deg,
-      rgba(225, 29, 72, 0.075) 0%,
-      rgba(37, 99, 235, 0.052) 43%,
-      rgba(245, 158, 11, 0.07) 100%
-    );
+  --bg-grad: none;
   --panel: #ffffff;
   --panel-alt: #f0f2f7;
   --panel-glass: rgba(255, 255, 255, 0.88);
@@ -43,12 +38,7 @@
 
 [data-theme='dark'] {
   --bg: #0f1117;
-  --bg-grad: linear-gradient(
-      135deg,
-      rgba(251, 113, 133, 0.12) 0%,
-      rgba(96, 165, 250, 0.075) 45%,
-      rgba(251, 191, 36, 0.08) 100%
-    );
+  --bg-grad: none;
   --panel: #171a23;
   --panel-alt: #202431;
   --panel-glass: rgba(23, 26, 35, 0.86);

@@ -191,9 +191,7 @@ export default function HomePage() {
       <main ref={contentRef} className="content">
         <header className="hero">
           <div className="hero-copy">
-            <span className="hero-kicker">Creator Workspace</span>
-            <h1>常用入口，一次到位</h1>
-            <p>把网站、音乐、AI 工具和后台能力整理成一个清爽高效的工作台。</p>
+            <h1>常用入口</h1>
           </div>
           <div className="hero-tools">
             <label className="search-box">
@@ -216,10 +214,6 @@ export default function HomePage() {
                 </button>
               )}
             </label>
-            <div className="hero-stats" aria-label="导航内容概览">
-              <span>{visibleCategories.length} 个分类</span>
-              <span>{visibleLinkCount} 个链接</span>
-            </div>
           </div>
         </header>
 
