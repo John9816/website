@@ -65,15 +65,6 @@ export default function HomePage() {
       .filter((category) => category.links.length > 0)
   }, [categories, filterLinks, normalizedQuery])
 
-  const visibleLinkCount = useMemo(
-    () =>
-      visibleCategories.reduce(
-        (total, category) => total + (category.links?.length ?? 0),
-        0,
-      ),
-    [visibleCategories],
-  )
-
   useEffect(() => {
     const root = contentRef.current
     if (!root || !visibleCategories.length) return
@@ -163,11 +154,6 @@ export default function HomePage() {
       </header>
 
       <aside className="sidebar">
-        <div className="sidebar-head">
-          <span className="sidebar-meta">
-            {visibleCategories.length} 个分类 / {visibleLinkCount} 个链接
-          </span>
-        </div>
         <nav className="side-nav" aria-label="分类导航">
           {visibleCategories.map((category) => (
             <button
@@ -179,7 +165,6 @@ export default function HomePage() {
             >
               <CategoryIcon icon={category.icon} size={18} />
               <span className="side-item-name">{category.name}</span>
-              <span className="side-item-count">{category.links?.length ?? 0}</span>
             </button>
           ))}
           {!visibleCategories.length && !error && !normalizedQuery && (
@@ -254,7 +239,6 @@ export default function HomePage() {
                 <CategoryIcon icon={category.icon} size={22} />
                 <span>{category.name}</span>
               </h2>
-              <span className="cat-count">{category.links?.length ?? 0} 个链接</span>
             </div>
             {category.links?.length ? (
               <div className="link-grid">
