@@ -22,11 +22,10 @@ export default function LinkCard({ link }: { link: NavLink }) {
       title={link.description ?? link.name}
     >
       <div className="link-icon">
-        <CategoryIcon icon={link.icon} alt={link.name} size={28} />
+        <CategoryIcon icon={link.icon} alt={link.name} size={22} />
       </div>
       <div className="link-body">
         <div className="link-name">{link.name}</div>
-        {link.description && <div className="link-desc">{link.description}</div>}
         <div className="link-meta">
           <span>{host}</span>
           <ExternalLink size={13} aria-hidden="true" />

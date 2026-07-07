@@ -4,7 +4,6 @@ import { ArrowUp, LogIn, Search, Settings, X } from 'lucide-react'
 import { getNav } from '../api/public'
 import type { CategoryWithLinks, NavLink } from '../types'
 import { useAuth } from '../context/AuthContext'
-import CategoryIcon from '../components/CategoryIcon'
 import LinkCard from '../components/LinkCard'
 import BeianFooter from '../components/BeianFooter'
 import TopbarNav from '../components/TopbarNav'
@@ -163,7 +162,6 @@ export default function HomePage() {
               onClick={() => scrollTo(category.id)}
               title={category.name}
             >
-              <CategoryIcon icon={category.icon} size={18} />
               <span className="side-item-name">{category.name}</span>
             </button>
           ))}
@@ -175,9 +173,6 @@ export default function HomePage() {
 
       <main ref={contentRef} className="content">
         <header className="hero">
-          <div className="hero-copy">
-            <h1>常用入口</h1>
-          </div>
           <div className="hero-tools">
             <label className="search-box">
               <Search size={18} className="search-icon" />
@@ -236,7 +231,6 @@ export default function HomePage() {
           >
             <div className="cat-head">
               <h2 className="cat-title">
-                <CategoryIcon icon={category.icon} size={22} />
                 <span>{category.name}</span>
               </h2>
             </div>
