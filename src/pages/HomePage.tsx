@@ -165,7 +165,7 @@ export default function HomePage() {
       <aside className="sidebar">
         <div className="sidebar-head">
           <span className="sidebar-meta">
-            {visibleCategories.length} 个分类 · {visibleLinkCount} 个链接
+            {visibleCategories.length} 个分类 / {visibleLinkCount} 个链接
           </span>
         </div>
         <nav className="side-nav" aria-label="分类导航">
@@ -183,7 +183,7 @@ export default function HomePage() {
             </button>
           ))}
           {!visibleCategories.length && !error && !normalizedQuery && (
-            <div className="side-empty">加载中...</div>
+            <div className="side-empty">正在加载...</div>
           )}
         </nav>
       </aside>
@@ -193,7 +193,7 @@ export default function HomePage() {
           <div className="hero-copy">
             <span className="hero-kicker">Creator Workspace</span>
             <h1>常用入口，一次到位</h1>
-            <p>把网站、音乐、AI 工具和后台能力整理成一个高效工作台。</p>
+            <p>把网站、音乐、AI 工具和后台能力整理成一个清爽高效的工作台。</p>
           </div>
           <div className="hero-tools">
             <label className="search-box">
