@@ -308,7 +308,11 @@
   gap: 10px;
 }
 
-.content-factory__category-strip .ant-segmented {
+.content-factory__category-strip .ant-select {
+  min-width: min(320px, 62vw);
+}
+
+.content-factory__category-strip .ant-select-selector {
   min-height: 36px;
 }
 
@@ -610,7 +614,8 @@
 
   .content-factory__header .ant-btn,
   .content-factory__panel-toolbar .ant-btn,
-  .content-factory__category-strip .ant-btn {
+  .content-factory__category-strip .ant-btn,
+  .content-factory__category-strip .ant-select-selector {
     min-height: 44px;
   }
 }

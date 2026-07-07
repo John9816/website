@@ -2,6 +2,7 @@ import { useEffect, useMemo, useState } from 'react'
 import {
   Alert,
   App as AntApp,
+  AutoComplete,
   Badge,
   Button,
   Card,
@@ -28,9 +29,11 @@ import {
 import {
   CheckCircleOutlined,
   CloudUploadOutlined,
+  CopyOutlined,
   DeleteOutlined,
   EditOutlined,
   FireOutlined,
+  LinkOutlined,
   PictureOutlined,
   ReloadOutlined,
   RocketOutlined,
@@ -87,6 +90,7 @@ type GenerateValues = {
 
 type ArticleFormValues = {
   title: string
+  category?: string | null
   digest?: string | null
   contentHtml: string
   contentMarkdown?: string | null
@@ -111,7 +115,7 @@ const statusMeta: Record<ContentArticleStatus, { label: string; color: string }>
 }
 
 const categoryMeta: Record<
-  ContentArticleCategory,
+  string,
   {
     label: string
     color: string
@@ -122,33 +126,54 @@ const categoryMeta: Record<
     note: string
   }
 > = {
-  emotion_psychology: {
-    label: '情感心理',
-    color: 'magenta',
-    angle: '从真实关系、情绪需求和自我成长切入，给读者可复盘、可练习的理解框架',
-    audience: '正在处理亲密关系、家庭沟通、职场情绪和自我成长的公众号读者',
-    tone: '温暖、清醒、克制，不鸡汤、不诊断',
-    coverStyle: '柔和人文，情绪曲线，温暖但不甜腻',
-    note: '适合关系沟通、情绪成本、自我成长和边界感选题。',
+  '科技 / 互联网': {
+    label: '科技 / 互联网',
+    color: 'blue',
+    angle: '先讲这件事和普通人有什么关系，再拆平台、产品、公司和行业里的信息差',
+    audience: '想快速看懂科技互联网热点、少被标题带节奏的公众号读者',
+    tone: '像朋友聊天，直接、有梗、有判断，但别装专家，拒绝正式和学术腔',
+    coverStyle: '热点解读感，科技产品和信息流元素，清爽醒目',
+    note: '适合 AI、平台规则、互联网产品、商业模式和大厂动态。',
   },
-  history_philosophy: {
-    label: '历史哲学',
+  '教育 / 职场': {
+    label: '教育 / 职场',
     color: 'gold',
-    angle: '从历史人物、事件脉络或思想命题切入，把旧问题讲成今天仍然有用的判断力',
-    audience: '喜欢历史故事、思想辨析和长期主义思考的公众号读者',
-    tone: '沉稳、有证据、有思辨感，避免故作玄虚',
-    coverStyle: '纸本文献，时间轴，克制高级的历史感',
-    note: '适合人物命运、时代结构、思想命题和长期判断。',
+    angle: '从升学、就业、转行、职场选择里的具体坑切入，讲清楚普通人该注意什么',
+    audience: '关注成长、就业、职场变化和自我提升的公众号读者',
+    tone: '口语化、像过来人聊天，少讲大道理，多讲真实处境和选择成本',
+    coverStyle: '职场桌面、学习资料、信息卡片，明亮但不鸡汤',
+    note: '适合就业、考证、AI 职场影响、教育政策和个人成长。',
   },
-  society_livelihood: {
-    label: '社会民生',
+  '财政金融': {
+    label: '财政金融',
     color: 'cyan',
-    angle: '从公共议题背后的生活成本、教育就业、城市生活和普通人处境切入',
-    audience: '关心现实生活、公共议题和社会变化的公众号读者',
-    tone: '客观、克制、有温度，不煽动',
-    coverStyle: '城市街景，民生数据，清晰可信的新闻杂志感',
-    note: '适合就业教育、消费变化、城市生活和公共议题。',
+    angle: '先翻译政策、市场和公司新闻里的关键信息差，再落到钱包、工作和决策影响',
+    audience: '想看懂财经热点但不想读研报黑话的公众号读者',
+    tone: '通俗、直白、像朋友解释新闻，避免金融黑话和学术腔',
+    coverStyle: '财经数据、城市商业、简洁信息图，可信但不严肃',
+    note: '适合消费、宏观政策、公司财报、资本市场和个人财务决策。',
   },
+}
+
+const defaultCategoryKey = '科技 / 互联网'
+const fallbackCategoryMeta = {
+  label: '自定义栏目',
+  color: 'blue',
+  angle: '先找出热点里读者没注意到的信息差，再讲清楚它会影响谁、怎么影响',
+  audience: '关注信息差型热点解读的公众号读者',
+  tone: '像朋友聊天，口语化，有判断但不端着，拒绝正式和学术腔',
+  coverStyle: '热点信息卡片，清晰醒目，适合订阅号首图',
+  note: '自定义栏目会按你输入的名称保存，写作角度、读者和语气可单独调整。',
+}
+
+function getCategoryMeta(category?: string | null) {
+  if (category && categoryMeta[category]) {
+    return categoryMeta[category]
+  }
+  return {
+    ...fallbackCategoryMeta,
+    label: category?.trim() || fallbackCategoryMeta.label,
+  }
 }
 
 const layoutThemeOptions: Array<{ label: string; value: ContentArticleLayoutTheme }> = [
@@ -172,39 +197,39 @@ const researchDepthOptions: Array<{ label: string; value: ContentArticleResearch
 const strategyPresets: StrategyPreset[] = [
   {
     key: 'trend_digest',
-    title: '热点快反',
-    description: '抓取多源热榜，快速生成观点清晰、适合当天发布的短中篇。',
+    title: '热点信息差',
+    description: '先把热点讲人话，再拆背后容易被忽略的利益、规则和影响。',
     values: {
       researchDepth: 'quick',
       length: 'short',
       layoutTheme: 'clean',
       imageMode: 'fetch',
-      tone: '直接、清醒、信息密度高，避免标题党和情绪煽动',
+      tone: '像朋友聊天，直白、有判断、有信息差，但不端着也不学术',
     },
   },
   {
     key: 'evidence_feature',
-    title: '深度长文',
-    description: '强调证据链、结构化论证和可复盘结论，适合周更主文。',
+    title: '拆解长文',
+    description: '把一个热点拆成背景、变化、坑点和普通人该怎么判断。',
     values: {
       researchDepth: 'deep',
       length: 'long',
       layoutTheme: 'magazine',
       imageMode: 'generate',
-      tone: '克制、扎实、有判断力，引用事实后再给观点',
+      tone: '口语化但有证据，像懂行朋友把复杂事掰开讲清楚',
     },
   },
   {
     key: 'wechat_safe',
-    title: '稳妥草稿',
-    description: '参考开源发布工具的保守策略：先入草稿箱，人工复核后再发布。',
+    title: '订阅号草稿',
+    description: '生成后只进入微信草稿箱，适合人工改标题、补案例后发布。',
     values: {
       researchDepth: 'standard',
       length: 'standard',
       layoutTheme: 'warm',
       autoWechatDraft: true,
       autoPublish: false,
-      tone: '自然、有温度、有边界感，不夸大、不制造对立',
+      tone: '自然、口语化、像朋友提醒你一个容易错过的信息差',
     },
   },
 ]
@@ -215,7 +240,7 @@ const pipelineSteps = [
   { title: '生成', description: '正文 / 摘要 / 封面' },
   { title: '审稿', description: '标题、事实、风险' },
   { title: '入草稿', description: '素材上传与草稿箱' },
-  { title: '发布', description: '人工确认或自动提交' },
+  { title: '发布', description: '后台人工发布' },
 ]
 
 const stageMeta: Record<ContentAutomationStage, { label: string; tone: string }> = {
@@ -235,15 +260,22 @@ const automationStatusMeta: Record<ContentAutomationStatus, { label: string; bad
   SKIPPED: { label: '跳过', badge: 'warning' },
 }
 
+const accountProfile = {
+  name: '早一步信息差',
+  positioning: '信息差型热点解读',
+  appId: 'wx235122c49e42e7c3',
+  freePublishEnabled: false,
+}
+
 const wechatGuardrails = [
   '封面建议使用 2.35:1 比例，避免重要文字贴边。',
   '外链、二维码、诱导分享等内容在发布前需要人工复核。',
-  '自动发布前先检查标题、摘要、封面、正文首屏和图片可访问性。',
+  '当前订阅号无 freepublish 权限，建议只创建微信草稿，进入公众号后台人工发布。',
   '微信接口受 IP 白名单、access_token、素材 media_id 等配置影响，失败后优先保留本站草稿。',
 ]
 
 const defaultGenerateValues: GenerateValues = {
-  category: 'emotion_psychology',
+  category: defaultCategoryKey,
   topic: '',
   layoutTheme: 'clean',
   imageMode: 'generate',
@@ -251,12 +283,12 @@ const defaultGenerateValues: GenerateValues = {
   researchDepth: 'standard',
   autoWechatDraft: false,
   autoPublish: false,
-  angle: categoryMeta.emotion_psychology.angle,
-  audience: categoryMeta.emotion_psychology.audience,
-  tone: categoryMeta.emotion_psychology.tone,
+  angle: categoryMeta[defaultCategoryKey].angle,
+  audience: categoryMeta[defaultCategoryKey].audience,
+  tone: categoryMeta[defaultCategoryKey].tone,
   length: 'standard',
   generateCover: true,
-  coverStyle: categoryMeta.emotion_psychology.coverStyle,
+  coverStyle: categoryMeta[defaultCategoryKey].coverStyle,
 }
 
 function stripHtml(html?: string | null) {
@@ -437,7 +469,6 @@ export default function AdminContentFactory() {
 
   const watchedHtml = Form.useWatch('contentHtml', articleForm)
   const watchedCoverImage = Form.useWatch('coverImageUrl', articleForm)
-  const watchedAutoPublish = Form.useWatch('autoPublish', generateForm)
   const watchedTopic = Form.useWatch('topic', generateForm)
 
   const selectedTopics = useMemo(() => {
@@ -449,6 +480,19 @@ export default function AdminContentFactory() {
     () => strategyPresets.find((preset) => preset.key === activePresetKey) || strategyPresets[0],
     [activePresetKey],
   )
+  const categoryOptions = useMemo(() => {
+    const values = new Map<string, { value: string; label: string }>()
+    Object.entries(categoryMeta).forEach(([value, meta]) => {
+      values.set(value, { value, label: meta.label })
+    })
+    articles.forEach((article) => {
+      const value = article.category?.trim()
+      if (value && !values.has(value)) {
+        values.set(value, { value, label: value })
+      }
+    })
+    return Array.from(values.values())
+  }, [articles])
 
   const quality = useMemo(() => getArticleQuality(activeArticle), [activeArticle])
   const progressPercent = activeArticle
@@ -459,7 +503,7 @@ export default function AdminContentFactory() {
         : 56
     : 18
   const riskCount = activeArticle?.riskTips.length ?? 0
-  const publishBlocked = !status?.wechatReady || generating || saving || Boolean(wechatAction)
+  const publishBlocked = !status?.wechatReady || !accountProfile.freePublishEnabled || generating || saving || Boolean(wechatAction)
 
   const loadStatus = async () => {
     setStatusLoading(true)
@@ -534,6 +578,7 @@ export default function AdminContentFactory() {
     articleForm.setFieldsValue({
       title: activeArticle.title,
       digest: activeArticle.digest || '',
+      category: activeArticle.category || '',
       contentHtml: activeArticle.contentHtml,
       contentMarkdown: activeArticle.contentMarkdown || '',
       coverImageUrl: activeArticle.coverImageUrl || '',
@@ -560,18 +605,24 @@ export default function AdminContentFactory() {
     )
   }
 
-  const changeCategory = (category: ContentArticleCategory) => {
-    const meta = categoryMeta[category]
-    setActiveCategory(category)
+  const changeCategory = (category: string, applyDefaults = false) => {
+    const nextCategory = category.trim()
+    if (!nextCategory) return
+    const meta = getCategoryMeta(nextCategory)
+    setActiveCategory(nextCategory)
     setSelectedTopicIds([])
-    generateForm.setFieldsValue({
-      category,
-      angle: meta.angle,
-      audience: meta.audience,
-      tone: meta.tone,
-      coverStyle: meta.coverStyle,
-    })
-    void loadHotTopics(category)
+    if (applyDefaults) {
+      generateForm.setFieldsValue({
+        category: nextCategory,
+        angle: meta.angle,
+        audience: meta.audience,
+        tone: meta.tone,
+        coverStyle: meta.coverStyle,
+      })
+    } else {
+      generateForm.setFieldValue('category', nextCategory)
+    }
+    void loadHotTopics(nextCategory)
   }
 
   const applyPreset = (preset: StrategyPreset) => {
@@ -579,10 +630,8 @@ export default function AdminContentFactory() {
     generateForm.setFieldsValue({
       ...preset.values,
       category: activeCategory,
+      autoPublish: false,
     })
-    if (preset.values.autoPublish) {
-      generateForm.setFieldValue('autoWechatDraft', false)
-    }
     if (preset.values.autoWechatDraft) {
       generateForm.setFieldValue('autoPublish', false)
     }
@@ -595,6 +644,7 @@ export default function AdminContentFactory() {
       ...values,
       topic: topic || undefined,
       category: activeCategory,
+      autoPublish: false,
       generateCover: values.imageMode !== 'none',
       topics: selectedTopics,
     }
@@ -604,7 +654,7 @@ export default function AdminContentFactory() {
       const article = await adminGenerateContentArticle(payload)
       upsertArticle(article)
       setDrawerOpen(true)
-      message.success(values.autoPublish ? '文章已生成，已提交自动发布流程' : values.autoWechatDraft ? '文章已生成，已提交微信草稿流程' : '文章已生成')
+      message.success(values.autoWechatDraft ? '文章已生成，已提交微信草稿流程' : '文章已生成')
     } catch (error) {
       message.error((error as Error).message)
     } finally {
@@ -624,6 +674,7 @@ export default function AdminContentFactory() {
     try {
       const article = await adminUpdateContentArticle(activeArticle.id, {
         title: values.title,
+        category: values.category || '',
         digest: values.digest || '',
         contentHtml: values.contentHtml,
         contentMarkdown: values.contentMarkdown || '',
@@ -644,9 +695,18 @@ export default function AdminContentFactory() {
     try {
       const result = await adminCreateWechatDraft(activeArticle.id)
       upsertArticle(result.article)
-      message.success('已创建微信草稿')
+      await loadAutomation(result.article.id)
+      if (result.draft.mode === 'local' || result.draft.mediaId?.startsWith('local-')) {
+        message.warning('已保留为本站本地草稿，尚未进入微信草稿箱')
+      } else {
+        message.success(`已创建微信草稿：${result.draft.mediaId}`)
+      }
     } catch (error) {
       message.error((error as Error).message)
+      if (activeArticle) {
+        await loadAutomation(activeArticle.id)
+        await loadArticles()
+      }
     } finally {
       setWechatAction(null)
     }
@@ -656,7 +716,9 @@ export default function AdminContentFactory() {
     if (!activeArticle) return
     modal.confirm({
       title: '发布到微信公众号',
-      content: '确认后会创建微信草稿并提交发布，请先确认标题、封面和正文已经复核。',
+      content: accountProfile.freePublishEnabled
+        ? '确认后会创建微信草稿并提交发布，请先确认标题、封面和正文已经复核。'
+        : '当前订阅号无 freepublish 权限，请先创建微信草稿，再到公众号后台人工发布。',
       okText: '确认发布',
       cancelText: '取消',
       okButtonProps: { icon: <SendOutlined /> },
@@ -665,9 +727,15 @@ export default function AdminContentFactory() {
         try {
           const result = await adminPublishWechatArticle(activeArticle.id)
           upsertArticle(result.article)
-          message.success('已提交微信发布')
+          await loadAutomation(result.article.id)
+          const publishId = typeof result.publish.publishId === 'string' ? result.publish.publishId : ''
+          message.success(publishId ? `已提交微信发布：${publishId}` : '已提交微信发布')
         } catch (error) {
           message.error((error as Error).message)
+          if (activeArticle) {
+            await loadAutomation(activeArticle.id)
+            await loadArticles()
+          }
         } finally {
           setWechatAction(null)
         }
@@ -706,7 +774,20 @@ export default function AdminContentFactory() {
 
   const allSelected = hotTopics.length > 0 && selectedTopicIds.length === hotTopics.length
   const articleStatus = activeArticle ? statusMeta[activeArticle.status] : null
-  const activeArticleCategory = activeArticle?.category ? categoryMeta[activeArticle.category] : null
+  const activeArticleCategory = activeArticle?.category ? getCategoryMeta(activeArticle.category) : null
+  const activeCategoryMeta = getCategoryMeta(activeCategory)
+  const hasDefaultWechatCover = Boolean(status?.configs.find((item) => item.key === 'wechat.coverMediaId')?.ready)
+  const missingWechatCover = Boolean(activeArticle && !activeArticle.coverImageUrl && !hasDefaultWechatCover)
+  const isLocalWechatDraft = Boolean(activeArticle?.wechatMediaId?.startsWith('local-'))
+  const copyText = async (text?: string | null) => {
+    if (!text) return
+    try {
+      await navigator.clipboard.writeText(text)
+      message.success('已复制')
+    } catch (error) {
+      message.error('复制失败，请手动选择文本')
+    }
+  }
 
   return (
     <div className="content-factory">
@@ -714,7 +795,7 @@ export default function AdminContentFactory() {
         <div>
           <Typography.Title level={3}>内容工厂</Typography.Title>
           <Typography.Paragraph type="secondary">
-            参考公众号自动化开源项目的常见流程，把选题、检索、审稿、草稿和发布放到同一条链路里。
+            {accountProfile.name} · {accountProfile.positioning}。默认按订阅号草稿流程生成，进入公众号后台人工发布。
           </Typography.Paragraph>
         </div>
         <Space wrap>
@@ -767,21 +848,35 @@ export default function AdminContentFactory() {
         />
       ) : null}
 
+      {!accountProfile.freePublishEnabled ? (
+        <Alert
+          type="info"
+          showIcon
+          message={`${accountProfile.name} 是订阅号，当前不启用一键发布`}
+          description={`AppID：${accountProfile.appId}。订阅号无 freepublish 权限，内容工厂只负责生成正文和创建微信草稿，最终发布请在公众号后台人工确认。`}
+        />
+      ) : null}
+
       <section className="content-factory__workspace">
         <Card className="content-factory__panel" title="话题研究与生成">
           <div className="content-factory__category-strip">
             <div className="content-factory__category-control">
               <Typography.Text strong>内容栏目</Typography.Text>
-              <Segmented
+              <AutoComplete
                 value={activeCategory}
-                options={(Object.keys(categoryMeta) as ContentArticleCategory[]).map((key) => ({
-                  label: categoryMeta[key].label,
-                  value: key,
-                }))}
-                onChange={(value) => changeCategory(value as ContentArticleCategory)}
+                options={categoryOptions}
+                onChange={(value) => {
+                  setActiveCategory(value)
+                  generateForm.setFieldValue('category', value)
+                }}
+                onSelect={(value) => changeCategory(value, Boolean(categoryMeta[value]))}
+                onBlur={() => changeCategory(activeCategory)}
+                filterOption={(inputValue, option) =>
+                  Boolean(option?.label?.toString().includes(inputValue) || option?.value?.toString().includes(inputValue))
+                }
               />
             </div>
-            <Typography.Text type="secondary">{categoryMeta[activeCategory].note}</Typography.Text>
+            <Typography.Text type="secondary">{activeCategoryMeta.note}</Typography.Text>
           </div>
 
           <Form
@@ -837,7 +932,7 @@ export default function AdminContentFactory() {
                 </Button>
               </Space>
               <Space size={8} wrap>
-                <Tag color={categoryMeta[activeCategory].color}>{categoryMeta[activeCategory].label}</Tag>
+                <Tag color={activeCategoryMeta.color}>{activeCategoryMeta.label}</Tag>
                 <Tag color={selectedTopicIds.length ? 'processing' : 'default'}>
                   已选 {selectedTopicIds.length || Math.min(5, hotTopics.length)}
                 </Tag>
@@ -889,14 +984,14 @@ export default function AdminContentFactory() {
               </Form.Item>
             </div>
             <Form.Item name="angle" label="切入角度">
-              <Input placeholder="例如：从普通人的机会和风险切入" />
+              <Input placeholder="例如：先讲清热点背后的信息差，再落到普通人会受什么影响" />
             </Form.Item>
             <div className="content-factory__form-grid">
               <Form.Item name="audience" label="目标读者">
-                <Input placeholder="例如：公众号运营者、AI 工具使用者" />
+                <Input placeholder="例如：想快速看懂热点、不想被标题带节奏的读者" />
               </Form.Item>
               <Form.Item name="tone" label="语气">
-                <Input placeholder="例如：清醒、有洞察、有行动感" />
+                <Input placeholder="例如：像朋友聊天，口语化，有判断但不端着" />
               </Form.Item>
             </div>
             <div className="content-factory__form-grid content-factory__form-grid--three">
@@ -913,17 +1008,14 @@ export default function AdminContentFactory() {
                 <Switch
                   checkedChildren="开启"
                   unCheckedChildren="关闭"
-                  disabled={Boolean(watchedAutoPublish) || !status?.wechatReady}
+                  disabled={!status?.wechatReady}
                 />
               </Form.Item>
-              <Form.Item name="autoPublish" label="生成后发布" valuePropName="checked">
+              <Form.Item name="autoPublish" label="生成后发布（订阅号不可用）" valuePropName="checked">
                 <Switch
                   checkedChildren="开启"
                   unCheckedChildren="关闭"
-                  disabled={!status?.wechatReady}
-                  onChange={(checked) => {
-                    if (checked) generateForm.setFieldValue('autoWechatDraft', false)
-                  }}
+                  disabled
                 />
               </Form.Item>
             </div>
@@ -983,7 +1075,7 @@ export default function AdminContentFactory() {
               dataSource={articles}
               renderItem={(article) => {
                 const meta = statusMeta[article.status]
-                const category = article.category ? categoryMeta[article.category] : null
+                const category = article.category ? getCategoryMeta(article.category) : null
                 return (
                   <List.Item
                     className="content-factory__article-row"
@@ -1127,6 +1219,39 @@ export default function AdminContentFactory() {
                             {record.url || record.errorMessage || formatDateTime(record.createdAt)}
                           </div>
                         </div>
+                        <Space size={4}>
+                          {record.mediaId ? (
+                            <Tooltip title="复制 media_id">
+                              <Button
+                                size="small"
+                                type="text"
+                                icon={<CopyOutlined />}
+                                onClick={() => void copyText(record.mediaId)}
+                              />
+                            </Tooltip>
+                          ) : null}
+                          {record.publishId ? (
+                            <Tooltip title="复制 publish_id">
+                              <Button
+                                size="small"
+                                type="text"
+                                icon={<CopyOutlined />}
+                                onClick={() => void copyText(record.publishId)}
+                              />
+                            </Tooltip>
+                          ) : null}
+                          {record.url ? (
+                            <Tooltip title="打开记录">
+                              <Button
+                                size="small"
+                                type="text"
+                                icon={<LinkOutlined />}
+                                href={record.url}
+                                target={record.url.startsWith('http') ? '_blank' : undefined}
+                              />
+                            </Tooltip>
+                          ) : null}
+                        </Space>
                       </List.Item>
                     )
                   }}
@@ -1183,15 +1308,15 @@ export default function AdminContentFactory() {
                 存为微信草稿
               </Button>
             </Tooltip>
-            <Tooltip title={status?.wechatReady ? '' : '请先配置微信公众号 AppID 和 AppSecret'}>
+            <Tooltip title={accountProfile.freePublishEnabled ? (status?.wechatReady ? '' : '请先配置微信公众号 AppID 和 AppSecret') : '订阅号无 freepublish 权限，请在微信公众平台草稿箱人工发布'}>
               <Button
                 type="primary"
                 icon={<SendOutlined />}
                 onClick={publishWechat}
                 loading={wechatAction === 'publish'}
-                disabled={!activeArticle || !status?.wechatReady}
+                disabled={!activeArticle || publishBlocked}
               >
-                一键发布
+                一键发布已关闭
               </Button>
             </Tooltip>
           </Space>
@@ -1201,6 +1326,24 @@ export default function AdminContentFactory() {
           <Form form={articleForm} layout="vertical" className="content-factory__article-form">
             {activeArticle.errorMessage ? (
               <Alert type="warning" showIcon message={activeArticle.errorMessage} />
+            ) : null}
+
+            {isLocalWechatDraft ? (
+              <Alert
+                type="info"
+                showIcon
+                message="当前是本站本地草稿"
+                description="这条记录还没有进入微信公众号草稿箱。补齐公众号配置后，可再次点击“存为微信草稿”生成真实 media_id。"
+              />
+            ) : null}
+
+            {missingWechatCover ? (
+              <Alert
+                type="warning"
+                showIcon
+                message="微信草稿缺少封面素材"
+                description="微信草稿箱要求封面 thumb_media_id。请给文章设置封面图，或在系统配置中填写 wechat.coverMediaId。"
+              />
             ) : null}
 
             {riskCount > 0 ? (
@@ -1228,6 +1371,15 @@ export default function AdminContentFactory() {
 
             <Form.Item name="title" label="标题" rules={[{ required: true, message: '请输入标题' }]}>
               <Input maxLength={96} showCount />
+            </Form.Item>
+            <Form.Item name="category" label="内容栏目">
+              <AutoComplete
+                options={categoryOptions}
+                placeholder="例如：AI 工具、创业观察、读书笔记"
+                filterOption={(inputValue, option) =>
+                  Boolean(option?.label?.toString().includes(inputValue) || option?.value?.toString().includes(inputValue))
+                }
+              />
             </Form.Item>
             <Form.Item name="digest" label="摘要">
               <Input.TextArea rows={2} maxLength={120} showCount />

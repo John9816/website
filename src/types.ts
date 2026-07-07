@@ -76,7 +76,7 @@ export interface ContentHotTopicsView {
 
 export type ContentArticleStatus = 'DRAFT' | 'WECHAT_DRAFT' | 'PUBLISHED'
 export type ContentArticleLength = 'short' | 'standard' | 'long'
-export type ContentArticleCategory = 'emotion_psychology' | 'history_philosophy' | 'society_livelihood'
+export type ContentArticleCategory = string
 export type ContentArticleLayoutTheme = 'clean' | 'warm' | 'magazine'
 export type ContentArticleImageMode = 'generate' | 'fetch' | 'none'
 export type ContentArticleResearchDepth = 'quick' | 'standard' | 'deep'
@@ -170,6 +170,7 @@ export interface ContentArticleGeneratePayload {
 export interface ContentWechatDraftResult {
   mediaId: string
   url?: string | null
+  mode?: 'wechat' | 'local'
 }
 
 export interface LoginResponse {

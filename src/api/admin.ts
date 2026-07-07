@@ -134,7 +134,7 @@ export const adminGenerateContentArticle = (body: ContentArticleGeneratePayload)
 
 export const adminUpdateContentArticle = (
   id: number,
-  body: Pick<ContentArticle, 'title' | 'digest' | 'contentMarkdown' | 'contentHtml' | 'coverImageUrl'>,
+  body: Pick<ContentArticle, 'title' | 'category' | 'digest' | 'contentMarkdown' | 'contentHtml' | 'coverImageUrl'>,
 ) =>
   request<ContentArticle>(`/api/admin/content/articles/${id}`, {
     method: 'PUT',
