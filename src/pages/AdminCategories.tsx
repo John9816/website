@@ -1,26 +1,50 @@
 import { useEffect, useState } from 'react'
 import {
-  Table,
+  App as AntApp,
   Button,
-  Space,
-  Modal,
+  Card,
   Form,
   Input,
   InputNumber,
+  Modal,
   Popconfirm,
-  App as AntApp,
-  Card,
   Skeleton,
+  Space,
+  Table,
 } from 'antd'
-import { PlusOutlined, EditOutlined, DeleteOutlined, ReloadOutlined } from '@ant-design/icons'
+import { DeleteOutlined, EditOutlined, PlusOutlined, ReloadOutlined } from '@ant-design/icons'
 import {
-  adminListCategories,
   adminCreateCategory,
-  adminUpdateCategory,
   adminDeleteCategory,
+  adminListCategories,
+  adminUpdateCategory,
 } from '../api/admin'
-import type { Category } from '../types'
 import CategoryIcon from '../components/CategoryIcon'
+import type { Category } from '../types'
+import '../styles/admin-categories.css'
+
+const BUILT_IN_CATEGORY_ICONS = [
+  { value: 'folder', label: '文件夹' },
+  { value: 'navigation', label: '导航' },
+  { value: 'code', label: '代码' },
+  { value: 'terminal', label: '终端' },
+  { value: 'tool', label: '工具' },
+  { value: 'book-open', label: '学习' },
+  { value: 'briefcase', label: '职场' },
+  { value: 'newspaper', label: '资讯' },
+  { value: 'sparkles', label: 'AI' },
+  { value: 'database', label: '数据' },
+  { value: 'cloud', label: '云服务' },
+  { value: 'globe', label: '网站' },
+  { value: 'rocket', label: '产品' },
+  { value: 'image', label: '图片' },
+  { value: 'music', label: '音乐' },
+  { value: 'gamepad-2', label: '游戏' },
+  { value: 'shopping-bag', label: '购物' },
+  { value: 'heart', label: '收藏' },
+  { value: 'star', label: '推荐' },
+  { value: 'settings', label: '设置' },
+]
 
 export default function AdminCategories() {
   const [rows, setRows] = useState<Category[]>([])
@@ -44,7 +68,7 @@ export default function AdminCategories() {
   }
 
   useEffect(() => {
-    load()
+    void load()
   }, [])
 
   const openCreate = () => {
@@ -53,6 +77,7 @@ export default function AdminCategories() {
     form.setFieldsValue({ sortOrder: (rows.at(-1)?.sortOrder ?? 0) + 1 })
     setOpen(true)
   }
+
   const openEdit = (row: Category) => {
     setEditing(row)
     form.setFieldsValue(row)
@@ -71,7 +96,7 @@ export default function AdminCategories() {
         message.success('创建成功')
       }
       setOpen(false)
-      load()
+      void load()
     } catch (e) {
       message.error((e as Error).message)
     } finally {
@@ -83,21 +108,21 @@ export default function AdminCategories() {
     try {
       await adminDeleteCategory(id)
       message.success('删除成功')
-      load()
+      void load()
     } catch (e) {
       message.error((e as Error).message)
     }
   }
 
   return (
-    <div style={{ display: 'flex', flexDirection: 'column', gap: 24 }}>
-      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+    <div className="admin-categories">
+      <div className="admin-categories__header">
         <div>
-          <h2 style={{ margin: 0, fontSize: 24, fontWeight: 600 }}>分类管理</h2>
-          <p style={{ margin: '4px 0 0', color: 'rgba(0,0,0,0.45)' }}>管理导航站的分类目录和排序</p>
+          <h2>分类管理</h2>
+          <p>管理导航站的分类目录和排序</p>
         </div>
         <Space>
-          <Button icon={<ReloadOutlined />} onClick={load} loading={loading}>
+          <Button icon={<ReloadOutlined />} onClick={() => void load()} loading={loading}>
             刷新
           </Button>
           <Button type="primary" size="large" icon={<PlusOutlined />} onClick={openCreate}>
@@ -106,9 +131,9 @@ export default function AdminCategories() {
         </Space>
       </div>
 
-      <Card styles={{ body: { padding: 0 } }} style={{ overflow: 'hidden', border: 'none', boxShadow: '0 1px 2px 0 rgba(0, 0, 0, 0.03), 0 1px 6px -1px rgba(0, 0, 0, 0.02), 0 2px 4px 0 rgba(0, 0, 0, 0.02)' }}>
+      <Card className="admin-categories__card" styles={{ body: { padding: 0 } }}>
         {loading && rows.length === 0 ? (
-          <div style={{ padding: 24 }}>
+          <div className="admin-categories__skeleton">
             <Skeleton active paragraph={{ rows: 8 }} />
           </div>
         ) : (
@@ -124,7 +149,7 @@ export default function AdminCategories() {
                 dataIndex: 'sortOrder',
                 width: 80,
                 align: 'center',
-                render: (v) => <span style={{ fontWeight: 600, color: '#e11d48' }}>{v}</span>,
+                render: (v) => <span className="admin-categories__sort">{v}</span>,
               },
               {
                 title: '图标',
@@ -132,17 +157,7 @@ export default function AdminCategories() {
                 width: 80,
                 align: 'center',
                 render: (v: string | null) => (
-                  <div
-                    style={{
-                      width: 40,
-                      height: 40,
-                      borderRadius: 8,
-                      background: 'rgba(225, 29, 72, 0.05)',
-                      display: 'flex',
-                      alignItems: 'center',
-                      justifyContent: 'center',
-                    }}
-                  >
+                  <div className="admin-categories__icon-preview">
                     <CategoryIcon icon={v} size={20} />
                   </div>
                 ),
@@ -150,12 +165,12 @@ export default function AdminCategories() {
               {
                 title: '名称',
                 dataIndex: 'name',
-                render: (v) => <span style={{ fontWeight: 500 }}>{v}</span>,
+                render: (v) => <span className="admin-categories__name">{v}</span>,
               },
               {
                 title: '图标标识',
                 dataIndex: 'icon',
-                render: (v) => (v ? <code style={{ fontSize: 12, background: 'rgba(0,0,0,0.04)', padding: '2px 6px', borderRadius: 4 }}>{v}</code> : '-'),
+                render: (v) => (v ? <code className="admin-categories__code">{v}</code> : '-'),
               },
               {
                 title: '操作',
@@ -164,18 +179,13 @@ export default function AdminCategories() {
                 align: 'center',
                 render: (_, row) => (
                   <Space size="middle">
-                    <Button
-                      type="text"
-                      icon={<EditOutlined />}
-                      onClick={() => openEdit(row)}
-                      style={{ color: '#1677ff' }}
-                    >
+                    <Button type="text" icon={<EditOutlined />} onClick={() => openEdit(row)}>
                       编辑
                     </Button>
                     <Popconfirm
                       title="确认删除？"
-                      description="该分类下的所有链接也将同步删除，此操作不可恢复。"
-                      onConfirm={() => del(row.id)}
+                      description="该分类下的所有链接也会同步删除，此操作不可恢复。"
+                      onConfirm={() => void del(row.id)}
                       okText="确认删除"
                       cancelText="取消"
                       okButtonProps={{ danger: true }}
@@ -196,13 +206,13 @@ export default function AdminCategories() {
         title={editing ? '编辑分类' : '新建分类'}
         open={open}
         onCancel={() => setOpen(false)}
-        onOk={submit}
+        onOk={() => void submit()}
         confirmLoading={submitLoading}
         destroyOnClose
         centered
-        width={480}
+        width={560}
       >
-        <Form layout="vertical" form={form} style={{ marginTop: 24 }}>
+        <Form layout="vertical" form={form} className="admin-categories__form">
           <Form.Item
             name="name"
             label="分类名称"
@@ -213,9 +223,25 @@ export default function AdminCategories() {
           <Form.Item
             name="icon"
             label="图标/图片"
-            tooltip="支持 Lucide 图标名（如 Navigation）或图片 URL"
+            tooltip="支持内置图标标识、Lucide 图标名或图片 URL"
           >
-            <Input placeholder="如：Navigation 或 https://..." size="large" />
+            <Input placeholder="例如：navigation 或 https://..." size="large" />
+          </Form.Item>
+          <Form.Item label="内置图标">
+            <div className="admin-category-icons">
+              {BUILT_IN_CATEGORY_ICONS.map((item) => (
+                <button
+                  key={item.value}
+                  type="button"
+                  className="admin-category-icons__item"
+                  onClick={() => form.setFieldValue('icon', item.value)}
+                  title={item.label}
+                >
+                  <CategoryIcon icon={item.value} size={20} />
+                  <span>{item.label}</span>
+                </button>
+              ))}
+            </div>
           </Form.Item>
           <Form.Item
             name="sortOrder"
