@@ -27,6 +27,9 @@ import { DEFAULT_PAGE_SIZE, PAGE_SIZE_OPTIONS } from '../constants/pagination'
 import type { Category, NavLink } from '../types'
 import CategoryIcon from '../components/CategoryIcon'
 
+const sortLinks = (items: NavLink[]) =>
+  [...items].sort((a, b) => a.sortOrder - b.sortOrder || a.id - b.id)
+
 export default function AdminLinks() {
   const [rows, setRows] = useState<NavLink[]>([])
   const [cats, setCats] = useState<Category[]>([])
@@ -45,7 +48,7 @@ export default function AdminLinks() {
         adminListLinks(categoryId),
         adminListCategories(),
       ])
-      setRows(links)
+      setRows(sortLinks(links))
       setCats(categories.sort((a, b) => a.sortOrder - b.sortOrder))
     } catch (e) {
       message.error((e as Error).message)
@@ -55,7 +58,7 @@ export default function AdminLinks() {
   }
 
   useEffect(() => {
-    load()
+    void load()
   }, [])
 
   const catMap = useMemo(() => {
@@ -83,15 +86,20 @@ export default function AdminLinks() {
     const values = await form.validateFields()
     setSubmitLoading(true)
     try {
+      const saved = editing ? await adminUpdateLink(editing.id, values) : await adminCreateLink(values)
+      setRows((previous) => {
+        const matchesCurrentFilter = filterCat === undefined || saved.categoryId === filterCat
+        const withoutSaved = previous.filter((item) => item.id !== saved.id)
+        return matchesCurrentFilter ? sortLinks([saved, ...withoutSaved]) : withoutSaved
+      })
       if (editing) {
-        await adminUpdateLink(editing.id, values)
         message.success('更新成功')
       } else {
-        await adminCreateLink(values)
         message.success('创建成功')
       }
       setOpen(false)
-      load(filterCat)
+      setEditing(null)
+      void load(filterCat)
     } catch (e) {
       message.error((e as Error).message)
     } finally {
@@ -102,8 +110,9 @@ export default function AdminLinks() {
   const del = async (id: number) => {
     try {
       await adminDeleteLink(id)
+      setRows((previous) => previous.filter((item) => item.id !== id))
       message.success('删除成功')
-      load(filterCat)
+      void load(filterCat)
     } catch (e) {
       message.error((e as Error).message)
     }
@@ -125,11 +134,11 @@ export default function AdminLinks() {
             options={cats.map((c) => ({ value: c.id, label: c.name }))}
             onChange={(v) => {
               setFilterCat(v)
-              load(v)
+              void load(v)
             }}
             size="large"
           />
-          <Button icon={<ReloadOutlined />} onClick={() => load(filterCat)} loading={loading} size="large">
+          <Button icon={<ReloadOutlined />} onClick={() => void load(filterCat)} loading={loading} size="large">
             刷新
           </Button>
           <Button type="primary" size="large" icon={<PlusOutlined />} onClick={openCreate}>
@@ -254,7 +263,7 @@ export default function AdminLinks() {
                     </Button>
                     <Popconfirm
                       title="确认删除该链接？"
-                      onConfirm={() => del(row.id)}
+                      onConfirm={() => void del(row.id)}
                       okText="确认删除"
                       cancelText="取消"
                       okButtonProps={{ danger: true }}

@@ -46,6 +46,9 @@ const BUILT_IN_CATEGORY_ICONS = [
   { value: 'settings', label: '设置' },
 ]
 
+const sortCategories = (items: Category[]) =>
+  [...items].sort((a, b) => a.sortOrder - b.sortOrder || a.id - b.id)
+
 export default function AdminCategories() {
   const [rows, setRows] = useState<Category[]>([])
   const [loading, setLoading] = useState(false)
@@ -59,7 +62,7 @@ export default function AdminCategories() {
     setLoading(true)
     try {
       const data = await adminListCategories()
-      setRows(data.sort((a, b) => a.sortOrder - b.sortOrder))
+      setRows(sortCategories(data))
     } catch (e) {
       message.error((e as Error).message)
     } finally {
@@ -88,14 +91,19 @@ export default function AdminCategories() {
     const values = await form.validateFields()
     setSubmitLoading(true)
     try {
+      const saved = editing
+        ? await adminUpdateCategory(editing.id, values)
+        : await adminCreateCategory(values)
+      setRows((previous) =>
+        sortCategories([saved, ...previous.filter((item) => item.id !== saved.id)]),
+      )
       if (editing) {
-        await adminUpdateCategory(editing.id, values)
         message.success('更新成功')
       } else {
-        await adminCreateCategory(values)
         message.success('创建成功')
       }
       setOpen(false)
+      setEditing(null)
       void load()
     } catch (e) {
       message.error((e as Error).message)
@@ -107,6 +115,7 @@ export default function AdminCategories() {
   const del = async (id: number) => {
     try {
       await adminDeleteCategory(id)
+      setRows((previous) => previous.filter((item) => item.id !== id))
       message.success('删除成功')
       void load()
     } catch (e) {

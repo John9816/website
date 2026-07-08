@@ -22,6 +22,9 @@ import {
 } from '../api/admin'
 import type { SysConfig } from '../types'
 
+const sortConfigs = (items: SysConfig[]) =>
+  [...items].sort((a, b) => a.configKey.localeCompare(b.configKey) || a.id - b.id)
+
 export default function AdminConfigs() {
   const [rows, setRows] = useState<SysConfig[]>([])
   const [loading, setLoading] = useState(false)
@@ -34,7 +37,7 @@ export default function AdminConfigs() {
   const load = async () => {
     setLoading(true)
     try {
-      setRows(await adminListConfigs())
+      setRows(sortConfigs(await adminListConfigs()))
     } catch (e) {
       message.error((e as Error).message)
     } finally {
@@ -43,7 +46,7 @@ export default function AdminConfigs() {
   }
 
   useEffect(() => {
-    load()
+    void load()
   }, [])
 
   const openCreate = () => {
@@ -61,15 +64,18 @@ export default function AdminConfigs() {
     const values = await form.validateFields()
     setSubmitLoading(true)
     try {
+      const saved = editing ? await adminUpdateConfig(editing.id, values) : await adminCreateConfig(values)
+      setRows((previous) =>
+        sortConfigs([saved, ...previous.filter((item) => item.id !== saved.id)]),
+      )
       if (editing) {
-        await adminUpdateConfig(editing.id, values)
         message.success('更新成功')
       } else {
-        await adminCreateConfig(values)
         message.success('创建成功')
       }
       setOpen(false)
-      load()
+      setEditing(null)
+      void load()
     } catch (e) {
       message.error((e as Error).message)
     } finally {
@@ -80,8 +86,9 @@ export default function AdminConfigs() {
   const del = async (id: number) => {
     try {
       await adminDeleteConfig(id)
+      setRows((previous) => previous.filter((item) => item.id !== id))
       message.success('删除成功')
-      load()
+      void load()
     } catch (e) {
       message.error((e as Error).message)
     }
@@ -97,7 +104,7 @@ export default function AdminConfigs() {
           </Typography.Paragraph>
         </div>
         <Space size="middle">
-          <Button icon={<ReloadOutlined />} onClick={load} loading={loading} size="large">
+          <Button icon={<ReloadOutlined />} onClick={() => void load()} loading={loading} size="large">
             刷新
           </Button>
           <Button type="primary" size="large" icon={<PlusOutlined />} onClick={openCreate}>
@@ -183,7 +190,7 @@ export default function AdminConfigs() {
         title={editing ? '编辑配置' : '新建配置'}
         open={open}
         onCancel={() => setOpen(false)}
-        onOk={submit}
+        onOk={() => void submit()}
         confirmLoading={submitLoading}
         destroyOnClose
         centered
