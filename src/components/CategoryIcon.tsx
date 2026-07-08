@@ -115,12 +115,17 @@ function normalizeLucideIconName(value: string) {
 
 export default function CategoryIcon({ icon, alt, size = 20 }: Props) {
   const [dynamicIcon, setDynamicIcon] = useState<LucideIconComponent | null>(null)
+  const [imageFailed, setImageFailed] = useState(false)
 
   const iconKey = useMemo(() => {
     if (!icon || isUrl(icon)) return null
     return normalizeLucideIconName(icon)
   }, [icon])
   const staticIcon = iconKey ? staticIconRegistry[iconKey] ?? null : null
+
+  useEffect(() => {
+    setImageFailed(false)
+  }, [icon])
 
   useEffect(() => {
     let cancelled = false
@@ -171,7 +176,7 @@ export default function CategoryIcon({ icon, alt, size = 20 }: Props) {
 
   const node = useMemo(() => {
     if (!icon) return null
-    if (isUrl(icon)) {
+    if (isUrl(icon) && !imageFailed) {
       return (
         <img
           src={icon}
@@ -180,8 +185,8 @@ export default function CategoryIcon({ icon, alt, size = 20 }: Props) {
           height={size}
           style={{ borderRadius: 4, objectFit: 'cover' }}
           onError={(e) => {
-            const el = e.currentTarget
-            el.style.display = 'none'
+            e.currentTarget.removeAttribute('src')
+            setImageFailed(true)
           }}
         />
       )
