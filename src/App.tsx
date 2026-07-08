@@ -7,6 +7,7 @@ import { MusicPlayerProvider, useMusicPlayer } from './context/MusicPlayerContex
 import { ThemeProvider, useTheme } from './context/ThemeContext'
 import { usePageTitle } from './hooks/usePageTitle'
 import BeianFooter from './components/BeianFooter'
+import RouteErrorBoundary from './components/RouteErrorBoundary'
 
 const HomePage = lazy(() => import('./pages/HomePage'))
 const GlobalMusicDock = lazy(() => import('./components/GlobalMusicDock'))
@@ -32,6 +33,15 @@ const AdminContentFactory = lazy(() => import('./pages/AdminContentFactory'))
 const AdminPassword = lazy(() => import('./pages/AdminPassword'))
 const AdminKnowledgeBase = lazy(() => import('./pages/AdminKnowledgeBase'))
 const KbSharePage = lazy(() => import('./pages/KbSharePage'))
+
+const routePreloaders = [
+  () => import('./pages/HomePage'),
+  () => import('./pages/MusicLayout'),
+  () => import('./pages/MusicPage'),
+  () => import('./pages/AiChatPage'),
+  () => import('./pages/AiImagePage'),
+  () => import('./pages/AdminLayout'),
+]
 
 function RouteFallback() {
   return (
@@ -162,61 +172,96 @@ function GlobalBeianFooterGate() {
   return <BeianFooter />
 }
 
+function RoutePreloader() {
+  useEffect(() => {
+    let cancelled = false
+    const preload = () => {
+      if (cancelled) return
+      routePreloaders.forEach((load) => {
+        void load().catch(() => {
+          // The route error boundary handles failed chunks if the user navigates there later.
+        })
+      })
+    }
+
+    const idleCallback = window.requestIdleCallback
+    const cancelIdleCallback = window.cancelIdleCallback
+    if (idleCallback && cancelIdleCallback) {
+      const idleId = idleCallback(preload, { timeout: 2500 })
+      return () => {
+        cancelled = true
+        cancelIdleCallback(idleId)
+      }
+    }
+
+    const timer = globalThis.setTimeout(preload, 1200)
+    return () => {
+      cancelled = true
+      globalThis.clearTimeout(timer)
+    }
+  }, [])
+
+  return null
+}
+
 export default function App() {
   return (
     <ThemeProvider>
       <ThemedAntd>
         <AuthProvider>
           <MusicPlayerProvider>
-            <BrowserRouter>
+            <BrowserRouter future={{ v7_startTransition: true, v7_relativeSplatPath: true }}>
               <a className="skip-link" href="#app-route-start">
                 跳到主要内容
               </a>
               <PageTitleSetter />
+              <RoutePreloader />
               <RouteFocusManager />
               <div id="app-route-start" className="app-route-start" tabIndex={-1} />
-              <Suspense fallback={<RouteFallback />}>
-                <Routes>
-                  <Route path="/" element={<HomePage />} />
-                  <Route path="/ai-chat" element={<AiChatPage />} />
-                  <Route path="/ai-image" element={<AiImagePage />} />
-                  <Route path="/resume" element={<ResumePage />} />
-                  <Route path="/kb/share/:token" element={<KbSharePage />} />
-                  <Route path="/music" element={<MusicLayout />}>
-                    <Route index element={<MusicPage />} />
-                    <Route path="share/:token" element={<MusicSharePage />} />
-                    <Route
-                      path="toplist/:source/:id"
-                      element={<MusicToplistDetailPage />}
-                    />
-                    <Route
-                      path="playlist/:source/:id"
-                      element={<MusicPlaylistDetailPage />}
-                    />
-                    <Route
-                      path="album/:source/:id"
-                      element={<MusicAlbumDetailPage />}
-                    />
-                    <Route
-                      path="my-playlist/:id"
-                      element={<MusicMyPlaylistDetailPage />}
-                    />
-                  </Route>
-                  <Route path="/login" element={<LoginPage />} />
-                  <Route path="/register" element={<RegisterPage />} />
-                  <Route path="/admin/login" element={<LoginPage />} />
-                  <Route path="/admin" element={<AdminLayout />}>
-                    <Route index element={<Navigate to="categories" replace />} />
-                    <Route path="categories" element={<AdminCategories />} />
-                    <Route path="links" element={<AdminLinks />} />
-                    <Route path="configs" element={<AdminConfigs />} />
-                    <Route path="content" element={<AdminContentFactory />} />
-                    <Route path="kb" element={<AdminKnowledgeBase />} />
-                    <Route path="password" element={<AdminPassword />} />
-                  </Route>
-                  <Route path="*" element={<Navigate to="/" replace />} />
-                </Routes>
-              </Suspense>
+              <RouteErrorBoundary>
+                <Suspense fallback={<RouteFallback />}>
+                  <Routes>
+                    <Route path="/" element={<HomePage />} />
+                    <Route path="/ai-chat" element={<AiChatPage />} />
+                    <Route path="/ai-image" element={<AiImagePage />} />
+                    <Route path="/resume" element={<ResumePage />} />
+                    <Route path="/kb/share/:token" element={<KbSharePage />} />
+                    <Route path="/music" element={<MusicLayout />}>
+                      <Route index element={<MusicPage />} />
+                      <Route path="share/:token" element={<MusicSharePage />} />
+                      <Route
+                        path="toplist/:source/:id"
+                        element={<MusicToplistDetailPage />}
+                      />
+                      <Route
+                        path="playlist/:source/:id"
+                        element={<MusicPlaylistDetailPage />}
+                      />
+                      <Route
+                        path="album/:source/:id"
+                        element={<MusicAlbumDetailPage />}
+                      />
+                      <Route
+                        path="my-playlist/:id"
+                        element={<MusicMyPlaylistDetailPage />}
+                      />
+                    </Route>
+                    <Route path="/login" element={<LoginPage />} />
+                    <Route path="/register" element={<RegisterPage />} />
+                    <Route path="/admin/login" element={<LoginPage />} />
+                    <Route path="/admin" element={<AdminLayout />}>
+                      <Route index element={<Navigate to="categories" replace />} />
+                      <Route path="categories" element={<AdminCategories />} />
+                      <Route path="links" element={<AdminLinks />} />
+                      <Route path="configs" element={<AdminConfigs />} />
+                      <Route path="content" element={<AdminContentFactory />} />
+                      <Route path="kb" element={<AdminKnowledgeBase />} />
+                      <Route path="password" element={<AdminPassword />} />
+                    </Route>
+                    <Route path="*" element={<Navigate to="/" replace />} />
+                  </Routes>
+                </Suspense>
+              </RouteErrorBoundary>
               <GlobalBeianFooterGate />
               <GlobalMusicDockGate />
             </BrowserRouter>
