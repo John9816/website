@@ -134,6 +134,9 @@ export const adminListContentArticles = (page = 0, size = DEFAULT_PAGE_SIZE) =>
     query: { page, size },
   })
 
+export const adminGetContentArticle = (id: number) =>
+  request<ContentArticle>(`/api/admin/content/articles/${id}`, { auth: true })
+
 export const adminGenerateContentArticle = (body: ContentArticleGeneratePayload) =>
   request<ContentArticle>('/api/admin/content/articles/generate', {
     method: 'POST',

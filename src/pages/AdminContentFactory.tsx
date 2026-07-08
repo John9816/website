@@ -45,6 +45,7 @@ import {
   adminDeleteContentArticle,
   adminGenerateContentArticle,
   adminGetContentAutomation,
+  adminGetContentArticle,
   adminGetContentStatus,
   adminGetHotTopics,
   adminListContentArticles,
@@ -460,6 +461,7 @@ export default function AdminContentFactory() {
   const [statusLoading, setStatusLoading] = useState(false)
   const [hotLoading, setHotLoading] = useState(false)
   const [articlesLoading, setArticlesLoading] = useState(false)
+  const [articleDetailLoading, setArticleDetailLoading] = useState(false)
   const [automationLoading, setAutomationLoading] = useState(false)
   const [generating, setGenerating] = useState(false)
   const [agentRunning, setAgentRunning] = useState(false)
@@ -692,9 +694,19 @@ export default function AdminContentFactory() {
     }
   }
 
-  const openArticle = (article: ContentArticle) => {
+  const openArticle = async (article: ContentArticle) => {
     setActiveArticle(article)
     setDrawerOpen(true)
+    setArticleDetailLoading(true)
+    try {
+      const detail = await adminGetContentArticle(article.id)
+      setActiveArticle((current) => (current?.id === article.id ? detail : current))
+      setArticles((previous) => previous.map((item) => (item.id === detail.id ? { ...item, ...detail } : item)))
+    } catch (error) {
+      message.error((error as Error).message)
+    } finally {
+      setArticleDetailLoading(false)
+    }
   }
 
   const saveArticle = async () => {
@@ -1326,7 +1338,12 @@ export default function AdminContentFactory() {
             <Tag color={publishBlocked ? 'warning' : 'success'}>
               {publishBlocked ? '发布待检查' : '发布就绪'}
             </Tag>
-            <Button icon={<SaveOutlined />} onClick={() => void saveArticle()} loading={saving} disabled={!activeArticle}>
+            <Button
+              icon={<SaveOutlined />}
+              onClick={() => void saveArticle()}
+              loading={saving}
+              disabled={!activeArticle || articleDetailLoading}
+            >
               保存
             </Button>
             <Button
@@ -1343,7 +1360,7 @@ export default function AdminContentFactory() {
                 icon={<CloudUploadOutlined />}
                 onClick={() => void createWechatDraft()}
                 loading={wechatAction === 'draft'}
-                disabled={!activeArticle || !status?.wechatReady}
+                disabled={!activeArticle || articleDetailLoading || !status?.wechatReady}
               >
                 存为微信草稿
               </Button>
@@ -1354,7 +1371,7 @@ export default function AdminContentFactory() {
                 icon={<SendOutlined />}
                 onClick={publishWechat}
                 loading={wechatAction === 'publish'}
-                disabled={!activeArticle || publishBlocked}
+                disabled={!activeArticle || articleDetailLoading || publishBlocked}
               >
                 一键发布已关闭
               </Button>
@@ -1364,6 +1381,8 @@ export default function AdminContentFactory() {
       >
         {activeArticle ? (
           <Form form={articleForm} layout="vertical" className="content-factory__article-form">
+            {articleDetailLoading ? <Skeleton active paragraph={{ rows: 3 }} /> : null}
+
             {activeArticle.errorMessage ? (
               <Alert type="warning" showIcon message={activeArticle.errorMessage} />
             ) : null}
