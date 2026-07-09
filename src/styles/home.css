@@ -87,6 +87,73 @@ body:has(.bank-nav-page) {
   pointer-events: none;
 }
 
+.bank-top-nav {
+  position: sticky;
+  top: 0;
+  z-index: 5;
+  width: 100%;
+  max-width: 1150px;
+  min-height: 62px;
+  margin: 0 auto;
+  padding: 12px 20px 7px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+}
+
+.bank-top-brand,
+.bank-top-link {
+  height: 43px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+  border-radius: 7px;
+  backdrop-filter: blur(var(--card_filter));
+  -webkit-backdrop-filter: blur(var(--card_filter));
+  background: var(--item_bg_color);
+  color: var(--main_text_color);
+  transition:
+    transform 0.3s ease,
+    background-color 0.3s ease;
+}
+
+.bank-top-brand {
+  padding: 0 18px;
+  font-family: bankTitle, cursive;
+  font-size: 24px;
+  background-image: var(--gradient);
+  background-size: 200%;
+}
+
+.bank-top-links {
+  min-width: 0;
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+  gap: 10px;
+  overflow-x: auto;
+  scrollbar-width: none;
+}
+
+.bank-top-links::-webkit-scrollbar {
+  display: none;
+}
+
+.bank-top-link {
+  padding: 0 14px;
+  font-size: 14px;
+  white-space: nowrap;
+}
+
+.bank-top-brand:hover,
+.bank-top-link:hover,
+.bank-top-link:focus-visible {
+  transform: translateY(-2px);
+  background-color: var(--item_hover_color);
+}
+
 .zyyo-main {
   position: relative;
   z-index: 1;
@@ -94,7 +161,7 @@ body:has(.bank-nav-page) {
   flex-direction: row;
   width: 100%;
   max-width: 1150px;
-  min-height: 100dvh;
+  min-height: calc(100dvh - 62px);
   margin: 0 auto;
 }
 
@@ -627,6 +694,29 @@ body:has(.bank-nav-page) {
 @media (max-width: 800px) {
   body:has(.bank-nav-page) {
     overflow-x: hidden;
+  }
+
+  .bank-top-nav {
+    padding: 10px 20px 4px;
+    align-items: flex-start;
+    flex-direction: column;
+    gap: 8px;
+  }
+
+  .bank-top-brand {
+    height: 38px;
+    font-size: 22px;
+  }
+
+  .bank-top-links {
+    width: 100%;
+    justify-content: flex-start;
+    padding-bottom: 2px;
+  }
+
+  .bank-top-link {
+    height: 38px;
+    padding: 0 12px;
   }
 
   .zyyo-left {

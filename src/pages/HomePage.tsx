@@ -9,6 +9,12 @@ import '../styles/home.css'
 const ASSET_BASE = '/bank-nav'
 const POLL_INTERVAL_MS = 30_000
 const THEME_COOKIE = 'themeState'
+const TOP_NAV_LINKS = [
+  { to: '/music', label: '音乐' },
+  { to: '/ai-chat', label: 'AI 对话' },
+  { to: '/ai-image', label: 'AI 生图' },
+  { to: '/resume', label: '个人简历' },
+]
 
 function sortByOrder<T extends { sortOrder: number }>(items: T[]) {
   return [...items].sort((a, b) => a.sortOrder - b.sortOrder)
@@ -176,6 +182,18 @@ export default function HomePage() {
   return (
     <div className="bank-nav-page" data-bank-theme={theme}>
       <div className="zyyo-filter" />
+      <nav className="bank-top-nav" aria-label="站内导航">
+        <RouterLink className="bank-top-brand" to="/">
+          oldchen
+        </RouterLink>
+        <div className="bank-top-links">
+          {TOP_NAV_LINKS.map((link) => (
+            <RouterLink className="bank-top-link" key={link.to} to={link.to}>
+              {link.label}
+            </RouterLink>
+          ))}
+        </div>
+      </nav>
       <div className="zyyo-main">
         <aside className="zyyo-left">
           <div
