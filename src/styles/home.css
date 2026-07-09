@@ -50,6 +50,15 @@ body:has(.bank-nav-page) {
   background-attachment: fixed;
 }
 
+body:has(.bank-nav-page)::-webkit-scrollbar {
+  display: none;
+}
+
+html:has(.bank-nav-page),
+body:has(.bank-nav-page) {
+  scrollbar-width: none;
+}
+
 .bank-nav-page {
   min-height: 100dvh;
   color: var(--main_text_color);
@@ -584,6 +593,22 @@ body:has(.bank-nav-page) {
   border-radius: 8px;
   background: var(--item_bg_color);
   color: var(--main_text_color);
+}
+
+.bank-nav-page .beian-footer {
+  position: relative;
+  z-index: 1;
+  width: 100%;
+  max-width: 1150px;
+  margin: 0 auto;
+  padding: 12px 20px 24px;
+  color: rgb(255 255 255 / 76%);
+  font-family: bankUbuntu, 'PingFang SC', 'Microsoft YaHei', sans-serif;
+}
+
+.bank-nav-page .beian-footer a:hover,
+.bank-nav-page .beian-footer a:focus-visible {
+  color: #ffffff;
 }
 
 .projectItemSkeleton {

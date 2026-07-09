@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useMemo, useState } from 'react'
 import { Link as RouterLink } from 'react-router-dom'
 import { getNav } from '../api/public'
+import BeianFooter from '../components/BeianFooter'
 import CategoryIcon from '../components/CategoryIcon'
 import type { CategoryWithLinks, NavLink } from '../types'
 import { useAuth } from '../context/AuthContext'
@@ -184,7 +185,7 @@ export default function HomePage() {
       <div className="zyyo-filter" />
       <nav className="bank-top-nav" aria-label="站内导航">
         <RouterLink className="bank-top-brand" to="/">
-          oldchen
+          oldwang
         </RouterLink>
         <div className="bank-top-links">
           {TOP_NAV_LINKS.map((link) => (
@@ -238,7 +239,7 @@ export default function HomePage() {
               style={{ backgroundImage: `url(${ASSET_BASE}/static/img/logo.png)` }}
             />
             <div className="welcome">
-              Hello I&apos; m <span className="gradientText">oldchen</span>
+              Hello I&apos; m <span className="gradientText">oldwang</span>
             </div>
             <div className="description">
               A real-time <span className="purpleText">navigation</span>
@@ -336,6 +337,8 @@ export default function HomePage() {
           </main>
         </section>
       </div>
+
+      <BeianFooter />
 
       <div
         className={`tc${popupImage ? ' active' : ''}`}
