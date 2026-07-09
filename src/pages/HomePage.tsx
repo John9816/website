@@ -249,7 +249,7 @@ export default function HomePage() {
               <button
                 className="iconItem"
                 type="button"
-                onClick={() => setPopupImage(`${ASSET_BASE}/static/img/wxzsm.png`)}
+                onClick={() => setPopupImage(`${ASSET_BASE}/static/img/wxzsm.jpg`)}
               >
                 <SponsorIcon />
                 <div className="iconTip">赞助</div>
