@@ -1,5 +1,6 @@
 import { useLayoutEffect, useMemo, useRef, useState, type CSSProperties } from 'react'
 import { NavLink as RouterNavLink, useLocation } from 'react-router-dom'
+import { useAuth } from '../context/AuthContext'
 
 interface TopbarNavItem {
   to: string
@@ -46,10 +47,16 @@ function getActiveIndex(pathname: string, items: TopbarNavItem[]) {
 }
 
 export default function TopbarNav() {
+  const auth = useAuth()
   const location = useLocation()
   const navRef = useRef<HTMLElement | null>(null)
   const linkRefs = useRef<Array<HTMLAnchorElement | null>>([])
-  const activeIndex = useMemo(() => getActiveIndex(location.pathname, NAV_ITEMS), [location.pathname])
+  const isAdmin = auth.user?.role === 'ADMIN'
+  const navItems = useMemo(
+    () => NAV_ITEMS.filter((item) => isAdmin || item.to !== '/resume'),
+    [isAdmin],
+  )
+  const activeIndex = useMemo(() => getActiveIndex(location.pathname, navItems), [location.pathname, navItems])
   const [indicator, setIndicator] = useState({ left: 6, width: 88, ready: false })
 
   useLayoutEffect(() => {
@@ -94,7 +101,7 @@ export default function TopbarNav() {
         className={`topbar-nav__indicator${indicator.ready ? ' is-ready' : ''}`}
         aria-hidden="true"
       />
-      {NAV_ITEMS.map((item, index) => (
+      {navItems.map((item, index) => (
         <RouterNavLink
           key={item.to}
           ref={(element) => {

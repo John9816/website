@@ -2,7 +2,7 @@ import { Suspense, lazy, useEffect, type ReactNode } from 'react'
 import { BrowserRouter, Navigate, Route, Routes, useLocation } from 'react-router-dom'
 import { App as AntApp, ConfigProvider, Spin, theme as antdTheme } from 'antd'
 import zhCN from 'antd/locale/zh_CN'
-import { AuthProvider } from './context/AuthContext'
+import { AuthProvider, useAuth } from './context/AuthContext'
 import { MusicPlayerProvider, useMusicPlayer } from './context/MusicPlayerContext'
 import { ThemeProvider, useTheme } from './context/ThemeContext'
 import { usePageTitle } from './hooks/usePageTitle'
@@ -193,6 +193,24 @@ function GlobalBeianFooterGate() {
   return <BeianFooter />
 }
 
+function RequireAdminRoute({ children }: { children: ReactNode }) {
+  const auth = useAuth()
+
+  if (auth.profileLoading) {
+    return <RouteFallback />
+  }
+
+  if (!auth.token || !auth.user) {
+    return <Navigate to="/login" state={{ from: '/resume' }} replace />
+  }
+
+  if (auth.user.role !== 'ADMIN') {
+    return <Navigate to="/" replace />
+  }
+
+  return <>{children}</>
+}
+
 function RoutePreloader() {
   useEffect(() => {
     let cancelled = false
@@ -245,7 +263,14 @@ export default function App() {
                     <Route path="/" element={<HomePage />} />
                     <Route path="/ai-chat" element={<AiChatPage />} />
                     <Route path="/ai-image" element={<AiImagePage />} />
-                    <Route path="/resume" element={<ResumePage />} />
+                    <Route
+                      path="/resume"
+                      element={
+                        <RequireAdminRoute>
+                          <ResumePage />
+                        </RequireAdminRoute>
+                      }
+                    />
                     <Route path="/kb/share/:token" element={<KbSharePage />} />
                     <Route path="/music" element={<MusicLayout />}>
                       <Route index element={<MusicPage />} />

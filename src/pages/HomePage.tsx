@@ -22,6 +22,14 @@ function sortByOrder<T extends { sortOrder: number }>(items: T[]) {
   return [...items].sort((a, b) => a.sortOrder - b.sortOrder)
 }
 
+function isResumeLink(link: NavLink) {
+  try {
+    return new URL(link.url, window.location.origin).pathname.toLowerCase() === '/resume'
+  } catch {
+    return link.url.trim().toLowerCase() === '/resume'
+  }
+}
+
 function SectionMark() {
   return (
     <svg className="icon" viewBox="0 0 1024 1024" aria-hidden="true">
@@ -101,6 +109,7 @@ export default function HomePage() {
   const [data, setData] = useState<CategoryWithLinks[] | null>(null)
   const [error, setError] = useState<string | null>(null)
   const [popupImage, setPopupImage] = useState<string | null>(null)
+  const isAdmin = auth.user?.role === 'ADMIN'
 
   const refresh = useCallback(async (silent = false) => {
     if (!silent) setError(null)
@@ -145,11 +154,21 @@ export default function HomePage() {
 
   const categories = useMemo(
     () =>
-      sortByOrder(data ?? []).map((category) => ({
-        ...category,
-        links: sortByOrder(category.links ?? []),
-      })),
-    [data],
+      sortByOrder(data ?? []).reduce<CategoryWithLinks[]>((visibleCategories, category) => {
+        const sortedLinks = sortByOrder(category.links ?? [])
+        const links = isAdmin ? sortedLinks : sortedLinks.filter((link) => !isResumeLink(link))
+
+        if (!isAdmin && sortedLinks.length > 0 && links.length === 0) {
+          return visibleCategories
+        }
+
+        visibleCategories.push({
+          ...category,
+          links,
+        })
+        return visibleCategories
+      }, []),
+    [data, isAdmin],
   )
 
   const totals = useMemo(

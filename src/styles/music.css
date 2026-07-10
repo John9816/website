@@ -594,6 +594,57 @@
   background: transparent;
 }
 
+.music-view-controls--stack {
+  align-items: flex-start;
+  flex-direction: column;
+}
+
+.music-playlist-controls {
+  display: grid;
+  width: 100%;
+  gap: 10px;
+}
+
+.music-playlist-categories {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  min-width: 0;
+}
+
+.music-category-chip {
+  min-height: 30px;
+  padding: 0 10px;
+  border: 1px solid transparent;
+  border-radius: 999px;
+  background: transparent;
+  color: var(--text-dim);
+  font-size: 12px;
+  cursor: pointer;
+  transition:
+    background var(--motion-fast),
+    border-color var(--motion-fast),
+    color var(--motion-fast),
+    transform var(--motion-fast);
+}
+
+.music-category-chip:hover,
+.music-category-chip:focus-visible {
+  border-color: var(--border);
+  background: var(--hover);
+  color: var(--text);
+}
+
+.music-category-chip.is-active {
+  border-color: transparent;
+  background: color-mix(in srgb, var(--accent) 12%, transparent);
+  color: var(--accent);
+}
+
+.music-category-chip:active {
+  transform: scale(0.98);
+}
+
 .music-source-filter {
   display: flex;
   align-items: center;

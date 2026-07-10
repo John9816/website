@@ -109,6 +109,36 @@ const PLAYLIST_SOURCE_OPTIONS = [
   { label: '酷我', value: 'kuwo' },
 ]
 
+const NETEASE_PLAYLIST_CATEGORIES = [
+  '全部',
+  '华语',
+  '欧美',
+  '日语',
+  '韩语',
+  '粤语',
+  '流行',
+  '摇滚',
+  '民谣',
+  '电子',
+  '轻音乐',
+  '说唱',
+  '爵士',
+  '古典',
+  '清晨',
+  '夜晚',
+  '学习',
+  '工作',
+  '运动',
+  '旅行',
+  '驾车',
+  '治愈',
+  '怀旧',
+  '浪漫',
+  '安静',
+  '伤感',
+  '快乐',
+]
+
 const ALL_QUALITIES: MusicQuality[] = ['128k', '320k', 'flac', 'flac24bit']
 
 function sourceLabel(source: MusicSourceId) {
@@ -305,7 +335,6 @@ export default function MusicExplorer() {
   const [toplistLoading, setToplistLoading] = useState(false)
 
   const [playlistSource, setPlaylistSource] = useState<MusicPlaylistSourceId>('netease')
-  const [playlistCategoryDraft, setPlaylistCategoryDraft] = useState('全部')
   const [playlistCategory, setPlaylistCategory] = useState('全部')
   const [playlistPage, setPlaylistPage] = useState(1)
   const [playlistPageSize, setPlaylistPageSize] = useState(DEFAULT_PAGE_SIZE)
@@ -1098,16 +1127,22 @@ export default function MusicExplorer() {
                   }}
                 />
                 {playlistSource === 'netease' && (
-                  <div className="music-inline-controls">
-                    <Input
-                      value={playlistCategoryDraft}
-                      onChange={(event) => setPlaylistCategoryDraft(event.target.value)}
-                      onPressEnter={() => {
-                        setPlaylistCategory(playlistCategoryDraft.trim() || '全部')
-                        setPlaylistPage(1)
-                      }}
-                      placeholder="分类"
-                    />
+                  <div className="music-playlist-controls">
+                    <div className="music-playlist-categories" aria-label="网易云歌单分类">
+                      {NETEASE_PLAYLIST_CATEGORIES.map((item) => (
+                        <button
+                          key={item}
+                          type="button"
+                          className={`music-category-chip${playlistCategory === item ? ' is-active' : ''}`}
+                          onClick={() => {
+                            setPlaylistCategory(item)
+                            setPlaylistPage(1)
+                          }}
+                        >
+                          {item}
+                        </button>
+                      ))}
+                    </div>
                   </div>
                 )}
               </div>
