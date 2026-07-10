@@ -10,23 +10,7 @@
   font-display: swap;
 }
 
-.bank-nav-page[data-bank-theme='Dark'] {
-  --main_text_color: #fff;
-  --gradient: linear-gradient(120deg, rgb(133, 62, 255), #f76cc6 30%, rgb(255, 255, 255) 60%);
-  --purple_text_color: #747bff;
-  --item_bg_color: rgb(19, 20, 24);
-  --item_hover_color: rgb(19, 23, 27);
-  --item_left_title_color: rgb(255, 255, 255);
-  --item_left_text_color: rgb(142, 142, 142);
-  --left_tag_item: linear-gradient(50deg, #1f2327, #000000);
-  --card_filter: 0px;
-  --back_filter: 0px;
-  --back_filter_color: #000000;
-  --fill: #ffffff;
-}
-
-.bank-nav-page:not([data-bank-theme='Dark']) {
-  --main_bg_color: url('/bank-nav/static/img/background.jpg');
+.bank-nav-page {
   --main_text_color: #eeeeee;
   --gradient: linear-gradient(120deg, #bd34fe, #e0321b 30%, #41d1ff 60%);
   --purple_text_color: #747bff;
@@ -41,29 +25,51 @@
   --fill: #ffffff;
 }
 
+[data-theme='light'] .bank-nav-page {
+  --main_text_color: #111827;
+  --gradient: linear-gradient(120deg, #2563eb, #db2777 34%, #16a34a 70%);
+  --purple_text_color: #2563eb;
+  --item_bg_color: rgb(255 255 255 / 92%);
+  --item_hover_color: rgb(241 245 249 / 96%);
+  --item_left_title_color: #111827;
+  --item_left_text_color: rgb(71 85 105 / 82%);
+  --left_tag_item: rgb(241 245 249 / 92%);
+  --card_filter: 0px;
+  --back_filter: 0px;
+  --back_filter_color: transparent;
+  --fill: #111827;
+}
+
+[data-theme='dark'] .bank-nav-page {
+  --main_text_color: #ffffff;
+  --gradient: linear-gradient(120deg, rgb(133, 62, 255), #f76cc6 30%, rgb(255, 255, 255) 60%);
+  --purple_text_color: #a78bfa;
+  --item_bg_color: rgb(19 20 24 / 92%);
+  --item_hover_color: rgb(28 31 36 / 96%);
+  --item_left_title_color: #ffffff;
+  --item_left_text_color: rgb(226 232 240 / 72%);
+  --left_tag_item: linear-gradient(50deg, #1f2327, #000000);
+  --card_filter: 0px;
+  --back_filter: 0px;
+  --back_filter_color: transparent;
+  --fill: #ffffff;
+}
+
 body:has(.bank-nav-page) {
   overflow-x: hidden;
-  background: url('/bank-nav/static/img/background.jpg');
+  background: var(--bg);
+  background-image: var(--bg-grad);
   background-repeat: no-repeat;
   background-size: cover;
   background-position: center;
   background-attachment: fixed;
 }
 
-body:has(.bank-nav-page)::-webkit-scrollbar {
-  display: none;
-}
-
-html:has(.bank-nav-page),
-body:has(.bank-nav-page) {
-  scrollbar-width: none;
-}
-
 .bank-nav-page {
   min-height: 100dvh;
   color: var(--main_text_color);
   font-family: bankUbuntu, 'PingFang SC', 'Microsoft YaHei', sans-serif;
-  background: var(--main_bg_color);
+  background: transparent;
   background-repeat: no-repeat;
   background-size: cover;
   background-position: center;
@@ -172,18 +178,18 @@ body:has(.bank-nav-page) {
   flex-direction: row;
   width: 100%;
   max-width: 1150px;
-  min-height: calc(100dvh - 52px);
+  min-height: calc(100dvh - var(--app-topbar-offset));
   margin: 0 auto;
-  padding-top: 52px;
+  padding-top: var(--app-topbar-offset);
 }
 
 .zyyo-left {
   position: sticky;
-  top: 0;
+  top: var(--app-topbar-offset);
   left: 0;
   display: flex;
   width: 230px;
-  height: 100dvh;
+  height: calc(100dvh - var(--app-topbar-offset));
   padding: 0 15px;
   overflow-y: auto;
   align-items: center;
@@ -202,7 +208,7 @@ body:has(.bank-nav-page) {
   width: 90%;
   position: relative;
   aspect-ratio: 1 / 1;
-  margin-top: 50px;
+  margin-top: 22px;
   background-size: cover;
   background-position: center;
   border-radius: 50%;
@@ -393,9 +399,9 @@ body:has(.bank-nav-page) {
   backdrop-filter: blur(var(--card_filter));
   -webkit-backdrop-filter: blur(var(--card_filter));
   background: var(--item_bg_color);
+  border: 1px solid color-mix(in srgb, var(--border) 86%, transparent);
   align-items: center;
   justify-content: center;
-  border: 0;
   transition:
     width 0.3s ease,
     opacity 0.3s ease,
@@ -472,6 +478,7 @@ body:has(.bank-nav-page) {
   margin: 7px;
   display: flex;
   background-color: var(--item_bg_color);
+  border: 1px solid color-mix(in srgb, var(--border) 80%, transparent);
   border-radius: 8px;
   padding: 15px;
   height: 100px;
@@ -593,6 +600,7 @@ body:has(.bank-nav-page) {
 .runtime-message {
   margin: 10px 7px 20px;
   padding: 16px;
+  border: 1px solid color-mix(in srgb, var(--border) 80%, transparent);
   border-radius: 8px;
   background: var(--item_bg_color);
   color: var(--main_text_color);
@@ -605,13 +613,13 @@ body:has(.bank-nav-page) {
   max-width: 1150px;
   margin: 0 auto;
   padding: 12px 20px 24px;
-  color: rgb(255 255 255 / 76%);
+  color: var(--text-dim);
   font-family: bankUbuntu, 'PingFang SC', 'Microsoft YaHei', sans-serif;
 }
 
 .bank-nav-page .beian-footer a:hover,
 .bank-nav-page .beian-footer a:focus-visible {
-  color: #ffffff;
+  color: var(--accent);
 }
 
 .projectItemSkeleton {
@@ -724,33 +732,9 @@ body:has(.bank-nav-page) {
     overflow-x: hidden;
   }
 
-  .bank-top-nav {
-    padding: 6px 14px;
-    align-items: flex-start;
-    flex-direction: column;
-    gap: 6px;
-  }
-
-  .bank-top-brand {
-    height: 34px;
-    font-size: 20px;
-  }
-
-  .bank-top-links {
-    width: 100%;
-    justify-content: flex-start;
-    padding-bottom: 2px;
-  }
-
-  .bank-top-link {
-    height: 34px;
-    padding: 0 10px;
-    font-size: 13px;
-  }
-
   .zyyo-main {
-    min-height: calc(100dvh - 88px);
-    padding-top: 88px;
+    min-height: calc(100dvh - var(--app-topbar-offset));
+    padding-top: var(--app-topbar-offset);
   }
 
   .zyyo-left {

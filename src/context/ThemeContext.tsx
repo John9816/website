@@ -1,24 +1,30 @@
 import { createContext, useContext, useEffect, useState, type ReactNode } from 'react'
 
-type Mode = 'light' | 'dark'
+export type ThemeMode = 'image' | 'light' | 'dark'
+
+export const THEME_MODES: ThemeMode[] = ['image', 'light', 'dark']
 
 interface ThemeState {
-  mode: Mode
+  mode: ThemeMode
   toggle: () => void
-  setMode: (m: Mode) => void
+  setMode: (m: ThemeMode) => void
 }
 
 const Ctx = createContext<ThemeState | null>(null)
 const KEY = 'nav.theme'
 
-function getInitial(): Mode {
+function isThemeMode(value: string | null): value is ThemeMode {
+  return value === 'image' || value === 'light' || value === 'dark'
+}
+
+function getInitial(): ThemeMode {
   const saved = localStorage.getItem(KEY)
-  if (saved === 'light' || saved === 'dark') return saved
-  return window.matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light'
+  if (isThemeMode(saved)) return saved
+  return 'image'
 }
 
 export function ThemeProvider({ children }: { children: ReactNode }) {
-  const [mode, setModeState] = useState<Mode>(getInitial)
+  const [mode, setModeState] = useState<ThemeMode>(getInitial)
 
   useEffect(() => {
     document.documentElement.setAttribute('data-theme', mode)
@@ -28,7 +34,11 @@ export function ThemeProvider({ children }: { children: ReactNode }) {
   const value: ThemeState = {
     mode,
     setMode: setModeState,
-    toggle: () => setModeState((m) => (m === 'dark' ? 'light' : 'dark')),
+    toggle: () =>
+      setModeState((current) => {
+        const currentIndex = THEME_MODES.indexOf(current)
+        return THEME_MODES[(currentIndex + 1) % THEME_MODES.length]
+      }),
   }
   return <Ctx.Provider value={value}>{children}</Ctx.Provider>
 }

@@ -1,22 +1,20 @@
 import { useCallback, useEffect, useMemo, useState } from 'react'
+import { LogIn, Settings } from 'lucide-react'
 import { Link as RouterLink } from 'react-router-dom'
 import { getNav } from '../api/public'
 import BeianFooter from '../components/BeianFooter'
 import CategoryIcon from '../components/CategoryIcon'
+import ThemeToggle from '../components/ThemeToggle'
+import TopbarNav from '../components/TopbarNav'
+import TopbarUserMenu from '../components/TopbarUserMenu'
 import type { CategoryWithLinks, NavLink } from '../types'
 import { useAuth } from '../context/AuthContext'
+import { useTheme } from '../context/ThemeContext'
+import '../styles/topbar.css'
 import '../styles/home.css'
 
 const ASSET_BASE = '/bank-nav'
 const POLL_INTERVAL_MS = 30_000
-const THEME_COOKIE = 'themeState'
-const TOP_NAV_LINKS = [
-  { to: '/music', label: '音乐' },
-  { to: '/ai-chat', label: 'AI 对话' },
-  { to: '/ai-image', label: 'AI 生图' },
-  { to: '/resume', label: '个人简历' },
-]
-
 function sortByOrder<T extends { sortOrder: number }>(items: T[]) {
   return [...items].sort((a, b) => a.sortOrder - b.sortOrder)
 }
@@ -68,20 +66,6 @@ function getInitial(name: string) {
   return trimmed ? trimmed.slice(0, 1).toUpperCase() : 'L'
 }
 
-function getInitialTheme(): 'Light' | 'Dark' {
-  const match = document.cookie
-    .split(';')
-    .map((cookie) => cookie.trim())
-    .find((cookie) => cookie.startsWith(`${THEME_COOKIE}=`))
-  const value = match ? decodeURIComponent(match.split('=').slice(1).join('=')) : null
-  return value === 'Dark' ? 'Dark' : 'Light'
-}
-
-function persistTheme(theme: 'Light' | 'Dark') {
-  const maxAge = 60 * 60 * 24 * 365
-  document.cookie = `${THEME_COOKIE}=${encodeURIComponent(theme)}; max-age=${maxAge}; path=/`
-}
-
 function ProjectCard({ link }: { link: NavLink }) {
   return (
     <a
@@ -110,9 +94,9 @@ function ProjectCard({ link }: { link: NavLink }) {
 
 export default function HomePage() {
   const auth = useAuth()
+  const { mode } = useTheme()
   const [data, setData] = useState<CategoryWithLinks[] | null>(null)
   const [error, setError] = useState<string | null>(null)
-  const [theme, setTheme] = useState<'Light' | 'Dark'>(getInitialTheme)
   const [popupImage, setPopupImage] = useState<string | null>(null)
 
   const refresh = useCallback(async (silent = false) => {
@@ -142,10 +126,6 @@ export default function HomePage() {
       window.removeEventListener('focus', onFocus)
     }
   }, [refresh])
-
-  useEffect(() => {
-    persistTheme(theme)
-  }, [theme])
 
   useEffect(() => {
     if (!popupImage) return
@@ -178,23 +158,35 @@ export default function HomePage() {
   )
 
   const timeline = categories.slice(0, 5)
-  const snakeTheme = theme === 'Dark' ? 'Dark' : 'Light'
+  const snakeTheme = mode === 'dark' ? 'Dark' : 'Light'
 
   return (
-    <div className="bank-nav-page" data-bank-theme={theme}>
+    <div className="bank-nav-page">
       <div className="zyyo-filter" />
-      <nav className="bank-top-nav" aria-label="站内导航">
-        <RouterLink className="bank-top-brand" to="/">
-          oldwang
+      <header className="topbar">
+        <RouterLink to="/" className="topbar-brand" aria-label="返回首页">
+          <span className="brand-dot" />
+          <span>oldwang</span>
         </RouterLink>
-        <div className="bank-top-links">
-          {TOP_NAV_LINKS.map((link) => (
-            <RouterLink className="bank-top-link" key={link.to} to={link.to}>
-              {link.label}
+
+        <TopbarNav />
+
+        <div className="topbar-actions" aria-label="站点操作">
+          {auth.token ? (
+            <RouterLink to="/admin" className="topbar-action">
+              <Settings size={16} />
+              <span>管理</span>
             </RouterLink>
-          ))}
+          ) : (
+            <RouterLink to="/login" className="topbar-action" state={{ from: '/' }}>
+              <LogIn size={16} />
+              <span>登录</span>
+            </RouterLink>
+          )}
+          <ThemeToggle />
+          {auth.token && <TopbarUserMenu />}
         </div>
-      </nav>
+      </header>
       <div className="zyyo-main">
         <aside className="zyyo-left">
           <div
@@ -274,17 +266,6 @@ export default function HomePage() {
                 <SectionMark />
                 <div className="iconTip">{auth.token ? '管理' : '登录'}</div>
               </RouterLink>
-              <button
-                className="switch"
-                type="button"
-                onClick={() => setTheme((current) => (current === 'Light' ? 'Dark' : 'Light'))}
-                aria-label="切换主题"
-              >
-                <span className="onoffswitch">
-                  <span className="onoffswitch-inner" />
-                  <span className="onoffswitch-switch" />
-                </span>
-              </button>
             </div>
 
             <div className="tanChiShe">

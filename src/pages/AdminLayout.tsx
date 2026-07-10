@@ -13,7 +13,7 @@ import {
 } from '@ant-design/icons'
 import { Link, Navigate, Outlet, useLocation, useNavigate } from 'react-router-dom'
 import { useAuth } from '../context/AuthContext'
-import { useTheme } from '../context/ThemeContext'
+import { useTheme, type ThemeMode } from '../context/ThemeContext'
 import ThemeToggle from '../components/ThemeToggle'
 import '../styles/admin-shell.css'
 
@@ -30,6 +30,7 @@ export default function AdminLayout() {
   const location = useLocation()
   const navigate = useNavigate()
   const { mode } = useTheme()
+  const isLight = mode === 'light'
   const canUseContentFactory = auth.user?.role === 'ADMIN' || auth.user?.canManageSystemConfig
 
   if (!auth.token) {
@@ -108,9 +109,9 @@ export default function AdminLayout() {
   return (
     <ConfigProvider
       theme={{
-        algorithm: mode === 'dark' ? antdTheme.darkAlgorithm : antdTheme.defaultAlgorithm,
+        algorithm: isLight ? antdTheme.defaultAlgorithm : antdTheme.darkAlgorithm,
         token: {
-          colorPrimary: mode === 'dark' ? '#fb7185' : '#e11d48',
+          colorPrimary: mode === 'dark' ? '#fb7185' : isLight ? '#2563eb' : '#41d1ff',
           borderRadius: 8,
           fontFamily:
             "-apple-system, BlinkMacSystemFont, 'Segoe UI', 'PingFang SC', 'Hiragino Sans GB', 'Microsoft YaHei', sans-serif",
@@ -148,7 +149,7 @@ function LayoutContent({
   auth,
   doLogout,
 }: {
-  mode: string
+  mode: ThemeMode
   selectedKey: string
   selectedTitle: string
   menuItems: MenuProps['items']
@@ -158,7 +159,7 @@ function LayoutContent({
   return (
     <Layout hasSider className="admin-shell">
       <Sider
-        theme={mode === 'dark' ? 'dark' : 'light'}
+        theme={mode === 'light' ? 'light' : 'dark'}
         breakpoint="lg"
         collapsedWidth="0"
         width={240}
@@ -170,7 +171,7 @@ function LayoutContent({
           <span className="admin-shell__brand-text">管理后台</span>
         </div>
         <Menu
-          theme={mode === 'dark' ? 'dark' : 'light'}
+          theme={mode === 'light' ? 'light' : 'dark'}
           mode="inline"
           selectedKeys={[selectedKey]}
           items={menuItems}

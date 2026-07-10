@@ -1638,3 +1638,85 @@
 .ai-chat__main--authenticated {
   padding-top: var(--app-topbar-offset);
 }
+
+[data-theme='light'] .ai-chat__sidebar,
+[data-theme='light'] .ai-chat__stage,
+[data-theme='light'] .ai-chat__welcome-card,
+[data-theme='light'] .ai-chat__login-card,
+[data-theme='light'] .ai-chat__composer-shell,
+[data-theme='light'] .ai-chat__search,
+[data-theme='light'] .ai-chat__warning-card {
+  border-color: rgb(15 23 42 / 10%) !important;
+  background: rgb(255 255 255 / 92%) !important;
+  box-shadow: inset 0 1px 0 rgb(255 255 255 / 70%);
+}
+
+[data-theme='light'] .ai-chat__conversation:hover,
+[data-theme='light'] .ai-chat__sidebar-toggle:hover,
+[data-theme='light'] .ai-chat__icon-button:hover,
+[data-theme='light'] .ai-chat__msg-action:hover,
+[data-theme='light'] .ai-chat__audio-trigger:hover,
+[data-theme='light'] .ai-chat__mode-chip:hover:not(.is-active) {
+  background: rgb(15 23 42 / 5%) !important;
+}
+
+[data-theme='light'] .ai-chat__conversation.is-active {
+  background:
+    linear-gradient(90deg, rgb(37 99 235 / 12%), transparent 90%),
+    rgb(15 23 42 / 4%) !important;
+}
+
+[data-theme='light'] .ai-chat__new-chat,
+[data-theme='light'] .ai-chat__button--primary,
+[data-theme='light'] .ai-chat__mode-chip.is-active {
+  border-color: rgb(37 99 235 / 32%) !important;
+  background:
+    linear-gradient(120deg, rgb(37 99 235 / 16%), rgb(219 39 119 / 10%)),
+    rgb(255 255 255 / 88%) !important;
+  color: var(--text) !important;
+}
+
+[data-theme='light'] .ai-chat__button--secondary,
+[data-theme='light'] .ai-chat__audio-trigger,
+[data-theme='light'] .ai-chat__model-select,
+[data-theme='light'] .ai-chat__settings-row select,
+[data-theme='light'] .ai-chat__settings-row input,
+[data-theme='light'] .ai-chat__input {
+  border-color: rgb(15 23 42 / 12%);
+  background: rgb(248 250 252 / 92%);
+  color: var(--text);
+}
+
+[data-theme='light'] .ai-chat__message-avatar {
+  background: rgb(15 23 42 / 6%);
+  color: rgb(30 41 59 / 76%);
+}
+
+[data-theme='light'] .ai-chat__message--user .ai-chat__message-content {
+  border-color: rgb(37 99 235 / 18%);
+  background:
+    linear-gradient(135deg, rgb(37 99 235 / 10%), transparent 60%),
+    rgb(255 255 255 / 88%);
+}
+
+[data-theme='light'] .ai-chat__composer-shell:focus-within {
+  border-color: rgb(37 99 235 / 34%) !important;
+  box-shadow:
+    0 0 0 4px rgb(37 99 235 / 10%),
+    var(--shadow-md) !important;
+}
+
+[data-theme='light'] .ai-chat__jump-bottom {
+  border-color: rgb(15 23 42 / 12%);
+  background: rgb(255 255 255 / 92%);
+}
+
+[data-theme='dark'] .ai-chat__sidebar,
+[data-theme='dark'] .ai-chat__stage,
+[data-theme='dark'] .ai-chat__welcome-card,
+[data-theme='dark'] .ai-chat__login-card,
+[data-theme='dark'] .ai-chat__composer-shell,
+[data-theme='dark'] .ai-chat__search,
+[data-theme='dark'] .ai-chat__warning-card {
+  background: rgb(13 15 20 / 88%) !important;
+}

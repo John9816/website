@@ -65,11 +65,23 @@ function RouteFallback() {
 
 function ThemedAntd({ children }: { children: ReactNode }) {
   const { mode } = useTheme()
+  const isLight = mode === 'light'
   const isDark = mode === 'dark'
-  const colorPrimary = isDark ? '#f76cc6' : '#41d1ff'
-  const colorBgContainer = isDark ? 'rgba(13, 15, 20, 0.76)' : 'rgba(8, 20, 40, 0.68)'
-  const colorBgElevated = isDark ? 'rgba(18, 23, 31, 0.94)' : 'rgba(10, 24, 48, 0.92)'
-  const colorBorder = 'rgba(255, 255, 255, 0.14)'
+  const colorPrimary = isDark ? '#f76cc6' : isLight ? '#2563eb' : '#41d1ff'
+  const colorText = isLight ? '#111827' : '#f4f7fb'
+  const colorTextSecondary = isLight ? 'rgba(71,85,105,0.78)' : 'rgba(226,235,245,0.72)'
+  const colorBgBase = isDark ? '#000000' : isLight ? '#ffffff' : '#102f52'
+  const colorBgContainer = isDark
+    ? 'rgba(13, 15, 20, 0.84)'
+    : isLight
+      ? 'rgba(255, 255, 255, 0.94)'
+      : 'rgba(8, 20, 40, 0.68)'
+  const colorBgElevated = isDark
+    ? 'rgba(18, 23, 31, 0.96)'
+    : isLight
+      ? 'rgba(255, 255, 255, 0.98)'
+      : 'rgba(10, 24, 48, 0.92)'
+  const colorBorder = isLight ? 'rgba(15, 23, 42, 0.12)' : 'rgba(255, 255, 255, 0.14)'
   return (
     <ConfigProvider
       locale={zhCN}
@@ -83,15 +95,19 @@ function ThemedAntd({ children }: { children: ReactNode }) {
           controlHeightSM: 32,
           fontFamily:
             "-apple-system, BlinkMacSystemFont, 'Segoe UI', 'PingFang SC', 'Hiragino Sans GB', 'Microsoft YaHei', sans-serif",
-          colorText: '#f4f7fb',
-          colorTextSecondary: 'rgba(226,235,245,0.72)',
-          colorBgBase: isDark ? '#05070d' : '#102f52',
+          colorText,
+          colorTextSecondary,
+          colorBgBase,
           colorBgContainer,
           colorBgElevated,
           colorBorder,
-          colorBorderSecondary: 'rgba(255, 255, 255, 0.09)',
-          colorFillTertiary: isDark ? 'rgba(247,108,198,0.12)' : 'rgba(65,209,255,0.12)',
-          boxShadow: '0 18px 44px rgba(0,0,0,0.26)',
+          colorBorderSecondary: isLight ? 'rgba(15, 23, 42, 0.08)' : 'rgba(255, 255, 255, 0.09)',
+          colorFillTertiary: isDark
+            ? 'rgba(247,108,198,0.12)'
+            : isLight
+              ? 'rgba(37,99,235,0.09)'
+              : 'rgba(65,209,255,0.12)',
+          boxShadow: isLight ? '0 18px 44px rgba(15,23,42,0.10)' : '0 18px 44px rgba(0,0,0,0.26)',
           motionDurationFast: '0.12s',
           motionDurationMid: '0.18s',
           motionEaseOut: 'cubic-bezier(0.2, 0.82, 0.2, 1)',
@@ -106,7 +122,9 @@ function ThemedAntd({ children }: { children: ReactNode }) {
           },
           Input: {
             borderRadius: 8,
-            activeShadow: `0 0 0 4px ${isDark ? 'rgba(247,108,198,0.14)' : 'rgba(65,209,255,0.14)'}`,
+            activeShadow: `0 0 0 4px ${
+              isDark ? 'rgba(247,108,198,0.14)' : isLight ? 'rgba(37,99,235,0.14)' : 'rgba(65,209,255,0.14)'
+            }`,
           },
           Select: {
             borderRadius: 8,
@@ -123,11 +141,11 @@ function ThemedAntd({ children }: { children: ReactNode }) {
             borderRadiusLG: 8,
           },
           Table: {
-            headerBg: 'rgba(255,255,255,0.08)',
-            rowHoverBg: 'rgba(255,255,255,0.07)',
+            headerBg: isLight ? 'rgba(15,23,42,0.04)' : 'rgba(255,255,255,0.08)',
+            rowHoverBg: isLight ? 'rgba(15,23,42,0.04)' : 'rgba(255,255,255,0.07)',
           },
         },
-        algorithm: antdTheme.darkAlgorithm,
+        algorithm: isLight ? antdTheme.defaultAlgorithm : antdTheme.darkAlgorithm,
       }}
     >
       <AntApp>{children}</AntApp>

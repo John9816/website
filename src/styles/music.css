@@ -2044,3 +2044,64 @@
 .music-body {
   padding-top: var(--app-topbar-offset);
 }
+
+[data-theme='light'] .music-browser__layout {
+  background: transparent;
+}
+
+[data-theme='light'] .music-browser__sidebar,
+[data-theme='light'] .music-browser__topline,
+[data-theme='light'] .music-toplist-card,
+[data-theme='light'] .music-collection-card,
+[data-theme='light'] .music-search-collection-card,
+[data-theme='light'] .music-share-card,
+[data-theme='light'] .music-icon-action {
+  border-color: rgb(15 23 42 / 10%);
+  background: rgb(255 255 255 / 92%);
+  box-shadow: inset 0 1px 0 rgb(255 255 255 / 70%);
+}
+
+[data-theme='light'] .music-browser__main {
+  border-color: rgb(15 23 42 / 10%);
+  background: rgb(248 250 252 / 62%);
+}
+
+[data-theme='light'] .music-browser__side-item.is-active,
+[data-theme='light'] .music-icon-action.is-active,
+[data-theme='light'] .music-row-active,
+[data-theme='light'] .music-song-table .ant-table-tbody > tr.music-row-active > td {
+  background: rgb(37 99 235 / 10%) !important;
+  color: var(--accent);
+}
+
+[data-theme='light'] .music-browser__side-item:hover,
+[data-theme='light'] .music-browser__history-controls button:hover,
+[data-theme='light'] .music-icon-action:hover:not(:disabled),
+[data-theme='light'] .ctrl-btn:hover,
+[data-theme='light'] .music-song-table .ant-table-tbody > tr:hover > td {
+  background: rgb(15 23 42 / 5%) !important;
+}
+
+[data-theme='light'] .music-toplist-card:hover,
+[data-theme='light'] .music-collection-card:hover,
+[data-theme='light'] .music-collection-card:focus-visible,
+[data-theme='light'] .music-search-collection-card:hover {
+  border-color: rgb(37 99 235 / 28%);
+  background: rgb(255 255 255 / 98%);
+  box-shadow: 0 14px 28px rgb(15 23 42 / 8%);
+}
+
+[data-theme='dark'] .music-browser__main {
+  border-color: rgb(255 255 255 / 10%);
+  background: rgb(0 0 0 / 44%);
+}
+
+[data-theme='dark'] .music-browser__sidebar,
+[data-theme='dark'] .music-browser__topline,
+[data-theme='dark'] .music-toplist-card,
+[data-theme='dark'] .music-collection-card,
+[data-theme='dark'] .music-search-collection-card,
+[data-theme='dark'] .music-share-card,
+[data-theme='dark'] .music-icon-action {
+  background: rgb(13 15 20 / 86%);
+}

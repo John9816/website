@@ -795,7 +795,7 @@
 
 @media (max-width: 768px) {
   :root {
-    --app-topbar-offset: calc(88px + var(--safe-top));
+    --app-topbar-offset: calc(96px + var(--safe-top));
   }
 
   .topbar,
@@ -833,5 +833,86 @@
     min-width: 36px;
     width: 36px;
     height: 34px;
+  }
+}
+
+.topbar-actions .theme-toggle,
+.topbar--pinned .topbar-actions .theme-toggle {
+  width: auto;
+  min-width: 104px;
+  height: 36px;
+  min-height: 36px;
+  padding: 3px;
+  gap: 2px;
+}
+
+.topbar-actions .theme-toggle__option {
+  width: 31px;
+  height: 28px;
+}
+
+[data-theme='light'] .topbar::before {
+  border-color: rgb(15 23 42 / 10%);
+  background: rgb(255 255 255 / 84%);
+  box-shadow: 0 10px 30px rgb(15 23 42 / 8%);
+}
+
+[data-theme='light'] .topbar-nav,
+[data-theme='light'] .topbar-action,
+[data-theme='light'] .topbar-actions .theme-toggle,
+[data-theme='light'] .topbar-user-trigger {
+  border-color: rgb(15 23 42 / 10%);
+  background: rgb(255 255 255 / 84%);
+  color: rgb(30 41 59 / 78%);
+  box-shadow: inset 0 1px 0 rgb(255 255 255 / 70%);
+}
+
+[data-theme='light'] .topbar-nav__link {
+  color: rgb(51 65 85 / 76%);
+}
+
+[data-theme='light'] .topbar-nav__link:hover,
+[data-theme='light'] .topbar-nav__link:focus-visible,
+[data-theme='light'] .topbar-nav__link.is-active,
+[data-theme='light'] .topbar-nav__link.is-transitioning,
+[data-theme='light'] .topbar-action:hover,
+[data-theme='light'] .topbar-user-trigger:hover {
+  color: #111827;
+}
+
+[data-theme='light'] .topbar-nav__link::before,
+[data-theme='light'] .topbar-action:hover,
+[data-theme='light'] .topbar-actions .theme-toggle:hover,
+[data-theme='light'] .topbar-user-trigger:hover {
+  background: rgb(15 23 42 / 6%);
+}
+
+[data-theme='light'] .topbar-user-card {
+  border-color: rgb(15 23 42 / 12%);
+  background: rgb(255 255 255 / 96%);
+  color: #111827;
+}
+
+[data-theme='light'] .topbar-user-card__meta {
+  border-color: rgb(15 23 42 / 10%);
+  background: rgb(248 250 252 / 96%);
+}
+
+[data-theme='dark'] .topbar::before {
+  background: rgb(0 0 0 / 72%);
+  border-color: rgb(255 255 255 / 12%);
+}
+
+@media (max-width: 768px) {
+  .topbar-actions .theme-toggle,
+  .topbar--pinned .topbar-actions .theme-toggle {
+    min-width: 100px;
+    width: auto;
+    height: 34px;
+  }
+
+  .topbar-actions .theme-toggle__option {
+    width: 30px;
+    height: 26px;
   }
 }

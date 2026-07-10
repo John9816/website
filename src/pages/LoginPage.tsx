@@ -13,14 +13,12 @@ import { LockOutlined, UserOutlined } from '@ant-design/icons'
 import { login as apiLogin } from '../api/auth'
 import ThemeToggle from '../components/ThemeToggle'
 import { useAuth } from '../context/AuthContext'
-import { useTheme } from '../context/ThemeContext'
+import { useTheme, type ThemeMode } from '../context/ThemeContext'
 
-function authBackground(mode: 'light' | 'dark') {
-  const overlay =
-    mode === 'dark'
-      ? 'linear-gradient(180deg, rgba(0,0,0,0.58), rgba(0,0,0,0.34))'
-      : 'linear-gradient(180deg, rgba(9,23,45,0.62), rgba(10,18,33,0.38))'
-  return `${overlay}, url('/bank-nav/static/img/background.jpg') center / cover fixed no-repeat`
+function authBackground(mode: ThemeMode) {
+  if (mode === 'light') return '#ffffff'
+  if (mode === 'dark') return '#000000'
+  return `linear-gradient(180deg, rgba(9,23,45,0.62), rgba(10,18,33,0.38)), url('/bank-nav/static/img/background.jpg') center / cover fixed no-repeat`
 }
 
 export default function LoginPage() {
