@@ -39,13 +39,18 @@ function filterTree(nodes: KbDocTreeNode[], keyword: string): KbDocTreeNode[] {
 function buildTreeData(nodes: KbDocTreeNode[]): KbTreeDataNode[] {
   return nodes.map((node) => {
     const childCount = countDocs(node.children ?? [])
+    const hasChildren = childCount > 0
     return {
       key: node.id,
       rawTitle: node.title,
       title: (
         <div className="kb-admin-tree-node">
           <span className={`kb-admin-tree-node__status is-${node.status}`} />
-          <FileTextOutlined className="kb-admin-tree-node__icon" />
+          {hasChildren ? (
+            <FolderOpenOutlined className="kb-admin-tree-node__icon is-folder" />
+          ) : (
+            <FileTextOutlined className="kb-admin-tree-node__icon" />
+          )}
           <span className="kb-admin-tree-node__title">{node.title || '未命名文档'}</span>
           {childCount > 0 ? <span className="kb-admin-tree-node__count">{childCount}</span> : null}
         </div>
@@ -119,7 +124,7 @@ const KbSidebar: React.FC<KbSidebarProps> = ({ onNavigate }) => {
             onNavigate?.()
           }}
         >
-          <span className="kb-admin-sidebar__title">个人知识库</span>
+          <span className="kb-admin-sidebar__title">我的学城</span>
           <span className="kb-admin-sidebar__subtitle">{totalDocs} 篇文档</span>
         </button>
         <div className="kb-admin-sidebar__actions">
@@ -226,10 +231,6 @@ const KbSidebar: React.FC<KbSidebarProps> = ({ onNavigate }) => {
             }}
           />
         )}
-      </div>
-
-      <div className="kb-admin-sidebar__hint">
-        右键文档可新增子文档、分享或删除；顶部搜索只筛选当前目录，不影响文档列表。
       </div>
     </aside>
   )

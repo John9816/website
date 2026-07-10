@@ -3,10 +3,10 @@ import {
   App as AntApp,
   Breadcrumb,
   Button,
+  Dropdown,
   Empty,
   Input,
   Popconfirm,
-  Segmented,
   Select,
   Skeleton,
   Space,
@@ -20,14 +20,16 @@ import {
   DeleteOutlined,
   EditOutlined,
   FileAddOutlined,
+  FileTextOutlined,
+  FolderOpenOutlined,
   HistoryOutlined,
+  MoreOutlined,
   PlusOutlined,
   SaveOutlined,
   SearchOutlined,
   SettingOutlined,
   ShareAltOutlined,
   TagsOutlined,
-  UnorderedListOutlined,
 } from '@ant-design/icons'
 import { useKbContext } from './context'
 import ErrorBoundary from '../../components/ErrorBoundary'
@@ -149,6 +151,21 @@ function countTreeDocs(nodes: KbDocTreeNode[]): number {
   return nodes.reduce((total, node) => total + 1 + countTreeDocs(node.children ?? []), 0)
 }
 
+function flattenTreeMeta(
+  nodes: KbDocTreeNode[],
+  parentTitle = '全部文档',
+  result = new Map<number, { parentTitle: string; childCount: number }>(),
+) {
+  nodes.forEach((node) => {
+    result.set(node.id, {
+      parentTitle,
+      childCount: node.children?.length ? countTreeDocs(node.children) : 0,
+    })
+    flattenTreeMeta(node.children ?? [], node.title || '未命名文档', result)
+  })
+  return result
+}
+
 function getStatusLabel(status: string) {
   return status === 'published' ? '已发布' : '草稿'
 }
@@ -176,7 +193,6 @@ function DocTags({ tags }: { tags: KbTag[] }) {
 
 const KbMain: React.FC = () => {
   const [toolbarContainer, setToolbarContainer] = React.useState<HTMLElement | null>(null)
-  const [listView, setListView] = React.useState<'table' | 'cards'>('table')
   const { message } = AntApp.useApp()
 
   const {
@@ -228,6 +244,7 @@ const KbMain: React.FC = () => {
   const articleContent = React.useMemo(() => buildArticleContent(selectedDoc), [selectedDoc])
   const editorOutline = React.useMemo(() => buildEditorOutline(editContentJson), [editContentJson])
   const totalTreeDocs = React.useMemo(() => countTreeDocs(tree), [tree])
+  const treeMeta = React.useMemo(() => flattenTreeMeta(tree), [tree])
   const publishedInPage = docs.filter((doc) => doc.status === 'published').length
   const draftInPage = docs.filter((doc) => doc.status !== 'published').length
   const isEditing = selectedDoc ? inlineEditingDocId === selectedDoc.id : false
@@ -237,19 +254,44 @@ const KbMain: React.FC = () => {
   const docColumns = React.useMemo(
     () => [
       {
-        title: '标题',
+        title: '名称',
         dataIndex: 'title',
         key: 'title',
         render: (_: string, row: KbDocSummary) => (
-          <button
-            type="button"
-            className="kb-admin-table-title"
-            onClick={() => setSelectedParentId(row.id)}
-          >
-            <span>{row.title || '未命名文档'}</span>
-            {row.summary ? <small>{row.summary}</small> : null}
-          </button>
+          <div className="kb-admin-file-title">
+            <button
+              type="button"
+              className="kb-admin-file-title__open"
+              onClick={() => setSelectedParentId(row.id)}
+            >
+              <span className={`kb-admin-file-title__icon${treeMeta.get(row.id)?.childCount ? ' is-folder' : ''}`}>
+                {treeMeta.get(row.id)?.childCount ? <FolderOpenOutlined /> : <FileTextOutlined />}
+              </span>
+              <span className="kb-admin-file-title__copy">
+                <span>{row.title || '未命名文档'}</span>
+                <small>{row.summary || '暂无摘要'}</small>
+              </span>
+            </button>
+          </div>
         ),
+      },
+      {
+        title: '所属目录',
+        key: 'parent',
+        width: 150,
+        render: (_: unknown, row: KbDocSummary) => (
+          <span className="kb-admin-file-path">{treeMeta.get(row.id)?.parentTitle || '全部文档'}</span>
+        ),
+      },
+      {
+        title: '子级',
+        key: 'children',
+        width: 82,
+        align: 'right' as const,
+        render: (_: unknown, row: KbDocSummary) => {
+          const childCount = treeMeta.get(row.id)?.childCount ?? 0
+          return <span className="kb-admin-file-count">{childCount || '-'}</span>
+        },
       },
       {
         title: '状态',
@@ -269,32 +311,42 @@ const KbMain: React.FC = () => {
         title: '更新时间',
         dataIndex: 'updatedAt',
         key: 'updatedAt',
-        width: 180,
+        width: 168,
         render: (value: string) => formatDateTime(value),
       },
       {
         title: '操作',
         key: 'action',
-        width: 248,
+        width: 148,
         render: (_: unknown, row: KbDocSummary) => (
-          <Space wrap size={4}>
-            <Button size="small" icon={<EditOutlined />} onClick={() => void openEditDoc(row)}>
-              编辑
-            </Button>
-            <Button size="small" icon={<HistoryOutlined />} onClick={() => void openVersionsDrawer(row)}>
-              版本
-            </Button>
-            <Button size="small" icon={<ShareAltOutlined />} onClick={() => void openShareModal(row)}>
-              分享
-            </Button>
+          <Space size={2} className="kb-admin-file-actions">
+            <Tooltip title="编辑">
+              <Button size="small" type="text" icon={<EditOutlined />} onClick={() => void openEditDoc(row)} />
+            </Tooltip>
+            <Tooltip title="分享">
+              <Button size="small" type="text" icon={<ShareAltOutlined />} onClick={() => void openShareModal(row)} />
+            </Tooltip>
+            <Dropdown
+              trigger={['click']}
+              menu={{
+                items: [
+                  { key: 'version', icon: <HistoryOutlined />, label: '版本历史' },
+                ],
+                onClick: ({ key }) => {
+                  if (key === 'version') void openVersionsDrawer(row)
+                },
+              }}
+            >
+              <Button size="small" type="text" icon={<MoreOutlined />} aria-label="更多操作" />
+            </Dropdown>
             <Popconfirm title="删除文档后不可恢复" onConfirm={() => void handleDeleteDoc(row.id)}>
-              <Button size="small" danger icon={<DeleteOutlined />} aria-label="删除文档" />
+              <Button className="kb-admin-file-actions__delete" size="small" type="text" danger icon={<DeleteOutlined />} aria-label="删除文档" />
             </Popconfirm>
           </Space>
         ),
       },
     ],
-    [handleDeleteDoc, openEditDoc, openShareModal, openVersionsDrawer, setSelectedParentId],
+    [handleDeleteDoc, openEditDoc, openShareModal, openVersionsDrawer, setSelectedParentId, treeMeta],
   )
 
   const handleUploadEditorImage = React.useCallback(
@@ -314,40 +366,6 @@ const KbMain: React.FC = () => {
       message.error('部分文档删除失败')
     }
   }, [handleDeleteDoc, message, selectedRowKeys, setSelectedRowKeys])
-
-  const renderDocCards = () => (
-    <div className="kb-admin-doc-grid">
-      {docs.map((doc) => (
-        <article key={doc.id} className="kb-admin-doc-card">
-          <button type="button" className="kb-admin-doc-card__main" onClick={() => setSelectedParentId(doc.id)}>
-            <div className="kb-admin-doc-card__topline">
-              <StatusTag status={doc.status} />
-              <span>v{doc.versionNo}</span>
-            </div>
-            <h3>{doc.title || '未命名文档'}</h3>
-            <p>{doc.summary || '暂无摘要，打开文档后可以补充一句话说明。'}</p>
-            <span className="kb-admin-doc-card__time">更新于 {formatDateTime(doc.updatedAt)}</span>
-          </button>
-          <div className="kb-admin-doc-card__actions">
-            <Tooltip title="编辑">
-              <Button size="small" type="text" icon={<EditOutlined />} onClick={() => void openEditDoc(doc)} />
-            </Tooltip>
-            <Tooltip title="版本历史">
-              <Button size="small" type="text" icon={<HistoryOutlined />} onClick={() => void openVersionsDrawer(doc)} />
-            </Tooltip>
-            <Tooltip title="分享">
-              <Button size="small" type="text" icon={<ShareAltOutlined />} onClick={() => void openShareModal(doc)} />
-            </Tooltip>
-            <Popconfirm title="删除文档后不可恢复" onConfirm={() => void handleDeleteDoc(doc.id)}>
-              <Tooltip title="删除">
-                <Button size="small" type="text" danger icon={<DeleteOutlined />} />
-              </Tooltip>
-            </Popconfirm>
-          </div>
-        </article>
-      ))}
-    </div>
-  )
 
   return (
     <section className="kb-admin-main">
@@ -392,17 +410,15 @@ const KbMain: React.FC = () => {
         <div className="kb-admin-toolbar__actions">
           {selectedDoc ? (
             <>
-              <Segmented
-                options={['预览', '编辑']}
-                value={isEditing ? '编辑' : '预览'}
-                onChange={(value) => {
-                  if (value === '编辑') {
-                    enterInlineEdit(selectedDoc)
-                    return
-                  }
-                  exitInlineEdit()
-                }}
-              />
+              {isEditing ? (
+                <Button size="small" onClick={exitInlineEdit}>
+                  预览
+                </Button>
+              ) : (
+                <Button size="small" type="primary" icon={<EditOutlined />} onClick={() => enterInlineEdit(selectedDoc)}>
+                  编辑
+                </Button>
+              )}
               <span className="kb-admin-toolbar__divider" />
 
               {!isEditing ? (
@@ -676,41 +692,15 @@ const KbMain: React.FC = () => {
           )
         ) : (
           <div className="kb-admin-listmode">
-            <div className="kb-admin-overview">
-              <div className="kb-admin-overview__copy">
-                <span>{activeSpace?.name || '个人空间'}</span>
-                <h1>知识库工作台</h1>
-                <p>集中管理文档结构、标签、版本和公开分享，适合把零散资料整理成可维护的知识体系。</p>
-              </div>
-              <div className="kb-admin-overview__stats">
-                <div>
-                  <strong>{docTotal || totalTreeDocs}</strong>
-                  <span>全部文档</span>
-                </div>
-                <div>
-                  <strong>{publishedInPage}</strong>
-                  <span>本页已发布</span>
-                </div>
-                <div>
-                  <strong>{draftInPage}</strong>
-                  <span>本页草稿</span>
-                </div>
-                <div>
-                  <strong>{tags.length}</strong>
-                  <span>标签</span>
-                </div>
-              </div>
-            </div>
-
-            <div className="kb-admin-listmode__filters">
+            <div className="kb-admin-filebar">
               <div className="kb-admin-listmode__filter-head">
-                <strong>{docsLoading ? '正在更新文档' : `共 ${docTotal} 篇文档`}</strong>
+                <strong>{activeSpace?.name || '个人空间'}</strong>
                 <span>
                   {hasActiveFilters
                     ? [keyword.trim() ? `关键词：${keyword.trim()}` : '', activeTagName ? `标签：${activeTagName}` : '']
                         .filter(Boolean)
                         .join(' · ')
-                    : '可按标题、摘要和标签快速定位'}
+                    : `${docsLoading ? '正在更新' : `共 ${docTotal || totalTreeDocs} 篇文档`} · 本页已发布 ${publishedInPage} · 本页草稿 ${draftInPage} · 标签 ${tags.length}`}
                 </span>
               </div>
               <Input.Search
@@ -735,14 +725,6 @@ const KbMain: React.FC = () => {
                 options={tags.map((tag) => ({ value: tag.id, label: tag.name }))}
                 optionFilterProp="label"
               />
-              <Segmented
-                value={listView}
-                onChange={(value) => setListView(value as 'table' | 'cards')}
-                options={[
-                  { label: '卡片', value: 'cards' },
-                  { label: '表格', value: 'table', icon: <UnorderedListOutlined /> },
-                ]}
-              />
               <Button
                 disabled={!hasActiveFilters}
                 onClick={() => {
@@ -765,50 +747,43 @@ const KbMain: React.FC = () => {
               ) : null}
             </div>
 
-            {listView === 'cards' ? (
-              docsLoading ? (
-                <Skeleton active paragraph={{ rows: 8 }} />
-              ) : docs.length ? (
-                renderDocCards()
-              ) : (
-                <Empty
-                  image={Empty.PRESENTED_IMAGE_SIMPLE}
-                  description={activeSpaceId ? '当前筛选条件下没有文档' : '请先创建个人空间'}
-                >
-                  <Button type="primary" icon={<PlusOutlined />} onClick={() => void openCreateDoc(null)}>
-                    新建文档
-                  </Button>
-                </Empty>
-              )
-            ) : (
-              <Table<KbDocSummary>
-                rowKey="id"
-                loading={docsLoading}
-                dataSource={docs}
-                columns={docColumns}
-                rowSelection={{
-                  selectedRowKeys,
-                  onChange: (keys) => setSelectedRowKeys(keys),
-                  preserveSelectedRowKeys: true,
-                }}
-                scroll={{ x: 820 }}
-                pagination={{
-                  current: docPage,
-                  pageSize: docPageSize,
-                  total: docTotal,
-                  showTotal: (total) => `共 ${total} 篇`,
-                  showLessItems: true,
-                  onChange: (page, pageSize) => {
-                    setDocPage(page)
-                    setDocPageSize(pageSize)
-                  },
-                  showSizeChanger: true,
-                }}
-                locale={{
-                  emptyText: activeSpaceId ? '当前筛选条件下没有文档' : '请先创建个人空间',
-                }}
-              />
-            )}
+            <Table<KbDocSummary>
+              rowKey="id"
+              loading={docsLoading}
+              dataSource={docs}
+              columns={docColumns}
+              rowSelection={{
+                selectedRowKeys,
+                onChange: (keys) => setSelectedRowKeys(keys),
+                preserveSelectedRowKeys: true,
+              }}
+              rowClassName={(row) => (row.id === selectedParentId ? 'is-active-file' : '')}
+              scroll={{ x: 980 }}
+              pagination={{
+                current: docPage,
+                pageSize: docPageSize,
+                total: docTotal,
+                showTotal: (total) => `共 ${total} 篇`,
+                showLessItems: true,
+                onChange: (page, pageSize) => {
+                  setDocPage(page)
+                  setDocPageSize(pageSize)
+                },
+                showSizeChanger: true,
+              }}
+              locale={{
+                emptyText: (
+                  <Empty
+                    image={Empty.PRESENTED_IMAGE_SIMPLE}
+                    description={activeSpaceId ? '当前筛选条件下没有文档' : '请先创建个人空间'}
+                  >
+                    <Button type="primary" icon={<PlusOutlined />} onClick={() => void openCreateDoc(null)}>
+                      新建文档
+                    </Button>
+                  </Empty>
+                ),
+              }}
+            />
           </div>
         )}
       </div>
