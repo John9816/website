@@ -55,7 +55,11 @@ function buildTreeData(nodes: KbDocTreeNode[]): KbTreeDataNode[] {
   })
 }
 
-const KbSidebar: React.FC = () => {
+type KbSidebarProps = {
+  onNavigate?: () => void
+}
+
+const KbSidebar: React.FC<KbSidebarProps> = ({ onNavigate }) => {
   const [treeKeyword, setTreeKeyword] = React.useState('')
   const {
     tree,
@@ -110,7 +114,10 @@ const KbSidebar: React.FC = () => {
         <button
           type="button"
           className="kb-admin-sidebar__title-button"
-          onClick={() => setSelectedParentId(null)}
+          onClick={() => {
+            setSelectedParentId(null)
+            onNavigate?.()
+          }}
         >
           <span className="kb-admin-sidebar__title">个人知识库</span>
           <span className="kb-admin-sidebar__subtitle">{totalDocs} 篇文档</span>
@@ -149,7 +156,13 @@ const KbSidebar: React.FC = () => {
 
       <div className="kb-admin-sidebar__meta">
         <span>{treeKeyword ? `匹配 ${visibleDocs} 篇` : '目录结构'}</span>
-        <button type="button" onClick={() => setSelectedParentId(null)}>
+        <button
+          type="button"
+          onClick={() => {
+            setSelectedParentId(null)
+            onNavigate?.()
+          }}
+        >
           打开列表
         </button>
       </div>
@@ -169,9 +182,11 @@ const KbSidebar: React.FC = () => {
               const key = keys[0]
               if (key === undefined || key === ROOT_TREE_KEY) {
                 setSelectedParentId(null)
+                onNavigate?.()
                 return
               }
               setSelectedParentId(typeof key === 'number' ? key : Number(key))
+              onNavigate?.()
             }}
             titleRender={(node: any) => {
               if (node.key === ROOT_TREE_KEY) return node.title

@@ -1,6 +1,6 @@
-import { useEffect } from 'react'
+import { useEffect, useState } from 'react'
 import { Button, Empty } from 'antd'
-import { PlusOutlined } from '@ant-design/icons'
+import { MenuFoldOutlined, MenuUnfoldOutlined, PlusOutlined } from '@ant-design/icons'
 import { KbContextProvider } from './kb/KbContextProvider'
 import { useKbContext } from './kb/context'
 import KbSidebar from './kb/KbSidebar'
@@ -12,6 +12,7 @@ import KbVersionDrawer from './kb/KbVersionDrawer'
 import '../styles/kb-admin.css'
 
 function AdminKnowledgeBaseContent() {
+  const [sidebarCollapsed, setSidebarCollapsed] = useState(false)
   const context = useKbContext()
   const {
     spaces,
@@ -83,9 +84,23 @@ function AdminKnowledgeBaseContent() {
     )
   }
 
+  const handleSidebarNavigate = () => {
+    if (typeof window !== 'undefined' && window.innerWidth <= 760) {
+      setSidebarCollapsed(true)
+    }
+  }
+
   return (
-    <div className="kb-admin-shell">
-      <KbSidebar />
+    <div className={`kb-admin-shell${sidebarCollapsed ? ' is-sidebar-collapsed' : ''}`}>
+      <Button
+        className="kb-admin-mobile-nav"
+        type="text"
+        icon={sidebarCollapsed ? <MenuUnfoldOutlined /> : <MenuFoldOutlined />}
+        onClick={() => setSidebarCollapsed((collapsed) => !collapsed)}
+      >
+        {sidebarCollapsed ? '展开目录' : '收起目录'}
+      </Button>
+      <KbSidebar onNavigate={handleSidebarNavigate} />
       <KbMain />
       <KbPropertyDrawer />
       <KbTagModal />

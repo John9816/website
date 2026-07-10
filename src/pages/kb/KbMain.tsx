@@ -231,6 +231,8 @@ const KbMain: React.FC = () => {
   const publishedInPage = docs.filter((doc) => doc.status === 'published').length
   const draftInPage = docs.filter((doc) => doc.status !== 'published').length
   const isEditing = selectedDoc ? inlineEditingDocId === selectedDoc.id : false
+  const hasActiveFilters = Boolean(keyword.trim() || tagFilterId)
+  const activeTagName = tags.find((tag) => tag.id === tagFilterId)?.name
 
   const docColumns = React.useMemo(
     () => [
@@ -701,6 +703,16 @@ const KbMain: React.FC = () => {
             </div>
 
             <div className="kb-admin-listmode__filters">
+              <div className="kb-admin-listmode__filter-head">
+                <strong>{docsLoading ? '正在更新文档' : `共 ${docTotal} 篇文档`}</strong>
+                <span>
+                  {hasActiveFilters
+                    ? [keyword.trim() ? `关键词：${keyword.trim()}` : '', activeTagName ? `标签：${activeTagName}` : '']
+                        .filter(Boolean)
+                        .join(' · ')
+                    : '可按标题、摘要和标签快速定位'}
+                </span>
+              </div>
               <Input.Search
                 allowClear
                 prefix={<SearchOutlined />}
@@ -732,6 +744,7 @@ const KbMain: React.FC = () => {
                 ]}
               />
               <Button
+                disabled={!hasActiveFilters}
                 onClick={() => {
                   setKeyword('')
                   setTagFilterId(undefined)
@@ -776,11 +789,15 @@ const KbMain: React.FC = () => {
                 rowSelection={{
                   selectedRowKeys,
                   onChange: (keys) => setSelectedRowKeys(keys),
+                  preserveSelectedRowKeys: true,
                 }}
+                scroll={{ x: 820 }}
                 pagination={{
                   current: docPage,
                   pageSize: docPageSize,
                   total: docTotal,
+                  showTotal: (total) => `共 ${total} 篇`,
+                  showLessItems: true,
                   onChange: (page, pageSize) => {
                     setDocPage(page)
                     setDocPageSize(pageSize)

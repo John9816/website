@@ -1,6 +1,6 @@
 import React from 'react'
-import { Button, Card, Input, Modal, Popconfirm, Space, Typography } from 'antd'
-import { CopyOutlined } from '@ant-design/icons'
+import { App as AntApp, Button, Card, Input, Modal, Popconfirm, Space, Typography } from 'antd'
+import { CopyOutlined, LinkOutlined, SyncOutlined } from '@ant-design/icons'
 import { useKbContext } from './context'
 
 function formatDateTime(value?: string | null) {
@@ -20,6 +20,7 @@ async function copyText(text: string, success: (msg: string) => void, error: (ms
 }
 
 const KbShareModal: React.FC = () => {
+  const { message } = AntApp.useApp()
   const {
     shareModalOpen,
     setShareModalOpen,
@@ -34,6 +35,13 @@ const KbShareModal: React.FC = () => {
     handleDisableShare,
   } = useKbContext()
 
+  const handleCopy = (text: string) => copyText(text, message.success, message.error)
+
+  const handleOpenShare = () => {
+    if (!shareUrl) return
+    window.open(shareUrl, '_blank', 'noopener,noreferrer')
+  }
+
   return (
     <Modal
       title={shareDoc ? `公开分享 · ${shareDoc.title}` : '公开分享'}
@@ -41,13 +49,14 @@ const KbShareModal: React.FC = () => {
       onCancel={() => setShareModalOpen(false)}
       footer={null}
       destroyOnClose
+      className="kb-share-modal"
     >
       {shareLoading ? (
         <Typography.Text type="secondary">正在读取分享状态...</Typography.Text>
       ) : (
-        <Space direction="vertical" size={16} style={{ width: '100%' }}>
-          <Typography.Paragraph type="secondary" style={{ marginBottom: 0 }}>
-            公开链接会走当前前端路由 `/kb/share/:token`，页面内部再请求后端公开接口。
+        <Space direction="vertical" size={14} style={{ width: '100%' }}>
+          <Typography.Paragraph type="secondary" className="kb-share-modal__hint">
+            启用后，拥有链接的人可以阅读这篇文档及其公开目录。需要停止访问时，可以随时关闭分享。
           </Typography.Paragraph>
 
           <Input
@@ -59,42 +68,42 @@ const KbShareModal: React.FC = () => {
 
           {shareInfo ? (
             <>
-              <Card size="small">
-                <Space direction="vertical" size={8} style={{ width: '100%' }}>
-                  <div>
-                    <Typography.Text type="secondary">Token：</Typography.Text>
-                    <Typography.Text code>{shareInfo.token}</Typography.Text>
-                  </div>
-                  <div>
-                    <Typography.Text type="secondary">访问量：</Typography.Text>
-                    <Typography.Text>{shareInfo.viewCount}</Typography.Text>
-                  </div>
-                  <div>
-                    <Typography.Text type="secondary">更新时间：</Typography.Text>
-                    <Typography.Text>{formatDateTime(shareInfo.updatedAt)}</Typography.Text>
-                  </div>
-                  <Input value={shareUrl} readOnly />
-                </Space>
+              <Card size="small" className="kb-share-modal__card">
+                <div className="kb-share-modal__facts">
+                  <span>访问量</span>
+                  <strong>{shareInfo.viewCount}</strong>
+                  <span>更新时间</span>
+                  <strong>{formatDateTime(shareInfo.updatedAt)}</strong>
+                </div>
+                <Input
+                  className="kb-share-modal__url"
+                  value={shareUrl}
+                  readOnly
+                  addonAfter={
+                    <Button
+                      type="text"
+                      size="small"
+                      icon={<CopyOutlined />}
+                      onClick={() => void handleCopy(shareUrl)}
+                    >
+                      复制
+                    </Button>
+                  }
+                />
               </Card>
 
-              <Space wrap>
+              <Space wrap className="kb-share-modal__actions">
                 <Button type="primary" loading={shareSaving} onClick={() => void handleSaveShare(false)}>
                   保存分享设置
                 </Button>
-                <Button loading={shareSaving} onClick={() => void handleSaveShare(true)}>
+                <Button icon={<LinkOutlined />} onClick={handleOpenShare}>
+                  打开链接
+                </Button>
+                <Button icon={<CopyOutlined />} onClick={() => void handleCopy(shareUrl)}>
+                  复制链接
+                </Button>
+                <Button icon={<SyncOutlined />} loading={shareSaving} onClick={() => void handleSaveShare(true)}>
                   轮换 Token
-                </Button>
-                <Button
-                  icon={<CopyOutlined />}
-                  onClick={() => void copyText(shareUrl, (m) => console.log(m), (e) => console.error(e))}
-                >
-                  复制公开链接
-                </Button>
-                <Button
-                  icon={<CopyOutlined />}
-                  onClick={() => void copyText(shareInfo.token, (m) => console.log(m), (e) => console.error(e))}
-                >
-                  复制 Token
                 </Button>
                 <Popconfirm title="确定关闭当前公开分享吗？" onConfirm={() => void handleDisableShare()}>
                   <Button danger loading={shareSaving}>
@@ -104,7 +113,8 @@ const KbShareModal: React.FC = () => {
               </Space>
             </>
           ) : (
-            <Space>
+            <Space direction="vertical" size={10}>
+              <Typography.Text type="secondary">当前文档还没有公开链接。</Typography.Text>
               <Button type="primary" loading={shareSaving} onClick={() => void handleSaveShare(false)}>
                 启用公开分享
               </Button>

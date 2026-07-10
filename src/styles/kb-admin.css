@@ -33,6 +33,10 @@
   isolation: isolate;
 }
 
+.kb-admin-mobile-nav {
+  display: none;
+}
+
 .kb-admin-sidebar {
   min-width: 0;
   display: flex;
@@ -422,6 +426,31 @@
   border-radius: 8px;
   background: color-mix(in srgb, var(--panel) 96%, var(--bg));
   box-shadow: none;
+}
+
+.kb-admin-listmode__filter-head {
+  grid-column: 1 / -1;
+  min-width: 0;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  color: var(--text-dim);
+  font-size: 12px;
+}
+
+.kb-admin-listmode__filter-head strong {
+  color: var(--text);
+  font-size: 13px;
+  font-weight: 700;
+  white-space: nowrap;
+}
+
+.kb-admin-listmode__filter-head span {
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
 }
 
 .kb-admin-listmode__filters .ant-input-affix-wrapper,
@@ -1130,6 +1159,43 @@
 .kb-admin-inspector--editor .ant-btn {
   width: auto;
   min-width: 130px;
+}
+
+.kb-share-modal__hint.ant-typography {
+  margin-bottom: 0;
+  line-height: 1.7;
+}
+
+.kb-share-modal__card.ant-card {
+  border-color: var(--border);
+  border-radius: 8px;
+  background: var(--panel);
+}
+
+.kb-share-modal__facts {
+  display: grid;
+  grid-template-columns: 72px minmax(0, 1fr);
+  gap: 8px 12px;
+  margin-bottom: 12px;
+  color: var(--text-dim);
+  font-size: 13px;
+}
+
+.kb-share-modal__facts strong {
+  min-width: 0;
+  overflow: hidden;
+  color: var(--text);
+  font-weight: 600;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.kb-share-modal__url .ant-input {
+  color: var(--text);
+}
+
+.kb-share-modal__actions {
+  width: 100%;
 }
 
 @keyframes kb-admin-fade-up {
@@ -2297,8 +2363,28 @@
     grid-template-columns: 1fr;
   }
 
+  .admin-kb-page .kb-admin-mobile-nav {
+    position: sticky;
+    top: var(--admin-header-height, 56px);
+    z-index: 22;
+    display: inline-flex;
+    align-items: center;
+    justify-content: flex-start;
+    min-height: 42px;
+    border-radius: 0;
+    border-bottom: 1px solid var(--border);
+    background: color-mix(in srgb, var(--panel) 98%, transparent);
+    color: var(--text);
+    backdrop-filter: blur(12px);
+    -webkit-backdrop-filter: blur(12px);
+  }
+
   .admin-kb-page .kb-admin-sidebar {
     max-height: 260px;
+  }
+
+  .admin-kb-page .kb-admin-shell.is-sidebar-collapsed .kb-admin-sidebar {
+    display: none;
   }
 
   .admin-kb-page .kb-admin-inspector--editor {

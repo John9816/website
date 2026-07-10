@@ -7,7 +7,7 @@ import {
   type PointerEvent as ReactPointerEvent,
 } from 'react'
 import { Link, useParams } from 'react-router-dom'
-import { Button, Result, Spin, Typography } from 'antd'
+import { Button, Input, Result, Spin, Typography } from 'antd'
 import { ChevronDown, ChevronRight, FileText, FolderTree } from 'lucide-react'
 import { getPublicKbShare } from '../api/kb'
 import ThemeToggle from '../components/ThemeToggle'
@@ -105,6 +105,20 @@ function buildDocumentTree(items: KbPublicDocItem[]): PublicTreeNode[] {
   return roots
 }
 
+function filterDocumentTree(nodes: PublicTreeNode[], keyword: string): PublicTreeNode[] {
+  const normalizedKeyword = keyword.trim().toLowerCase()
+  if (!normalizedKeyword) return nodes
+
+  return nodes.flatMap((node) => {
+    const children = filterDocumentTree(node.children, normalizedKeyword)
+    const matched = [node.title, node.summary].some((value) =>
+      (value || '').toLowerCase().includes(normalizedKeyword),
+    )
+    if (!matched && !children.length) return []
+    return [{ ...node, children }]
+  })
+}
+
 function collectRequiredExpandedKeys(items: KbPublicDocItem[], activeId: number | null): string[] {
   const itemMap = new Map(items.map((item) => [item.id, item]))
   const expanded = new Set<string>()
@@ -122,6 +136,18 @@ function collectRequiredExpandedKeys(items: KbPublicDocItem[], activeId: number 
   }
 
   return Array.from(expanded)
+}
+
+function collectExpandableKeys(nodes: PublicTreeNode[]): string[] {
+  const keys: string[] = []
+  const walk = (node: PublicTreeNode) => {
+    if (node.children.length) {
+      keys.push(String(node.id))
+      node.children.forEach(walk)
+    }
+  }
+  nodes.forEach(walk)
+  return keys
 }
 
 function TreeBranch({
@@ -193,6 +219,7 @@ export default function KbSharePage() {
   const [doc, setDoc] = useState<KbPublicDoc | null>(null)
   const [documents, setDocuments] = useState<KbPublicDocItem[]>([])
   const [expandedKeys, setExpandedKeys] = useState<string[]>([])
+  const [treeKeyword, setTreeKeyword] = useState('')
   const [sidebarWidth, setSidebarWidth] = useState(getInitialSidebarWidth)
   const [viewportWidth, setViewportWidth] = useState(
     typeof window === 'undefined' ? 1440 : window.innerWidth,
@@ -292,12 +319,28 @@ export default function KbSharePage() {
     null
   const activeDocumentId = activeDocument?.id ?? doc?.id ?? null
 
-  const documentTree = useMemo(() => buildDocumentTree(sidebarDocuments), [sidebarDocuments])
+  const fullDocumentTree = useMemo(() => buildDocumentTree(sidebarDocuments), [sidebarDocuments])
+  const documentTree = useMemo(
+    () => filterDocumentTree(fullDocumentTree, treeKeyword),
+    [fullDocumentTree, treeKeyword],
+  )
+  const visibleDocumentCount = useMemo(() => {
+    const count = (nodes: PublicTreeNode[]): number =>
+      nodes.reduce((total, node) => total + 1 + count(node.children), 0)
+    return count(documentTree)
+  }, [documentTree])
 
   useEffect(() => {
     const requiredKeys = collectRequiredExpandedKeys(sidebarDocuments, activeDocumentId)
     setExpandedKeys((previous) => Array.from(new Set([...requiredKeys, ...previous])))
   }, [activeDocumentId, sidebarDocuments])
+
+  useEffect(() => {
+    if (!treeKeyword.trim()) return
+    setExpandedKeys((previous) =>
+      Array.from(new Set([...previous, ...collectExpandableKeys(documentTree)])),
+    )
+  }, [documentTree, treeKeyword])
 
   const currentTitle = doc?.title || activeDocument?.title || '未命名文档'
   const currentSummary = doc?.summary || activeDocument?.summary || ''
@@ -386,8 +429,21 @@ export default function KbSharePage() {
           </div>
 
           <div className="kb-share-sidebar__meta">
-            <span>公开文档</span>
-            <strong>{sidebarDocuments.length}</strong>
+            <span>{treeKeyword.trim() ? '匹配文档' : '公开文档'}</span>
+            <strong>
+              {treeKeyword.trim()
+                ? `${visibleDocumentCount}/${sidebarDocuments.length}`
+                : sidebarDocuments.length}
+            </strong>
+          </div>
+
+          <div className="kb-share-sidebar__search">
+            <Input.Search
+              allowClear
+              placeholder="搜索标题或摘要"
+              value={treeKeyword}
+              onChange={(event) => setTreeKeyword(event.target.value)}
+            />
           </div>
 
           <div className="kb-share-tree" aria-label="公开文档树形目录">
@@ -402,7 +458,9 @@ export default function KbSharePage() {
                 />
               ))
             ) : (
-              <div className="kb-share-tree__empty">暂无公开文档</div>
+              <div className="kb-share-tree__empty">
+                {treeKeyword.trim() ? '没有匹配的公开文档' : '暂无公开文档'}
+              </div>
             )}
           </div>
         </aside>
