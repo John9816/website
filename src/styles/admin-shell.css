@@ -340,6 +340,46 @@
   box-shadow: 18px 0 42px rgb(15 23 42 / 8%);
 }
 
+[data-theme='light'] .admin-shell__brand {
+  border-bottom-color: rgb(15 23 42 / 10%);
+}
+
+[data-theme='light'] .admin-shell__brand-mark {
+  border-color: rgb(15 23 42 / 12%);
+}
+
+[data-theme='light'] .admin-shell__brand-text {
+  color: #111827;
+}
+
+[data-theme='light'] .admin-shell__menu.ant-menu .ant-menu-item,
+[data-theme='light'] .admin-shell__menu.ant-menu .ant-menu-item .anticon,
+[data-theme='light'] .admin-shell__menu.ant-menu .ant-menu-item a {
+  color: rgb(51 65 85 / 82%) !important;
+}
+
+[data-theme='light'] .admin-shell__menu.ant-menu .ant-menu-item:hover {
+  background: rgb(15 23 42 / 6%) !important;
+}
+
+[data-theme='light'] .admin-shell__menu.ant-menu .ant-menu-item:hover,
+[data-theme='light'] .admin-shell__menu.ant-menu .ant-menu-item:hover .anticon,
+[data-theme='light'] .admin-shell__menu.ant-menu .ant-menu-item:hover a {
+  color: #111827 !important;
+}
+
+[data-theme='light'] .admin-shell__menu.ant-menu .ant-menu-item-selected {
+  background:
+    linear-gradient(90deg, rgb(37 99 235 / 14%), transparent 78%),
+    rgb(15 23 42 / 5%) !important;
+}
+
+[data-theme='light'] .admin-shell__menu.ant-menu .ant-menu-item-selected,
+[data-theme='light'] .admin-shell__menu.ant-menu .ant-menu-item-selected .anticon,
+[data-theme='light'] .admin-shell__menu.ant-menu .ant-menu-item-selected a {
+  color: #1d4ed8 !important;
+}
+
 [data-theme='light'] .admin-shell__header.ant-layout-header {
   border-bottom-color: rgb(15 23 42 / 10%);
   background: rgb(255 255 255 / 88%);
