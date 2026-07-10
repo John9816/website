@@ -444,3 +444,8 @@
     rgb(255 255 255 / 8%);
   color: #fff;
 }
+
+.ai-chat--image-authenticated {
+  grid-template-rows: minmax(0, 1fr);
+  grid-template-areas: 'main';
+}

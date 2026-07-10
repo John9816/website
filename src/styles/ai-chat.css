@@ -1624,3 +1624,17 @@
   backdrop-filter: blur(10px);
   -webkit-backdrop-filter: blur(10px);
 }
+
+.ai-chat {
+  grid-template-rows: minmax(0, 1fr);
+  grid-template-areas: 'main';
+}
+
+.ai-chat > .topbar {
+  grid-area: auto;
+}
+
+.ai-chat__main,
+.ai-chat__main--authenticated {
+  padding-top: var(--app-topbar-offset);
+}

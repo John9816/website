@@ -716,3 +716,122 @@
     background-position: 0%;
   }
 }
+
+/* Compact fixed topbar */
+:root {
+  --app-topbar-offset: calc(56px + var(--safe-top));
+}
+
+.topbar,
+.topbar--pinned {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  z-index: 1000;
+  gap: 14px;
+  width: 100%;
+  padding: calc(6px + var(--safe-top)) 20px 6px;
+  border-radius: 0;
+  transform: translateY(0);
+}
+
+.topbar::before {
+  inset: calc(4px + var(--safe-top)) 14px 4px;
+  background: rgb(8 20 40 / 44%);
+  box-shadow: 0 10px 30px rgb(0 0 0 / 16%);
+}
+
+.topbar-brand,
+.topbar--pinned .topbar-brand {
+  min-height: 36px;
+  padding: 0 14px;
+  font-size: 20px;
+}
+
+.topbar-nav,
+.topbar--pinned .topbar-nav {
+  gap: 3px;
+  padding: 3px;
+}
+
+.topbar-nav__indicator {
+  top: 3px;
+  bottom: 3px;
+}
+
+.topbar-nav__link,
+.topbar--pinned .topbar-nav__link {
+  min-width: 76px;
+  min-height: 34px;
+  padding: 0 12px;
+  font-size: 13px;
+}
+
+.topbar-action,
+.topbar-actions .theme-toggle,
+.topbar-user-trigger,
+.topbar--pinned .topbar-action,
+.topbar--pinned .topbar-actions .theme-toggle,
+.topbar--pinned .topbar-user-trigger {
+  min-height: 36px;
+  padding: 0 11px;
+}
+
+.topbar-actions .theme-toggle {
+  width: 38px;
+  height: 36px;
+  min-width: 38px;
+  padding: 0;
+}
+
+@media (max-width: 1024px) {
+  .topbar,
+  .topbar--pinned {
+    gap: 10px;
+    padding: calc(6px + var(--safe-top)) 14px 6px;
+  }
+}
+
+@media (max-width: 768px) {
+  :root {
+    --app-topbar-offset: calc(88px + var(--safe-top));
+  }
+
+  .topbar,
+  .topbar--pinned {
+    gap: 6px;
+    padding: calc(6px + var(--safe-top)) 14px 6px;
+  }
+
+  .topbar::before {
+    inset: calc(4px + var(--safe-top)) 8px 4px;
+  }
+
+  .topbar-brand {
+    min-height: 34px;
+    padding: 0 13px;
+    font-size: 20px;
+  }
+
+  .topbar-nav__link {
+    flex: 1 1 0;
+    min-width: 0;
+    min-height: 34px;
+    padding: 0 6px;
+    font-size: 12px;
+  }
+
+  .topbar-action,
+  .topbar-actions .theme-toggle,
+  .topbar-user-trigger {
+    min-height: 34px;
+    padding-inline: 10px;
+  }
+
+  .topbar-actions .theme-toggle {
+    min-width: 36px;
+    width: 36px;
+    height: 34px;
+  }
+}

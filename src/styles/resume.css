@@ -283,7 +283,7 @@
 }
 
 .resume-page__main {
-  padding-top: 24px;
+  padding-top: calc(var(--app-topbar-offset) + 18px);
 }
 
 .resume-paper {

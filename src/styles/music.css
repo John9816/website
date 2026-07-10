@@ -2031,3 +2031,16 @@
   backdrop-filter: blur(18px);
   -webkit-backdrop-filter: blur(18px);
 }
+
+.music-page {
+  grid-template-rows: minmax(0, 1fr);
+  grid-template-areas: 'body';
+}
+
+.music-page > .topbar {
+  grid-area: auto;
+}
+
+.music-body {
+  padding-top: var(--app-topbar-offset);
+}
