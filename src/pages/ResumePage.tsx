@@ -33,7 +33,7 @@ export default function ResumePage() {
       <header className="topbar">
         <RouterLink to="/" className="topbar-brand" aria-label="返回首页">
           <span className="brand-dot" />
-          <span>我的导航</span>
+          <span>oldwang</span>
         </RouterLink>
 
         <TopbarNav />

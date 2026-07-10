@@ -599,3 +599,120 @@
   }
 
 }
+
+/* Bank-style shared navigation skin */
+.topbar {
+  background: transparent;
+  border: 0;
+  box-shadow: none;
+}
+
+.topbar::before {
+  content: '';
+  position: absolute;
+  inset: 8px 20px 8px;
+  z-index: -1;
+  border: 1px solid rgb(255 255 255 / 9%);
+  border-radius: 8px;
+  background: rgb(8 20 40 / 22%);
+  backdrop-filter: blur(10px);
+  -webkit-backdrop-filter: blur(10px);
+}
+
+.topbar-brand {
+  min-height: 43px;
+  padding: 0 18px;
+  border-radius: 7px;
+  background-image: linear-gradient(120deg, #bd34fe, #e0321b 30%, #41d1ff 60%);
+  background-size: 200%;
+  color: #fff;
+  font-family: bankTitle, cursive;
+  font-size: 24px;
+  font-weight: 800;
+  box-shadow: inset 0 1px 0 rgb(255 255 255 / 18%);
+  animation: topbar-brand-gradient 10s ease-in-out infinite;
+}
+
+.topbar-brand:hover {
+  color: #fff;
+}
+
+.topbar-brand .brand-dot {
+  width: 8px;
+  height: 8px;
+  border-radius: 999px;
+  background: #aaffcd;
+  box-shadow: 0 0 0 5px rgb(170 255 205 / 14%);
+}
+
+.topbar-nav {
+  border-color: rgb(255 255 255 / 10%);
+  background: rgb(0 0 0 / 20%);
+  box-shadow: none;
+  backdrop-filter: blur(8px);
+  -webkit-backdrop-filter: blur(8px);
+}
+
+.topbar-nav__indicator {
+  background:
+    linear-gradient(120deg, rgb(189 52 254 / 28%), rgb(65 209 255 / 18%)),
+    rgb(255 255 255 / 8%);
+  box-shadow: inset 0 1px 0 rgb(255 255 255 / 14%);
+}
+
+.topbar-nav__link {
+  color: rgb(255 255 255 / 72%);
+}
+
+.topbar-nav__link:hover,
+.topbar-nav__link:focus-visible,
+.topbar-nav__link.is-active,
+.topbar-nav__link.is-transitioning {
+  color: #fff;
+}
+
+.topbar-nav__link::before {
+  background: rgb(255 255 255 / 8%);
+}
+
+.topbar-action,
+.topbar-actions .theme-toggle,
+.topbar-user-trigger {
+  border-color: rgb(255 255 255 / 10%);
+  background: rgb(0 0 0 / 20%);
+  color: rgb(255 255 255 / 76%);
+  box-shadow: inset 0 1px 0 rgb(255 255 255 / 10%);
+  backdrop-filter: blur(8px);
+  -webkit-backdrop-filter: blur(8px);
+}
+
+.topbar-action:hover,
+.topbar-actions .theme-toggle:hover,
+.topbar-user-trigger:hover {
+  border-color: rgb(255 255 255 / 18%);
+  background: rgb(255 255 255 / 9%);
+  color: #fff;
+}
+
+.topbar-user-card {
+  border-color: rgb(255 255 255 / 12%);
+  background: rgb(9 22 43 / 88%);
+  color: #fff;
+  backdrop-filter: blur(18px);
+  -webkit-backdrop-filter: blur(18px);
+}
+
+.topbar-user-card__meta {
+  border-color: rgb(255 255 255 / 10%);
+  background: rgb(255 255 255 / 7%);
+}
+
+@keyframes topbar-brand-gradient {
+  0%,
+  100% {
+    background-position: 100%;
+  }
+  50% {
+    background-position: 0%;
+  }
+}

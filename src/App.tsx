@@ -66,7 +66,10 @@ function RouteFallback() {
 function ThemedAntd({ children }: { children: ReactNode }) {
   const { mode } = useTheme()
   const isDark = mode === 'dark'
-  const colorPrimary = mode === 'dark' ? '#fb7185' : '#e11d48'
+  const colorPrimary = isDark ? '#f76cc6' : '#41d1ff'
+  const colorBgContainer = isDark ? 'rgba(13, 15, 20, 0.76)' : 'rgba(8, 20, 40, 0.68)'
+  const colorBgElevated = isDark ? 'rgba(18, 23, 31, 0.94)' : 'rgba(10, 24, 48, 0.92)'
+  const colorBorder = 'rgba(255, 255, 255, 0.14)'
   return (
     <ConfigProvider
       locale={zhCN}
@@ -80,15 +83,15 @@ function ThemedAntd({ children }: { children: ReactNode }) {
           controlHeightSM: 32,
           fontFamily:
             "-apple-system, BlinkMacSystemFont, 'Segoe UI', 'PingFang SC', 'Hiragino Sans GB', 'Microsoft YaHei', sans-serif",
-          colorText: isDark ? '#f5f6fb' : '#171720',
-          colorTextSecondary: isDark ? '#aeb5c6' : '#626879',
-          colorBgContainer: isDark ? '#171a23' : '#ffffff',
-          colorBgElevated: isDark ? '#202431' : '#ffffff',
-          colorBorder: isDark ? '#303543' : '#e1e4ec',
-          colorBorderSecondary: isDark ? '#2a2f3d' : '#edf0f5',
-          colorFillTertiary: isDark ? 'rgba(255,255,255,0.08)' : 'rgba(225,29,72,0.08)',
-          boxShadow:
-            isDark ? '0 18px 48px rgba(0,0,0,0.36)' : '0 18px 48px rgba(18,24,40,0.12)',
+          colorText: '#f4f7fb',
+          colorTextSecondary: 'rgba(226,235,245,0.72)',
+          colorBgBase: isDark ? '#05070d' : '#102f52',
+          colorBgContainer,
+          colorBgElevated,
+          colorBorder,
+          colorBorderSecondary: 'rgba(255, 255, 255, 0.09)',
+          colorFillTertiary: isDark ? 'rgba(247,108,198,0.12)' : 'rgba(65,209,255,0.12)',
+          boxShadow: '0 18px 44px rgba(0,0,0,0.26)',
           motionDurationFast: '0.12s',
           motionDurationMid: '0.18s',
           motionEaseOut: 'cubic-bezier(0.2, 0.82, 0.2, 1)',
@@ -103,7 +106,7 @@ function ThemedAntd({ children }: { children: ReactNode }) {
           },
           Input: {
             borderRadius: 8,
-            activeShadow: `0 0 0 4px ${isDark ? 'rgba(251,113,133,0.14)' : 'rgba(225,29,72,0.12)'}`,
+            activeShadow: `0 0 0 4px ${isDark ? 'rgba(247,108,198,0.14)' : 'rgba(65,209,255,0.14)'}`,
           },
           Select: {
             borderRadius: 8,
@@ -120,11 +123,11 @@ function ThemedAntd({ children }: { children: ReactNode }) {
             borderRadiusLG: 8,
           },
           Table: {
-            headerBg: isDark ? '#202431' : '#f0f2f7',
-            rowHoverBg: isDark ? '#252a37' : '#f6f7fb',
+            headerBg: 'rgba(255,255,255,0.08)',
+            rowHoverBg: 'rgba(255,255,255,0.07)',
           },
         },
-        algorithm: isDark ? antdTheme.darkAlgorithm : antdTheme.defaultAlgorithm,
+        algorithm: antdTheme.darkAlgorithm,
       }}
     >
       <AntApp>{children}</AntApp>

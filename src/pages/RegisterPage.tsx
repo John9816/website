@@ -16,9 +16,11 @@ import { useAuth } from '../context/AuthContext'
 import { useTheme } from '../context/ThemeContext'
 
 function authBackground(mode: 'light' | 'dark') {
-  return mode === 'dark'
-    ? 'linear-gradient(135deg, #0f1117 0%, #1b1f2a 50%, #111827 100%)'
-    : 'linear-gradient(135deg, #fff1f4 0%, #f7f7fb 48%, #eef4ff 100%)'
+  const overlay =
+    mode === 'dark'
+      ? 'linear-gradient(180deg, rgba(0,0,0,0.58), rgba(0,0,0,0.34))'
+      : 'linear-gradient(180deg, rgba(9,23,45,0.62), rgba(10,18,33,0.38))'
+  return `${overlay}, url('/bank-nav/static/img/background.jpg') center / cover fixed no-repeat`
 }
 
 type RegisterValues = {
@@ -77,6 +79,8 @@ export default function RegisterPage() {
           width: 420,
           background: token.colorBgContainer,
           borderRadius: 8,
+          border: '1px solid rgba(255,255,255,0.12)',
+          backdropFilter: 'blur(16px)',
           boxShadow: token.boxShadow,
         }}
         bordered={false}

@@ -297,3 +297,38 @@
     min-height: 44px;
   }
 }
+
+/* Bank-style admin shell skin */
+.admin-shell {
+  background: transparent;
+}
+
+.admin-shell__sider.ant-layout-sider {
+  border-right-color: rgb(255 255 255 / 10%);
+  background:
+    linear-gradient(180deg, rgb(8 20 40 / 82%), rgb(7 14 28 / 86%)) !important;
+  backdrop-filter: blur(16px);
+  -webkit-backdrop-filter: blur(16px);
+}
+
+.admin-shell__body.ant-layout {
+  background: transparent;
+}
+
+.admin-shell__header.ant-layout-header {
+  border-bottom-color: rgb(255 255 255 / 10%);
+  background: rgb(8 20 40 / 48%);
+  backdrop-filter: blur(14px);
+  -webkit-backdrop-filter: blur(14px);
+}
+
+.admin-shell__content.ant-layout-content {
+  background: transparent;
+}
+
+.admin-shell .ant-card,
+.admin-shell .ant-table-wrapper,
+.admin-shell .ant-form,
+.admin-shell .ant-tabs-content-holder {
+  border-color: rgb(255 255 255 / 10%);
+}

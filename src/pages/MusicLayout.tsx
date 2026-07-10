@@ -43,7 +43,7 @@ export default function MusicLayout() {
       <header ref={topbarRef} className="topbar">
         <RouterLink to="/" className="topbar-brand">
           <span className="brand-dot" />
-          <span className="brand-title">我的导航</span>
+          <span className="brand-title">oldwang</span>
         </RouterLink>
 
         <TopbarNav />

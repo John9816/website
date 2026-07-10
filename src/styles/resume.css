@@ -275,3 +275,54 @@
     white-space: normal;
   }
 }
+
+/* Bank-style resume skin */
+.resume-page {
+  background: transparent;
+  color: var(--text);
+}
+
+.resume-page__main {
+  padding-top: 24px;
+}
+
+.resume-paper {
+  border-color: rgb(255 255 255 / 12%);
+  background: rgb(8 20 40 / 48%);
+  color: var(--text);
+  box-shadow: var(--shadow-lg);
+  backdrop-filter: blur(14px);
+  -webkit-backdrop-filter: blur(14px);
+}
+
+.resume-header {
+  border-bottom-color: rgb(255 255 255 / 12%);
+}
+
+.resume-section-title__bar {
+  border-radius: 999px;
+  background: linear-gradient(180deg, #41d1ff, #f76cc6);
+}
+
+.resume-section-title h2 {
+  color: #ffffff;
+}
+
+.resume-entry,
+.resume-award {
+  border-radius: 8px;
+}
+
+[data-theme='dark'] .resume-paper {
+  background: rgb(13 15 20 / 58%);
+  border-color: rgb(255 255 255 / 12%);
+  box-shadow: var(--shadow-lg);
+}
+
+[data-theme='dark'] .resume-section-title h2 {
+  color: #ffffff;
+}
+
+[data-theme='dark'] .resume-section-title__bar {
+  background: linear-gradient(180deg, #f76cc6, #41d1ff);
+}

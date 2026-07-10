@@ -10,8 +10,8 @@ interface TopbarNavItem {
 const NAV_ITEMS: TopbarNavItem[] = [
   { to: '/', label: '导航', end: true },
   { to: '/music', label: '音乐' },
-  { to: '/ai-chat', label: 'AI对话' },
-  { to: '/ai-image', label: 'AI生图' },
+  { to: '/ai-chat', label: 'AI 对话' },
+  { to: '/ai-image', label: 'AI 生图' },
   { to: '/resume', label: '个人简历' },
 ]
 

@@ -1,34 +1,48 @@
+@font-face {
+  font-family: bankTitle;
+  src: url('/bank-nav/static/fonts/Pacifico-Regular.ttf');
+  font-display: swap;
+}
+
+@font-face {
+  font-family: bankUbuntu;
+  src: url('/bank-nav/static/fonts/Ubuntu-Regular.ttf');
+  font-display: swap;
+}
+
 :root,
 [data-theme='light'] {
-  --bg: #f7f7fb;
-  --bg-grad: none;
-  --panel: #ffffff;
-  --panel-alt: #f0f2f7;
-  --panel-glass: rgba(255, 255, 255, 0.88);
-  --text: #171720;
-  --text-dim: #626879;
-  --border: #e1e4ec;
-  --border-strong: #c7ccd8;
-  --accent: #e11d48;
-  --accent-rgb: 225, 29, 72;
-  --accent-hover: #be123c;
-  --accent-2: #2563eb;
-  --accent-warm: #f59e0b;
-  --accent-green: #059669;
-  --accent-soft: rgba(225, 29, 72, 0.11);
-  --accent-2-soft: rgba(37, 99, 235, 0.1);
-  --hover: #f3f5f9;
-  --shadow-sm: 0 1px 2px rgba(18, 24, 40, 0.06);
-  --shadow-md: 0 12px 30px rgba(18, 24, 40, 0.1);
-  --shadow-lg: 0 24px 64px rgba(18, 24, 40, 0.14);
-  --error-bg: #fef2f2;
-  --error-fg: #b91c1c;
-  --error-border: #fecaca;
+  --bg: #102f52;
+  --bg-grad:
+    linear-gradient(180deg, rgb(9 23 45 / 62%), rgb(10 18 33 / 38%)),
+    url('/bank-nav/static/img/background.jpg');
+  --panel: rgb(8 20 40 / 58%);
+  --panel-alt: rgb(10 24 48 / 42%);
+  --panel-glass: rgb(9 22 43 / 58%);
+  --text: #f4f7fb;
+  --text-dim: rgb(226 235 245 / 72%);
+  --border: rgb(255 255 255 / 12%);
+  --border-strong: rgb(255 255 255 / 22%);
+  --accent: #41d1ff;
+  --accent-rgb: 65, 209, 255;
+  --accent-hover: #7be1ff;
+  --accent-2: #f76cc6;
+  --accent-warm: #aaffcd;
+  --accent-green: #aaffcd;
+  --accent-soft: rgb(65 209 255 / 14%);
+  --accent-2-soft: rgb(247 108 198 / 13%);
+  --hover: rgb(255 255 255 / 10%);
+  --shadow-sm: 0 8px 18px rgb(0 0 0 / 10%);
+  --shadow-md: 0 18px 44px rgb(0 0 0 / 18%);
+  --shadow-lg: 0 28px 74px rgb(0 0 0 / 24%);
+  --error-bg: rgb(127 29 29 / 32%);
+  --error-fg: #fecaca;
+  --error-border: rgb(254 202 202 / 22%);
   --skeleton: linear-gradient(
     90deg,
-    rgba(0, 0, 0, 0.04) 25%,
-    rgba(0, 0, 0, 0.08) 37%,
-    rgba(0, 0, 0, 0.04) 63%
+    rgb(255 255 255 / 6%) 25%,
+    rgb(255 255 255 / 15%) 37%,
+    rgb(255 255 255 / 6%) 63%
   );
   --motion-fast: 0.14s ease;
   --motion-base: 0.2s cubic-bezier(0.2, 0.82, 0.2, 1);
@@ -37,30 +51,32 @@
 }
 
 [data-theme='dark'] {
-  --bg: #0f1117;
-  --bg-grad: none;
-  --panel: #171a23;
-  --panel-alt: #202431;
-  --panel-glass: rgba(23, 26, 35, 0.86);
-  --text: #f5f6fb;
-  --text-dim: #aeb5c6;
-  --border: #303543;
-  --border-strong: #4a5164;
-  --accent: #fb7185;
-  --accent-rgb: 251, 113, 133;
-  --accent-hover: #fda4af;
-  --accent-2: #60a5fa;
-  --accent-warm: #fbbf24;
-  --accent-green: #34d399;
-  --accent-soft: rgba(251, 113, 133, 0.16);
-  --accent-2-soft: rgba(96, 165, 250, 0.14);
-  --hover: #252a37;
-  --shadow-sm: 0 1px 3px rgba(0, 0, 0, 0.4);
-  --shadow-md: 0 12px 28px rgba(0, 0, 0, 0.38);
-  --shadow-lg: 0 20px 54px rgba(0, 0, 0, 0.48);
-  --error-bg: #3a1d1d;
+  --bg: #05070d;
+  --bg-grad:
+    linear-gradient(180deg, rgb(0 0 0 / 54%), rgb(0 0 0 / 34%)),
+    url('/bank-nav/static/img/background.jpg');
+  --panel: rgb(13 15 20 / 62%);
+  --panel-alt: rgb(18 23 31 / 54%);
+  --panel-glass: rgb(13 15 20 / 64%);
+  --text: #ffffff;
+  --text-dim: rgb(226 232 240 / 70%);
+  --border: rgb(255 255 255 / 12%);
+  --border-strong: rgb(255 255 255 / 24%);
+  --accent: #f76cc6;
+  --accent-rgb: 247, 108, 198;
+  --accent-hover: #ff9bdd;
+  --accent-2: #41d1ff;
+  --accent-warm: #aaffcd;
+  --accent-green: #aaffcd;
+  --accent-soft: rgb(247 108 198 / 15%);
+  --accent-2-soft: rgb(65 209 255 / 13%);
+  --hover: rgb(255 255 255 / 10%);
+  --shadow-sm: 0 8px 18px rgb(0 0 0 / 20%);
+  --shadow-md: 0 18px 44px rgb(0 0 0 / 32%);
+  --shadow-lg: 0 28px 74px rgb(0 0 0 / 44%);
+  --error-bg: rgb(69 10 10 / 52%);
   --error-fg: #fca5a5;
-  --error-border: #5c2a2a;
+  --error-border: rgb(252 165 165 / 20%);
   --skeleton: linear-gradient(
     90deg,
     rgba(255, 255, 255, 0.04) 25%,
@@ -92,6 +108,9 @@ body {
   margin: 0;
   background: var(--bg);
   background-image: var(--bg-grad);
+  background-repeat: no-repeat;
+  background-size: cover;
+  background-position: center;
   background-attachment: fixed;
   color: var(--text);
   font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', 'PingFang SC',
@@ -99,6 +118,17 @@ body {
   -webkit-font-smoothing: antialiased;
   transition: background-color 0.2s, color 0.2s;
   overscroll-behavior-y: none;
+}
+
+body::before {
+  content: '';
+  position: fixed;
+  inset: 0;
+  z-index: -1;
+  background: rgb(0 0 0 / 18%);
+  backdrop-filter: blur(16px);
+  -webkit-backdrop-filter: blur(16px);
+  pointer-events: none;
 }
 
 a {
@@ -109,6 +139,41 @@ a {
 
 a:hover {
   color: var(--accent);
+}
+
+.theme-toggle {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 42px;
+  height: 40px;
+  border: 1px solid rgb(255 255 255 / 14%);
+  border-radius: 8px;
+  background: rgb(8 20 40 / 46%);
+  color: var(--text);
+  box-shadow: inset 0 1px 0 rgb(255 255 255 / 8%);
+  backdrop-filter: blur(10px);
+  -webkit-backdrop-filter: blur(10px);
+  cursor: pointer;
+  transition:
+    transform var(--motion-fast),
+    border-color var(--motion-fast),
+    background var(--motion-fast);
+}
+
+.theme-toggle:hover {
+  border-color: rgb(65 209 255 / 32%);
+  background: rgb(255 255 255 / 9%);
+}
+
+.theme-toggle:active {
+  transform: scale(0.98);
+}
+
+.theme-toggle__icon {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
 }
 
 button,
