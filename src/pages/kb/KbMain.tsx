@@ -524,36 +524,47 @@ const KbMain: React.FC = () => {
                   </div>
                 </div>
                 <aside className="kb-admin-editor-actionbar" aria-label={'\u7f16\u8f91\u64cd\u4f5c'}>
-                  <span className={`kb-admin-editor-save-state${isDirty ? ' is-dirty' : ''}`}>
-                    {inlineDocSaving ? '\u6b63\u5728\u4fdd\u5b58' : isDirty ? '\u672a\u4fdd\u5b58' : '\u5df2\u4fdd\u5b58'}
-                  </span>
-                  <Tooltip title={'\u6587\u6863\u5c5e\u6027'}>
-                    <Button
-                      type="text"
-                      icon={<SettingOutlined />}
-                      onClick={() => setPropertyDrawerOpen(true)}
-                      aria-label={'\u6587\u6863\u5c5e\u6027'}
-                    />
-                  </Tooltip>
-                  {isDirty ? (
-                    <Popconfirm title={'\u6709\u672a\u4fdd\u5b58\u4fee\u6539\uff0c\u786e\u5b9a\u9000\u51fa\u7f16\u8f91\u5417\uff1f'} onConfirm={exitInlineEdit}>
-                      <Button type="text" icon={<CloseOutlined />}>
+                  <div className="kb-admin-editor-actionbar__context">
+                    <span className="kb-admin-editor-actionbar__icon">
+                      <FileTextOutlined />
+                    </span>
+                    <span className="kb-admin-editor-actionbar__copy">
+                      <small>{activeSpace?.name || '个人空间'} / 编辑文档</small>
+                      <strong>{editTitle.trim() || selectedDoc.title || '未命名文档'}</strong>
+                    </span>
+                    <span className={`kb-admin-editor-save-state${isDirty ? ' is-dirty' : ''}`}>
+                      {inlineDocSaving ? '\u6b63\u5728\u4fdd\u5b58' : isDirty ? '\u672a\u4fdd\u5b58' : '\u5df2\u4fdd\u5b58'}
+                    </span>
+                  </div>
+                  <div className="kb-admin-editor-actionbar__actions">
+                    <Tooltip title={'\u6587\u6863\u5c5e\u6027'}>
+                      <Button
+                        type="text"
+                        icon={<SettingOutlined />}
+                        onClick={() => setPropertyDrawerOpen(true)}
+                        aria-label={'\u6587\u6863\u5c5e\u6027'}
+                      />
+                    </Tooltip>
+                    {isDirty ? (
+                      <Popconfirm title={'\u6709\u672a\u4fdd\u5b58\u4fee\u6539\uff0c\u786e\u5b9a\u9000\u51fa\u7f16\u8f91\u5417\uff1f'} onConfirm={exitInlineEdit}>
+                        <Button type="text" icon={<CloseOutlined />}>
+                          {'\u9000\u51fa'}
+                        </Button>
+                      </Popconfirm>
+                    ) : (
+                      <Button type="text" icon={<CloseOutlined />} onClick={exitInlineEdit}>
                         {'\u9000\u51fa'}
                       </Button>
-                    </Popconfirm>
-                  ) : (
-                    <Button type="text" icon={<CloseOutlined />} onClick={exitInlineEdit}>
-                      {'\u9000\u51fa'}
+                    )}
+                    <Button
+                      type="primary"
+                      icon={<SaveOutlined />}
+                      onClick={() => void handleSaveInlineDoc()}
+                      loading={inlineDocSaving}
+                    >
+                      {'\u4fdd\u5b58'}
                     </Button>
-                  )}
-                  <Button
-                    type="primary"
-                    icon={<SaveOutlined />}
-                    onClick={() => void handleSaveInlineDoc()}
-                    loading={inlineDocSaving}
-                  >
-                    {'\u4fdd\u5b58'}
-                  </Button>
+                  </div>
                 </aside>
                 <aside className="kb-admin-inspector kb-admin-inspector--editor">
                   <div className="kb-admin-inspector__section">
