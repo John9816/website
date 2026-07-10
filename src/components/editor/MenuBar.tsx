@@ -6,29 +6,39 @@ import {
   AlignRightOutlined,
   BgColorsOutlined,
   BoldOutlined,
+  BorderHorizontalOutlined,
+  BorderOutlined,
+  BorderVerticleOutlined,
   CheckOutlined,
   ClearOutlined,
   CodeOutlined,
+  DashOutlined,
   DeleteOutlined,
+  DeleteColumnOutlined,
+  DeleteRowOutlined,
   FullscreenExitOutlined,
   FullscreenOutlined,
   HighlightOutlined,
+  InsertRowAboveOutlined,
+  InsertRowBelowOutlined,
+  InsertRowLeftOutlined,
+  InsertRowRightOutlined,
   ItalicOutlined,
   LeftOutlined,
   LinkOutlined,
   LoadingOutlined,
-  MinusOutlined,
+  MergeCellsOutlined,
   OrderedListOutlined,
   PictureOutlined,
   RedoOutlined,
   RightOutlined,
+  SplitCellsOutlined,
+  StrikethroughOutlined,
   TableOutlined,
   UnderlineOutlined,
   UndoOutlined,
   UnorderedListOutlined,
   UploadOutlined,
-  VerticalLeftOutlined,
-  VerticalRightOutlined,
 } from '@ant-design/icons'
 import { Button, ColorPicker, Select, Tooltip } from 'antd'
 import { EDITOR_TEXT } from './texts'
@@ -112,6 +122,7 @@ function MenuBarInner({
         textColor: ed.getAttributes('textStyle').color as string | undefined,
         isBold: ed.isActive('bold'),
         isItalic: ed.isActive('italic'),
+        isStrike: ed.isActive('strike'),
         isUnderline: ed.isActive('underline'),
         isInlineCode: ed.isActive('code'),
         isHighlight: ed.isActive('highlight'),
@@ -128,6 +139,11 @@ function MenuBarInner({
         canAddColBefore: ed.can().addColumnBefore(),
         canAddColAfter: ed.can().addColumnAfter(),
         canDeleteCol: ed.can().deleteColumn(),
+        canToggleHeaderRow: ed.can().toggleHeaderRow(),
+        canToggleHeaderColumn: ed.can().toggleHeaderColumn(),
+        canToggleHeaderCell: ed.can().toggleHeaderCell(),
+        canMergeCells: ed.can().mergeCells(),
+        canSplitCell: ed.can().splitCell(),
         canDeleteTable: ed.can().deleteTable(),
       }
     },
@@ -248,6 +264,12 @@ function MenuBarInner({
             onClick={() => editor.chain().focus().toggleItalic().run()}
           />
           <ToolbarButton
+            title={EDITOR_TEXT.strike}
+            icon={<StrikethroughOutlined />}
+            active={state.isStrike}
+            onClick={() => editor.chain().focus().toggleStrike().run()}
+          />
+          <ToolbarButton
             title={EDITOR_TEXT.underline}
             icon={<UnderlineOutlined />}
             active={state.isUnderline}
@@ -346,44 +368,79 @@ function MenuBarInner({
               editor.chain().focus().insertTable({ rows: 3, cols: 3, withHeaderRow: true }).run()
             }
           />
+          <ToolbarButton
+            title={EDITOR_TEXT.horizontalRule}
+            icon={<DashOutlined />}
+            onClick={() => editor.chain().focus().setHorizontalRule().run()}
+          />
         </div>
 
         <div className="menu-group menu-group--table-edit">
           <ToolbarButton
             title={EDITOR_TEXT.addRowBefore}
-            icon={<VerticalLeftOutlined />}
+            icon={<InsertRowAboveOutlined />}
             onClick={() => editor.chain().focus().addRowBefore().run()}
             disabled={!state.canAddRowBefore}
           />
           <ToolbarButton
             title={EDITOR_TEXT.addRowAfter}
-            icon={<VerticalRightOutlined />}
+            icon={<InsertRowBelowOutlined />}
             onClick={() => editor.chain().focus().addRowAfter().run()}
             disabled={!state.canAddRowAfter}
           />
           <ToolbarButton
             title={EDITOR_TEXT.deleteRow}
-            icon={<MinusOutlined />}
+            icon={<DeleteRowOutlined />}
             onClick={() => editor.chain().focus().deleteRow().run()}
             disabled={!state.canDeleteRow}
           />
           <ToolbarButton
             title={EDITOR_TEXT.addColumnBefore}
-            icon={<LeftOutlined />}
+            icon={<InsertRowLeftOutlined />}
             onClick={() => editor.chain().focus().addColumnBefore().run()}
             disabled={!state.canAddColBefore}
           />
           <ToolbarButton
             title={EDITOR_TEXT.addColumnAfter}
-            icon={<RightOutlined />}
+            icon={<InsertRowRightOutlined />}
             onClick={() => editor.chain().focus().addColumnAfter().run()}
             disabled={!state.canAddColAfter}
           />
           <ToolbarButton
             title={EDITOR_TEXT.deleteColumn}
-            icon={<MinusOutlined />}
+            icon={<DeleteColumnOutlined />}
             onClick={() => editor.chain().focus().deleteColumn().run()}
             disabled={!state.canDeleteCol}
+          />
+          <ToolbarButton
+            title={EDITOR_TEXT.toggleHeaderRow}
+            icon={<BorderHorizontalOutlined />}
+            onClick={() => editor.chain().focus().toggleHeaderRow().run()}
+            disabled={!state.canToggleHeaderRow}
+          />
+          <ToolbarButton
+            title={EDITOR_TEXT.toggleHeaderColumn}
+            icon={<BorderVerticleOutlined />}
+            onClick={() => editor.chain().focus().toggleHeaderColumn().run()}
+            disabled={!state.canToggleHeaderColumn}
+          />
+          <ToolbarButton
+            title={EDITOR_TEXT.toggleHeaderCell}
+            icon={<BorderOutlined />}
+            onClick={() => editor.chain().focus().toggleHeaderCell().run()}
+            disabled={!state.canToggleHeaderCell}
+          />
+          <ToolbarButton
+            title={EDITOR_TEXT.mergeCells}
+            icon={<MergeCellsOutlined />}
+            onClick={() => editor.chain().focus().mergeCells().run()}
+            disabled={!state.canMergeCells}
+          />
+          <ToolbarButton
+            title={EDITOR_TEXT.splitCell}
+            icon={<SplitCellsOutlined />}
+            onClick={() => editor.chain().focus().splitCell().run()}
+            disabled={!state.canSplitCell}
           />
           <ToolbarButton
             title={EDITOR_TEXT.deleteTable}

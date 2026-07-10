@@ -3,7 +3,9 @@ import { FloatingMenu } from '@tiptap/react/menus'
 import type { Editor } from '@tiptap/react'
 import { Button, Tooltip } from 'antd'
 import {
+  CheckSquareOutlined,
   CodeOutlined,
+  DashOutlined,
   OrderedListOutlined,
   PictureOutlined,
   TableOutlined,
@@ -86,6 +88,16 @@ function FloatingMenuBarInner({ editor, onInsertImage }: Props) {
             aria-label={EDITOR_TEXT.orderedList}
           />
         </Tooltip>
+        <Tooltip title={EDITOR_TEXT.taskList}>
+          <Button
+            size="small"
+            type="text"
+            className="editor-toolbar-btn"
+            icon={<CheckSquareOutlined />}
+            onClick={() => editor.chain().focus().toggleTaskList().run()}
+            aria-label={EDITOR_TEXT.taskList}
+          />
+        </Tooltip>
         <Tooltip title={EDITOR_TEXT.codeBlock}>
           <Button
             size="small"
@@ -94,6 +106,16 @@ function FloatingMenuBarInner({ editor, onInsertImage }: Props) {
             icon={<CodeOutlined />}
             onClick={() => editor.chain().focus().toggleCodeBlock().run()}
             aria-label={EDITOR_TEXT.codeBlock}
+          />
+        </Tooltip>
+        <Tooltip title={EDITOR_TEXT.horizontalRule}>
+          <Button
+            size="small"
+            type="text"
+            className="editor-toolbar-btn"
+            icon={<DashOutlined />}
+            onClick={() => editor.chain().focus().setHorizontalRule().run()}
+            aria-label={EDITOR_TEXT.horizontalRule}
           />
         </Tooltip>
         <Tooltip title={EDITOR_TEXT.insertImageByUrl}>

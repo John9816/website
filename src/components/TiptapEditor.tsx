@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useMemo, useState, type CSSProperties } from 'react'
 import { createPortal } from 'react-dom'
-import { EditorContent, useEditor, type Editor } from '@tiptap/react'
+import { EditorContent, ReactNodeViewRenderer, useEditor, type Editor } from '@tiptap/react'
 import StarterKit from '@tiptap/starter-kit'
 import Underline from '@tiptap/extension-underline'
 import Link from '@tiptap/extension-link'
@@ -21,6 +21,7 @@ import { all, createLowlight } from 'lowlight'
 import { App as AntApp } from 'antd'
 import { MenuBar } from './editor/MenuBar'
 import { BubbleMenuBar } from './editor/BubbleMenuBar'
+import { CodeBlockView } from './editor/CodeBlockView'
 import { FloatingMenuBar } from './editor/FloatingMenuBar'
 import { ImagePromptModal } from './editor/ImagePromptModal'
 import { LinkPromptModal, type LinkPromptValue } from './editor/LinkPromptModal'
@@ -236,7 +237,9 @@ export default function TiptapEditor({
 
   const editor = useEditor({
     extensions: [
-      StarterKit,
+      StarterKit.configure({
+        codeBlock: false,
+      }),
       Underline,
       Link.configure({
         openOnClick: false,
@@ -263,8 +266,13 @@ export default function TiptapEditor({
       TextAlign.configure({
         types: ['heading', 'paragraph'],
       }),
-      CodeBlockLowlight.configure({
+      CodeBlockLowlight.extend({
+        addNodeView() {
+          return ReactNodeViewRenderer(CodeBlockView)
+        },
+      }).configure({
         lowlight,
+        defaultLanguage: 'plaintext',
       }),
       SlashCommand.configure({
         onInsertImage: openImageModal,
@@ -328,9 +336,9 @@ export default function TiptapEditor({
   }, [editor, openImageModal])
 
   const handleConfirmImageUrl = useCallback(
-    (url: string) => {
+    (value: { url: string; alt?: string }) => {
       if (!editor) return
-      editor.chain().focus().setImage({ src: url }).run()
+      editor.chain().focus().setImage({ src: value.url, alt: value.alt }).run()
       setImageModalOpen(false)
     },
     [editor],

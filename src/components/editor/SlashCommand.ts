@@ -34,6 +34,13 @@ type SlashCommandItemsProps = { query: string; editor: Editor }
 
 const defaultItems = ({ onInsertImage }: { onInsertImage?: () => void }): SlashCommandItem[] => [
   {
+    title: EDITOR_TEXT.slashParagraph,
+    keywords: ['p', 'paragraph', 'text'],
+    icon: createElement(FontSizeOutlined),
+    command: ({ editor, range }) =>
+      editor.chain().focus().deleteRange(range).setParagraph().run(),
+  },
+  {
     title: EDITOR_TEXT.slashHeading1,
     keywords: ['h1', 'heading1', 'title'],
     icon: createElement(FontSizeOutlined),
@@ -53,6 +60,27 @@ const defaultItems = ({ onInsertImage }: { onInsertImage?: () => void }): SlashC
     icon: createElement(FontSizeOutlined),
     command: ({ editor, range }) =>
       editor.chain().focus().deleteRange(range).toggleHeading({ level: 3 }).run(),
+  },
+  {
+    title: EDITOR_TEXT.slashHeading4,
+    keywords: ['h4', 'heading4'],
+    icon: createElement(FontSizeOutlined),
+    command: ({ editor, range }) =>
+      editor.chain().focus().deleteRange(range).toggleHeading({ level: 4 }).run(),
+  },
+  {
+    title: EDITOR_TEXT.slashHeading5,
+    keywords: ['h5', 'heading5'],
+    icon: createElement(FontSizeOutlined),
+    command: ({ editor, range }) =>
+      editor.chain().focus().deleteRange(range).toggleHeading({ level: 5 }).run(),
+  },
+  {
+    title: EDITOR_TEXT.slashHeading6,
+    keywords: ['h6', 'heading6'],
+    icon: createElement(FontSizeOutlined),
+    command: ({ editor, range }) =>
+      editor.chain().focus().deleteRange(range).toggleHeading({ level: 6 }).run(),
   },
   {
     title: EDITOR_TEXT.slashBulletList,
