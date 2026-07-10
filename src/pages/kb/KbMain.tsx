@@ -155,6 +155,15 @@ function scrollEditorHeadingIntoView(index?: number) {
   headings[index]?.scrollIntoView({ behavior: 'smooth', block: 'center' })
 }
 
+function EditorLoading() {
+  return (
+    <div className="kb-admin-editor-loading" role="status" aria-live="polite">
+      <Skeleton.Input active block size="small" />
+      <Skeleton active title={false} paragraph={{ rows: 8 }} />
+    </div>
+  )
+}
+
 function countTreeDocs(nodes: KbDocTreeNode[]): number {
   return nodes.reduce((total, node) => total + 1 + countTreeDocs(node.children ?? []), 0)
 }
@@ -555,7 +564,7 @@ const KbMain: React.FC = () => {
                   <div className="kb-admin-editor-paper">
                     <div className="kb-admin-edit__editor">
                       <ErrorBoundary message="编辑器加载失败">
-                        <Suspense fallback={<Skeleton active paragraph={{ rows: 10 }} />}>
+                        <Suspense fallback={<EditorLoading />}>
                           <TiptapEditor
                             key={selectedDoc.id}
                             content={editInitialContent}

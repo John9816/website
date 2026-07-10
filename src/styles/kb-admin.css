@@ -3431,11 +3431,19 @@
 }
 
 .admin-kb-page .kb-admin-sidebar__nav,
+.admin-kb-page .kb-admin-sidebar__workspace,
 .admin-kb-page .kb-admin-sidebar__sections {
   display: grid;
   gap: 2px;
   padding: 12px 12px 8px;
   border-bottom: 1px solid var(--kb-xc-divider);
+}
+
+.admin-kb-page .kb-admin-sidebar__workspace {
+  grid-template-columns: minmax(0, 1fr) minmax(0, 1fr) auto auto;
+  align-items: center;
+  gap: 6px;
+  padding-block: 8px;
 }
 
 .admin-kb-page .kb-admin-sidebar__sections {
@@ -3446,11 +3454,14 @@
 }
 
 .admin-kb-page .kb-admin-sidebar__nav button,
+.admin-kb-page .kb-admin-sidebar__workspace-link,
+.admin-kb-page .kb-admin-sidebar__workspace .ant-btn,
 .admin-kb-page .kb-admin-sidebar__sections button {
   width: 100%;
   min-height: 36px;
   display: inline-flex;
   align-items: center;
+  justify-content: flex-start;
   gap: 10px;
   border: 0;
   border-radius: 4px;
@@ -3465,9 +3476,31 @@
     color var(--motion-fast);
 }
 
+.admin-kb-page .kb-admin-sidebar__workspace .ant-btn {
+  min-width: 36px;
+  justify-content: center;
+  padding: 0;
+}
+
+.admin-kb-page .kb-admin-sidebar__workspace .theme-toggle {
+  min-width: 108px;
+  min-height: 36px;
+  border-color: transparent;
+  background: transparent;
+}
+
+.admin-kb-page .kb-admin-sidebar__workspace .theme-toggle__option {
+  min-width: 30px;
+  min-height: 30px;
+}
+
 .admin-kb-page .kb-admin-sidebar__nav button:hover,
+.admin-kb-page .kb-admin-sidebar__workspace-link:hover,
+.admin-kb-page .kb-admin-sidebar__workspace .ant-btn:hover,
 .admin-kb-page .kb-admin-sidebar__sections button:hover,
 .admin-kb-page .kb-admin-sidebar__nav button:focus-visible,
+.admin-kb-page .kb-admin-sidebar__workspace-link:focus-visible,
+.admin-kb-page .kb-admin-sidebar__workspace .ant-btn:focus-visible,
 .admin-kb-page .kb-admin-sidebar__sections button:focus-visible {
   background: var(--kb-xc-sidebar-hover);
   color: var(--accent);
@@ -3848,6 +3881,17 @@
   width: min(100%, 980px);
   margin-inline: auto;
   padding: 0 clamp(28px, 6vw, 72px) 104px;
+}
+
+.admin-kb-page .kb-admin-editor-loading {
+  min-height: 560px;
+  display: grid;
+  align-content: start;
+  gap: 18px;
+  border: 0;
+  border-radius: 0;
+  padding: 4px 0 96px;
+  background: transparent;
 }
 
 .admin-kb-page .kb-admin-workspace--editing .kb-admin-edit__editor .tiptap-editor-container,

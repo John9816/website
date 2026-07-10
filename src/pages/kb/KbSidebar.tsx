@@ -1,19 +1,20 @@
 import React from 'react'
+import { Link, useNavigate } from 'react-router-dom'
 import { Button, Dropdown, Input, Tooltip, Tree, Typography } from 'antd'
 import {
   AppstoreOutlined,
   DeleteOutlined,
   FileTextOutlined,
-  FolderOutlined,
   FolderOpenOutlined,
   HomeOutlined,
+  LogoutOutlined,
   PlusOutlined,
-  PushpinOutlined,
   ShareAltOutlined,
-  StarOutlined,
   TagsOutlined,
   UserOutlined,
 } from '@ant-design/icons'
+import ThemeToggle from '../../components/ThemeToggle'
+import { useAuth } from '../../context/AuthContext'
 import { useKbContext } from './context'
 import type { KbDocTreeNode } from '../../types'
 
@@ -72,6 +73,8 @@ type KbSidebarProps = {
 
 const KbSidebar: React.FC<KbSidebarProps> = ({ onNavigate }) => {
   const [treeKeyword, setTreeKeyword] = React.useState('')
+  const auth = useAuth()
+  const navigate = useNavigate()
   const {
     tree,
     treeLoading,
@@ -118,6 +121,11 @@ const KbSidebar: React.FC<KbSidebarProps> = ({ onNavigate }) => {
     ],
     [filteredTree, openCreateDoc, totalDocs],
   )
+
+  const handleLogout = React.useCallback(() => {
+    auth.logout()
+    navigate('/', { replace: true })
+  }, [auth, navigate])
 
   return (
     <aside className="kb-admin-sidebar">
@@ -175,24 +183,27 @@ const KbSidebar: React.FC<KbSidebarProps> = ({ onNavigate }) => {
         <button
           type="button"
           onClick={() => {
-            setSelectedParentId(null)
-            onNavigate?.()
-          }}
-        >
-          <AppstoreOutlined />
-          <span>模板市场</span>
-        </button>
-        <button
-          type="button"
-          onClick={() => {
-            setSelectedParentId(null)
+            setTagModalOpen(true)
             onNavigate?.()
           }}
         >
           <TagsOutlined />
-          <span>知识广场</span>
+          <span>标签管理</span>
         </button>
       </nav>
+
+      <div className="kb-admin-sidebar__workspace" aria-label="工作台访问">
+        <Link to="/" className="kb-admin-sidebar__workspace-link" aria-label="回到站点首页">
+          <HomeOutlined />
+          <span>首页</span>
+        </Link>
+        <Link to="/admin/categories" className="kb-admin-sidebar__workspace-link" aria-label="回到管理后台">
+          <AppstoreOutlined />
+          <span>后台</span>
+        </Link>
+        <ThemeToggle bare />
+        <Button type="text" danger icon={<LogoutOutlined />} onClick={handleLogout} aria-label="退出登录" />
+      </div>
 
       <div className="kb-admin-sidebar__search">
         <Input.Search
@@ -279,39 +290,6 @@ const KbSidebar: React.FC<KbSidebarProps> = ({ onNavigate }) => {
             }}
           />
         )}
-      </div>
-
-      <div className="kb-admin-sidebar__sections" aria-label="快捷分区">
-        <button
-          type="button"
-          onClick={() => {
-            setSelectedParentId(null)
-            onNavigate?.()
-          }}
-        >
-          <PushpinOutlined />
-          <span>快速访问</span>
-        </button>
-        <button
-          type="button"
-          onClick={() => {
-            setSelectedParentId(null)
-            onNavigate?.()
-          }}
-        >
-          <FolderOutlined />
-          <span>收藏夹</span>
-        </button>
-        <button
-          type="button"
-          onClick={() => {
-            setSelectedParentId(null)
-            onNavigate?.()
-          }}
-        >
-          <StarOutlined />
-          <span>收藏空间</span>
-        </button>
       </div>
     </aside>
   )
