@@ -154,6 +154,7 @@ export interface KbContextState {
   openEditDoc: (doc: { id: number }) => Promise<void>
   handleSaveInlineDoc: () => Promise<void>
   handleDeleteDoc: (docId: number) => Promise<void>
+  handleMoveDoc: (docId: number, target: { parentId: number | null; sortOrder?: number }) => Promise<void>
   confirmDeleteDoc: (docId: number, title: string) => void
   openShareModal: (doc: { id: number; title: string }) => Promise<void>
   handleSaveShare: (rotateToken?: boolean) => Promise<void>

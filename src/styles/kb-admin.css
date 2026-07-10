@@ -885,6 +885,13 @@
   color: var(--accent);
 }
 
+.kb-admin-outline a.is-active {
+  background: color-mix(in srgb, var(--accent-soft) 72%, transparent);
+  color: var(--accent);
+  font-weight: 700;
+  box-shadow: inset 2px 0 0 var(--accent);
+}
+
 .kb-admin-outline a.is-level-3 {
   padding-left: 18px;
 }
@@ -2920,6 +2927,14 @@
   transition: color var(--motion-fast);
 }
 
+.admin-kb-page .kb-admin-search-hit {
+  border-radius: 3px;
+  padding: 0 2px;
+  background: color-mix(in srgb, var(--accent-warm) 30%, transparent);
+  color: color-mix(in srgb, var(--text) 96%, var(--accent-warm));
+  font-weight: 750;
+}
+
 .admin-kb-page .kb-admin-file-title__copy small {
   max-width: min(560px, 42vw);
   overflow: hidden;
@@ -3560,6 +3575,22 @@
   min-height: 30px;
   border-radius: 4px;
   padding-inline: 4px;
+}
+
+.admin-kb-page .kb-admin-sidebar__tree .ant-tree-draggable-icon {
+  display: none;
+}
+
+.admin-kb-page .kb-admin-sidebar__tree .ant-tree-node-content-wrapper.ant-tree-node-content-wrapper-dragging,
+.admin-kb-page .kb-admin-sidebar__tree .ant-tree-treenode.drag-over > .ant-tree-node-content-wrapper,
+.admin-kb-page .kb-admin-sidebar__tree .ant-tree-treenode.drag-over-gap-top > .ant-tree-node-content-wrapper,
+.admin-kb-page .kb-admin-sidebar__tree .ant-tree-treenode.drag-over-gap-bottom > .ant-tree-node-content-wrapper {
+  background: color-mix(in srgb, var(--accent-soft) 76%, transparent);
+  color: var(--accent);
+}
+
+.admin-kb-page .kb-admin-sidebar__tree .ant-tree-drop-indicator {
+  background-color: var(--accent);
 }
 
 .admin-kb-page .kb-admin-tree-node {

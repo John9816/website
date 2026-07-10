@@ -17,6 +17,7 @@ import ThemeToggle from '../../components/ThemeToggle'
 import { useAuth } from '../../context/AuthContext'
 import { useKbContext } from './context'
 import type { KbDocTreeNode } from '../../types'
+import type { TreeProps } from 'antd'
 
 const ROOT_TREE_KEY = '__kb_root__'
 
@@ -41,6 +42,55 @@ function filterTree(nodes: KbDocTreeNode[], keyword: string): KbDocTreeNode[] {
     if (!matched && !children.length) return []
     return [{ ...node, children }]
   })
+}
+
+function sortTreeNodes(nodes: KbDocTreeNode[]): KbDocTreeNode[] {
+  return [...nodes].sort((left, right) => left.sortOrder - right.sortOrder || left.id - right.id)
+}
+
+function findTreeNode(nodes: KbDocTreeNode[], docId: number): KbDocTreeNode | null {
+  for (const node of nodes) {
+    if (node.id === docId) return node
+    const child = findTreeNode(node.children ?? [], docId)
+    if (child) return child
+  }
+  return null
+}
+
+function getChildrenForParent(nodes: KbDocTreeNode[], parentId: number | null): KbDocTreeNode[] {
+  if (parentId === null) return nodes
+  return findTreeNode(nodes, parentId)?.children ?? []
+}
+
+function getAppendSortOrder(nodes: KbDocTreeNode[], dragId: number): number {
+  const siblings = sortTreeNodes(nodes.filter((node) => node.id !== dragId))
+  return (siblings.at(-1)?.sortOrder ?? 0) + 1
+}
+
+function getGapSortOrder(
+  nodes: KbDocTreeNode[],
+  dragId: number,
+  targetId: number,
+  placement: 'before' | 'after',
+): number | undefined {
+  const siblings = sortTreeNodes(nodes.filter((node) => node.id !== dragId))
+  const targetIndex = siblings.findIndex((node) => node.id === targetId)
+  if (targetIndex < 0) return undefined
+
+  const target = siblings[targetIndex]
+  if (placement === 'before') {
+    const previous = siblings[targetIndex - 1]
+    return previous ? (previous.sortOrder + target.sortOrder) / 2 : target.sortOrder - 1
+  }
+
+  const next = siblings[targetIndex + 1]
+  return next ? (target.sortOrder + next.sortOrder) / 2 : target.sortOrder + 1
+}
+
+function getDocIdFromTreeKey(key: React.Key | undefined): number | null {
+  if (key === undefined || key === ROOT_TREE_KEY) return null
+  const docId = Number(key)
+  return Number.isFinite(docId) ? docId : null
 }
 
 function buildTreeData(nodes: KbDocTreeNode[]): KbTreeDataNode[] {
@@ -83,6 +133,7 @@ const KbSidebar: React.FC<KbSidebarProps> = ({ onNavigate }) => {
     openCreateDoc,
     openShareModal,
     confirmDeleteDoc,
+    handleMoveDoc,
     setTagModalOpen,
   } = useKbContext()
 
@@ -126,6 +177,40 @@ const KbSidebar: React.FC<KbSidebarProps> = ({ onNavigate }) => {
     auth.logout()
     navigate('/', { replace: true })
   }, [auth, navigate])
+
+  const handleTreeDrop = React.useCallback<NonNullable<TreeProps['onDrop']>>(
+    (info) => {
+      if (treeKeyword.trim()) return
+
+      const dragId = getDocIdFromTreeKey(info.dragNode.key)
+      const dropId = getDocIdFromTreeKey(info.node.key)
+      if (!dragId) return
+
+      if (!info.dropToGap) {
+        const parentId = dropId
+        const sortOrder = getAppendSortOrder(getChildrenForParent(tree, parentId), dragId)
+        void handleMoveDoc(dragId, { parentId, sortOrder })
+        return
+      }
+
+      if (!dropId) {
+        const sortOrder = getAppendSortOrder(tree, dragId)
+        void handleMoveDoc(dragId, { parentId: null, sortOrder })
+        return
+      }
+
+      const dropNode = findTreeNode(tree, dropId)
+      if (!dropNode) return
+
+      const dropPos = String((info.node as any).pos ?? '').split('-')
+      const dropIndex = Number(dropPos[dropPos.length - 1] ?? 0)
+      const placement = info.dropPosition - dropIndex < 0 ? 'before' : 'after'
+      const parentId = dropNode.parentId ?? null
+      const sortOrder = getGapSortOrder(getChildrenForParent(tree, parentId), dragId, dropId, placement)
+      void handleMoveDoc(dragId, { parentId, sortOrder })
+    },
+    [handleMoveDoc, tree, treeKeyword],
+  )
 
   return (
     <aside className="kb-admin-sidebar">
@@ -240,6 +325,8 @@ const KbSidebar: React.FC<KbSidebarProps> = ({ onNavigate }) => {
           <Tree
             blockNode
             defaultExpandAll
+            draggable={treeKeyword.trim() ? false : { icon: false }}
+            onDrop={handleTreeDrop}
             selectedKeys={selectedParentId ? [selectedParentId] : [ROOT_TREE_KEY]}
             treeData={treeData}
             onSelect={(keys) => {

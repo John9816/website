@@ -70,6 +70,32 @@ function escapeHtml(text?: string | null) {
     .replaceAll("'", '&#39;')
 }
 
+function highlightText(text: string | null | undefined, keyword: string): React.ReactNode {
+  const value = text || ''
+  const query = keyword.trim()
+  if (!query) return value || '-'
+
+  const lowerValue = value.toLowerCase()
+  const lowerQuery = query.toLowerCase()
+  const parts: React.ReactNode[] = []
+  let cursor = 0
+  let index = lowerValue.indexOf(lowerQuery)
+
+  while (index !== -1) {
+    if (index > cursor) parts.push(value.slice(cursor, index))
+    parts.push(
+      <mark className="kb-admin-search-hit" key={`${index}-${query}`}>
+        {value.slice(index, index + query.length)}
+      </mark>,
+    )
+    cursor = index + query.length
+    index = lowerValue.indexOf(lowerQuery, cursor)
+  }
+
+  if (cursor < value.length) parts.push(value.slice(cursor))
+  return parts.length ? parts : value || '-'
+}
+
 function stripHtml(html: string) {
   if (!html) return ''
   if (typeof window === 'undefined') return html.replace(/<[^>]+>/g, ' ')
@@ -210,6 +236,7 @@ function DocTags({ tags }: { tags: KbTag[] }) {
 
 const KbMain: React.FC = () => {
   const [toolbarContainer, setToolbarContainer] = React.useState<HTMLElement | null>(null)
+  const [activeOutlineId, setActiveOutlineId] = React.useState('')
   const { message } = AntApp.useApp()
 
   const {
@@ -289,6 +316,40 @@ const KbMain: React.FC = () => {
   ].filter(Boolean).join(' ')
   const localDraftTime = formatClockTime(localDraft?.updatedAt)
 
+  React.useEffect(() => {
+    if (!selectedDoc || isEditing || !articleContent.outline.length) {
+      setActiveOutlineId('')
+      return undefined
+    }
+
+    setActiveOutlineId(articleContent.outline[0].id)
+    const observer = new IntersectionObserver(
+      (entries) => {
+        const visibleEntries = entries
+          .filter((entry) => entry.isIntersecting)
+          .sort((left, right) => {
+            const leftIndex = articleContent.outline.findIndex((item) => item.id === left.target.id)
+            const rightIndex = articleContent.outline.findIndex((item) => item.id === right.target.id)
+            return leftIndex - rightIndex
+          })
+
+        if (visibleEntries[0]?.target.id) setActiveOutlineId(visibleEntries[0].target.id)
+      },
+      {
+        root: null,
+        rootMargin: '-18% 0px -70% 0px',
+        threshold: [0, 1],
+      },
+    )
+
+    articleContent.outline.forEach((item) => {
+      const element = document.getElementById(item.id)
+      if (element) observer.observe(element)
+    })
+
+    return () => observer.disconnect()
+  }, [articleContent.outline, isEditing, selectedDoc])
+
   const docColumns = React.useMemo(
     () => [
       {
@@ -306,8 +367,8 @@ const KbMain: React.FC = () => {
                 {treeMeta.get(row.id)?.childCount ? <FolderOpenOutlined /> : <FileTextOutlined />}
               </span>
               <span className="kb-admin-file-title__copy">
-                <span>{row.title || '未命名文档'}</span>
-                <small>{row.summary || '暂无摘要'}</small>
+                <span>{highlightText(row.title || '未命名文档', keyword)}</span>
+                <small>{highlightText(row.summary || '暂无摘要', keyword)}</small>
               </span>
             </button>
           </div>
@@ -384,7 +445,7 @@ const KbMain: React.FC = () => {
         ),
       },
     ],
-    [handleDeleteDoc, openEditDoc, openShareModal, openVersionsDrawer, setSelectedParentId, treeMeta],
+    [handleDeleteDoc, keyword, openEditDoc, openShareModal, openVersionsDrawer, setSelectedParentId, treeMeta],
   )
 
   const handleUploadEditorImage = React.useCallback(
@@ -739,8 +800,9 @@ const KbMain: React.FC = () => {
                         {articleContent.outline.map((item) => (
                           <a
                             key={item.id}
-                            className={`is-level-${item.level}`}
+                            className={`is-level-${item.level}${activeOutlineId === item.id ? ' is-active' : ''}`}
                             href={`#${item.id}`}
+                            onClick={() => setActiveOutlineId(item.id)}
                           >
                             {item.text}
                           </a>

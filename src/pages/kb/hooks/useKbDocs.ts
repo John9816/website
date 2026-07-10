@@ -229,6 +229,20 @@ function flattenTreeOptions(
   return result
 }
 
+function findTreeNode(nodes: KbDocTreeNode[], docId: number): KbDocTreeNode | null {
+  for (const node of nodes) {
+    if (node.id === docId) return node
+    const child = findTreeNode(node.children ?? [], docId)
+    if (child) return child
+  }
+  return null
+}
+
+function containsTreeNode(nodes: KbDocTreeNode[] | undefined, docId: number): boolean {
+  if (!nodes?.length) return false
+  return Boolean(findTreeNode(nodes, docId))
+}
+
 export function useKbDocs(activeSpaceId: number | null) {
   const { message, modal } = AntApp.useApp()
   const [keyword, setKeyword] = useState('')
@@ -634,6 +648,54 @@ export function useKbDocs(activeSpaceId: number | null) {
     }
   }, [activeSpaceId, loadDocs, loadTree, message, selectedParentId])
 
+  const handleMoveDoc = useCallback(async (
+    docId: number,
+    target: { parentId: number | null; sortOrder?: number },
+  ) => {
+    if (!activeSpaceId) return
+    if (target.parentId === docId) {
+      message.warning('不能移动到文档自身下面')
+      return
+    }
+
+    const sourceNode = findTreeNode(tree, docId)
+    if (!sourceNode) {
+      message.warning('未找到要移动的文档')
+      return
+    }
+    if (target.parentId && containsTreeNode(sourceNode.children, target.parentId)) {
+      message.warning('不能移动到自己的子文档下面')
+      return
+    }
+
+    try {
+      const movedDoc = await moveKbDoc(docId, {
+        spaceId: activeSpaceId,
+        parentId: target.parentId,
+        sortOrder: target.sortOrder,
+      })
+      if (selectedDoc?.id === docId) {
+        setSelectedDoc((doc) =>
+          doc
+            ? {
+                ...doc,
+                parentId: movedDoc.parentId ?? target.parentId,
+                sortOrder: movedDoc.sortOrder ?? target.sortOrder ?? doc.sortOrder,
+                updatedAt: movedDoc.updatedAt ?? doc.updatedAt,
+              }
+            : doc,
+        )
+      }
+      message.success('文档位置已更新')
+      await Promise.all([
+        loadTree(activeSpaceId),
+        loadDocs({ spaceId: activeSpaceId }),
+      ])
+    } catch (error) {
+      message.error((error as Error).message)
+    }
+  }, [activeSpaceId, loadDocs, loadTree, message, selectedDoc?.id, tree])
+
   const confirmDeleteDoc = useCallback((docId: number, title: string, loadSpaces: any) => {
     modal.confirm({
       title: `确认删除“${title}”？`,
@@ -728,7 +790,7 @@ export function useKbDocs(activeSpaceId: number | null) {
     isDirty, inlineDocParentOptions,
     keyword, setKeyword, deferredKeyword,
     loadTree, loadDocs, loadSelectedDoc, openCreateDoc, openEditDoc,
-    handleSaveInlineDoc, handleDeleteDoc, confirmDeleteDoc, enterInlineEdit, exitInlineEdit,
+    handleSaveInlineDoc, handleDeleteDoc, handleMoveDoc, confirmDeleteDoc, enterInlineEdit, exitInlineEdit,
     restoreLocalDraft, discardLocalDraft, handleInlineDocFormValuesChange,
   }
 }
