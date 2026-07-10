@@ -373,6 +373,9 @@ function cacheControlFor(filePath) {
   if (normalizedPath.includes('/assets/') || normalizedPath.includes('/models/')) {
     return 'public, max-age=31536000, immutable'
   }
+  if (normalizedPath.includes('/bank-nav/static/')) {
+    return 'public, max-age=604800, stale-while-revalidate=86400'
+  }
   return 'no-cache'
 }
 

@@ -14,6 +14,9 @@ import '../styles/topbar.css'
 import '../styles/home.css'
 
 const ASSET_BASE = '/bank-nav'
+const HOME_AVATAR_URL = `${ASSET_BASE}/static/img/logo-20260710.webp`
+const SPONSOR_IMAGE_URL = `${ASSET_BASE}/static/img/wxzsm-20260710.webp`
+const WECHAT_IMAGE_URL = `${ASSET_BASE}/static/img/qq-20260710.webp`
 const POLL_INTERVAL_MS = 30_000
 function sortByOrder<T extends { sortOrder: number }>(items: T[]) {
   return [...items].sort((a, b) => a.sortOrder - b.sortOrder)
@@ -191,7 +194,7 @@ export default function HomePage() {
         <aside className="zyyo-left">
           <div
             className="logo"
-            style={{ backgroundImage: `url(${ASSET_BASE}/static/img/logo.png)` }}
+            style={{ backgroundImage: `url(${HOME_AVATAR_URL})` }}
           />
           <div className="left-div left-des">
             <div className="left-des-item">
@@ -228,7 +231,7 @@ export default function HomePage() {
           <header>
             <div
               className="index-logo"
-              style={{ backgroundImage: `url(${ASSET_BASE}/static/img/logo.png)` }}
+              style={{ backgroundImage: `url(${HOME_AVATAR_URL})` }}
             />
             <div className="welcome">
               Hello I&apos; m <span className="gradientText">oldwang</span>
@@ -241,7 +244,7 @@ export default function HomePage() {
               <button
                 className="iconItem"
                 type="button"
-                onClick={() => setPopupImage(`${ASSET_BASE}/static/img/wxzsm.jpg`)}
+                onClick={() => setPopupImage(SPONSOR_IMAGE_URL)}
               >
                 <SponsorIcon />
                 <div className="iconTip">赞助</div>
@@ -249,7 +252,7 @@ export default function HomePage() {
               <button
                 className="iconItem"
                 type="button"
-                onClick={() => setPopupImage(`${ASSET_BASE}/static/img/qq.jpg`)}
+                onClick={() => setPopupImage(WECHAT_IMAGE_URL)}
               >
                 <WechatIcon />
                 <div className="iconTip">公众号</div>

@@ -18,7 +18,7 @@ import { useTheme, type ThemeMode } from '../context/ThemeContext'
 function authBackground(mode: ThemeMode) {
   if (mode === 'light') return '#ffffff'
   if (mode === 'dark') return '#000000'
-  return `linear-gradient(180deg, rgba(9,23,45,0.62), rgba(10,18,33,0.38)), url('/bank-nav/static/img/background.jpg') center / cover fixed no-repeat`
+  return `linear-gradient(180deg, rgba(9,23,45,0.62), rgba(10,18,33,0.38)), url('/bank-nav/static/img/background-20260710.webp') center / cover fixed no-repeat`
 }
 
 type RegisterValues = {
