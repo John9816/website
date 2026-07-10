@@ -23,6 +23,20 @@ export type DocFormValues = {
   contentHtml?: string
 }
 
+export type KbAutosaveStatus = 'idle' | 'pending' | 'saving' | 'saved' | 'error' | 'draft'
+
+export type KbLocalDraftState = {
+  docId: number
+  title: string
+  summary: string
+  contentHtml: string
+  contentJson: string
+  formValues: Partial<DocFormValues>
+  updatedAt: number
+  baseUpdatedAt?: string
+  baseVersionNo?: number
+}
+
 export type TreeContextMenuState =
   | {
       kind: 'root'
@@ -92,6 +106,10 @@ export interface KbContextState {
   versionDetailLoading: boolean
   selectedRowKeys: React.Key[]
   isDirty: boolean
+  autosaveStatus: KbAutosaveStatus
+  lastAutosavedAt: string | null
+  autosaveError: string
+  localDraft: KbLocalDraftState | null
 
   // Computed
   inlineDocParentOptions: Array<{ value: number; label: string }>
@@ -118,6 +136,7 @@ export interface KbContextState {
   setEditContentHtml: (html: string) => void
   setEditContentJson: (json: string) => void
   setTreeContextMenu: (state: TreeContextMenuState | null) => void
+  handleInlineDocFormValuesChange: () => void
 
   // Async Actions
   loadSpaces: (preferredSpaceId?: number, signal?: AbortSignal) => Promise<void>
@@ -143,6 +162,8 @@ export interface KbContextState {
   handleRestoreVersion: () => Promise<void>
   enterInlineEdit: (doc: KbDoc) => void
   exitInlineEdit: () => void
+  restoreLocalDraft: () => void
+  discardLocalDraft: () => void
 }
 
 export const KbContext = createContext<KbContextState | undefined>(undefined)

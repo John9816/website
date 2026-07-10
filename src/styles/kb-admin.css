@@ -3144,6 +3144,16 @@
   font-size: 11.5px;
 }
 
+.admin-kb-page .kb-admin-editor-save-state.is-error {
+  background: color-mix(in srgb, #ef4444 12%, transparent);
+  color: #dc2626;
+}
+
+.admin-kb-page .kb-admin-editor-save-state.is-saved {
+  background: color-mix(in srgb, #16a34a 10%, transparent);
+  color: #15803d;
+}
+
 .admin-kb-page .kb-admin-editor-actionbar .ant-btn {
   min-width: 32px;
   min-height: 32px;
@@ -3158,6 +3168,25 @@
 .admin-kb-page .kb-admin-workspace--editing .kb-admin-editor-head {
   width: min(100%, 980px);
   padding: 18px 32px 10px;
+}
+
+.admin-kb-page .kb-admin-edit__draft-alert {
+  width: min(100%, 980px);
+  padding: 0 32px 10px;
+}
+
+.admin-kb-page .kb-admin-edit__draft-alert .ant-alert {
+  border-radius: 6px;
+  padding: 8px 10px;
+}
+
+.admin-kb-page .kb-admin-edit__draft-alert .ant-alert-message {
+  font-size: 12.5px;
+  font-weight: 700;
+}
+
+.admin-kb-page .kb-admin-edit__draft-alert .ant-alert-description {
+  font-size: 12px;
 }
 
 .admin-kb-page .kb-admin-workspace--editing .kb-admin-edit__title {

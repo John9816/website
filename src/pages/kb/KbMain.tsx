@@ -1,5 +1,6 @@
 import React, { Suspense } from 'react'
 import {
+  Alert,
   App as AntApp,
   Breadcrumb,
   Button,
@@ -50,6 +51,13 @@ function formatDateTime(value?: string | null) {
   const date = new Date(value.replace(' ', 'T'))
   if (Number.isNaN(date.getTime())) return value
   return date.toLocaleString('zh-CN')
+}
+
+function formatClockTime(value?: string | number | null) {
+  if (!value) return ''
+  const date = typeof value === 'number' ? new Date(value) : new Date(value)
+  if (Number.isNaN(date.getTime())) return ''
+  return date.toLocaleTimeString('zh-CN', { hour: '2-digit', minute: '2-digit' })
 }
 
 function escapeHtml(text?: string | null) {
@@ -238,6 +246,12 @@ const KbMain: React.FC = () => {
     docTotal,
     isDirty,
     inlineDocSaving,
+    autosaveStatus,
+    lastAutosavedAt,
+    autosaveError,
+    localDraft,
+    restoreLocalDraft,
+    discardLocalDraft,
   } = useKbContext()
 
   const activeSpace = spaces.find((space) => space.id === activeSpaceId)
@@ -250,6 +264,21 @@ const KbMain: React.FC = () => {
   const isEditing = selectedDoc ? inlineEditingDocId === selectedDoc.id : false
   const hasActiveFilters = Boolean(keyword.trim() || tagFilterId)
   const activeTagName = tags.find((tag) => tag.id === tagFilterId)?.name
+  const autosaveLabel = React.useMemo(() => {
+    if (inlineDocSaving || autosaveStatus === 'saving') return '正在保存'
+    if (autosaveStatus === 'pending') return '等待自动保存'
+    if (autosaveStatus === 'saved') return lastAutosavedAt ? `已自动保存 ${formatClockTime(lastAutosavedAt)}` : '已自动保存'
+    if (autosaveStatus === 'error') return '自动保存失败'
+    if (autosaveStatus === 'draft') return '本地草稿已保存'
+    return isDirty ? '未保存' : '已保存'
+  }, [autosaveStatus, inlineDocSaving, isDirty, lastAutosavedAt])
+  const autosaveClassName = [
+    'kb-admin-editor-save-state',
+    isDirty ? 'is-dirty' : '',
+    autosaveStatus === 'error' ? 'is-error' : '',
+    autosaveStatus === 'saved' ? 'is-saved' : '',
+  ].filter(Boolean).join(' ')
+  const localDraftTime = formatClockTime(localDraft?.updatedAt)
 
   const docColumns = React.useMemo(
     () => [
@@ -502,6 +531,27 @@ const KbMain: React.FC = () => {
                     />
                   </header>
 
+                  {localDraft ? (
+                    <div className="kb-admin-edit__draft-alert">
+                      <Alert
+                        type="warning"
+                        showIcon
+                        message={localDraftTime ? `发现 ${localDraftTime} 的本地草稿` : '发现本地草稿'}
+                        description="草稿保存在当前浏览器，可恢复到编辑器或丢弃后继续使用服务器版本。"
+                        action={
+                          <Space size={6}>
+                            <Button size="small" onClick={discardLocalDraft}>
+                              丢弃
+                            </Button>
+                            <Button size="small" type="primary" onClick={restoreLocalDraft}>
+                              恢复
+                            </Button>
+                          </Space>
+                        }
+                      />
+                    </div>
+                  ) : null}
+
                   <div className="kb-admin-editor-paper">
                     <div className="kb-admin-edit__editor">
                       <ErrorBoundary message="编辑器加载失败">
@@ -532,8 +582,8 @@ const KbMain: React.FC = () => {
                       <small>{activeSpace?.name || '个人空间'} / 编辑文档</small>
                       <strong>{editTitle.trim() || selectedDoc.title || '未命名文档'}</strong>
                     </span>
-                    <span className={`kb-admin-editor-save-state${isDirty ? ' is-dirty' : ''}`}>
-                      {inlineDocSaving ? '\u6b63\u5728\u4fdd\u5b58' : isDirty ? '\u672a\u4fdd\u5b58' : '\u5df2\u4fdd\u5b58'}
+                    <span className={autosaveClassName}>
+                      {autosaveLabel}
                     </span>
                   </div>
                   <div className="kb-admin-editor-actionbar__actions">
@@ -569,8 +619,8 @@ const KbMain: React.FC = () => {
                 <aside className="kb-admin-inspector kb-admin-inspector--editor">
                   <div className="kb-admin-inspector__section">
                     <span className="kb-admin-inspector__label">编辑状态</span>
-                    <strong>{inlineDocSaving ? '正在保存' : isDirty ? '有未保存改动' : '已同步'}</strong>
-                    <small>内容只会在手动点击保存时提交</small>
+                    <strong>{autosaveLabel}</strong>
+                    <small>{autosaveError || '支持自动保存，本地草稿会在浏览器内兜底'}</small>
                   </div>
                   <Button block type="primary" onClick={() => void handleSaveInlineDoc()} loading={inlineDocSaving}>
                     保存并退出编辑

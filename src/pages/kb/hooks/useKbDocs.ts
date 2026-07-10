@@ -19,8 +19,121 @@ import type {
 } from '../../../types'
 import type { DocFormValues, TreeContextMenuState } from '../context'
 
+type AutosaveStatus = 'idle' | 'pending' | 'saving' | 'saved' | 'error' | 'draft'
+
+type KbLocalDraft = {
+  docId: number
+  title: string
+  summary: string
+  contentHtml: string
+  contentJson: string
+  formValues: Partial<DocFormValues>
+  updatedAt: number
+  baseUpdatedAt?: string
+  baseVersionNo?: number
+}
+
+const AUTOSAVE_DELAY_MS = 6500
+const LOCAL_DRAFT_DELAY_MS = 600
+
 function editorInitialContent(doc: KbDoc) {
   return doc.contentHtml || doc.contentJson || ''
+}
+
+function draftStorageKey(docId: number) {
+  return `kb:draft:v1:${docId}`
+}
+
+function readLocalDraft(docId: number): KbLocalDraft | null {
+  if (typeof window === 'undefined') return null
+  try {
+    const raw = window.localStorage.getItem(draftStorageKey(docId))
+    if (!raw) return null
+    const parsed = JSON.parse(raw) as KbLocalDraft
+    return parsed?.docId === docId && parsed.updatedAt ? parsed : null
+  } catch {
+    return null
+  }
+}
+
+function parseDocTime(value?: string | null) {
+  if (!value) return 0
+  const parsed = new Date(value.replace(' ', 'T')).getTime()
+  return Number.isNaN(parsed) ? 0 : parsed
+}
+
+function draftDiffersFromDoc(draft: KbLocalDraft, doc: KbDoc) {
+  if (draft.title !== doc.title) return true
+  if (draft.summary !== (doc.summary ?? '')) return true
+  if (draft.contentHtml !== (doc.contentHtml ?? '')) return true
+  if (draft.contentJson !== (doc.contentJson ?? '')) return true
+  return formValuesChanged(draft.formValues, {
+    spaceId: doc.spaceId,
+    parentId: doc.parentId ?? undefined,
+    status: doc.status,
+    sortOrder: doc.sortOrder,
+    tagIds: doc.tags.map((item) => item.id),
+    changeNote: '',
+  })
+}
+
+function shouldOfferLocalDraft(draft: KbLocalDraft | null, doc: KbDoc) {
+  if (!draft || !draftDiffersFromDoc(draft, doc)) return false
+  if (draft.baseVersionNo === doc.versionNo) return true
+  const serverUpdatedAt = parseDocTime(doc.updatedAt)
+  return !serverUpdatedAt || draft.updatedAt > serverUpdatedAt
+}
+
+function writeLocalDraft(draft: KbLocalDraft) {
+  if (typeof window === 'undefined') return
+  try {
+    window.localStorage.setItem(draftStorageKey(draft.docId), JSON.stringify(draft))
+  } catch {
+    // Browsers may block or evict localStorage; remote autosave is still the source of truth.
+  }
+}
+
+function removeLocalDraft(docId: number) {
+  if (typeof window === 'undefined') return
+  try {
+    window.localStorage.removeItem(draftStorageKey(docId))
+  } catch {
+    // Best-effort cleanup only.
+  }
+}
+
+function normalizeFormValues(values: Partial<DocFormValues>): Partial<DocFormValues> {
+  return {
+    ...values,
+    parentId: values.parentId ?? undefined,
+    tagIds: [...(values.tagIds ?? [])].sort((a, b) => a - b),
+    changeNote: values.changeNote ?? '',
+  }
+}
+
+function formValuesChanged(current: Partial<DocFormValues>, saved: Partial<DocFormValues>) {
+  const next = normalizeFormValues(current)
+  const previous = normalizeFormValues(saved)
+  return (
+    next.parentId !== previous.parentId ||
+    next.status !== previous.status ||
+    next.sortOrder !== previous.sortOrder ||
+    JSON.stringify(next.tagIds ?? []) !== JSON.stringify(previous.tagIds ?? [])
+  )
+}
+
+function patchTreeDoc(nodes: KbDocTreeNode[], doc: Pick<KbDoc, 'id' | 'title' | 'status' | 'sortOrder'>): KbDocTreeNode[] {
+  return nodes.map((node) => {
+    const nextNode =
+      node.id === doc.id
+        ? { ...node, title: doc.title, status: doc.status, sortOrder: doc.sortOrder }
+        : node
+
+    return {
+      ...nextNode,
+      children: nextNode.children?.length ? patchTreeDoc(nextNode.children, doc) : nextNode.children,
+    }
+  })
 }
 
 async function hydrateDocContent(doc: KbDoc, signal?: AbortSignal) {
@@ -83,6 +196,11 @@ export function useKbDocs(activeSpaceId: number | null) {
   const [editContentHtml, setEditContentHtml] = useState('')
   const [editContentJson, setEditContentJson] = useState('')
   const [editInitialContent, setEditInitialContent] = useState('')
+  const [inlineDocFormRevision, setInlineDocFormRevision] = useState(0)
+  const [autosaveStatus, setAutosaveStatus] = useState<AutosaveStatus>('idle')
+  const [lastAutosavedAt, setLastAutosavedAt] = useState<string | null>(null)
+  const [autosaveError, setAutosaveError] = useState('')
+  const [localDraft, setLocalDraft] = useState<KbLocalDraft | null>(null)
 
   const lastSavedValuesRef = useRef<any>(null)
 
@@ -174,6 +292,12 @@ export function useKbDocs(activeSpaceId: number | null) {
       }
       inlineDocForm.setFieldsValue(formValues)
       lastSavedValuesRef.current = formValues
+      setInlineDocFormRevision((revision) => revision + 1)
+      setAutosaveStatus('idle')
+      setAutosaveError('')
+      setLastAutosavedAt(null)
+      const draft = readLocalDraft(doc.id)
+      setLocalDraft(draft && shouldOfferLocalDraft(draft, doc) ? draft : null)
     },
     [inlineDocForm],
   )
@@ -185,6 +309,11 @@ export function useKbDocs(activeSpaceId: number | null) {
     setEditContentHtml('')
     setEditContentJson('')
     setEditInitialContent('')
+    setInlineDocFormRevision(0)
+    setAutosaveStatus('idle')
+    setAutosaveError('')
+    setLastAutosavedAt(null)
+    setLocalDraft(null)
     inlineDocForm.resetFields()
     lastSavedValuesRef.current = null
   }, [inlineDocForm])
@@ -229,18 +358,73 @@ export function useKbDocs(activeSpaceId: number | null) {
     }
   }, [enterInlineEdit])
 
-  const handleSaveInlineDoc = useCallback(async (loadSpaces: any, loadTags: any) => {
+  const buildLocalDraft = useCallback((): KbLocalDraft | null => {
+    if (!selectedDoc || inlineEditingDocId !== selectedDoc.id) return null
+    return {
+      docId: selectedDoc.id,
+      title: editTitle,
+      summary: editSummary,
+      contentHtml: editContentHtml,
+      contentJson: editContentJson,
+      formValues: normalizeFormValues(inlineDocForm.getFieldsValue()),
+      updatedAt: Date.now(),
+      baseUpdatedAt: selectedDoc.updatedAt,
+      baseVersionNo: selectedDoc.versionNo,
+    }
+  }, [editContentHtml, editContentJson, editSummary, editTitle, inlineDocForm, inlineEditingDocId, selectedDoc])
+
+  const restoreLocalDraft = useCallback(() => {
+    if (!localDraft || !selectedDoc || localDraft.docId !== selectedDoc.id) return
+    setEditTitle(localDraft.title)
+    setEditSummary(localDraft.summary)
+    setEditContentHtml(localDraft.contentHtml)
+    setEditContentJson(localDraft.contentJson)
+    setEditInitialContent(localDraft.contentHtml || localDraft.contentJson || '')
+    inlineDocForm.setFieldsValue(localDraft.formValues)
+    setInlineDocFormRevision((revision) => revision + 1)
+    setLocalDraft(null)
+    setAutosaveStatus('draft')
+  }, [inlineDocForm, localDraft, selectedDoc])
+
+  const discardLocalDraft = useCallback(() => {
+    if (!selectedDoc) return
+    removeLocalDraft(selectedDoc.id)
+    setLocalDraft(null)
+    if (autosaveStatus === 'draft') setAutosaveStatus('idle')
+  }, [autosaveStatus, selectedDoc])
+
+  const handleInlineDocFormValuesChange = useCallback(() => {
+    setInlineDocFormRevision((revision) => revision + 1)
+  }, [])
+
+  const saveInlineDoc = useCallback(async (
+    options: {
+      exitAfterSave?: boolean
+      silent?: boolean
+      loadSpaces?: any
+      loadTags?: any
+    } = {},
+  ) => {
     if (!selectedDoc || inlineEditingDocId !== selectedDoc.id) return
     const trimmedTitle = editTitle.trim()
     if (!trimmedTitle) {
-      message.error('请输入标题')
+      if (!options.silent) message.error('请输入标题')
+      setAutosaveStatus('draft')
       return
     }
-    const values = await inlineDocForm.validateFields()
+    const values = options.silent
+      ? normalizeFormValues(inlineDocForm.getFieldsValue()) as DocFormValues
+      : await inlineDocForm.validateFields()
+    if (!values.status) {
+      setAutosaveStatus('draft')
+      return
+    }
     const nextParentId = values.parentId ?? null
     const nextTagIds = [...(values.tagIds ?? [])].sort((a, b) => a - b)
 
     setInlineDocSaving(true)
+    setAutosaveStatus(options.silent ? 'saving' : 'pending')
+    setAutosaveError('')
     try {
       await updateKbDoc(selectedDoc.id, {
         title: trimmedTitle,
@@ -265,22 +449,81 @@ export function useKbDocs(activeSpaceId: number | null) {
         await replaceKbDocTags(selectedDoc.id, nextTagIds)
       }
 
-      message.success('文档已更新')
+      const now = new Date().toISOString()
+      const updatedDoc = {
+        ...selectedDoc,
+        title: trimmedTitle,
+        summary: editSummary,
+        contentJson: editContentJson,
+        contentHtml: editContentHtml,
+        parentId: nextParentId,
+        status: values.status,
+        sortOrder: values.sortOrder ?? selectedDoc.sortOrder,
+        updatedAt: now,
+      }
+      setSelectedDoc(updatedDoc)
+      setDocs((items) =>
+        items.map((item) =>
+          item.id === selectedDoc.id
+            ? {
+                ...item,
+                title: trimmedTitle,
+                summary: editSummary,
+                status: values.status,
+                sortOrder: values.sortOrder ?? item.sortOrder,
+                updatedAt: now,
+              }
+            : item,
+        ),
+      )
+      setTree((nodes) => patchTreeDoc(nodes, updatedDoc))
+      lastSavedValuesRef.current = {
+        spaceId: values.spaceId,
+        parentId: values.parentId ?? undefined,
+        status: values.status,
+        sortOrder: values.sortOrder,
+        tagIds: nextTagIds,
+        changeNote: '',
+      }
+      inlineDocForm.setFieldValue('changeNote', '')
+      removeLocalDraft(selectedDoc.id)
+      setLocalDraft(null)
+      setLastAutosavedAt(now)
+      setAutosaveStatus('saved')
+      if (!options.silent) message.success('文档已更新')
       const targetSpaceId = selectedDoc.spaceId
-      exitInlineEdit()
-      await Promise.all([
-        loadSpaces(targetSpaceId),
-        loadTags(),
-        loadTree(targetSpaceId),
-        loadDocs({ spaceId: targetSpaceId }),
-        loadSelectedDoc(selectedDoc.id),
-      ])
+      if (options.exitAfterSave) {
+        exitInlineEdit()
+        await Promise.all([
+          options.loadSpaces?.(targetSpaceId),
+          options.loadTags?.(),
+          loadTree(targetSpaceId),
+          loadDocs({ spaceId: targetSpaceId }),
+          loadSelectedDoc(selectedDoc.id),
+        ])
+      } else if ((selectedDoc.parentId ?? null) !== nextParentId || selectedDoc.sortOrder !== values.sortOrder) {
+        await Promise.all([
+          loadTree(targetSpaceId),
+          loadDocs({ spaceId: targetSpaceId }),
+        ])
+      }
     } catch (error) {
-      message.error((error as Error).message)
+      setAutosaveStatus('error')
+      setAutosaveError((error as Error).message)
+      if (!options.silent) message.error((error as Error).message)
     } finally {
       setInlineDocSaving(false)
     }
   }, [editContentHtml, editContentJson, editSummary, editTitle, exitInlineEdit, inlineDocForm, inlineEditingDocId, loadDocs, loadSelectedDoc, loadTree, message, selectedDoc])
+
+  const handleSaveInlineDoc = useCallback(async (loadSpaces: any, loadTags: any) => {
+    await saveInlineDoc({
+      exitAfterSave: true,
+      silent: false,
+      loadSpaces,
+      loadTags,
+    })
+  }, [saveInlineDoc])
 
   const handleDeleteDoc = useCallback(async (docId: number, loadSpaces: any) => {
     if (!activeSpaceId) return
@@ -322,20 +565,38 @@ export function useKbDocs(activeSpaceId: number | null) {
     if (lastSavedValuesRef.current) {
       const currentValues = inlineDocForm.getFieldsValue()
       const saved = lastSavedValuesRef.current
-      if (currentValues.parentId !== saved.parentId) return true
-      if (currentValues.status !== saved.status) return true
-      if (currentValues.sortOrder !== saved.sortOrder) return true
-      if (JSON.stringify([...(currentValues.tagIds ?? [])].sort()) !==
-          JSON.stringify([...(saved.tagIds ?? [])].sort())) return true
+      if (formValuesChanged(currentValues, saved)) return true
     }
 
     return false
-  }, [editContentHtml, editContentJson, editSummary, editTitle, inlineDocForm, inlineEditingDocId, selectedDoc])
+  }, [editContentHtml, editContentJson, editSummary, editTitle, inlineDocForm, inlineDocFormRevision, inlineEditingDocId, selectedDoc])
 
   const inlineDocParentOptions = useMemo(
     () => flattenTreeOptions(tree, '', inlineEditingDocId ?? undefined),
     [inlineEditingDocId, tree],
   )
+
+  useEffect(() => {
+    if (!inlineEditingDocId || !isDirty) return
+    const timer = window.setTimeout(() => {
+      const draft = buildLocalDraft()
+      if (!draft) return
+      writeLocalDraft(draft)
+      setAutosaveStatus((status) => (status === 'saving' || status === 'pending' ? status : 'draft'))
+    }, LOCAL_DRAFT_DELAY_MS)
+
+    return () => window.clearTimeout(timer)
+  }, [buildLocalDraft, inlineDocFormRevision, inlineEditingDocId, isDirty])
+
+  useEffect(() => {
+    if (!inlineEditingDocId || !selectedDoc || !isDirty || inlineDocSaving) return
+    setAutosaveStatus('pending')
+    const timer = window.setTimeout(() => {
+      void saveInlineDoc({ exitAfterSave: false, silent: true })
+    }, AUTOSAVE_DELAY_MS)
+
+    return () => window.clearTimeout(timer)
+  }, [inlineDocFormRevision, inlineDocSaving, inlineEditingDocId, isDirty, saveInlineDoc, selectedDoc])
 
   useEffect(() => {
     if (selectedParentId) {
@@ -354,9 +615,11 @@ export function useKbDocs(activeSpaceId: number | null) {
     editTitle, setEditTitle, editSummary, setEditSummary,
     editContentHtml, setEditContentHtml, editContentJson, setEditContentJson,
     editInitialContent,
+    autosaveStatus, lastAutosavedAt, autosaveError, localDraft,
     isDirty, inlineDocParentOptions,
     keyword, setKeyword, deferredKeyword,
     loadTree, loadDocs, loadSelectedDoc, openCreateDoc, openEditDoc,
     handleSaveInlineDoc, handleDeleteDoc, confirmDeleteDoc, enterInlineEdit, exitInlineEdit,
+    restoreLocalDraft, discardLocalDraft, handleInlineDocFormValuesChange,
   }
 }

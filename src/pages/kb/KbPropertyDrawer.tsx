@@ -13,6 +13,7 @@ const KbPropertyDrawer: React.FC = () => {
     setPropertyDrawerOpen,
     inlineDocForm,
     inlineDocParentOptions,
+    handleInlineDocFormValuesChange,
     tags,
   } = useKbContext()
 
@@ -31,7 +32,12 @@ const KbPropertyDrawer: React.FC = () => {
       mask={false}
       destroyOnClose={false}
     >
-      <Form form={inlineDocForm} component="div" layout="vertical">
+      <Form
+        form={inlineDocForm}
+        component="div"
+        layout="vertical"
+        onValuesChange={handleInlineDocFormValuesChange}
+      >
         <Form.Item name="parentId" label="父文档">
           <Select
             allowClear
@@ -69,7 +75,7 @@ const KbPropertyDrawer: React.FC = () => {
           <Input placeholder="可选，记录本次修改" maxLength={500} />
         </Form.Item>
         <Typography.Text type="secondary" style={{ fontSize: 12 }}>
-          修改完成后，点击顶部"保存"按钮提交所有变更。
+          修改会进入自动保存队列，本地草稿也会同步兜底；需要立即提交时可点击顶部保存。
         </Typography.Text>
       </Form>
     </Drawer>
