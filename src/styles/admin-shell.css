@@ -205,6 +205,24 @@
   min-width: 0;
 }
 
+.admin-shell--workspace .admin-shell__sider.ant-layout-sider {
+  display: none;
+}
+
+.admin-shell--workspace .admin-shell__body.ant-layout {
+  margin-left: 0;
+}
+
+.admin-shell--workspace .admin-shell__header.ant-layout-header {
+  display: none;
+}
+
+.admin-shell--workspace .admin-shell__content.ant-layout-content {
+  min-height: 100dvh;
+  padding: 0;
+  overflow: visible;
+}
+
 .admin-shell .ant-layout-sider-zero-width-trigger {
   top: 16px;
   inset-inline-end: -38px;
@@ -399,4 +417,8 @@
 
 [data-theme='dark'] .admin-shell__header.ant-layout-header {
   background: rgb(0 0 0 / 72%);
+}
+
+.admin-shell--workspace {
+  --admin-header-height: 0px;
 }
