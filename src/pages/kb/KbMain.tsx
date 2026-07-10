@@ -475,6 +475,10 @@ const KbMain: React.FC = () => {
             isEditing ? (
               <div className="kb-admin-workspace kb-admin-workspace--editing">
                 <div className="kb-admin-editor-shell">
+                  <div className="kb-admin-editor-toolbar">
+                    <div ref={setToolbarContainer} className="kb-admin-edit__tiptap-toolbar-wrapper" />
+                  </div>
+
                   <header className="kb-admin-editor-head">
                     <div className="kb-admin-editor-head__meta">
                       <span>{activeSpace?.name || '个人空间'}</span>
@@ -497,10 +501,6 @@ const KbMain: React.FC = () => {
                       onChange={(event) => setEditSummary(event.target.value)}
                     />
                   </header>
-
-                  <div className="kb-admin-editor-toolbar">
-                    <div ref={setToolbarContainer} className="kb-admin-edit__tiptap-toolbar-wrapper" />
-                  </div>
 
                   <div className="kb-admin-editor-paper">
                     <div className="kb-admin-edit__editor">

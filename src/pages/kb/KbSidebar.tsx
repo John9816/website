@@ -1,12 +1,18 @@
 import React from 'react'
 import { Button, Dropdown, Input, Tooltip, Tree, Typography } from 'antd'
 import {
+  AppstoreOutlined,
   DeleteOutlined,
   FileTextOutlined,
+  FolderOutlined,
   FolderOpenOutlined,
+  HomeOutlined,
   PlusOutlined,
+  PushpinOutlined,
   ShareAltOutlined,
+  StarOutlined,
   TagsOutlined,
+  UserOutlined,
 } from '@ant-design/icons'
 import { useKbContext } from './context'
 import type { KbDocTreeNode } from '../../types'
@@ -124,6 +130,11 @@ const KbSidebar: React.FC<KbSidebarProps> = ({ onNavigate }) => {
             onNavigate?.()
           }}
         >
+          <span className="kb-admin-sidebar__logo-mark" aria-hidden="true">
+            <span />
+            <span />
+            <span />
+          </span>
           <span className="kb-admin-sidebar__title">我的学城</span>
           <span className="kb-admin-sidebar__subtitle">{totalDocs} 篇文档</span>
         </button>
@@ -149,6 +160,40 @@ const KbSidebar: React.FC<KbSidebarProps> = ({ onNavigate }) => {
         </div>
       </div>
 
+      <nav className="kb-admin-sidebar__nav" aria-label="学城导航">
+        <button
+          type="button"
+          className={!selectedParentId ? 'is-active' : undefined}
+          onClick={() => {
+            setSelectedParentId(null)
+            onNavigate?.()
+          }}
+        >
+          <HomeOutlined />
+          <span>主页</span>
+        </button>
+        <button
+          type="button"
+          onClick={() => {
+            setSelectedParentId(null)
+            onNavigate?.()
+          }}
+        >
+          <AppstoreOutlined />
+          <span>模板市场</span>
+        </button>
+        <button
+          type="button"
+          onClick={() => {
+            setSelectedParentId(null)
+            onNavigate?.()
+          }}
+        >
+          <TagsOutlined />
+          <span>知识广场</span>
+        </button>
+      </nav>
+
       <div className="kb-admin-sidebar__search">
         <Input.Search
           allowClear
@@ -160,7 +205,10 @@ const KbSidebar: React.FC<KbSidebarProps> = ({ onNavigate }) => {
       </div>
 
       <div className="kb-admin-sidebar__meta">
-        <span>{treeKeyword ? `匹配 ${visibleDocs} 篇` : '目录结构'}</span>
+        <span className="kb-admin-sidebar__meta-title">
+          <UserOutlined />
+          {treeKeyword ? `匹配 ${visibleDocs} 篇` : '我的空间'}
+        </span>
         <button
           type="button"
           onClick={() => {
@@ -231,6 +279,39 @@ const KbSidebar: React.FC<KbSidebarProps> = ({ onNavigate }) => {
             }}
           />
         )}
+      </div>
+
+      <div className="kb-admin-sidebar__sections" aria-label="快捷分区">
+        <button
+          type="button"
+          onClick={() => {
+            setSelectedParentId(null)
+            onNavigate?.()
+          }}
+        >
+          <PushpinOutlined />
+          <span>快速访问</span>
+        </button>
+        <button
+          type="button"
+          onClick={() => {
+            setSelectedParentId(null)
+            onNavigate?.()
+          }}
+        >
+          <FolderOutlined />
+          <span>收藏夹</span>
+        </button>
+        <button
+          type="button"
+          onClick={() => {
+            setSelectedParentId(null)
+            onNavigate?.()
+          }}
+        >
+          <StarOutlined />
+          <span>收藏空间</span>
+        </button>
       </div>
     </aside>
   )
