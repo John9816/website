@@ -33,6 +33,15 @@ type KbLocalDraft = {
   baseVersionNo?: number
 }
 
+type EditorSnapshot = {
+  docId: number | null
+  title: string
+  summary: string
+  contentHtml: string
+  contentJson: string
+  formValues: Partial<DocFormValues>
+}
+
 const AUTOSAVE_DELAY_MS = 6500
 const LOCAL_DRAFT_DELAY_MS = 600
 
@@ -122,6 +131,57 @@ function formValuesChanged(current: Partial<DocFormValues>, saved: Partial<DocFo
   )
 }
 
+function editorSnapshotsEqual(current: EditorSnapshot, saved: EditorSnapshot) {
+  return (
+    current.docId === saved.docId &&
+    current.title === saved.title &&
+    current.summary === saved.summary &&
+    current.contentHtml === saved.contentHtml &&
+    current.contentJson === saved.contentJson &&
+    !formValuesChanged(current.formValues, saved.formValues)
+  )
+}
+
+function docToFormValues(doc: KbDoc): Partial<DocFormValues> {
+  return {
+    spaceId: doc.spaceId,
+    parentId: doc.parentId ?? undefined,
+    status: doc.status,
+    sortOrder: doc.sortOrder,
+    tagIds: doc.tags.map((item) => item.id),
+    changeNote: '',
+  }
+}
+
+function mergeSavedDoc(
+  current: KbDoc,
+  saved: KbDoc,
+  fallback: {
+    title: string
+    summary: string
+    contentHtml: string
+    contentJson: string
+    parentId: number | null
+    status: KbDoc['status']
+    sortOrder?: number
+  },
+): KbDoc {
+  return {
+    ...current,
+    ...saved,
+    title: saved.title ?? fallback.title,
+    summary: saved.summary ?? fallback.summary,
+    contentHtml: saved.contentHtml ?? fallback.contentHtml,
+    contentJson: saved.contentJson ?? fallback.contentJson,
+    parentId: saved.parentId ?? fallback.parentId,
+    status: saved.status ?? fallback.status,
+    sortOrder: saved.sortOrder ?? fallback.sortOrder ?? current.sortOrder,
+    tags: Array.isArray(saved.tags) ? saved.tags : current.tags,
+    share: saved.share ?? current.share,
+    updatedAt: saved.updatedAt ?? new Date().toISOString(),
+  }
+}
+
 function patchTreeDoc(nodes: KbDocTreeNode[], doc: Pick<KbDoc, 'id' | 'title' | 'status' | 'sortOrder'>): KbDocTreeNode[] {
   return nodes.map((node) => {
     const nextNode =
@@ -203,6 +263,16 @@ export function useKbDocs(activeSpaceId: number | null) {
   const [localDraft, setLocalDraft] = useState<KbLocalDraft | null>(null)
 
   const lastSavedValuesRef = useRef<any>(null)
+  const inlineEditingDocIdRef = useRef<number | null>(null)
+  const selectedParentIdRef = useRef<number | null>(null)
+  const latestEditorSnapshotRef = useRef<EditorSnapshot>({
+    docId: null,
+    title: '',
+    summary: '',
+    contentHtml: '',
+    contentJson: '',
+    formValues: {},
+  })
 
   const loadTree = useCallback(
     async (spaceId: number, signal?: AbortSignal) => {
@@ -282,14 +352,7 @@ export function useKbDocs(activeSpaceId: number | null) {
       setEditContentHtml(doc.contentHtml ?? '')
       setEditContentJson(doc.contentJson ?? '')
       setEditInitialContent(editorInitialContent(doc))
-      const formValues = {
-        spaceId: doc.spaceId,
-        parentId: doc.parentId ?? undefined,
-        status: doc.status,
-        sortOrder: doc.sortOrder,
-        tagIds: doc.tags.map((item) => item.id),
-        changeNote: '',
-      }
+      const formValues = docToFormValues(doc)
       inlineDocForm.setFieldsValue(formValues)
       lastSavedValuesRef.current = formValues
       setInlineDocFormRevision((revision) => revision + 1)
@@ -421,12 +484,39 @@ export function useKbDocs(activeSpaceId: number | null) {
     }
     const nextParentId = values.parentId ?? null
     const nextTagIds = [...(values.tagIds ?? [])].sort((a, b) => a - b)
+    const savedSnapshot: EditorSnapshot = {
+      docId: selectedDoc.id,
+      title: trimmedTitle,
+      summary: editSummary,
+      contentHtml: editContentHtml,
+      contentJson: editContentJson,
+      formValues: normalizeFormValues({
+        ...values,
+        parentId: values.parentId ?? undefined,
+        tagIds: nextTagIds,
+        changeNote: '',
+      }),
+    }
+    const hasEditorChanges =
+      trimmedTitle !== selectedDoc.title ||
+      editSummary !== (selectedDoc.summary ?? '') ||
+      editContentHtml !== (selectedDoc.contentHtml ?? '') ||
+      editContentJson !== (selectedDoc.contentJson ?? '') ||
+      formValuesChanged(savedSnapshot.formValues, lastSavedValuesRef.current ?? docToFormValues(selectedDoc))
+    const hasChangeNote = Boolean(values.changeNote?.trim())
+
+    if (!hasEditorChanges && !hasChangeNote) {
+      setAutosaveStatus('saved')
+      if (options.exitAfterSave) exitInlineEdit()
+      return
+    }
+    latestEditorSnapshotRef.current = savedSnapshot
 
     setInlineDocSaving(true)
     setAutosaveStatus(options.silent ? 'saving' : 'pending')
     setAutosaveError('')
     try {
-      await updateKbDoc(selectedDoc.id, {
+      let savedDoc = await updateKbDoc(selectedDoc.id, {
         title: trimmedTitle,
         summary: editSummary,
         contentJson: editContentJson,
@@ -437,7 +527,7 @@ export function useKbDocs(activeSpaceId: number | null) {
       })
 
       if ((selectedDoc.parentId ?? null) !== nextParentId || selectedDoc.sortOrder !== values.sortOrder) {
-        await moveKbDoc(selectedDoc.id, {
+        savedDoc = await moveKbDoc(selectedDoc.id, {
           spaceId: selectedDoc.spaceId,
           parentId: nextParentId,
           sortOrder: values.sortOrder,
@@ -446,22 +536,23 @@ export function useKbDocs(activeSpaceId: number | null) {
 
       const currentTagIds = selectedDoc.tags.map((item) => item.id).sort((a, b) => a - b)
       if (currentTagIds.join(',') !== nextTagIds.join(',')) {
-        await replaceKbDocTags(selectedDoc.id, nextTagIds)
+        savedDoc = await replaceKbDocTags(selectedDoc.id, nextTagIds)
       }
 
-      const now = new Date().toISOString()
-      const updatedDoc = {
-        ...selectedDoc,
+      const updatedDoc = mergeSavedDoc(selectedDoc, savedDoc, {
         title: trimmedTitle,
         summary: editSummary,
-        contentJson: editContentJson,
         contentHtml: editContentHtml,
+        contentJson: editContentJson,
         parentId: nextParentId,
         status: values.status,
-        sortOrder: values.sortOrder ?? selectedDoc.sortOrder,
-        updatedAt: now,
-      }
-      setSelectedDoc(updatedDoc)
+        sortOrder: values.sortOrder,
+      })
+      const currentEditorStillMatchesSave = editorSnapshotsEqual(latestEditorSnapshotRef.current, savedSnapshot)
+      const stillEditingThisDoc = inlineEditingDocIdRef.current === selectedDoc.id
+      const stillViewingThisDoc = selectedParentIdRef.current === selectedDoc.id
+
+      if (stillViewingThisDoc) setSelectedDoc(updatedDoc)
       setDocs((items) =>
         items.map((item) =>
           item.id === selectedDoc.id
@@ -471,25 +562,24 @@ export function useKbDocs(activeSpaceId: number | null) {
                 summary: editSummary,
                 status: values.status,
                 sortOrder: values.sortOrder ?? item.sortOrder,
-                updatedAt: now,
+                updatedAt: updatedDoc.updatedAt,
               }
             : item,
         ),
       )
       setTree((nodes) => patchTreeDoc(nodes, updatedDoc))
-      lastSavedValuesRef.current = {
-        spaceId: values.spaceId,
-        parentId: values.parentId ?? undefined,
-        status: values.status,
-        sortOrder: values.sortOrder,
-        tagIds: nextTagIds,
-        changeNote: '',
+      if (stillEditingThisDoc) {
+        lastSavedValuesRef.current = savedSnapshot.formValues
       }
-      inlineDocForm.setFieldValue('changeNote', '')
-      removeLocalDraft(selectedDoc.id)
-      setLocalDraft(null)
-      setLastAutosavedAt(now)
-      setAutosaveStatus('saved')
+      if (stillEditingThisDoc && currentEditorStillMatchesSave) {
+        inlineDocForm.setFieldValue('changeNote', '')
+        removeLocalDraft(selectedDoc.id)
+        setLocalDraft(null)
+        setLastAutosavedAt(updatedDoc.updatedAt ?? new Date().toISOString())
+        setAutosaveStatus('saved')
+      } else if (stillEditingThisDoc) {
+        setAutosaveStatus('pending')
+      }
       if (!options.silent) message.success('文档已更新')
       const targetSpaceId = selectedDoc.spaceId
       if (options.exitAfterSave) {
@@ -575,6 +665,25 @@ export function useKbDocs(activeSpaceId: number | null) {
     () => flattenTreeOptions(tree, '', inlineEditingDocId ?? undefined),
     [inlineEditingDocId, tree],
   )
+
+  useEffect(() => {
+    inlineEditingDocIdRef.current = inlineEditingDocId
+  }, [inlineEditingDocId])
+
+  useEffect(() => {
+    selectedParentIdRef.current = selectedParentId
+  }, [selectedParentId])
+
+  useEffect(() => {
+    latestEditorSnapshotRef.current = {
+      docId: inlineEditingDocId,
+      title: editTitle.trim(),
+      summary: editSummary,
+      contentHtml: editContentHtml,
+      contentJson: editContentJson,
+      formValues: normalizeFormValues(inlineDocForm.getFieldsValue()),
+    }
+  }, [editContentHtml, editContentJson, editSummary, editTitle, inlineDocForm, inlineDocFormRevision, inlineEditingDocId])
 
   useEffect(() => {
     if (!inlineEditingDocId || !isDirty) return
