@@ -2648,11 +2648,12 @@
 /* Xuecheng-like compact document management surface. */
 .admin-kb-page .kb-admin-shell {
   grid-template-columns: 264px minmax(0, 1fr);
-  height: calc(100dvh - var(--admin-header-height, 56px) - 18px);
-  min-height: min(640px, calc(100dvh - var(--admin-header-height, 56px) - 18px));
-  border-radius: 6px;
-  background: var(--panel);
+  height: auto;
+  min-height: calc(100dvh - var(--admin-header-height, 56px));
+  border-radius: 0;
+  background: transparent;
   box-shadow: none;
+  overflow: visible;
 }
 
 .admin-kb-page .kb-admin-sidebar {
@@ -3338,17 +3339,18 @@
   --kb-xc-page: var(--panel);
   --kb-xc-muted: color-mix(in srgb, var(--text-dim) 86%, transparent);
   --kb-xc-divider: color-mix(in srgb, var(--border) 82%, transparent);
-  overflow: hidden;
+  overflow: visible;
 }
 
 .admin-kb-page .kb-admin-shell {
   grid-template-columns: 286px minmax(0, 1fr);
-  height: calc(100dvh - var(--admin-header-height, 56px) - 14px);
-  min-height: min(680px, calc(100dvh - var(--admin-header-height, 56px) - 14px));
-  border: 1px solid var(--kb-xc-divider);
+  height: auto;
+  min-height: calc(100dvh - var(--admin-header-height, 56px));
+  border: 0;
   border-radius: 0;
-  background: var(--kb-xc-page);
+  background: transparent;
   box-shadow: none;
+  overflow: visible;
 }
 
 .admin-kb-page .kb-admin-sidebar {
@@ -3554,7 +3556,8 @@
 
 .admin-kb-page .kb-admin-main {
   min-width: 0;
-  overflow: hidden;
+  min-height: calc(100dvh - var(--admin-header-height, 56px));
+  overflow: visible;
   background: var(--kb-xc-page);
 }
 
@@ -3578,8 +3581,9 @@
 }
 
 .admin-kb-page .kb-admin-canvas {
-  height: calc(100% - 48px);
-  overflow: auto;
+  height: auto;
+  min-height: calc(100dvh - var(--admin-header-height, 56px) - 48px);
+  overflow: visible;
   background: var(--kb-xc-page);
 }
 
@@ -3698,7 +3702,8 @@
 }
 
 .admin-kb-page .kb-admin-canvas--editing {
-  height: 100%;
+  height: auto;
+  min-height: calc(100dvh - var(--admin-header-height, 56px));
   overflow: hidden;
 }
 
