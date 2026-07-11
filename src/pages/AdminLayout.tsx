@@ -10,6 +10,7 @@ import {
   LogoutOutlined,
   RocketOutlined,
   SettingOutlined,
+  TeamOutlined,
 } from '@ant-design/icons'
 import { Link, Navigate, Outlet, useLocation, useNavigate } from 'react-router-dom'
 import { useAuth } from '../context/AuthContext'
@@ -70,6 +71,12 @@ export default function AdminLayout() {
 
   if (auth.user?.canManageSystemConfig) {
     navItems.splice(canUseContentFactory ? 3 : 2, 0, {
+      key: '/admin/users',
+      icon: <TeamOutlined />,
+      title: '用户管理',
+    })
+
+    navItems.splice(canUseContentFactory ? 3 : 2, 0, {
       key: '/admin/configs',
       icon: <SettingOutlined />,
       title: '系统配置',
@@ -79,7 +86,7 @@ export default function AdminLayout() {
   if (
     !auth.profileLoading &&
     !auth.user?.canManageSystemConfig &&
-    location.pathname.startsWith('/admin/configs')
+    (location.pathname.startsWith('/admin/configs') || location.pathname.startsWith('/admin/users'))
   ) {
     return <Navigate to="/admin/categories" replace />
   }

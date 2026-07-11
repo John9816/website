@@ -209,12 +209,23 @@ export interface CurrentUserView {
   id: number
   username: string
   role: 'ADMIN' | 'USER'
+  enabled?: boolean
   canManageSystemConfig: boolean
   credits?: number
   imageCreditCost?: number
   dailyCheckInReward?: number
   checkedInToday?: boolean
   lastCheckInDate?: string | null
+}
+
+export interface AdminUserView {
+  id: number
+  username: string
+  email?: string | null
+  role: 'ADMIN' | 'USER'
+  enabled: boolean
+  createdAt: string
+  updatedAt: string
 }
 
 export interface ImageGenerateDataItem {

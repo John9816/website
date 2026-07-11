@@ -6,9 +6,92 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <meta name="referrer" content="no-referrer" />
     <title>个人导航</title>
+    <style>
+      .boot-fallback {
+        position: fixed;
+        top: 0;
+        right: 0;
+        bottom: 0;
+        left: 0;
+        z-index: 9999;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        box-sizing: border-box;
+        padding: 24px;
+        color: #f4f7fb;
+        background: #102f52;
+        font-family: Arial, "Microsoft YaHei", sans-serif;
+        text-align: center;
+      }
+
+      .boot-fallback__panel {
+        width: 100%;
+        max-width: 360px;
+      }
+
+      .boot-fallback__dot {
+        display: inline-block;
+        width: 10px;
+        height: 10px;
+        margin-bottom: 14px;
+        border-radius: 50%;
+        background: #41d1ff;
+        animation: boot-pulse 1.2s ease-in-out infinite;
+      }
+
+      .boot-fallback strong,
+      .boot-fallback span {
+        display: block;
+      }
+
+      .boot-fallback strong {
+        margin-bottom: 8px;
+        font-size: 18px;
+      }
+
+      .boot-fallback span {
+        color: rgba(244, 247, 251, 0.72);
+        font-size: 13px;
+        line-height: 1.7;
+      }
+
+      @keyframes boot-pulse {
+        0%, 100% { opacity: 0.45; transform: scale(0.8); }
+        50% { opacity: 1; transform: scale(1); }
+      }
+
+      @media (prefers-reduced-motion: reduce) {
+        .boot-fallback__dot { animation: none; }
+      }
+    </style>
   </head>
   <body>
-    <div id="root"></div>
+    <div id="root">
+      <div class="boot-fallback" role="status">
+        <div class="boot-fallback__panel">
+          <i class="boot-fallback__dot" aria-hidden="true"></i>
+          <strong>正在加载导航</strong>
+          <span id="boot-status-copy">首次打开可能需要一点时间，已自动适配车机与旧版浏览器。</span>
+        </div>
+      </div>
+    </div>
+    <noscript>
+      <div class="boot-fallback">
+        <div class="boot-fallback__panel">
+          <strong>浏览器未启用 JavaScript</strong>
+          <span>请在车机浏览器设置中启用 JavaScript 后重新打开。</span>
+        </div>
+      </div>
+    </noscript>
+    <script>
+      window.setTimeout(function () {
+        var statusCopy = document.getElementById('boot-status-copy')
+        if (statusCopy) {
+          statusCopy.innerHTML = '加载时间较长，请检查车机网络或尝试刷新页面。<br>仍无法打开时，请升级车机浏览器内核。'
+        }
+      }, 15000)
+    </script>
     <script type="module" src="/src/main.tsx"></script>
   </body>
 </html>

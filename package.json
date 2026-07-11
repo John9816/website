@@ -5,7 +5,7 @@
   "type": "module",
   "scripts": {
     "dev": "vite",
-    "build": "tsc --noEmit && vite build",
+    "build": "tsc --noEmit && node --max-old-space-size=8192 ./node_modules/vite/bin/vite.js build",
     "preview": "vite preview",
     "lint": "tsc --noEmit",
     "ecs:serve": "node server/ecs-server.mjs",
@@ -33,10 +33,12 @@
     "@tiptap/react": "^3.23.4",
     "@tiptap/starter-kit": "^3.23.4",
     "@tiptap/suggestion": "^3.23.4",
+    "abortcontroller-polyfill": "^1.7.8",
     "antd": "^5.22.0",
     "colorthief": "^2.7.0",
     "fast-average-color": "^9.5.2",
     "highlight.js": "^11.11.1",
+    "intersection-observer": "^0.12.2",
     "lowlight": "^3.3.0",
     "lucide-react": "^0.469.0",
     "react": "^18.3.1",
@@ -44,14 +46,17 @@
     "react-markdown": "^9.1.0",
     "react-router-dom": "^6.28.0",
     "remark-gfm": "^4.0.1",
-    "tippy.js": "^6.3.7"
+    "tippy.js": "^6.3.7",
+    "whatwg-fetch": "^3.6.20"
   },
   "devDependencies": {
     "@types/node": "^25.6.0",
     "@types/react": "^18.3.12",
     "@types/react-dom": "^18.3.1",
     "@vercel/config": "^0.2.1",
+    "@vitejs/plugin-legacy": "^5.4.3",
     "@vitejs/plugin-react": "^4.3.4",
+    "terser": "^5.49.0",
     "typescript": "^5.7.2",
     "vite": "^5.4.11"
   }

@@ -323,6 +323,10 @@ const KbMain: React.FC = () => {
     }
 
     setActiveOutlineId(articleContent.outline[0].id)
+    if (typeof IntersectionObserver === 'undefined') {
+      return undefined
+    }
+
     const observer = new IntersectionObserver(
       (entries) => {
         const visibleEntries = entries

@@ -31,17 +31,9 @@ const AdminLinks = lazy(() => import('./pages/AdminLinks'))
 const AdminConfigs = lazy(() => import('./pages/AdminConfigs'))
 const AdminContentFactory = lazy(() => import('./pages/AdminContentFactory'))
 const AdminPassword = lazy(() => import('./pages/AdminPassword'))
+const AdminUsers = lazy(() => import('./pages/AdminUsers'))
 const AdminKnowledgeBase = lazy(() => import('./pages/AdminKnowledgeBase'))
 const KbSharePage = lazy(() => import('./pages/KbSharePage'))
-
-const routePreloaders = [
-  () => import('./pages/HomePage'),
-  () => import('./pages/MusicLayout'),
-  () => import('./pages/MusicPage'),
-  () => import('./pages/AiChatPage'),
-  () => import('./pages/AiImagePage'),
-  () => import('./pages/AdminLayout'),
-]
 
 function RouteFallback() {
   return (
@@ -211,38 +203,6 @@ function RequireAdminRoute({ children }: { children: ReactNode }) {
   return <>{children}</>
 }
 
-function RoutePreloader() {
-  useEffect(() => {
-    let cancelled = false
-    const preload = () => {
-      if (cancelled) return
-      routePreloaders.forEach((load) => {
-        void load().catch(() => {
-          // The route error boundary handles failed chunks if the user navigates there later.
-        })
-      })
-    }
-
-    const idleCallback = window.requestIdleCallback
-    const cancelIdleCallback = window.cancelIdleCallback
-    if (idleCallback && cancelIdleCallback) {
-      const idleId = idleCallback(preload, { timeout: 2500 })
-      return () => {
-        cancelled = true
-        cancelIdleCallback(idleId)
-      }
-    }
-
-    const timer = globalThis.setTimeout(preload, 1200)
-    return () => {
-      cancelled = true
-      globalThis.clearTimeout(timer)
-    }
-  }, [])
-
-  return null
-}
-
 export default function App() {
   return (
     <ThemeProvider>
@@ -254,7 +214,6 @@ export default function App() {
                 跳到主要内容
               </a>
               <PageTitleSetter />
-              <RoutePreloader />
               <RouteFocusManager />
               <div id="app-route-start" className="app-route-start" tabIndex={-1} />
               <RouteErrorBoundary>
@@ -302,6 +261,7 @@ export default function App() {
                       <Route path="configs" element={<AdminConfigs />} />
                       <Route path="content" element={<AdminContentFactory />} />
                       <Route path="kb" element={<AdminKnowledgeBase />} />
+                      <Route path="users" element={<AdminUsers />} />
                       <Route path="password" element={<AdminPassword />} />
                     </Route>
                     <Route path="*" element={<Navigate to="/" replace />} />

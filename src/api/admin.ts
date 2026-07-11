@@ -1,6 +1,7 @@
 import { request } from './client'
 import type {
   Category,
+  AdminUserView,
   ContentAgentRunPayload,
   ContentAgentRunResult,
   ContentAutomationView,
@@ -100,6 +101,34 @@ export const adminUpdateConfig = (id: number, body: Partial<SysConfig>) =>
   request<SysConfig>(`/api/admin/configs/${id}`, { method: 'PUT', auth: true, body })
 export const adminDeleteConfig = (id: number) =>
   request<void>(`/api/admin/configs/${id}`, { method: 'DELETE', auth: true })
+
+// Users
+export const adminListUsers = (query: {
+  page?: number
+  size?: number
+  keyword?: string
+  role?: 'ADMIN' | 'USER'
+  enabled?: boolean
+} = {}) => request<PageView<AdminUserView>>('/api/admin/users', { auth: true, query })
+
+export const adminCreateUser = (body: {
+  username: string
+  email: string
+  password: string
+  role: 'ADMIN' | 'USER'
+}) => request<AdminUserView>('/api/admin/users', { method: 'POST', auth: true, body })
+
+export const adminUpdateUser = (
+  id: number,
+  body: { role: 'ADMIN' | 'USER'; enabled: boolean },
+) => request<AdminUserView>(`/api/admin/users/${id}`, { method: 'PUT', auth: true, body })
+
+export const adminResetUserPassword = (id: number, password: string) =>
+  request<void>(`/api/admin/users/${id}/reset-password`, {
+    method: 'POST',
+    auth: true,
+    body: { password },
+  })
 
 // Content factory
 export const adminGetContentStatus = () =>

@@ -1,0 +1,120 @@
+.admin-users {
+  display: grid;
+  gap: 18px;
+  width: 100%;
+}
+
+.admin-users__header {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 20px;
+}
+
+.admin-users__header .ant-typography {
+  margin: 0;
+}
+
+.admin-users__header h2.ant-typography {
+  margin-bottom: 6px;
+  font-size: 24px;
+}
+
+.admin-users__filters {
+  display: grid;
+  grid-template-columns: minmax(220px, 1fr) 150px 150px auto;
+  gap: 10px;
+  padding: 14px;
+  border: 1px solid var(--admin-border);
+  border-radius: 8px;
+  background: var(--admin-panel);
+}
+
+.admin-users__table-card {
+  overflow: hidden;
+  border-color: var(--admin-border);
+  background: var(--admin-panel);
+}
+
+.admin-users__identity {
+  display: flex;
+  align-items: center;
+  gap: 11px;
+  min-width: 210px;
+}
+
+.admin-users__identity > span:last-child {
+  display: grid;
+  gap: 2px;
+}
+
+.admin-users__identity small {
+  color: var(--admin-text-muted);
+}
+
+.admin-users__avatar {
+  display: inline-grid;
+  flex: 0 0 36px;
+  width: 36px;
+  height: 36px;
+  place-items: center;
+  border-radius: 8px;
+  color: #fff;
+  background: #2563eb;
+  font-weight: 700;
+}
+
+.admin-users__status {
+  display: inline-flex;
+  align-items: center;
+  gap: 7px;
+  white-space: nowrap;
+}
+
+.admin-users__status i {
+  width: 7px;
+  height: 7px;
+  border-radius: 50%;
+  background: #94a3b8;
+}
+
+.admin-users__status.is-enabled i {
+  background: #16a34a;
+}
+
+.admin-users__status.is-disabled {
+  color: var(--admin-text-muted);
+}
+
+.admin-users__form {
+  padding-top: 8px;
+}
+
+@media (max-width: 760px) {
+  .admin-users__header {
+    align-items: stretch;
+    flex-direction: column;
+  }
+
+  .admin-users__header > .ant-space {
+    justify-content: flex-end;
+  }
+
+  .admin-users__filters {
+    grid-template-columns: 1fr 1fr;
+  }
+
+  .admin-users__filters > .ant-input-affix-wrapper {
+    grid-column: 1 / -1;
+  }
+}
+
+@media (max-width: 480px) {
+  .admin-users__filters {
+    grid-template-columns: 1fr;
+  }
+
+  .admin-users__filters > .ant-input-affix-wrapper {
+    grid-column: auto;
+  }
+}
