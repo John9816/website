@@ -10,6 +10,7 @@ import TopbarUserMenu from '../components/TopbarUserMenu'
 import ThemeToggle from '../components/ThemeToggle'
 import { DEFAULT_PAGE_SIZE } from '../constants/pagination'
 import { useAuth } from '../context/AuthContext'
+import { isAdminUser } from '../utils/permissions'
 import type { GeneratedImageView } from '../types'
 import '../styles/topbar.css'
 import '../styles/ai-chat.css'
@@ -21,6 +22,7 @@ const SHARED_PAGE_SIZE = Math.min(DEFAULT_PAGE_SIZE, 12)
 export default function AiImagePage() {
   const { message } = AntApp.useApp()
   const auth = useAuth()
+  const isAdmin = isAdminUser(auth.user)
   const mainClassName = `ai-chat__main${auth.token ? ' ai-chat__main--authenticated' : ''}`
   const pageClassName = `ai-chat${auth.token ? ' ai-chat--image-authenticated' : ''}`
   const [sharedItems, setSharedItems] = useState<GeneratedImageView[]>([])
@@ -79,17 +81,17 @@ export default function AiImagePage() {
         <TopbarNav />
 
         <div className="topbar-actions" aria-label="站点操作">
-          {auth.token ? (
+          {isAdmin ? (
             <RouterLink to="/admin" className="topbar-action">
               <Settings size={16} />
               <span>管理</span>
             </RouterLink>
-          ) : (
+          ) : !auth.token ? (
             <RouterLink to="/login" className="topbar-action" state={{ from: '/ai-image' }}>
               <LogIn size={16} />
               <span>登录</span>
             </RouterLink>
-          )}
+          ) : null}
           <ThemeToggle />
           {auth.token && <TopbarUserMenu />}
         </div>

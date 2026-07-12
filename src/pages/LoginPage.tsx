@@ -46,7 +46,7 @@ export default function LoginPage() {
       }
       auth.login(data.token, data.username, data.tokenType, profile)
       message.success('登录成功')
-      nav(redirectTo, { replace: true })
+      nav(profile.role === 'ADMIN' || !redirectTo.startsWith('/admin') ? redirectTo : '/', { replace: true })
     } catch (error) {
       message.error((error as Error).message)
     } finally {

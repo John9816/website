@@ -48,6 +48,7 @@ import TopbarNav from '../components/TopbarNav'
 import TopbarUserMenu from '../components/TopbarUserMenu'
 import ThemeToggle from '../components/ThemeToggle'
 import { useAuth } from '../context/AuthContext'
+import { isAdminUser } from '../utils/permissions'
 import type {
   AiChatMessageView,
   AiConversationReplyView,
@@ -488,6 +489,7 @@ function SkeletonConversation() {
 
 export default function AiChatPage() {
   const auth = useAuth()
+  const isAdmin = isAdminUser(auth.user)
   const { message } = AntApp.useApp()
 
   const [models, setModels] = useState<AiModelView[]>([])
@@ -1337,17 +1339,17 @@ export default function AiChatPage() {
         <TopbarNav />
 
         <div className="topbar-actions" aria-label="站点操作">
-          {auth.token ? (
+          {isAdmin ? (
             <RouterLink to="/admin" className="topbar-action">
               <Settings size={16} />
               <span>管理</span>
             </RouterLink>
-          ) : (
+          ) : !auth.token ? (
             <RouterLink to="/login" className="topbar-action" state={{ from: '/ai-chat' }}>
               <LogIn size={16} />
               <span>登录</span>
             </RouterLink>
-          )}
+          ) : null}
           <ThemeToggle />
           {auth.token && <TopbarUserMenu />}
         </div>

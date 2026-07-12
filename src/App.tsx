@@ -8,7 +8,12 @@ import { ThemeProvider, useTheme } from './context/ThemeContext'
 import { usePageTitle } from './hooks/usePageTitle'
 import BeianFooter from './components/BeianFooter'
 import RouteErrorBoundary from './components/RouteErrorBoundary'
-import { canAccessAdminPermission, getFirstAccessibleAdminPath, type AdminPermission } from './utils/permissions'
+import {
+  canAccessAdminPermission,
+  getFirstAccessibleAdminPath,
+  isAdminUser,
+  type AdminPermission,
+} from './utils/permissions'
 
 const HomePage = lazy(() => import('./pages/HomePage'))
 const GlobalMusicDock = lazy(() => import('./components/GlobalMusicDock'))
@@ -228,6 +233,24 @@ function RequireAdminPermission({
   return <>{children}</>
 }
 
+function RequireAdminShell({ children }: { children: ReactNode }) {
+  const auth = useAuth()
+
+  if (auth.profileLoading) {
+    return <RouteFallback />
+  }
+
+  if (!auth.token || !auth.user) {
+    return <Navigate to="/admin/login" state={{ from: '/admin' }} replace />
+  }
+
+  if (!isAdminUser(auth.user)) {
+    return <Navigate to="/" replace />
+  }
+
+  return <>{children}</>
+}
+
 export default function App() {
   return (
     <ThemeProvider>
@@ -279,7 +302,14 @@ export default function App() {
                     <Route path="/login" element={<LoginPage />} />
                     <Route path="/register" element={<RegisterPage />} />
                     <Route path="/admin/login" element={<LoginPage />} />
-                    <Route path="/admin" element={<AdminLayout />}>
+                    <Route
+                      path="/admin"
+                      element={
+                        <RequireAdminShell>
+                          <AdminLayout />
+                        </RequireAdminShell>
+                      }
+                    >
                       <Route index element={<Navigate to="categories" replace />} />
                       <Route path="categories" element={<AdminCategories />} />
                       <Route path="links" element={<AdminLinks />} />

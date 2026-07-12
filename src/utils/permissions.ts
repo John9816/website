@@ -3,11 +3,15 @@ import type { CurrentUserView } from '../types'
 export type AdminPermission = 'authenticated' | 'contentFactory' | 'systemConfig'
 
 export function canManageSystemConfig(user?: CurrentUserView | null) {
-  return user?.role === 'ADMIN' || user?.canManageSystemConfig === true
+  return isAdminUser(user) && user?.canManageSystemConfig === true
+}
+
+export function isAdminUser(user?: CurrentUserView | null) {
+  return user?.role === 'ADMIN'
 }
 
 export function canUseContentFactory(user?: CurrentUserView | null) {
-  return user?.role === 'ADMIN' || user?.canManageSystemConfig === true
+  return isAdminUser(user)
 }
 
 export function canAccessAdminPermission(
@@ -15,6 +19,7 @@ export function canAccessAdminPermission(
   permission: AdminPermission,
 ) {
   if (!user) return false
+  if (!isAdminUser(user)) return false
   if (permission === 'systemConfig') return canManageSystemConfig(user)
   if (permission === 'contentFactory') return canUseContentFactory(user)
   return true
