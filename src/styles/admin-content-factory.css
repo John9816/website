@@ -9,11 +9,12 @@
 .content-factory__pipeline {
   display: grid;
   gap: 10px;
-  padding: 12px 14px;
-  border: 1px solid var(--border);
-  border-radius: 8px;
-  background: linear-gradient(180deg, color-mix(in srgb, var(--panel) 96%, transparent), var(--panel));
-  box-shadow: var(--shadow-sm);
+  padding: 4px 0 14px;
+  border: 0;
+  border-bottom: 1px solid var(--border);
+  border-radius: 0;
+  background: transparent;
+  box-shadow: none;
 }
 
 .content-factory__pipeline .ant-steps-item-title {
@@ -266,15 +267,16 @@
 }
 
 .content-factory__panel.ant-card {
-  border-color: var(--border);
-  border-radius: 8px;
-  background: var(--panel);
-  box-shadow: var(--shadow-sm);
+  border: 0;
+  border-radius: 0;
+  background: transparent;
+  box-shadow: none;
 }
 
 .content-factory__panel .ant-card-head {
   min-height: 44px;
   border-color: var(--border);
+  padding-inline: 0;
 }
 
 .content-factory__panel .ant-card-head-title {
@@ -294,6 +296,7 @@
   align-items: center;
   justify-content: space-between;
   gap: 12px;
+  padding: 16px 0 0;
 }
 
 .content-factory__category-strip {

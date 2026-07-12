@@ -123,7 +123,7 @@
   min-height: var(--admin-header-height);
   display: flex;
   align-items: center;
-  justify-content: space-between;
+  justify-content: flex-end;
   gap: 16px;
   padding: 0 18px;
   border-bottom: 1px solid var(--border);
@@ -134,11 +134,7 @@
 }
 
 .admin-shell__title.ant-typography {
-  margin: 0;
-  color: var(--text);
-  font-size: 17px;
-  font-weight: 800;
-  line-height: 1.2;
+  display: none;
 }
 
 .admin-shell__header-actions {
@@ -287,16 +283,14 @@
 
 @media (max-width: 640px) {
   .admin-shell {
-    --admin-header-height: 112px;
+    --admin-header-height: 64px;
   }
 
   .admin-shell__header.ant-layout-header {
-    height: auto;
     min-height: 64px;
-    align-items: flex-start;
-    flex-direction: column;
-    justify-content: center;
-    gap: 8px;
+    align-items: center;
+    flex-direction: row;
+    justify-content: flex-end;
     padding-block: 10px;
   }
 
@@ -491,10 +485,10 @@
 
 .admin-shell .admin-page__panel.ant-card {
   overflow: hidden;
-  border: 1px solid var(--border);
-  border-radius: 8px;
-  background: color-mix(in srgb, var(--panel) 94%, transparent);
-  box-shadow: var(--shadow-sm);
+  border: 0;
+  border-radius: 0;
+  background: transparent;
+  box-shadow: none;
 }
 
 .admin-shell .admin-page__panel .ant-table,
@@ -507,6 +501,12 @@
   background: color-mix(in srgb, var(--panel-alt) 78%, transparent);
   color: var(--text-dim);
   font-weight: 650;
+}
+
+.admin-shell .admin-page__panel .ant-table-container {
+  border-top: 1px solid var(--border);
+  border-bottom: 1px solid var(--border);
+  border-radius: 0;
 }
 
 .admin-shell .admin-page__panel .ant-table-tbody > tr > td {
@@ -552,6 +552,10 @@
 
 .admin-password__card {
   width: min(100%, 520px);
+}
+
+.admin-password__card .ant-card-body {
+  padding: 8px 0 0;
 }
 
 .admin-password__divider {
