@@ -6,10 +6,12 @@ import {
   ChevronDown,
   Coins,
   Edit3,
+  LayoutDashboard,
   LogOut,
   Shield,
   UserRound,
 } from 'lucide-react'
+import { Link as RouterLink } from 'react-router-dom'
 import { updateUserProfile, uploadUserAvatar } from '../api/auth'
 import { useAuth } from '../context/AuthContext'
 
@@ -57,6 +59,7 @@ export default function TopbarUserMenu() {
   const username = auth.user?.username ?? auth.username
   const role = auth.user?.role
   const avatarUrl = auth.user?.avatarUrl
+  const isAdmin = role === 'ADMIN'
   const canManageSystemConfig = !!auth.user?.canManageSystemConfig
   const credits = auth.credits
 
@@ -163,13 +166,24 @@ export default function TopbarUserMenu() {
           <span>用户 ID</span>
           <b>{auth.user?.id ?? '--'}</b>
         </div>
-        {canManageSystemConfig && (
+        {isAdmin && (
           <div className="topbar-user-card__meta-item">
-            <span>系统配置</span>
-            <b>可管理</b>
+            <span>后台权限</span>
+            <b>{canManageSystemConfig ? '系统管理' : '管理员'}</b>
           </div>
         )}
       </div>
+
+      {isAdmin && (
+        <RouterLink
+          to="/admin"
+          className="topbar-user-card__admin"
+          onClick={() => setOpen(false)}
+        >
+          <LayoutDashboard size={15} />
+          <span>进入后台</span>
+        </RouterLink>
+      )}
 
       <Button
         block

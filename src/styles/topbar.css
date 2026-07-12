@@ -446,6 +446,30 @@ img.topbar-user-card__avatar {
   color: var(--text);
 }
 
+.topbar-user-card__admin {
+  width: 100%;
+  margin-top: 12px;
+  min-height: 42px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  border: 1px solid color-mix(in srgb, #2563eb 26%, var(--border));
+  border-radius: 8px;
+  background: color-mix(in srgb, #2563eb 12%, transparent);
+  color: #2563eb;
+  font-size: 14px;
+  font-weight: 700;
+  text-decoration: none;
+  transition: background 0.15s ease, transform 0.15s ease, border-color 0.15s ease;
+}
+
+.topbar-user-card__admin:hover {
+  background: color-mix(in srgb, #2563eb 17%, transparent);
+  border-color: color-mix(in srgb, #2563eb 42%, var(--border));
+  color: #1d4ed8;
+}
+
 .topbar-user-card__checkin {
   width: 100%;
   margin-top: 12px;
