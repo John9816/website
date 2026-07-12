@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useMemo, useState } from 'react'
-import { LogIn, Settings } from 'lucide-react'
+import { LogIn } from 'lucide-react'
 import { Link as RouterLink } from 'react-router-dom'
 import { getNav } from '../api/public'
 import BeianFooter from '../components/BeianFooter'
@@ -10,7 +10,6 @@ import TopbarUserMenu from '../components/TopbarUserMenu'
 import type { CategoryWithLinks, NavLink } from '../types'
 import { useAuth } from '../context/AuthContext'
 import { useTheme } from '../context/ThemeContext'
-import { isAdminUser } from '../utils/permissions'
 import '../styles/topbar.css'
 import '../styles/home.css'
 
@@ -110,7 +109,6 @@ export default function HomePage() {
   const [data, setData] = useState<CategoryWithLinks[] | null>(null)
   const [error, setError] = useState<string | null>(null)
   const [popupImage, setPopupImage] = useState<string | null>(null)
-  const isAdmin = isAdminUser(auth.user)
 
   const refresh = useCallback(async (silent = false) => {
     if (!silent) setError(null)
@@ -169,7 +167,7 @@ export default function HomePage() {
         })
         return visibleCategories
       }, []),
-    [data, isAdmin],
+    [data],
   )
 
   const totals = useMemo(
@@ -195,12 +193,7 @@ export default function HomePage() {
         <TopbarNav />
 
         <div className="topbar-actions" aria-label="站点操作">
-          {isAdmin ? (
-            <RouterLink to="/admin" className="topbar-action">
-              <Settings size={16} />
-              <span>管理</span>
-            </RouterLink>
-          ) : !auth.token ? (
+          {!auth.token ? (
             <RouterLink to="/login" className="topbar-action" state={{ from: '/' }}>
               <LogIn size={16} />
               <span>登录</span>
@@ -281,12 +274,7 @@ export default function HomePage() {
                 <MailIcon />
                 <div className="iconTip">邮箱</div>
               </a>
-              {isAdmin ? (
-                <RouterLink className="iconItem" to="/admin" title="管理">
-                  <SectionMark />
-                  <div className="iconTip">管理</div>
-                </RouterLink>
-              ) : !auth.token ? (
+              {!auth.token ? (
                 <RouterLink className="iconItem" to="/login" title="登录">
                   <SectionMark />
                   <div className="iconTip">登录</div>

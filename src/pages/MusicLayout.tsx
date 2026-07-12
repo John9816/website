@@ -1,12 +1,11 @@
 import { Suspense, lazy, useEffect, useRef } from 'react'
 import { Link as RouterLink, Outlet } from 'react-router-dom'
-import { LogIn, Settings } from 'lucide-react'
+import { LogIn } from 'lucide-react'
 import TopbarNav from '../components/TopbarNav'
 import TopbarUserMenu from '../components/TopbarUserMenu'
 import ThemeToggle from '../components/ThemeToggle'
 import { useAuth } from '../context/AuthContext'
 import { useMusicPlayer } from '../context/MusicPlayerContext'
-import { isAdminUser } from '../utils/permissions'
 import '../styles/topbar.css'
 import '../styles/music.css'
 
@@ -14,7 +13,6 @@ const MusicPlayerBar = lazy(() => import('../components/MusicPlayerBar'))
 
 export default function MusicLayout() {
   const auth = useAuth()
-  const isAdmin = isAdminUser(auth.user)
   const { current } = useMusicPlayer()
   const pageRef = useRef<HTMLDivElement | null>(null)
   const topbarRef = useRef<HTMLElement | null>(null)
@@ -51,12 +49,7 @@ export default function MusicLayout() {
         <TopbarNav />
 
         <div className="topbar-actions">
-          {isAdmin ? (
-            <RouterLink to="/admin" className="topbar-action">
-              <Settings size={16} />
-              <span>管理</span>
-            </RouterLink>
-          ) : !auth.token ? (
+          {!auth.token ? (
             <RouterLink to="/login" className="topbar-action">
               <LogIn size={16} />
               <span>登录</span>
