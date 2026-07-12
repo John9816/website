@@ -10,7 +10,7 @@ import {
   theme as antdTheme,
 } from 'antd'
 import { LockOutlined, MailOutlined, UserOutlined } from '@ant-design/icons'
-import { register as apiRegister } from '../api/auth'
+import { getCurrentUser, register as apiRegister } from '../api/auth'
 import ThemeToggle from '../components/ThemeToggle'
 import { useAuth } from '../context/AuthContext'
 import { useTheme, type ThemeMode } from '../context/ThemeContext'
@@ -46,7 +46,8 @@ export default function RegisterPage() {
         values.password,
         values.email.trim().toLowerCase(),
       )
-      auth.login(result.token, result.username, result.tokenType)
+      const profile = await getCurrentUser(result.token, result.tokenType)
+      auth.login(result.token, result.username, result.tokenType, profile)
       message.success('注册成功，已自动登录')
       nav('/', { replace: true })
     } catch (error) {

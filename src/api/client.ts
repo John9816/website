@@ -45,6 +45,8 @@ type Options = {
     string,
     string | number | boolean | undefined | null | Array<string | number | boolean>
   >
+  authToken?: string
+  authTokenType?: string
   signal?: AbortSignal
 }
 
@@ -69,8 +71,9 @@ export async function request<T>(path: string, opts: Options = {}): Promise<T> {
   const headers: Record<string, string> = {}
   if (body !== undefined && !isFormData) headers['Content-Type'] = 'application/json'
   if (auth) {
-    const t = getToken()
-    if (t) headers['Authorization'] = `${getTokenType()} ${t}`
+    const t = opts.authToken ?? getToken()
+    const tokenType = opts.authTokenType ?? getTokenType()
+    if (t) headers['Authorization'] = `${tokenType} ${t}`
   }
 
   let res: Response

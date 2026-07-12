@@ -2,12 +2,10 @@ import { ApiError, request, setToken } from './client'
 import type { CurrentUserView, LoginResponse, UserCreditView } from '../types'
 
 export async function login(username: string, password: string) {
-  const data = await request<LoginResponse>('/api/auth/login', {
+  return request<LoginResponse>('/api/auth/login', {
     method: 'POST',
     body: { username, password },
   })
-  setToken(data.token, data.tokenType || 'Bearer')
-  return data
 }
 
 export function logout() {
@@ -33,8 +31,12 @@ export async function register(username: string, password: string, email: string
   }
 }
 
-export function getCurrentUser() {
-  return request<CurrentUserView>('/api/user/me', { auth: true })
+export function getCurrentUser(token?: string, tokenType?: string) {
+  return request<CurrentUserView>('/api/user/me', {
+    auth: true,
+    authToken: token,
+    authTokenType: tokenType,
+  })
 }
 
 export function updateUserProfile(body: { username: string; email: string }) {

@@ -38,7 +38,7 @@ export default function LoginPage() {
     setLoading(true)
     try {
       const data = await apiLogin(values.username, values.password)
-      const profile = await getCurrentUser()
+      const profile = await getCurrentUser(data.token, data.tokenType)
       if (isAdminEntry && profile.role !== 'ADMIN') {
         auth.logout()
         message.error('当前账号不是管理员，不能进入后台')
