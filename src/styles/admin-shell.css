@@ -213,6 +213,12 @@
   min-width: 0;
 }
 
+.admin-shell--knowledge .admin-shell__content.ant-layout-content {
+  height: calc(100dvh - var(--admin-header-height));
+  padding: 0;
+  overflow: hidden;
+}
+
 .admin-shell--workspace .admin-shell__sider.ant-layout-sider {
   display: none;
 }
@@ -272,6 +278,10 @@
 
   .admin-shell__content.ant-layout-content {
     padding: 12px;
+  }
+
+  .admin-shell--knowledge .admin-shell__content.ant-layout-content {
+    padding: 0;
   }
 }
 
