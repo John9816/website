@@ -7,23 +7,84 @@ export const BASE = ((import.meta.env.VITE_API_BASE as string | undefined) ?? ''
 const TOKEN_KEY = 'nav.token'
 const TOKEN_TYPE_KEY = 'nav.tokenType'
 const USER_KEY = 'nav.username'
+const AUTH_SESSION_KEY = 'nav.auth.session'
 export const AUTH_CHANGE_EVENT = 'nav-auth-change'
 
+type StoredAuthSession = {
+  token: string
+  tokenType: string
+  username: string | null
+}
+
+function readAuthSession(): StoredAuthSession | null {
+  try {
+    const raw = localStorage.getItem(AUTH_SESSION_KEY)
+    if (raw) {
+      const value = JSON.parse(raw) as Partial<StoredAuthSession>
+      if (typeof value.token === 'string' && value.token) {
+        return {
+          token: value.token,
+          tokenType: typeof value.tokenType === 'string' && value.tokenType ? value.tokenType : 'Bearer',
+          username: typeof value.username === 'string' && value.username ? value.username : null,
+        }
+      }
+    }
+  } catch {
+    localStorage.removeItem(AUTH_SESSION_KEY)
+  }
+
+  const legacyToken = localStorage.getItem(TOKEN_KEY)
+  if (!legacyToken) return null
+  const migrated = {
+    token: legacyToken,
+    tokenType: localStorage.getItem(TOKEN_TYPE_KEY) || 'Bearer',
+    username: localStorage.getItem(USER_KEY),
+  }
+  localStorage.setItem(AUTH_SESSION_KEY, JSON.stringify(migrated))
+  return migrated
+}
+
 export function getToken(): string | null {
-  return localStorage.getItem(TOKEN_KEY)
+  return readAuthSession()?.token ?? null
 }
 
 export function getTokenType(): string {
-  return localStorage.getItem(TOKEN_TYPE_KEY) || 'Bearer'
+  return readAuthSession()?.tokenType ?? 'Bearer'
+}
+
+export function getStoredUsername(): string | null {
+  return readAuthSession()?.username ?? null
+}
+
+export function setAuthSession(
+  token: string,
+  tokenType = 'Bearer',
+  username: string | null = null,
+  options: { emit?: boolean } = {},
+) {
+  const session: StoredAuthSession = { token, tokenType, username }
+  localStorage.setItem(AUTH_SESSION_KEY, JSON.stringify(session))
+  localStorage.removeItem(TOKEN_KEY)
+  localStorage.removeItem(TOKEN_TYPE_KEY)
+  localStorage.removeItem(USER_KEY)
+  if (options.emit !== false) {
+    window.dispatchEvent(new Event(AUTH_CHANGE_EVENT))
+  }
 }
 
 export function setToken(token: string | null, tokenType = 'Bearer', options: { emit?: boolean } = {}) {
   if (token) {
-    localStorage.setItem(TOKEN_KEY, token)
-    localStorage.setItem(TOKEN_TYPE_KEY, tokenType)
+    const session: StoredAuthSession = {
+      token,
+      tokenType,
+      username: readAuthSession()?.username ?? null,
+    }
+    localStorage.setItem(AUTH_SESSION_KEY, JSON.stringify(session))
   } else {
+    localStorage.removeItem(AUTH_SESSION_KEY)
     localStorage.removeItem(TOKEN_KEY)
     localStorage.removeItem(TOKEN_TYPE_KEY)
+    localStorage.removeItem(USER_KEY)
   }
 
   if (options.emit !== false) {
@@ -97,7 +158,6 @@ export async function request<T>(path: string, opts: Options = {}): Promise<T> {
 
   if (res.status === 401) {
     if (!auth || !requestToken || requestToken === getToken()) {
-      localStorage.removeItem(USER_KEY)
       setToken(null)
     }
     throw new ApiError(401, '登录已过期，请重新登录')

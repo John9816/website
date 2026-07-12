@@ -1,6 +1,14 @@
 import { createContext, useContext, useEffect, useRef, useState, type ReactNode } from 'react'
 import { checkInToday, getCurrentUser, getUserCredits } from '../api/auth'
-import { ApiError, AUTH_CHANGE_EVENT, getToken, setToken } from '../api/client'
+import {
+  ApiError,
+  AUTH_CHANGE_EVENT,
+  getStoredUsername,
+  getToken,
+  getTokenType,
+  setAuthSession,
+  setToken,
+} from '../api/client'
 import type { CurrentUserView, UserCreditView } from '../types'
 
 interface AuthState {
@@ -19,13 +27,9 @@ interface AuthState {
 
 const Ctx = createContext<AuthState | null>(null)
 
-const USER_KEY = 'nav.username'
-
 export function AuthProvider({ children }: { children: ReactNode }) {
   const [token, setTok] = useState<string | null>(() => getToken())
-  const [username, setUsername] = useState<string | null>(
-    () => localStorage.getItem(USER_KEY),
-  )
+  const [username, setUsername] = useState<string | null>(() => getStoredUsername())
   const [user, setUser] = useState<CurrentUserView | null>(null)
   const [credits, setCredits] = useState<UserCreditView | null>(null)
   const [profileLoading, setProfileLoading] = useState(() => !!getToken())
@@ -37,7 +41,10 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     }
     setUser(profile)
     setUsername(profile.username)
-    localStorage.setItem(USER_KEY, profile.username)
+    const activeToken = getToken()
+    if (activeToken) {
+      setAuthSession(activeToken, getTokenType(), profile.username, { emit: false })
+    }
     const profileCredits = profile.credits
     if (typeof profileCredits === 'number') {
       setCredits((previous) => ({
@@ -62,7 +69,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         }
         return nextToken
       })
-      setUsername(nextToken ? localStorage.getItem(USER_KEY) : null)
+      setUsername(nextToken ? getStoredUsername() : null)
       if (!nextToken) {
         setUser(null)
         setCredits(null)
@@ -171,10 +178,9 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       setUser(null)
       setCredits(null)
       setProfileLoading(true)
-      localStorage.setItem(USER_KEY, u)
-      setToken(t, tokenType, { emit: false })
+      setAuthSession(t, tokenType, profile?.username ?? u, { emit: false })
       setTok(t)
-      setUsername(u)
+      setUsername(profile?.username ?? u)
       if (profile) {
         applyProfile(profile, t)
         setProfileLoading(false)
@@ -182,7 +188,6 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     },
     logout() {
       authVersionRef.current += 1
-      localStorage.removeItem(USER_KEY)
       setToken(null, 'Bearer', { emit: false })
       setTok(null)
       setUsername(null)
