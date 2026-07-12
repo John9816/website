@@ -209,6 +209,7 @@ export interface CurrentUserView {
   id: number
   username: string
   email?: string | null
+  avatarUrl?: string | null
   role: 'ADMIN' | 'USER'
   enabled?: boolean
   canManageSystemConfig: boolean
@@ -223,6 +224,7 @@ export interface AdminUserView {
   id: number
   username: string
   email?: string | null
+  avatarUrl?: string | null
   role: 'ADMIN' | 'USER'
   enabled: boolean
   createdAt: string

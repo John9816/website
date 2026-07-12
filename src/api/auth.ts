@@ -45,6 +45,16 @@ export function updateUserProfile(body: { username: string; email: string }) {
   })
 }
 
+export function uploadUserAvatar(file: File) {
+  const formData = new FormData()
+  formData.append('file', file)
+  return request<CurrentUserView>('/api/user/avatar', {
+    method: 'POST',
+    auth: true,
+    body: formData,
+  })
+}
+
 export function getUserCredits() {
   return request<UserCreditView>('/api/user/credits', { auth: true })
 }
