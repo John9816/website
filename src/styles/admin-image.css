@@ -318,7 +318,7 @@
 .admin-image__history-card {
   position: relative;
   width: 100%;
-  min-height: 88px;
+  min-height: 112px;
   display: grid;
   grid-template-columns: 18px minmax(0, 1fr);
   grid-template-rows: auto auto auto;
@@ -371,13 +371,17 @@
 }
 
 .admin-image__history-prompt {
+  display: -webkit-box;
   min-width: 0;
+  min-height: 34px;
   font-size: 13px;
   font-weight: 700;
-  line-height: 1.2;
-  white-space: nowrap;
+  line-height: 1.35;
+  white-space: normal;
   overflow: hidden;
-  text-overflow: ellipsis;
+  -webkit-box-orient: vertical;
+  -webkit-line-clamp: 2;
+  overflow-wrap: anywhere;
 }
 
 .admin-image__history-row {

@@ -33,6 +33,7 @@ import {
   adminEditImage,
   adminGenerateImage,
   adminGetImageTask,
+  adminListImageTasks,
   adminListImageHistory,
   adminRetryImageHistory,
   adminToggleImageHistoryShare,
@@ -63,7 +64,6 @@ const WORKSPACE_WIDTH_MIN = 360
 const GRID_PADDING_X = 16
 const RESIZE_HANDLE_TOTAL = 16
 
-const MODEL_OPTIONS = ['gpt-image-2', 'gpt-image-1']
 const QUALITY_OPTIONS = [
   { value: 'auto', label: '自动' },
   { value: 'high', label: '高' },
@@ -178,7 +178,6 @@ export default function ImageStudio({ layout = 'admin' }: ImageStudioProps) {
   const { message } = AntApp.useApp()
   const auth = useAuth()
   const [prompt, setPrompt] = useState('')
-  const [selectedModel, setSelectedModel] = useState(MODEL_OPTIONS[0])
   const [quality, setQuality] = useState('auto')
   const [width, setWidth] = useState('1024')
   const [height, setHeight] = useState('1024')
@@ -193,6 +192,7 @@ export default function ImageStudio({ layout = 'admin' }: ImageStudioProps) {
   const pollAbortRef = useRef<AbortController | null>(null)
   const pollTimerRef = useRef<number | null>(null)
   const pendingStartedAtRef = useRef<number | null>(null)
+  const restoredTaskIdRef = useRef<number | null>(null)
   const activeRef = useRef(true)
   const imageInputRef = useRef<HTMLInputElement | null>(null)
   const rootRef = useRef<HTMLDivElement | null>(null)
@@ -257,11 +257,26 @@ export default function ImageStudio({ layout = 'admin' }: ImageStudioProps) {
   const loadHistory = async (nextPage = page) => {
     setHistoryLoading(true)
     try {
-      const data = await adminListImageHistory(nextPage - 1, DEFAULT_PAGE_SIZE)
+      const [data, taskData] = await Promise.all([
+        adminListImageHistory(nextPage - 1, DEFAULT_PAGE_SIZE),
+        adminListImageTasks(0, DEFAULT_PAGE_SIZE),
+      ])
       if (!activeRef.current) return
-      setItems(data.items)
+      setItems([
+        ...taskData.items.map(taskToHistoryItem),
+        ...data.items,
+      ])
       setTotal(data.total)
       setPage(nextPage)
+      const activeTask = taskData.items.find((item) => !isTerminalTask(item.status))
+      if (activeTask && restoredTaskIdRef.current !== activeTask.id) {
+        restoredTaskIdRef.current = activeTask.id
+        setTask(activeTask)
+        setResult(null)
+        setPendingImageCount(Math.max(activeTask.n || 1, 1))
+        pendingStartedAtRef.current = Date.now()
+        void pollTaskStatus(activeTask.id)
+      }
     } catch (e) {
       message.error((e as Error).message)
     } finally {
@@ -375,6 +390,7 @@ export default function ImageStudio({ layout = 'admin' }: ImageStudioProps) {
     if (!activeRef.current) return
 
     clearTaskPolling()
+    restoredTaskIdRef.current = null
     setTask(nextTask)
 
     if (nextTask.status === 'COMPLETED') {
@@ -528,7 +544,6 @@ export default function ImageStudio({ layout = 'admin' }: ImageStudioProps) {
     try {
       const payload = {
         prompt: text,
-        model: selectedModel,
         size: normalizedSize || undefined,
         quality: quality === 'auto' ? undefined : quality,
         n: imageCount,
@@ -546,6 +561,7 @@ export default function ImageStudio({ layout = 'admin' }: ImageStudioProps) {
       if (!activeRef.current) return
 
       setTask(nextTask)
+      restoredTaskIdRef.current = nextTask.id
       abortRef.current = null
 
       if (isTerminalTask(nextTask.status)) {
@@ -846,7 +862,7 @@ export default function ImageStudio({ layout = 'admin' }: ImageStudioProps) {
                     handleToggleGroupSelection(group.id)
                   }}
                 />
-                <span className="admin-image__history-prompt">{compactPrompt(group.prompt)}</span>
+                <span className="admin-image__history-prompt" title={group.prompt}>{group.prompt}</span>
                 <span className="admin-image__history-row">
                   <span className="admin-image__history-thumbs">
                     {group.images.slice(0, 4).map((item) => (
@@ -1002,22 +1018,6 @@ export default function ImageStudio({ layout = 'admin' }: ImageStudioProps) {
             <small>{selectedAspect} · {imageCount} 张 · {quality === 'auto' ? '自动质量' : quality}</small>
           </summary>
           <div className="admin-image__advanced-body">
-        <section className="admin-image__section">
-          <h3>模型</h3>
-          <select
-            className="admin-image__select"
-            value={selectedModel}
-            onChange={(event) => setSelectedModel(event.target.value)}
-            disabled={loading}
-          >
-            {MODEL_OPTIONS.map((model) => (
-              <option key={model} value={model}>
-                {model}
-              </option>
-            ))}
-          </select>
-        </section>
-
         <section className="admin-image__section">
           <h3>质量</h3>
           <div className="admin-image__segmented">
@@ -1194,7 +1194,7 @@ export default function ImageStudio({ layout = 'admin' }: ImageStudioProps) {
                 </div>
                 <div className="admin-image__result-meta admin-image__result-meta--pending">
                   <span>{normalizedSize || task?.size || 'auto'}</span>
-                  <span>{task?.model || selectedModel}</span>
+                  <span>{task?.model || '系统默认模型'}</span>
                   <span>已等待 {elapsed}s</span>
                 </div>
                 <div className="admin-image__pending-copy">
@@ -1218,7 +1218,7 @@ export default function ImageStudio({ layout = 'admin' }: ImageStudioProps) {
                 </button>
                 <div className="admin-image__result-meta">
                   <span>{image.size || normalizedSize || 'auto'}</span>
-                  <span>{image.model || selectedModel}</span>
+                  <span>{image.model || task?.model || '系统默认模型'}</span>
                   <span>{image.createdAt ? formatTime(image.createdAt) : task ? `${elapsed}s` : ''}</span>
                 </div>
                 <div className="admin-image__result-actions">
@@ -1322,6 +1322,22 @@ function buildHistoryGroups(items: GeneratedImageView[]): HistoryGroup[] {
   return groups
 }
 
+function taskToHistoryItem(task: ImageTaskView): GeneratedImageView {
+  return {
+    id: -Math.abs(task.id),
+    taskId: task.id,
+    type: 'task',
+    status: task.status,
+    prompt: task.prompt,
+    imageUrl: null,
+    model: task.model,
+    size: task.size,
+    isShared: false,
+    errorMessage: task.errorMessage,
+    createdAt: task.createdAt || task.updatedAt || new Date().toISOString(),
+  }
+}
+
 function buildDisplayImages(result: ImageGenerateResult | null, group: HistoryGroup | null): DisplayImage[] {
   if (result) {
     return result.data
@@ -1390,11 +1406,6 @@ function taskStatusTone(status: ImageTaskStatus) {
     default:
       return 'pending'
   }
-}
-
-function compactPrompt(value: string) {
-  const trimmed = value.trim()
-  return trimmed.length > 12 ? `${trimmed.slice(0, 12)}…` : trimmed
 }
 
 function formatTime(value: string) {

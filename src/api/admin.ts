@@ -231,6 +231,12 @@ export const adminGetImageTask = async (taskId: number, signal?: AbortSignal) =>
     signal,
   }))
 
+export const adminListImageTasks = (page = 0, size = DEFAULT_PAGE_SIZE) =>
+  request<PageView<ImageTaskView>>('/api/user/image/tasks', {
+    auth: true,
+    query: { page, size },
+  })
+
 export const adminListImageHistory = async (page = 0, size = DEFAULT_PAGE_SIZE) =>
   normalizePageView(await request<PageView<GeneratedImageView>>('/api/user/image/history', {
     auth: true,
