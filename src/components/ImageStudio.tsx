@@ -630,6 +630,20 @@ export default function ImageStudio({ layout = 'admin' }: ImageStudioProps) {
     if (!ids.length) return
     try {
       await Promise.all(ids.map((id) => adminDeleteImageHistory(id)))
+      const deletedTaskIds = new Set(
+        targetGroups
+          .map((group) => group.fallbackItem?.taskId)
+          .filter((id): id is number => typeof id === 'number'),
+      )
+      if (task && deletedTaskIds.has(task.id)) {
+        clearTaskPolling()
+        restoredTaskIdRef.current = null
+        setTask(null)
+        setResult(null)
+        setPendingImageCount(0)
+        setLoading(false)
+      }
+      setItems((previous) => previous.filter((item) => !ids.includes(item.id)))
       message.success('已删除')
       setSelectedHistoryId(null)
       setSelectedGroupIds(new Set())
