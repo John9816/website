@@ -1,6 +1,7 @@
 import { useState } from 'react'
-import { App as AntApp, Popover } from 'antd'
-import { CalendarCheck, ChevronDown, Coins, LogOut, Shield, UserRound } from 'lucide-react'
+import { App as AntApp, Button, Form, Input, Modal, Popover } from 'antd'
+import { CalendarCheck, ChevronDown, Coins, Edit3, LogOut, Shield, UserRound } from 'lucide-react'
+import { updateUserProfile } from '../api/auth'
 import { useAuth } from '../context/AuthContext'
 
 function getDisplayName(username?: string | null) {
@@ -22,7 +23,10 @@ export default function TopbarUserMenu() {
   const auth = useAuth()
   const { message } = AntApp.useApp()
   const [open, setOpen] = useState(false)
+  const [profileOpen, setProfileOpen] = useState(false)
   const [checkingIn, setCheckingIn] = useState(false)
+  const [savingProfile, setSavingProfile] = useState(false)
+  const [profileForm] = Form.useForm<{ username: string; email: string }>()
 
   const username = auth.user?.username ?? auth.username
   const role = auth.user?.role
@@ -32,6 +36,33 @@ export default function TopbarUserMenu() {
   const handleLogout = () => {
     auth.logout()
     setOpen(false)
+  }
+
+  const openProfileEditor = () => {
+    profileForm.setFieldsValue({
+      username: auth.user?.username ?? auth.username ?? '',
+      email: auth.user?.email ?? '',
+    })
+    setOpen(false)
+    setProfileOpen(true)
+  }
+
+  const saveProfile = async () => {
+    const values = await profileForm.validateFields()
+    setSavingProfile(true)
+    try {
+      const profile = await updateUserProfile({
+        username: values.username.trim(),
+        email: values.email.trim(),
+      })
+      auth.updateProfile(profile)
+      message.success('资料已更新')
+      setProfileOpen(false)
+    } catch (error) {
+      message.error((error as Error).message)
+    } finally {
+      setSavingProfile(false)
+    }
   }
 
   const handleCheckIn = async () => {
@@ -86,6 +117,15 @@ export default function TopbarUserMenu() {
         )}
       </div>
 
+      <Button
+        block
+        type="primary"
+        icon={<Edit3 size={15} />}
+        onClick={openProfileEditor}
+      >
+        编辑资料
+      </Button>
+
       {credits && (
         <button
           type="button"
@@ -110,24 +150,54 @@ export default function TopbarUserMenu() {
   )
 
   return (
-    <Popover
-      trigger="click"
-      placement="bottomRight"
-      open={open}
-      onOpenChange={setOpen}
-      overlayClassName="topbar-user-popover"
-      content={content}
-    >
-      <button type="button" className="topbar-user-trigger" aria-label="查看个人资料">
-        <span className="topbar-user-trigger__avatar">{getAvatarText(username)}</span>
-        <span className="topbar-user-trigger__name">{getDisplayName(username)}</span>
-        {role === 'ADMIN' ? (
-          <Shield size={14} className="topbar-user-trigger__icon" />
-        ) : (
-          <UserRound size={14} className="topbar-user-trigger__icon" />
-        )}
-        <ChevronDown size={14} className="topbar-user-trigger__chevron" />
-      </button>
-    </Popover>
+    <>
+      <Popover
+        trigger="click"
+        placement="bottomRight"
+        open={open}
+        onOpenChange={setOpen}
+        overlayClassName="topbar-user-popover"
+        content={content}
+      >
+        <button type="button" className="topbar-user-trigger" aria-label="查看个人资料">
+          <span className="topbar-user-trigger__avatar">{getAvatarText(username)}</span>
+          <span className="topbar-user-trigger__name">{getDisplayName(username)}</span>
+          {role === 'ADMIN' ? (
+            <Shield size={14} className="topbar-user-trigger__icon" />
+          ) : (
+            <UserRound size={14} className="topbar-user-trigger__icon" />
+          )}
+          <ChevronDown size={14} className="topbar-user-trigger__chevron" />
+        </button>
+      </Popover>
+      <Modal
+        title="编辑资料"
+        open={profileOpen}
+        confirmLoading={savingProfile}
+        onCancel={() => setProfileOpen(false)}
+        onOk={() => void saveProfile()}
+        destroyOnClose
+      >
+        <Form form={profileForm} layout="vertical">
+          <Form.Item
+            name="username"
+            label="用户名"
+            rules={[{ required: true }, { min: 3, max: 50 }]}
+          >
+            <Input autoComplete="username" placeholder="3-50 个字符" />
+          </Form.Item>
+          <Form.Item
+            name="email"
+            label="QQ 邮箱"
+            rules={[
+              { required: true },
+              { pattern: /^[1-9]\d{4,10}@qq\.com$/i, message: '请输入有效的 QQ 邮箱' },
+            ]}
+          >
+            <Input autoComplete="email" placeholder="例如 123456@qq.com" />
+          </Form.Item>
+        </Form>
+      </Modal>
+    </>
   )
 }

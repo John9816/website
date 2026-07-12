@@ -208,6 +208,7 @@ export interface UserCreditView {
 export interface CurrentUserView {
   id: number
   username: string
+  email?: string | null
   role: 'ADMIN' | 'USER'
   enabled?: boolean
   canManageSystemConfig: boolean

@@ -37,6 +37,14 @@ export function getCurrentUser() {
   return request<CurrentUserView>('/api/user/me', { auth: true })
 }
 
+export function updateUserProfile(body: { username: string; email: string }) {
+  return request<CurrentUserView>('/api/user/profile', {
+    method: 'PUT',
+    auth: true,
+    body,
+  })
+}
+
 export function getUserCredits() {
   return request<UserCreditView>('/api/user/credits', { auth: true })
 }

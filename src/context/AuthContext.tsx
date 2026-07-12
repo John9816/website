@@ -11,6 +11,7 @@ interface AuthState {
   profileLoading: boolean
   refreshProfile: () => Promise<void>
   refreshCredits: () => Promise<UserCreditView | null>
+  updateProfile: (profile: CurrentUserView) => void
   checkIn: () => Promise<UserCreditView>
   login: (token: string, username: string, tokenType?: string, profile?: CurrentUserView) => void
   logout: () => void
@@ -150,6 +151,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     profileLoading,
     refreshProfile,
     refreshCredits,
+    updateProfile: applyProfile,
     checkIn,
     login(t, u, tokenType, profile) {
       setUser(null)
