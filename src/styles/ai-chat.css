@@ -1499,6 +1499,24 @@
     justify-content: center;
   }
 
+  .ai-chat__guest {
+    height: auto;
+    min-height: 100%;
+    justify-content: flex-start;
+    gap: 12px;
+    padding: 18px 14px calc(20px + var(--safe-bottom));
+  }
+
+  .ai-chat__welcome-card,
+  .ai-chat__login-card {
+    max-width: none;
+    padding: 20px;
+  }
+
+  .ai-chat__welcome-card h1 {
+    font-size: 20px;
+  }
+
   .ai-chat__settings-expanded {
     grid-template-columns: 1fr;
   }

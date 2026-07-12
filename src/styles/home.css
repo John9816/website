@@ -763,11 +763,16 @@ body:has(.bank-nav-page) {
   }
 
   .iconContainer {
-    margin-top: 4vw;
+    margin-top: 12px;
+  }
+
+  .zyyo-right {
+    padding-top: 14px;
   }
 
   .projectItem {
-    height: 110px;
+    min-height: 102px;
+    height: auto;
     margin: 8px 15px;
     width: calc(100% - 30px);
     padding: 10px;

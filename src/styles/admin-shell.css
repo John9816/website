@@ -591,6 +591,18 @@
     padding: 10px 12px;
   }
 
+  .admin-shell .ant-table-cell-fix-left,
+  .admin-shell .ant-table-cell-fix-left-last,
+  .admin-shell .ant-table-cell-fix-right,
+  .admin-shell .ant-table-cell-fix-right-first {
+    position: static !important;
+  }
+
+  .admin-shell .ant-table-cell-fix-left-last::after,
+  .admin-shell .ant-table-cell-fix-right-first::after {
+    display: none;
+  }
+
   .admin-shell .ant-pagination {
     justify-content: center;
     margin-inline: 8px;
@@ -599,6 +611,13 @@
   .admin-page__actions .ant-space-item,
   .admin-page__actions .ant-select {
     max-width: 100%;
+  }
+
+  .admin-page__header h2,
+  .admin-password__intro h2,
+  .admin-users__header h2.ant-typography,
+  .admin-categories__header h2 {
+    font-size: 20px;
   }
 }
 
