@@ -211,7 +211,7 @@ export default function AdminUsers() {
           rowKey="id"
           dataSource={rows}
           loading={loading}
-          scroll={{ x: 920 }}
+          scroll={{ x: 1480 }}
           pagination={{
             current: page + 1,
             pageSize: PAGE_SIZE,
@@ -222,17 +222,53 @@ export default function AdminUsers() {
           }}
           columns={[
             {
-              title: '用户',
-              key: 'user',
+              title: 'ID',
+              dataIndex: 'id',
+              width: 80,
+              fixed: 'left',
+              render: (id: number) => <span className="admin-users__id">#{id}</span>,
+            },
+            {
+              title: '用户名',
+              dataIndex: 'username',
+              width: 180,
+              fixed: 'left',
               render: (_, row) => (
                 <div className="admin-users__identity">
-                  <span className="admin-users__avatar">{row.username.slice(0, 1).toUpperCase()}</span>
-                  <span>
-                    <strong>{row.username}</strong>
-                    <small>{row.email || '未设置邮箱'}</small>
-                  </span>
+                  {row.avatarUrl ? (
+                    <img
+                      className="admin-users__avatar"
+                      src={row.avatarUrl}
+                      alt=""
+                      loading="lazy"
+                      referrerPolicy="no-referrer"
+                    />
+                  ) : (
+                    <span className="admin-users__avatar">{row.username.slice(0, 1).toUpperCase()}</span>
+                  )}
+                  <strong>{row.username}</strong>
                 </div>
               ),
+            },
+            {
+              title: '邮箱',
+              dataIndex: 'email',
+              width: 220,
+              render: (email?: string | null) => email || '未设置',
+            },
+            {
+              title: '头像地址',
+              dataIndex: 'avatarUrl',
+              width: 260,
+              ellipsis: true,
+              render: (avatarUrl?: string | null) =>
+                avatarUrl ? (
+                  <a href={avatarUrl} target="_blank" rel="noreferrer" title={avatarUrl}>
+                    {avatarUrl}
+                  </a>
+                ) : (
+                  <span className="admin-users__empty">未上传</span>
+                ),
             },
             {
               title: '角色',
@@ -257,6 +293,12 @@ export default function AdminUsers() {
             {
               title: '注册时间',
               dataIndex: 'createdAt',
+              width: 190,
+              render: formatDate,
+            },
+            {
+              title: '最后更新',
+              dataIndex: 'updatedAt',
               width: 190,
               render: formatDate,
             },
