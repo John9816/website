@@ -7,7 +7,6 @@ const titleMap: Record<string, string> = {
   '/': '首页',
   '/ai-chat': 'AI 对话',
   '/ai-image': 'AI 生图',
-  '/resume': '个人简历',
   '/music': '音乐',
   '/music/share': '音乐分享',
   '/music/toplist': '榜单详情',
@@ -26,10 +25,8 @@ const titleMap: Record<string, string> = {
 }
 
 function resolveTitle(pathname: string): string {
-  // 精确匹配
   if (titleMap[pathname]) return `${titleMap[pathname]} - ${SITE_NAME}`
 
-  // 匹配前缀（取最长匹配）
   let best = ''
   for (const prefix of Object.keys(titleMap)) {
     if (pathname.startsWith(prefix + '/') && prefix.length > best.length) {

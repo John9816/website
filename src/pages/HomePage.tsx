@@ -157,9 +157,9 @@ export default function HomePage() {
     () =>
       sortByOrder(data ?? []).reduce<CategoryWithLinks[]>((visibleCategories, category) => {
         const sortedLinks = sortByOrder(category.links ?? [])
-        const links = isAdmin ? sortedLinks : sortedLinks.filter((link) => !isResumeLink(link))
+        const links = sortedLinks.filter((link) => !isResumeLink(link))
 
-        if (!isAdmin && sortedLinks.length > 0 && links.length === 0) {
+        if (sortedLinks.length > 0 && links.length === 0) {
           return visibleCategories
         }
 

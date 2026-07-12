@@ -23,7 +23,6 @@ const MusicLayout = lazy(() => import('./pages/MusicLayout'))
 const MusicPage = lazy(() => import('./pages/MusicPage'))
 const AiChatPage = lazy(() => import('./pages/AiChatPage'))
 const AiImagePage = lazy(() => import('./pages/AiImagePage'))
-const ResumePage = lazy(() => import('./pages/ResumePage'))
 const MusicPlaylistDetailPage = lazy(
   () => import('./pages/MusicPlaylistDetailPage'),
 )
@@ -191,24 +190,6 @@ function GlobalBeianFooterGate() {
   return <BeianFooter />
 }
 
-function RequireAdminRoute({ children }: { children: ReactNode }) {
-  const auth = useAuth()
-
-  if (auth.profileLoading) {
-    return <RouteFallback />
-  }
-
-  if (!auth.token || !auth.user) {
-    return <Navigate to="/login" state={{ from: '/resume' }} replace />
-  }
-
-  if (auth.user.role !== 'ADMIN') {
-    return <Navigate to="/" replace />
-  }
-
-  return <>{children}</>
-}
-
 function RequireAdminPermission({
   permission,
   children,
@@ -270,14 +251,6 @@ export default function App() {
                     <Route path="/" element={<HomePage />} />
                     <Route path="/ai-chat" element={<AiChatPage />} />
                     <Route path="/ai-image" element={<AiImagePage />} />
-                    <Route
-                      path="/resume"
-                      element={
-                        <RequireAdminRoute>
-                          <ResumePage />
-                        </RequireAdminRoute>
-                      }
-                    />
                     <Route path="/kb/share/:token" element={<KbSharePage />} />
                     <Route path="/music" element={<MusicLayout />}>
                       <Route index element={<MusicPage />} />

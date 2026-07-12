@@ -1,6 +1,5 @@
 import { useLayoutEffect, useMemo, useRef, useState, type CSSProperties } from 'react'
 import { NavLink as RouterNavLink, useLocation } from 'react-router-dom'
-import { useAuth } from '../context/AuthContext'
 
 interface TopbarNavItem {
   to: string
@@ -13,7 +12,6 @@ const NAV_ITEMS: TopbarNavItem[] = [
   { to: '/music', label: '音乐' },
   { to: '/ai-chat', label: 'AI 对话' },
   { to: '/ai-image', label: 'AI 生图' },
-  { to: '/resume', label: '个人简历' },
 ]
 
 const preloaders: Record<string, () => Promise<unknown>> = {
@@ -21,7 +19,6 @@ const preloaders: Record<string, () => Promise<unknown>> = {
   '/music': () => Promise.all([import('../pages/MusicLayout'), import('../pages/MusicPage')]),
   '/ai-chat': () => import('../pages/AiChatPage'),
   '/ai-image': () => import('../pages/AiImagePage'),
-  '/resume': () => import('../pages/ResumePage'),
 }
 
 const preloadedRoutes = new Set<string>()
@@ -47,15 +44,10 @@ function getActiveIndex(pathname: string, items: TopbarNavItem[]) {
 }
 
 export default function TopbarNav() {
-  const auth = useAuth()
   const location = useLocation()
   const navRef = useRef<HTMLElement | null>(null)
   const linkRefs = useRef<Array<HTMLAnchorElement | null>>([])
-  const isAdmin = auth.user?.role === 'ADMIN'
-  const navItems = useMemo(
-    () => NAV_ITEMS.filter((item) => isAdmin || item.to !== '/resume'),
-    [isAdmin],
-  )
+  const navItems = NAV_ITEMS
   const activeIndex = useMemo(() => getActiveIndex(location.pathname, navItems), [location.pathname, navItems])
   const [indicator, setIndicator] = useState({ left: 6, width: 88, ready: false })
 
