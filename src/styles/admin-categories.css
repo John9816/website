@@ -1,7 +1,7 @@
 .admin-categories {
   display: flex;
   flex-direction: column;
-  gap: 18px;
+  gap: 14px;
 }
 
 .admin-categories__header {
@@ -13,13 +13,13 @@
 
 .admin-categories__header h2 {
   margin: 0;
-  font-size: 24px;
+  font-size: 22px;
   color: var(--text);
   font-weight: 700;
 }
 
 .admin-categories__header p {
-  margin: 4px 0 0;
+  margin: 3px 0 0;
   color: var(--text-dim);
 }
 

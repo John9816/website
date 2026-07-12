@@ -1,7 +1,7 @@
 .admin-users {
   display: flex;
   flex-direction: column;
-  gap: 18px;
+  gap: 14px;
   width: 100%;
 }
 
@@ -9,7 +9,7 @@
   display: flex;
   align-items: flex-start;
   justify-content: space-between;
-  gap: 20px;
+  gap: 16px;
 }
 
 .admin-users__header .ant-typography {
@@ -17,8 +17,8 @@
 }
 
 .admin-users__header h2.ant-typography {
-  margin-bottom: 6px;
-  font-size: 24px;
+  margin-bottom: 3px;
+  font-size: 22px;
   font-weight: 700;
 }
 
