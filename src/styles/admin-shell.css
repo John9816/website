@@ -1,3 +1,11 @@
+.admin-shell-loading {
+  min-height: 100dvh;
+  display: grid;
+  place-items: center;
+  color: var(--admin-text-muted);
+  background: var(--admin-bg);
+}
+
 .admin-shell {
   --admin-header-height: 56px;
   min-height: 100dvh;

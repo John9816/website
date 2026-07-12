@@ -78,10 +78,12 @@ export default function TopbarUserMenu() {
           <span>用户 ID</span>
           <b>{auth.user?.id ?? '--'}</b>
         </div>
-        <div className="topbar-user-card__meta-item">
-          <span>系统配置</span>
-          <b>{canManageSystemConfig ? '可管理' : '无权限'}</b>
-        </div>
+        {canManageSystemConfig && (
+          <div className="topbar-user-card__meta-item">
+            <span>系统配置</span>
+            <b>可管理</b>
+          </div>
+        )}
       </div>
 
       {credits && (

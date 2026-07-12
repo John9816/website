@@ -16,6 +16,13 @@ import { Link, Navigate, Outlet, useLocation, useNavigate } from 'react-router-d
 import { useAuth } from '../context/AuthContext'
 import { useTheme, type ThemeMode } from '../context/ThemeContext'
 import ThemeToggle from '../components/ThemeToggle'
+import {
+  canAccessAdminPermission,
+  canManageSystemConfig,
+  canUseContentFactory,
+  getAdminPermissionForPath,
+  getFirstAccessibleAdminPath,
+} from '../utils/permissions'
 import '../styles/admin-shell.css'
 
 const { Header, Sider, Content } = Layout
@@ -32,10 +39,19 @@ export default function AdminLayout() {
   const navigate = useNavigate()
   const { mode } = useTheme()
   const isLight = mode === 'light'
-  const canUseContentFactory = auth.user?.role === 'ADMIN' || auth.user?.canManageSystemConfig
+  const contentFactoryVisible = canUseContentFactory(auth.user)
+  const systemConfigVisible = canManageSystemConfig(auth.user)
 
   if (!auth.token) {
     return <Navigate to="/admin/login" state={{ from: location.pathname }} replace />
+  }
+
+  if (auth.profileLoading || !auth.user) {
+    return (
+      <div className="admin-shell-loading" role="status" aria-live="polite">
+        正在确认权限...
+      </div>
+    )
   }
 
   const navItems: AdminNavItem[] = [
@@ -61,7 +77,7 @@ export default function AdminLayout() {
     },
   ]
 
-  if (canUseContentFactory) {
+  if (contentFactoryVisible) {
     navItems.splice(2, 0, {
       key: '/admin/content',
       icon: <RocketOutlined />,
@@ -69,34 +85,23 @@ export default function AdminLayout() {
     })
   }
 
-  if (auth.user?.canManageSystemConfig) {
-    navItems.splice(canUseContentFactory ? 3 : 2, 0, {
+  if (systemConfigVisible) {
+    navItems.splice(contentFactoryVisible ? 3 : 2, 0, {
       key: '/admin/users',
       icon: <TeamOutlined />,
       title: '用户管理',
     })
 
-    navItems.splice(canUseContentFactory ? 3 : 2, 0, {
+    navItems.splice(contentFactoryVisible ? 3 : 2, 0, {
       key: '/admin/configs',
       icon: <SettingOutlined />,
       title: '系统配置',
     })
   }
 
-  if (
-    !auth.profileLoading &&
-    !auth.user?.canManageSystemConfig &&
-    (location.pathname.startsWith('/admin/configs') || location.pathname.startsWith('/admin/users'))
-  ) {
-    return <Navigate to="/admin/categories" replace />
-  }
-
-  if (
-    !auth.profileLoading &&
-    !canUseContentFactory &&
-    location.pathname.startsWith('/admin/content')
-  ) {
-    return <Navigate to="/admin/categories" replace />
+  const currentPermission = getAdminPermissionForPath(location.pathname)
+  if (!canAccessAdminPermission(auth.user, currentPermission)) {
+    return <Navigate to={getFirstAccessibleAdminPath(auth.user)} replace />
   }
 
   const selectedKey =

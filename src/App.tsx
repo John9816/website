@@ -8,6 +8,7 @@ import { ThemeProvider, useTheme } from './context/ThemeContext'
 import { usePageTitle } from './hooks/usePageTitle'
 import BeianFooter from './components/BeianFooter'
 import RouteErrorBoundary from './components/RouteErrorBoundary'
+import { canAccessAdminPermission, getFirstAccessibleAdminPath, type AdminPermission } from './utils/permissions'
 
 const HomePage = lazy(() => import('./pages/HomePage'))
 const GlobalMusicDock = lazy(() => import('./components/GlobalMusicDock'))
@@ -203,6 +204,30 @@ function RequireAdminRoute({ children }: { children: ReactNode }) {
   return <>{children}</>
 }
 
+function RequireAdminPermission({
+  permission,
+  children,
+}: {
+  permission: AdminPermission
+  children: ReactNode
+}) {
+  const auth = useAuth()
+
+  if (auth.profileLoading) {
+    return <RouteFallback />
+  }
+
+  if (!auth.token || !auth.user) {
+    return <Navigate to="/admin/login" state={{ from: '/admin' }} replace />
+  }
+
+  if (!canAccessAdminPermission(auth.user, permission)) {
+    return <Navigate to={getFirstAccessibleAdminPath(auth.user)} replace />
+  }
+
+  return <>{children}</>
+}
+
 export default function App() {
   return (
     <ThemeProvider>
@@ -258,10 +283,31 @@ export default function App() {
                       <Route index element={<Navigate to="categories" replace />} />
                       <Route path="categories" element={<AdminCategories />} />
                       <Route path="links" element={<AdminLinks />} />
-                      <Route path="configs" element={<AdminConfigs />} />
-                      <Route path="content" element={<AdminContentFactory />} />
+                      <Route
+                        path="configs"
+                        element={
+                          <RequireAdminPermission permission="systemConfig">
+                            <AdminConfigs />
+                          </RequireAdminPermission>
+                        }
+                      />
+                      <Route
+                        path="content"
+                        element={
+                          <RequireAdminPermission permission="contentFactory">
+                            <AdminContentFactory />
+                          </RequireAdminPermission>
+                        }
+                      />
                       <Route path="kb" element={<AdminKnowledgeBase />} />
-                      <Route path="users" element={<AdminUsers />} />
+                      <Route
+                        path="users"
+                        element={
+                          <RequireAdminPermission permission="systemConfig">
+                            <AdminUsers />
+                          </RequireAdminPermission>
+                        }
+                      />
                       <Route path="password" element={<AdminPassword />} />
                     </Route>
                     <Route path="*" element={<Navigate to="/" replace />} />
