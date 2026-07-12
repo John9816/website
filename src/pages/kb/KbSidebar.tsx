@@ -1,21 +1,15 @@
 import React from 'react'
-import { Link, useNavigate } from 'react-router-dom'
 import { Button, Dropdown, Input, Tooltip, Tree, Typography } from 'antd'
 import {
-  AppstoreOutlined,
   DeleteOutlined,
   FileTextOutlined,
   FolderOpenOutlined,
   HomeOutlined,
-  LogoutOutlined,
   PlusOutlined,
   ShareAltOutlined,
   TagsOutlined,
   UserOutlined,
 } from '@ant-design/icons'
-import ThemeToggle from '../../components/ThemeToggle'
-import { useAuth } from '../../context/AuthContext'
-import { isAdminUser } from '../../utils/permissions'
 import { useKbContext } from './context'
 import type { KbDocTreeNode } from '../../types'
 import type { TreeProps } from 'antd'
@@ -124,8 +118,6 @@ type KbSidebarProps = {
 
 const KbSidebar: React.FC<KbSidebarProps> = ({ onNavigate }) => {
   const [treeKeyword, setTreeKeyword] = React.useState('')
-  const auth = useAuth()
-  const navigate = useNavigate()
   const {
     tree,
     treeLoading,
@@ -141,7 +133,6 @@ const KbSidebar: React.FC<KbSidebarProps> = ({ onNavigate }) => {
   const filteredTree = React.useMemo(() => filterTree(tree, treeKeyword), [tree, treeKeyword])
   const totalDocs = React.useMemo(() => countDocs(tree), [tree])
   const visibleDocs = React.useMemo(() => countDocs(filteredTree), [filteredTree])
-  const isAdmin = isAdminUser(auth.user)
 
   const treeData: KbTreeDataNode[] = React.useMemo(
     () => [
@@ -174,11 +165,6 @@ const KbSidebar: React.FC<KbSidebarProps> = ({ onNavigate }) => {
     ],
     [filteredTree, openCreateDoc, totalDocs],
   )
-
-  const handleLogout = React.useCallback(() => {
-    auth.logout()
-    navigate('/', { replace: true })
-  }, [auth, navigate])
 
   const handleTreeDrop = React.useCallback<NonNullable<TreeProps['onDrop']>>(
     (info) => {
@@ -278,21 +264,6 @@ const KbSidebar: React.FC<KbSidebarProps> = ({ onNavigate }) => {
           <span>标签管理</span>
         </button>
       </nav>
-
-      <div className="kb-admin-sidebar__workspace" aria-label="工作台访问">
-        <Link to="/" className="kb-admin-sidebar__workspace-link" aria-label="回到站点首页">
-          <HomeOutlined />
-          <span>首页</span>
-        </Link>
-        {isAdmin && (
-          <Link to="/admin/categories" className="kb-admin-sidebar__workspace-link" aria-label="回到管理后台">
-            <AppstoreOutlined />
-            <span>后台</span>
-          </Link>
-        )}
-        <ThemeToggle bare />
-        <Button type="text" danger icon={<LogoutOutlined />} onClick={handleLogout} aria-label="退出登录" />
-      </div>
 
       <div className="kb-admin-sidebar__search">
         <Input.Search
