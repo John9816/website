@@ -11,7 +11,6 @@ import RouteErrorBoundary from './components/RouteErrorBoundary'
 import {
   canAccessAdminPermission,
   getFirstAccessibleAdminPath,
-  isAdminUser,
   type AdminPermission,
 } from './utils/permissions'
 
@@ -223,10 +222,6 @@ function RequireAdminShell({ children }: { children: ReactNode }) {
 
   if (!auth.token || !auth.user) {
     return <Navigate to="/admin/login" state={{ from: '/admin' }} replace />
-  }
-
-  if (!isAdminUser(auth.user)) {
-    return <Navigate to="/" replace />
   }
 
   return <>{children}</>

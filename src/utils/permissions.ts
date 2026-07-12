@@ -19,7 +19,6 @@ export function canAccessAdminPermission(
   permission: AdminPermission,
 ) {
   if (!user) return false
-  if (!isAdminUser(user)) return false
   if (permission === 'systemConfig') return canManageSystemConfig(user)
   if (permission === 'contentFactory') return canUseContentFactory(user)
   return true

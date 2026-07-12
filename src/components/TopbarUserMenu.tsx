@@ -174,16 +174,14 @@ export default function TopbarUserMenu() {
         )}
       </div>
 
-      {isAdmin && (
-        <RouterLink
-          to="/admin"
-          className="topbar-user-card__admin"
-          onClick={() => setOpen(false)}
-        >
-          <LayoutDashboard size={15} />
-          <span>进入后台</span>
-        </RouterLink>
-      )}
+      <RouterLink
+        to="/admin"
+        className="topbar-user-card__admin"
+        onClick={() => setOpen(false)}
+      >
+        <LayoutDashboard size={15} />
+        <span>进入后台</span>
+      </RouterLink>
 
       <Button
         block

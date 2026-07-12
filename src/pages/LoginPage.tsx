@@ -39,14 +39,9 @@ export default function LoginPage() {
     try {
       const data = await apiLogin(values.username, values.password)
       const profile = await getCurrentUser(data.token, data.tokenType)
-      if (isAdminEntry && profile.role !== 'ADMIN') {
-        auth.logout()
-        message.error('当前账号不是管理员，不能进入后台')
-        return
-      }
       auth.login(data.token, data.username, data.tokenType, profile)
       message.success('登录成功')
-      nav(profile.role === 'ADMIN' || !redirectTo.startsWith('/admin') ? redirectTo : '/', { replace: true })
+      nav(redirectTo, { replace: true })
     } catch (error) {
       message.error((error as Error).message)
     } finally {
@@ -82,19 +77,18 @@ export default function LoginPage() {
         bordered={false}
       >
         <Typography.Title level={3} style={{ textAlign: 'center', marginBottom: 8 }}>
-          {isAdminEntry ? '后台登录' : '账号登录'}
+          {isAdminEntry ? '管理后台登录' : '账号登录'}
         </Typography.Title>
         <Typography.Paragraph
           type="secondary"
           style={{ textAlign: 'center', marginBottom: 28 }}
         >
-          {isAdminEntry ? '管理员登录后进入后台管理' : '登录后可继续使用你的账号'}
+          {isAdminEntry ? '登录后进入你的管理后台' : '登录后可继续使用你的账号'}
         </Typography.Paragraph>
 
         <Form
           size="large"
           layout="vertical"
-          initialValues={isAdminEntry ? { username: 'admin' } : undefined}
           onFinish={onFinish}
         >
           <Form.Item

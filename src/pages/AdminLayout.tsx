@@ -22,7 +22,6 @@ import {
   canUseContentFactory,
   getAdminPermissionForPath,
   getFirstAccessibleAdminPath,
-  isAdminUser,
 } from '../utils/permissions'
 import '../styles/admin-shell.css'
 
@@ -53,10 +52,6 @@ export default function AdminLayout() {
         正在确认权限...
       </div>
     )
-  }
-
-  if (!isAdminUser(auth.user)) {
-    return <Navigate to="/" replace />
   }
 
   const navItems: AdminNavItem[] = [
