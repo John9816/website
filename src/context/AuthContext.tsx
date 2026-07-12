@@ -12,7 +12,7 @@ interface AuthState {
   refreshProfile: () => Promise<void>
   refreshCredits: () => Promise<UserCreditView | null>
   checkIn: () => Promise<UserCreditView>
-  login: (token: string, username: string, tokenType?: string) => void
+  login: (token: string, username: string, tokenType?: string, profile?: CurrentUserView) => void
   logout: () => void
 }
 
@@ -47,10 +47,17 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
   useEffect(() => {
     const syncAuthState = () => {
-      const token = getToken()
-      setTok(token)
-      setUsername(token ? localStorage.getItem(USER_KEY) : null)
-      if (!token) {
+      const nextToken = getToken()
+      setTok((previousToken) => {
+        if (previousToken !== nextToken) {
+          setUser(null)
+          setCredits(null)
+          setProfileLoading(!!nextToken)
+        }
+        return nextToken
+      })
+      setUsername(nextToken ? localStorage.getItem(USER_KEY) : null)
+      if (!nextToken) {
         setUser(null)
         setCredits(null)
         setProfileLoading(false)
@@ -144,12 +151,18 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     refreshProfile,
     refreshCredits,
     checkIn,
-    login(t, u, tokenType) {
+    login(t, u, tokenType, profile) {
+      setUser(null)
+      setCredits(null)
+      setProfileLoading(true)
       setToken(t, tokenType)
       localStorage.setItem(USER_KEY, u)
       setTok(t)
       setUsername(u)
-      setProfileLoading(true)
+      if (profile) {
+        applyProfile(profile)
+        setProfileLoading(false)
+      }
     },
     logout() {
       setToken(null)

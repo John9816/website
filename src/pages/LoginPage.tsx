@@ -44,8 +44,7 @@ export default function LoginPage() {
         message.error('当前账号不是管理员，不能进入后台')
         return
       }
-      auth.login(data.token, data.username, data.tokenType)
-      await auth.refreshProfile()
+      auth.login(data.token, data.username, data.tokenType, profile)
       message.success('登录成功')
       nav(redirectTo, { replace: true })
     } catch (error) {
