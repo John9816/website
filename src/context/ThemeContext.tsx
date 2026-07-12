@@ -12,15 +12,21 @@ interface ThemeState {
 
 const Ctx = createContext<ThemeState | null>(null)
 const KEY = 'nav.theme'
+const DEFAULT_VERSION_KEY = 'nav.theme.defaultVersion'
+const DEFAULT_VERSION = '2026-07-bg-default'
+const DEFAULT_MODE: ThemeMode = 'image'
 
 function isThemeMode(value: string | null): value is ThemeMode {
   return value === 'image' || value === 'light' || value === 'dark'
 }
 
 function getInitial(): ThemeMode {
+  if (localStorage.getItem(DEFAULT_VERSION_KEY) !== DEFAULT_VERSION) {
+    return DEFAULT_MODE
+  }
   const saved = localStorage.getItem(KEY)
   if (isThemeMode(saved)) return saved
-  return 'image'
+  return DEFAULT_MODE
 }
 
 export function ThemeProvider({ children }: { children: ReactNode }) {
@@ -29,6 +35,7 @@ export function ThemeProvider({ children }: { children: ReactNode }) {
   useEffect(() => {
     document.documentElement.setAttribute('data-theme', mode)
     localStorage.setItem(KEY, mode)
+    localStorage.setItem(DEFAULT_VERSION_KEY, DEFAULT_VERSION)
   }, [mode])
 
   const value: ThemeState = {
