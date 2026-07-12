@@ -95,15 +95,15 @@ export default function AdminConfigs() {
   }
 
   return (
-    <div style={{ display: 'flex', flexDirection: 'column', gap: 24 }}>
-      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+    <div className="admin-page">
+      <div className="admin-page__header">
         <div>
-          <h2 style={{ margin: 0, fontSize: 24, fontWeight: 600 }}>系统配置</h2>
-          <Typography.Paragraph type="secondary" style={{ margin: '4px 0 0', maxWidth: 600 }}>
+          <h2>系统配置</h2>
+          <Typography.Paragraph type="secondary">
             运行时集成配置（如图片生成 API 等），修改后立即生效，无需重启服务。
           </Typography.Paragraph>
         </div>
-        <Space size="middle">
+        <Space className="admin-page__actions" size="middle" wrap>
           <Button icon={<ReloadOutlined />} onClick={() => void load()} loading={loading} size="large">
             刷新
           </Button>
@@ -113,7 +113,7 @@ export default function AdminConfigs() {
         </Space>
       </div>
 
-      <Card styles={{ body: { padding: 0 } }} style={{ overflow: 'hidden', border: 'none', boxShadow: '0 1px 2px 0 rgba(0, 0, 0, 0.03), 0 1px 6px -1px rgba(0, 0, 0, 0.02), 0 2px 4px 0 rgba(0, 0, 0, 0.02)' }}>
+      <Card className="admin-page__panel" styles={{ body: { padding: 0 } }}>
         {loading && rows.length === 0 ? (
           <div style={{ padding: 24 }}>
             <Skeleton active paragraph={{ rows: 6 }} />

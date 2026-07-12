@@ -124,13 +124,13 @@ export default function AdminCategories() {
   }
 
   return (
-    <div className="admin-categories">
-      <div className="admin-categories__header">
+    <div className="admin-categories admin-page">
+      <div className="admin-categories__header admin-page__header">
         <div>
           <h2>分类管理</h2>
           <p>管理导航站的分类目录和排序</p>
         </div>
-        <Space>
+        <Space className="admin-page__actions" wrap>
           <Button icon={<ReloadOutlined />} onClick={() => void load()} loading={loading}>
             刷新
           </Button>
@@ -140,7 +140,7 @@ export default function AdminCategories() {
         </Space>
       </div>
 
-      <Card className="admin-categories__card" styles={{ body: { padding: 0 } }}>
+      <Card className="admin-categories__card admin-page__panel" styles={{ body: { padding: 0 } }}>
         {loading && rows.length === 0 ? (
           <div className="admin-categories__skeleton">
             <Skeleton active paragraph={{ rows: 8 }} />

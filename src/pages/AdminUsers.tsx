@@ -144,13 +144,13 @@ export default function AdminUsers() {
   }
 
   return (
-    <div className="admin-users">
-      <div className="admin-users__header">
+    <div className="admin-users admin-page">
+      <div className="admin-users__header admin-page__header">
         <div>
           <Typography.Title level={2}>用户管理</Typography.Title>
           <Typography.Paragraph>管理账户角色、访问状态与登录凭据，共 {total} 个用户</Typography.Paragraph>
         </div>
-        <Space>
+        <Space className="admin-page__actions" wrap>
           <Button icon={<ReloadOutlined />} loading={loading} onClick={() => void load()}>
             刷新
           </Button>
@@ -206,7 +206,7 @@ export default function AdminUsers() {
         </Button>
       </div>
 
-      <Card className="admin-users__table-card" styles={{ body: { padding: 0 } }}>
+      <Card className="admin-users__table-card admin-page__panel" styles={{ body: { padding: 0 } }}>
         <Table<AdminUserView>
           rowKey="id"
           dataSource={rows}

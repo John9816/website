@@ -1,7 +1,7 @@
 .admin-categories {
   display: flex;
   flex-direction: column;
-  gap: 24px;
+  gap: 18px;
 }
 
 .admin-categories__header {
@@ -14,21 +14,19 @@
 .admin-categories__header h2 {
   margin: 0;
   font-size: 24px;
-  font-weight: 600;
+  color: var(--text);
+  font-weight: 700;
 }
 
 .admin-categories__header p {
   margin: 4px 0 0;
-  color: rgba(0, 0, 0, 0.45);
+  color: var(--text-dim);
 }
 
 .admin-categories__card {
   overflow: hidden;
-  border: none;
-  box-shadow:
-    0 1px 2px 0 rgba(0, 0, 0, 0.03),
-    0 1px 6px -1px rgba(0, 0, 0, 0.02),
-    0 2px 4px 0 rgba(0, 0, 0, 0.02);
+  border-color: var(--border);
+  box-shadow: var(--shadow-sm);
 }
 
 .admin-categories__skeleton {
@@ -36,7 +34,7 @@
 }
 
 .admin-categories__sort {
-  color: #e11d48;
+  color: var(--accent);
   font-weight: 600;
 }
 
@@ -47,7 +45,7 @@
   align-items: center;
   justify-content: center;
   border-radius: 8px;
-  background: rgba(225, 29, 72, 0.05);
+  background: var(--accent-soft);
 }
 
 .admin-categories__name {
@@ -57,7 +55,8 @@
 .admin-categories__code {
   padding: 2px 6px;
   border-radius: 4px;
-  background: rgba(0, 0, 0, 0.04);
+  background: var(--panel-alt);
+  color: var(--text);
   font-size: 12px;
 }
 
@@ -77,17 +76,17 @@
   place-items: center;
   gap: 6px;
   padding: 8px 6px;
-  border: 1px solid rgba(5, 5, 5, 0.08);
+  border: 1px solid var(--border);
   border-radius: 8px;
-  background: #fff;
-  color: rgba(0, 0, 0, 0.78);
+  background: var(--panel);
+  color: var(--text);
   cursor: pointer;
 }
 
 .admin-category-icons__item:hover,
 .admin-category-icons__item:focus-visible {
-  border-color: #1677ff;
-  color: #1677ff;
+  border-color: var(--accent);
+  color: var(--accent);
 }
 
 .admin-category-icons__item span {

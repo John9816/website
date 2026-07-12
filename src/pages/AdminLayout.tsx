@@ -168,10 +168,8 @@ function LayoutContent({
   auth: any
   doLogout: () => void
 }) {
-  const isWorkspaceRoute = selectedKey === '/admin/kb'
-
   return (
-    <Layout hasSider className={`admin-shell${isWorkspaceRoute ? ' admin-shell--workspace' : ''}`}>
+    <Layout hasSider className="admin-shell">
       <Sider
         theme={mode === 'light' ? 'light' : 'dark'}
         breakpoint="lg"
