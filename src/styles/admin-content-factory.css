@@ -629,3 +629,24 @@
     min-height: 44px;
   }
 }
+
+@media (min-width: 721px) and (max-width: 1180px) {
+  .content-factory__preset-strip {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
+  .content-factory__form-grid--three {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+}
+
+@media (min-width: 900px) and (max-height: 720px) and (orientation: landscape) {
+  .content-factory__pipeline,
+  .content-factory__header {
+    padding-block: 6px;
+  }
+
+  .content-factory__panel .ant-card-body {
+    padding-top: 10px;
+  }
+}

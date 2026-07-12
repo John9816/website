@@ -51,6 +51,7 @@ export default function LoginPage() {
 
   return (
     <div
+      className="auth-page"
       style={{
         minHeight: '100dvh',
         display: 'flex',
@@ -61,13 +62,14 @@ export default function LoginPage() {
         position: 'relative',
       }}
     >
-      <div style={{ position: 'absolute', top: 16, right: 20 }}>
+      <div className="auth-page__theme">
         <ThemeToggle bare />
       </div>
 
       <Card
+        className="auth-page__card"
         style={{
-          width: 380,
+          width: 'min(100%, 380px)',
           background: token.colorBgContainer,
           borderRadius: 8,
           border: '1px solid rgba(255,255,255,0.12)',

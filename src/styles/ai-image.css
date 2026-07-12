@@ -390,6 +390,31 @@
   }
 }
 
+@media (min-width: 769px) and (max-width: 1180px) {
+  .ai-image-page__guest {
+    padding: 18px;
+  }
+
+  .ai-image-page__shared {
+    padding: 20px;
+  }
+}
+
+@media (min-width: 900px) and (max-height: 720px) and (orientation: landscape) {
+  .ai-image-page__guest {
+    padding-block: 12px;
+  }
+
+  .ai-image-page__hero {
+    gap: 12px;
+    margin-bottom: 12px;
+  }
+
+  .ai-image-page__shared {
+    padding: 14px 18px;
+  }
+}
+
 /* Bank-style image gallery skin */
 .ai-image-page__guest {
   background: transparent;

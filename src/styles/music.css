@@ -1974,6 +1974,47 @@
   }
 }
 
+@media (min-width: 769px) and (max-width: 1180px) {
+  .music-browser__content,
+  .music-detail-shell {
+    padding-inline: 18px;
+  }
+
+  .music-collection-grid,
+  .music-collection-strip {
+    grid-template-columns: repeat(auto-fill, minmax(150px, 1fr));
+  }
+}
+
+@media (min-width: 900px) and (max-height: 720px) and (orientation: landscape) {
+  .music-app,
+  .music-browser__layout {
+    height: 100dvh;
+  }
+
+  .music-browser__sidebar {
+    padding-block: 6px;
+  }
+
+  .music-browser__content,
+  .music-detail-shell {
+    padding-top: 10px;
+  }
+
+  .music-detail-hero {
+    min-height: 0;
+    padding-block: 18px;
+  }
+
+  .music-player-bar-wrap {
+    bottom: 6px;
+  }
+
+  .music-player-fullscreen__shell {
+    padding: 10px 16px;
+  }
+}
+
 /* Bank-style music page skin */
 .music-page {
   background: transparent;

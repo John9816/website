@@ -571,3 +571,24 @@
     gap: 10px;
   }
 }
+
+@media (min-width: 641px) and (max-width: 1180px) {
+  .kb-share-shell {
+    --kb-share-sidebar-width: 260px;
+  }
+
+  .kb-share-article {
+    padding-inline: 28px;
+  }
+}
+
+@media (min-width: 900px) and (max-height: 720px) and (orientation: landscape) {
+  .kb-share-shell,
+  .kb-share-layout {
+    height: 100dvh;
+  }
+
+  .kb-share-article {
+    padding-block: 24px;
+  }
+}

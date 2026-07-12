@@ -677,6 +677,24 @@ img.topbar-user-card__avatar {
 
 }
 
+@media (min-width: 900px) and (max-height: 720px) and (orientation: landscape) {
+  .topbar,
+  .topbar--pinned {
+    gap: 12px;
+    padding: calc(6px + var(--safe-top)) 18px 6px;
+  }
+
+  .topbar-nav {
+    padding-block: 2px;
+  }
+
+  .topbar-nav a,
+  .topbar-action,
+  .topbar-user-menu__trigger {
+    min-height: 44px;
+  }
+}
+
 /* Bank-style shared navigation skin */
 .topbar {
   background: transparent;

@@ -785,3 +785,50 @@ body:has(.bank-nav-page) {
     font-size: 20px;
   }
 }
+
+@media (min-width: 801px) and (max-width: 1180px) {
+  .zyyo-left {
+    width: 200px;
+  }
+
+  .zyyo-right {
+    width: calc(100% - 200px);
+  }
+
+  .projectItem {
+    width: calc(50% - 16px);
+    margin: 8px;
+  }
+}
+
+@media (min-width: 900px) and (max-height: 720px) and (orientation: landscape) {
+  .zyyo-main {
+    min-height: calc(100dvh - var(--app-topbar-offset));
+  }
+
+  .zyyo-left {
+    width: 190px;
+    height: calc(100dvh - var(--app-topbar-offset));
+  }
+
+  .zyyo-right {
+    width: calc(100% - 190px);
+    padding-block: 10px;
+  }
+
+  .welcome {
+    margin-block: 4px;
+    font-size: clamp(32px, 5.5vw, 68px);
+  }
+
+  .description,
+  .iconContainer {
+    margin-block: 6px;
+  }
+
+  .projectItem {
+    min-height: 88px;
+    height: auto;
+    margin-block: 6px;
+  }
+}
