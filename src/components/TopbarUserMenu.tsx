@@ -14,6 +14,7 @@ import {
 import { Link as RouterLink } from 'react-router-dom'
 import { updateUserProfile, uploadUserAvatar } from '../api/auth'
 import { useAuth } from '../context/AuthContext'
+import { ACCOUNT_EMAIL_HINT, ACCOUNT_EMAIL_PATTERN } from '../utils/email'
 
 function getDisplayName(username?: string | null) {
   return username?.trim() || '未命名用户'
@@ -283,13 +284,13 @@ export default function TopbarUserMenu() {
           </Form.Item>
           <Form.Item
             name="email"
-            label="QQ 邮箱"
+            label="邮箱"
             rules={[
               { required: true },
-              { pattern: /^[1-9]\d{4,10}@qq\.com$/i, message: '请输入有效的 QQ 邮箱' },
+              { pattern: ACCOUNT_EMAIL_PATTERN, message: ACCOUNT_EMAIL_HINT },
             ]}
           >
-            <Input autoComplete="email" placeholder="例如 123456@qq.com" />
+            <Input autoComplete="email" placeholder="QQ 邮箱或 name@751152.xyz" />
           </Form.Item>
         </Form>
       </Modal>

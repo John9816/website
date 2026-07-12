@@ -28,6 +28,7 @@ import {
 } from '../api/admin'
 import { useAuth } from '../context/AuthContext'
 import type { AdminUserView } from '../types'
+import { ACCOUNT_EMAIL_HINT, ACCOUNT_EMAIL_PATTERN } from '../utils/email'
 import '../styles/admin-users.css'
 
 const PAGE_SIZE = 20
@@ -343,13 +344,13 @@ export default function AdminUsers() {
           </Form.Item>
           <Form.Item
             name="email"
-            label="QQ 邮箱"
+            label="邮箱"
             rules={[
               { required: true },
-              { pattern: /^[1-9]\d{4,10}@qq\.com$/i, message: '请输入有效的 QQ 邮箱' },
+              { pattern: ACCOUNT_EMAIL_PATTERN, message: ACCOUNT_EMAIL_HINT },
             ]}
           >
-            <Input autoComplete="off" placeholder="例如 123456@qq.com" />
+            <Input autoComplete="off" placeholder="QQ 邮箱或 name@751152.xyz" />
           </Form.Item>
           <Form.Item name="password" label="初始密码" rules={[{ required: true }, { min: 6, max: 64 }]}>
             <Input.Password autoComplete="new-password" placeholder="至少 6 个字符" />

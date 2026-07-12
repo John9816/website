@@ -14,6 +14,7 @@ import { getCurrentUser, register as apiRegister } from '../api/auth'
 import ThemeToggle from '../components/ThemeToggle'
 import { useAuth } from '../context/AuthContext'
 import { useTheme, type ThemeMode } from '../context/ThemeContext'
+import { ACCOUNT_EMAIL_HINT, ACCOUNT_EMAIL_PATTERN } from '../utils/email'
 
 function authBackground(mode: ThemeMode) {
   if (mode === 'light') return '#ffffff'
@@ -27,8 +28,6 @@ type RegisterValues = {
   password: string
   confirmPassword: string
 }
-
-const QQ_EMAIL_PATTERN = /^[1-9]\d{4,10}@qq\.com$/i
 
 export default function RegisterPage() {
   const [loading, setLoading] = useState(false)
@@ -93,7 +92,7 @@ export default function RegisterPage() {
           type="secondary"
           style={{ textAlign: 'center', marginBottom: 28 }}
         >
-          使用 QQ 邮箱创建普通用户账号
+          使用 QQ 邮箱或 @751152.xyz 邮箱创建普通用户账号
         </Typography.Paragraph>
 
         <Form<RegisterValues> size="large" layout="vertical" onFinish={onFinish}>
@@ -111,16 +110,16 @@ export default function RegisterPage() {
           <Form.Item
             name="email"
             rules={[
-              { required: true, message: '请输入 QQ 邮箱' },
+              { required: true, message: '请输入邮箱' },
               {
-                pattern: QQ_EMAIL_PATTERN,
-                message: '请输入有效的 QQ 邮箱，例如 123456@qq.com',
+                pattern: ACCOUNT_EMAIL_PATTERN,
+                message: ACCOUNT_EMAIL_HINT,
               },
             ]}
           >
             <Input
               prefix={<MailOutlined />}
-              placeholder="QQ 邮箱"
+              placeholder="QQ 邮箱或 name@751152.xyz"
               autoComplete="email"
             />
           </Form.Item>
