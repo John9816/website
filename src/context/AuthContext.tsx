@@ -1,4 +1,4 @@
-import { createContext, useContext, useEffect, useState, type ReactNode } from 'react'
+import { createContext, useContext, useEffect, useRef, useState, type ReactNode } from 'react'
 import { checkInToday, getCurrentUser, getUserCredits } from '../api/auth'
 import { ApiError, AUTH_CHANGE_EVENT, getToken, setToken } from '../api/client'
 import type { CurrentUserView, UserCreditView } from '../types'
@@ -29,8 +29,12 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const [user, setUser] = useState<CurrentUserView | null>(null)
   const [credits, setCredits] = useState<UserCreditView | null>(null)
   const [profileLoading, setProfileLoading] = useState(() => !!getToken())
+  const authVersionRef = useRef(0)
 
-  const applyProfile = (profile: CurrentUserView) => {
+  const applyProfile = (profile: CurrentUserView, expectedToken?: string | null) => {
+    if (expectedToken !== undefined && getToken() !== expectedToken) {
+      return
+    }
     setUser(profile)
     setUsername(profile.username)
     localStorage.setItem(USER_KEY, profile.username)
@@ -51,6 +55,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       const nextToken = getToken()
       setTok((previousToken) => {
         if (previousToken !== nextToken) {
+          authVersionRef.current += 1
           setUser(null)
           setCredits(null)
           setProfileLoading(!!nextToken)
@@ -81,12 +86,18 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       return
     }
 
+    const requestToken = getToken()
+    const requestVersion = authVersionRef.current
     setProfileLoading(true)
     try {
-      const profile = await getCurrentUser()
-      applyProfile(profile)
+      const profile = await getCurrentUser(requestToken ?? undefined)
+      if (authVersionRef.current === requestVersion) {
+        applyProfile(profile, requestToken)
+      }
     } finally {
-      setProfileLoading(false)
+      if (authVersionRef.current === requestVersion) {
+        setProfileLoading(false)
+      }
     }
   }
 
@@ -121,21 +132,23 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       return
     }
 
+    const requestToken = token
+    const requestVersion = authVersionRef.current
     let cancelled = false
     setProfileLoading(true)
-    getCurrentUser()
+    getCurrentUser(requestToken)
       .then((profile) => {
-        if (cancelled) return
-        applyProfile(profile)
+        if (cancelled || authVersionRef.current !== requestVersion) return
+        applyProfile(profile, requestToken)
         void refreshCredits().catch(() => undefined)
       })
       .catch(() => {
-        if (cancelled) return
+        if (cancelled || authVersionRef.current !== requestVersion) return
         setUser(null)
         setCredits(null)
       })
       .finally(() => {
-        if (!cancelled) setProfileLoading(false)
+        if (!cancelled && authVersionRef.current === requestVersion) setProfileLoading(false)
       })
 
     return () => {
@@ -154,21 +167,23 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     updateProfile: applyProfile,
     checkIn,
     login(t, u, tokenType, profile) {
+      authVersionRef.current += 1
       setUser(null)
       setCredits(null)
       setProfileLoading(true)
-      setToken(t, tokenType)
       localStorage.setItem(USER_KEY, u)
+      setToken(t, tokenType, { emit: false })
       setTok(t)
       setUsername(u)
       if (profile) {
-        applyProfile(profile)
+        applyProfile(profile, t)
         setProfileLoading(false)
       }
     },
     logout() {
-      setToken(null)
+      authVersionRef.current += 1
       localStorage.removeItem(USER_KEY)
+      setToken(null, 'Bearer', { emit: false })
       setTok(null)
       setUsername(null)
       setUser(null)

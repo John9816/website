@@ -17,7 +17,7 @@ export function getTokenType(): string {
   return localStorage.getItem(TOKEN_TYPE_KEY) || 'Bearer'
 }
 
-export function setToken(token: string | null, tokenType = 'Bearer') {
+export function setToken(token: string | null, tokenType = 'Bearer', options: { emit?: boolean } = {}) {
   if (token) {
     localStorage.setItem(TOKEN_KEY, token)
     localStorage.setItem(TOKEN_TYPE_KEY, tokenType)
@@ -26,7 +26,9 @@ export function setToken(token: string | null, tokenType = 'Bearer') {
     localStorage.removeItem(TOKEN_TYPE_KEY)
   }
 
-  window.dispatchEvent(new Event(AUTH_CHANGE_EVENT))
+  if (options.emit !== false) {
+    window.dispatchEvent(new Event(AUTH_CHANGE_EVENT))
+  }
 }
 
 export class ApiError extends Error {
