@@ -72,8 +72,10 @@ export async function request<T>(path: string, opts: Options = {}): Promise<T> {
 
   const headers: Record<string, string> = {}
   if (body !== undefined && !isFormData) headers['Content-Type'] = 'application/json'
+  let requestToken: string | null = null
   if (auth) {
     const t = opts.authToken ?? getToken()
+    requestToken = t
     const tokenType = opts.authTokenType ?? getTokenType()
     if (t) headers['Authorization'] = `${tokenType} ${t}`
   }
@@ -94,8 +96,10 @@ export async function request<T>(path: string, opts: Options = {}): Promise<T> {
   }
 
   if (res.status === 401) {
-    localStorage.removeItem(USER_KEY)
-    setToken(null)
+    if (!auth || !requestToken || requestToken === getToken()) {
+      localStorage.removeItem(USER_KEY)
+      setToken(null)
+    }
     throw new ApiError(401, '登录已过期，请重新登录')
   }
 
