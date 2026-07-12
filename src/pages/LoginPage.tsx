@@ -10,7 +10,7 @@ import {
   theme as antdTheme,
 } from 'antd'
 import { LockOutlined, UserOutlined } from '@ant-design/icons'
-import { login as apiLogin } from '../api/auth'
+import { getCurrentUser, login as apiLogin } from '../api/auth'
 import ThemeToggle from '../components/ThemeToggle'
 import { useAuth } from '../context/AuthContext'
 import { useTheme, type ThemeMode } from '../context/ThemeContext'
@@ -38,7 +38,14 @@ export default function LoginPage() {
     setLoading(true)
     try {
       const data = await apiLogin(values.username, values.password)
+      const profile = await getCurrentUser()
+      if (isAdminEntry && profile.role !== 'ADMIN') {
+        auth.logout()
+        message.error('当前账号不是管理员，不能进入后台')
+        return
+      }
       auth.login(data.token, data.username, data.tokenType)
+      await auth.refreshProfile()
       message.success('登录成功')
       nav(redirectTo, { replace: true })
     } catch (error) {
