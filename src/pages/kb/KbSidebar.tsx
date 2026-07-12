@@ -15,6 +15,7 @@ import {
 } from '@ant-design/icons'
 import ThemeToggle from '../../components/ThemeToggle'
 import { useAuth } from '../../context/AuthContext'
+import { isAdminUser } from '../../utils/permissions'
 import { useKbContext } from './context'
 import type { KbDocTreeNode } from '../../types'
 import type { TreeProps } from 'antd'
@@ -140,6 +141,7 @@ const KbSidebar: React.FC<KbSidebarProps> = ({ onNavigate }) => {
   const filteredTree = React.useMemo(() => filterTree(tree, treeKeyword), [tree, treeKeyword])
   const totalDocs = React.useMemo(() => countDocs(tree), [tree])
   const visibleDocs = React.useMemo(() => countDocs(filteredTree), [filteredTree])
+  const isAdmin = isAdminUser(auth.user)
 
   const treeData: KbTreeDataNode[] = React.useMemo(
     () => [
@@ -282,10 +284,12 @@ const KbSidebar: React.FC<KbSidebarProps> = ({ onNavigate }) => {
           <HomeOutlined />
           <span>首页</span>
         </Link>
-        <Link to="/admin/categories" className="kb-admin-sidebar__workspace-link" aria-label="回到管理后台">
-          <AppstoreOutlined />
-          <span>后台</span>
-        </Link>
+        {isAdmin && (
+          <Link to="/admin/categories" className="kb-admin-sidebar__workspace-link" aria-label="回到管理后台">
+            <AppstoreOutlined />
+            <span>后台</span>
+          </Link>
+        )}
         <ThemeToggle bare />
         <Button type="text" danger icon={<LogoutOutlined />} onClick={handleLogout} aria-label="退出登录" />
       </div>
