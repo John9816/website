@@ -445,11 +445,6 @@
   color: #fff;
 }
 
-.ai-chat--image-authenticated {
-  grid-template-rows: minmax(0, 1fr);
-  grid-template-areas: 'main';
-}
-
 [data-theme='light'] .ai-image-page__shared,
 [data-theme='light'] .ai-image-page__gallery-card,
 [data-theme='light'] .ai-image-page__shared-toolbar,

@@ -246,7 +246,7 @@ export default function TopbarUserMenu() {
         confirmLoading={savingProfile}
         onCancel={() => setProfileOpen(false)}
         onOk={() => void saveProfile()}
-        destroyOnClose
+        destroyOnHidden
       >
         <div className="topbar-profile-avatar-editor">
           <UserAvatar

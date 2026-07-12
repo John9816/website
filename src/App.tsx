@@ -181,8 +181,13 @@ function RouteFocusManager() {
 
 function GlobalBeianFooterGate() {
   const location = useLocation()
+  const auth = useAuth()
 
-  if (location.pathname === '/' || location.pathname.startsWith('/admin')) {
+  if (
+    location.pathname === '/'
+    || location.pathname.startsWith('/admin')
+    || (location.pathname === '/ai-image' && !!auth.token)
+  ) {
     return null
   }
 

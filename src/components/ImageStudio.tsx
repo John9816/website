@@ -10,7 +10,6 @@ import {
 } from 'react'
 import { App as AntApp } from 'antd'
 import {
-  ArrowLeft,
   CheckSquare,
   Clipboard,
   Coins,
@@ -22,13 +21,13 @@ import {
   RefreshCw,
   SendHorizontal,
   Share2,
+  SlidersHorizontal,
   Sparkles,
   StopCircle,
   Trash2,
   Upload,
   X,
 } from 'lucide-react'
-import { Link as RouterLink } from 'react-router-dom'
 import {
   adminDeleteImageHistory,
   adminEditImage,
@@ -212,7 +211,11 @@ export default function ImageStudio({ layout = 'admin' }: ImageStudioProps) {
   const [selectedHistoryId, setSelectedHistoryId] = useState<string | null>(null)
   const [selectedGroupIds, setSelectedGroupIds] = useState<Set<string>>(() => new Set())
   const [historyCollapsed, setHistoryCollapsed] = useState(() =>
-    typeof window !== 'undefined' ? window.matchMedia(`(max-width: ${RESIZE_BREAKPOINT}px)`).matches : false,
+    layout === 'standalone'
+      ? true
+      : typeof window !== 'undefined'
+        ? window.matchMedia(`(max-width: ${RESIZE_BREAKPOINT}px)`).matches
+        : false,
   )
   const [layoutWidths, setLayoutWidths] = useState<LayoutWidths>(() => loadLayoutWidths())
   const [resizingTarget, setResizingTarget] = useState<ResizeTarget | null>(null)
@@ -324,11 +327,13 @@ export default function ImageStudio({ layout = 'admin' }: ImageStudioProps) {
 
   useEffect(() => {
     const media = window.matchMedia(`(max-width: ${RESIZE_BREAKPOINT}px)`)
-    const syncHistoryMode = () => setHistoryCollapsed(media.matches)
+    const syncHistoryMode = () => {
+      setHistoryCollapsed(layout === 'standalone' ? true : media.matches)
+    }
     syncHistoryMode()
     media.addEventListener('change', syncHistoryMode)
     return () => media.removeEventListener('change', syncHistoryMode)
-  }, [])
+  }, [layout])
 
   useEffect(() => {
     window.localStorage.setItem(IMAGE_LAYOUT_STORAGE_KEY, JSON.stringify(layoutWidths))
@@ -913,14 +918,21 @@ export default function ImageStudio({ layout = 'admin' }: ImageStudioProps) {
       <section className="admin-image__controls" aria-label="生图参数">
         <div className="admin-image__controls-body">
         <div className="admin-image__topline">
-          <RouterLink to="/" className="admin-image__back-link">
-            <ArrowLeft size={15} />
-            首页
-          </RouterLink>
-          <span>{selectedModel}</span>
+          <div>
+            <span className="admin-image__eyebrow">AI IMAGE STUDIO</span>
+            <h1>图像创作</h1>
+          </div>
+          <button
+            type="button"
+            className="admin-image__history-trigger"
+            onClick={() => setHistoryCollapsed(false)}
+          >
+            <Menu size={15} />
+            历史记录
+          </button>
         </div>
         <label className="admin-image__prompt-field">
-          <span>提示词：</span>
+          <span>描述你想生成的画面</span>
           <textarea
             value={prompt}
             onChange={(event) => setPrompt(event.target.value)}
@@ -929,6 +941,7 @@ export default function ImageStudio({ layout = 'admin' }: ImageStudioProps) {
             maxLength={MAX_PROMPT}
             disabled={loading}
           />
+          <small>{prompt.length}/{MAX_PROMPT}</small>
         </label>
 
         <section className="admin-image__section">
@@ -980,6 +993,15 @@ export default function ImageStudio({ layout = 'admin' }: ImageStudioProps) {
           />
         </section>
 
+        <details className="admin-image__advanced">
+          <summary>
+            <span>
+              <SlidersHorizontal size={16} />
+              高级参数
+            </span>
+            <small>{selectedAspect} · {imageCount} 张 · {quality === 'auto' ? '自动质量' : quality}</small>
+          </summary>
+          <div className="admin-image__advanced-body">
         <section className="admin-image__section">
           <h3>模型</h3>
           <select
@@ -1072,6 +1094,8 @@ export default function ImageStudio({ layout = 'admin' }: ImageStudioProps) {
             ))}
           </div>
         </section>
+          </div>
+        </details>
 
         <section className="admin-image__credit-panel">
           <div>
