@@ -37,6 +37,7 @@ const AdminContentFactory = lazy(() => import('./pages/AdminContentFactory'))
 const AdminPassword = lazy(() => import('./pages/AdminPassword'))
 const AdminUsers = lazy(() => import('./pages/AdminUsers'))
 const AdminKnowledgeBase = lazy(() => import('./pages/AdminKnowledgeBase'))
+const AdminOreatePool = lazy(() => import('./pages/AdminOreatePool'))
 const KbSharePage = lazy(() => import('./pages/KbSharePage'))
 
 function RouteFallback() {
@@ -303,6 +304,14 @@ export default function App() {
                         }
                       />
                       <Route path="kb" element={<AdminKnowledgeBase />} />
+                      <Route
+                        path="oreate-pool"
+                        element={
+                          <RequireAdminPermission permission="oreatePool">
+                            <AdminOreatePool />
+                          </RequireAdminPermission>
+                        }
+                      />
                       <Route
                         path="users"
                         element={

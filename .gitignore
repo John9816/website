@@ -9,7 +9,12 @@ dist
 .codex-screenshots/
 .codex_resume/
 .playwright-mcp/
+.playwright-cli/
 .wrangler/
 .wrangler-config/
 output/
 *.png
+.trellis/
+.agents/
+.codex/
+.cursor/

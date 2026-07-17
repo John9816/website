@@ -100,6 +100,27 @@ export class ApiError extends Error {
   }
 }
 
+function normalizeApiErrorMessage(message: string | undefined): string {
+  const raw = String(message || '').trim()
+  const prefix = 'Oreate upstream error:'
+  const jsonText = raw.startsWith(prefix) ? raw.slice(prefix.length).trim() : raw
+  if (jsonText.startsWith('{')) {
+    try {
+      const parsed = JSON.parse(jsonText) as { detail?: unknown; message?: unknown }
+      const detail = parsed.detail
+      if (detail && typeof detail === 'object') {
+        const record = detail as Record<string, unknown>
+        const parts = [record.message, record.hint].filter(Boolean).map(String)
+        if (parts.length) return parts.join('\n')
+      }
+      if (parsed.message) return String(parsed.message)
+    } catch {
+      // Fall through to raw message.
+    }
+  }
+  return raw || 'Request failed'
+}
+
 type Options = {
   method?: 'GET' | 'POST' | 'PUT' | 'DELETE' | 'PATCH'
   body?: unknown
@@ -171,7 +192,7 @@ export async function request<T>(path: string, opts: Options = {}): Promise<T> {
   }
 
   if (json.code !== 0) {
-    throw new ApiError(json.code, json.message || '请求失败')
+    throw new ApiError(json.code, normalizeApiErrorMessage(json.message))
   }
   return json.data
 }

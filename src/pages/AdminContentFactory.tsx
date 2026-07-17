@@ -44,6 +44,7 @@ import {
   adminCreateWechatDraft,
   adminDeleteContentArticle,
   adminGenerateContentArticle,
+  adminGetContentAgentJob,
   adminGetContentAutomation,
   adminGetContentArticle,
   adminGetContentStatus,
@@ -55,6 +56,7 @@ import {
   adminUpdateContentArticle,
 } from '../api/admin'
 import type {
+  ContentAgentRunJob,
   ContentAutomationJob,
   ContentAutomationLog,
   ContentAutomationStage,
@@ -247,12 +249,24 @@ const pipelineSteps = [
 
 const stageMeta: Record<ContentAutomationStage, { label: string; tone: string }> = {
   topic: { label: '选题', tone: 'blue' },
+  editorial_decision: { label: '主编决策', tone: 'blue' },
   research: { label: '检索', tone: 'cyan' },
+  evidence: { label: '证据补全', tone: 'cyan' },
+  plan: { label: '文章计划', tone: 'purple' },
   generate: { label: '生成', tone: 'purple' },
   review: { label: '审稿', tone: 'gold' },
+  quality_gate: { label: '质量门', tone: 'volcano' },
+  draft_ready: { label: '草稿就绪', tone: 'gold' },
+  local_draft: { label: '本地草稿', tone: 'orange' },
   wechat_draft: { label: '入草稿', tone: 'geekblue' },
   publish: { label: '发布', tone: 'green' },
 }
+
+function getStageMeta(stage?: ContentAutomationStage | string | null) {
+  if (!stage) return { label: '未开始', tone: 'default' }
+  return stageMeta[stage as ContentAutomationStage] ?? { label: String(stage), tone: 'default' }
+}
+
 
 const automationStatusMeta: Record<ContentAutomationStatus, { label: string; badge: 'default' | 'processing' | 'success' | 'error' | 'warning' }> = {
   PENDING: { label: '等待中', badge: 'default' },
@@ -426,6 +440,14 @@ function deriveAutomation(article: ContentArticle | null): NormalizedAutomation 
     jobs,
     publishRecords,
   }
+}
+
+function sleep(ms: number) {
+  return new Promise((resolve) => window.setTimeout(resolve, ms))
+}
+
+function isAgentJobFinished(job: ContentAgentRunJob) {
+  return job.status === 'SUCCESS' || job.status === 'FAILED'
 }
 
 function inferStage(article: ContentArticle): ContentAutomationStage {
@@ -671,21 +693,46 @@ export default function AdminContentFactory() {
     const topic = values.topic?.trim()
     setAgentRunning(true)
     try {
-      const result = await adminRunContentAgent({
+      let job = await adminRunContentAgent({
         category: activeCategory,
         topic: topic || undefined,
         instruction: values.angle || activePreset.description,
         length: values.length || 'standard',
         generateCover: false,
         autoWechatDraft: true,
+        autoPublish: false,
       })
-      upsertArticle(result.article)
-      setAutomation({ ...result.automation, source: 'backend' })
+      message.info(`Agent 任务已启动：${job.jobId}`)
+      for (let attempt = 0; attempt < 180 && !isAgentJobFinished(job); attempt += 1) {
+        await sleep(attempt < 10 ? 1500 : 3000)
+        job = await adminGetContentAgentJob(job.jobId)
+        if (job.automation) {
+          setAutomation({ ...job.automation, source: 'backend' })
+        }
+      }
+      if (!isAgentJobFinished(job)) {
+        message.warning('Agent 执行超时，任务仍在后台运行，请稍后刷新查看')
+        return
+      }
+      if (job.status === 'FAILED') {
+        message.error(job.errorMessage || 'Agent 执行失败')
+        return
+      }
+      if (!job.article || !job.automation) {
+        message.warning('Agent 已完成，但未返回文章数据，请刷新列表查看')
+        await loadArticles()
+        return
+      }
+      upsertArticle(job.article)
+      setAutomation({ ...job.automation, source: 'backend' })
       setDrawerOpen(true)
-      if (result.draft.mode === 'wechat') {
+      await loadArticles()
+      if (job.article.errorMessage) {
+        message.warning(`Agent 已完成，但存在告警：${job.article.errorMessage}`)
+      } else if (job.draft?.mode === 'wechat') {
         message.success('Agent 已完成：文章已生成并进入微信草稿箱')
       } else {
-        message.warning('Agent 已完成：文章已生成，微信草稿失败时已保留为本站本地草稿')
+        message.success('Agent 已完成：文章已生成，微信草稿失败时已保留为本站本地草稿')
       }
     } catch (error) {
       message.error((error as Error).message)
@@ -1195,8 +1242,8 @@ export default function AdminContentFactory() {
                 <Tag color={automation.source === 'backend' ? 'success' : 'default'}>
                   {automation.source === 'backend' ? '后端同步' : '前端推导'}
                 </Tag>
-                <Tag color={automation.currentStage ? stageMeta[automation.currentStage].tone : 'default'}>
-                  {automation.currentStage ? stageMeta[automation.currentStage].label : '未开始'}
+                <Tag color={getStageMeta(automation.currentStage).tone}>
+                  {getStageMeta(automation.currentStage).label}
                 </Tag>
               </Space>
 
@@ -1212,7 +1259,7 @@ export default function AdminContentFactory() {
                         <Badge status={meta.badge} text={meta.label} />
                         <div>
                           <div className="content-factory__automation-title">
-                            {stageMeta[item.stage].label} · {item.message}
+                            {getStageMeta(item.stage).label} · {item.message}
                           </div>
                           <div className="content-factory__automation-meta">{formatDateTime(item.createdAt)}</div>
                         </div>
@@ -1235,7 +1282,7 @@ export default function AdminContentFactory() {
                         <Badge status={meta.badge} text={meta.label} />
                         <div>
                           <div className="content-factory__automation-title">
-                            {stageMeta[job.stage].label} · {job.attempts}/{job.maxAttempts}
+                            {getStageMeta(job.stage).label} · {job.attempts}/{job.maxAttempts}
                           </div>
                           <div className="content-factory__automation-meta">
                             {job.errorMessage || job.nextRunAt ? [job.errorMessage, job.nextRunAt && `下次重试 ${formatDateTime(job.nextRunAt)}`].filter(Boolean).join(' · ') : '无待执行任务'}
@@ -1419,8 +1466,8 @@ export default function AdminContentFactory() {
                 <Tag color={automation?.source === 'backend' ? 'success' : 'default'}>
                   {automation?.source === 'backend' ? '任务流已接入' : '本地推导'}
                 </Tag>
-                <Tag color={automation?.currentStage ? stageMeta[automation.currentStage].tone : 'default'}>
-                  {automation?.currentStage ? stageMeta[automation.currentStage].label : '未开始'}
+                <Tag color={getStageMeta(automation?.currentStage).tone}>
+                  {getStageMeta(automation?.currentStage).label}
                 </Tag>
               </Space>
               <Typography.Text type="secondary">
@@ -1498,7 +1545,7 @@ export default function AdminContentFactory() {
                           <List.Item className="content-factory__automation-item">
                             <Badge status={automationStatusMeta[item.status].badge} text={item.message} />
                             <span className="content-factory__automation-meta">
-                              {stageMeta[item.stage].label} · {formatDateTime(item.createdAt)}
+                              {getStageMeta(item.stage).label} · {formatDateTime(item.createdAt)}
                             </span>
                           </List.Item>
                         )}

@@ -3187,8 +3187,17 @@
 }
 
 .admin-kb-page .kb-admin-edit__draft-alert {
+  position: relative;
+  z-index: 12;
   width: min(100%, 980px);
   padding: 0 32px 10px;
+  pointer-events: auto;
+}
+
+.admin-kb-page .kb-admin-edit__draft-alert .ant-alert,
+.admin-kb-page .kb-admin-edit__draft-alert .ant-alert-action,
+.admin-kb-page .kb-admin-edit__draft-alert .ant-btn {
+  pointer-events: auto;
 }
 
 .admin-kb-page .kb-admin-edit__draft-alert .ant-alert {
@@ -3839,7 +3848,7 @@
   grid-column: 1;
   grid-row: 2;
   display: grid;
-  grid-template-rows: 42px auto minmax(0, 1fr);
+  grid-template-rows: 42px auto auto minmax(0, 1fr);
   min-height: 0;
   overflow: auto;
   background: var(--panel);
@@ -4054,7 +4063,7 @@
   }
 
   .admin-kb-page .kb-admin-workspace--editing > .kb-admin-editor-shell {
-    grid-template-rows: auto auto minmax(0, 1fr);
+    grid-template-rows: auto auto auto minmax(0, 1fr);
   }
 
   .admin-kb-page .kb-admin-workspace--editing .kb-admin-editor-head {
@@ -4112,4 +4121,23 @@
   .admin-kb-page .kb-admin-article {
     padding-block: 24px;
   }
+}
+
+
+/* Final fix: local draft alert is a real grid row and must stay clickable above the editor. */
+.admin-kb-page .kb-admin-workspace--editing > .kb-admin-editor-shell {
+  grid-template-rows: 42px auto auto minmax(0, 1fr);
+}
+
+.admin-kb-page .kb-admin-edit__draft-alert {
+  position: relative;
+  z-index: 20;
+  pointer-events: auto;
+}
+
+.admin-kb-page .kb-admin-edit__draft-alert .ant-alert-action,
+.admin-kb-page .kb-admin-edit__draft-alert .ant-btn {
+  position: relative;
+  z-index: 21;
+  pointer-events: auto;
 }

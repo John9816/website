@@ -106,7 +106,13 @@ function isBlankEditorHtml(html: string) {
   return html === '<p></p>' || html === ''
 }
 
+function isEditorUsable(editor: Editor | null | undefined): editor is Editor {
+  return !!editor && !editor.isDestroyed
+}
+
 function isSameEditorContent(editor: Editor, content: string) {
+  if (!isEditorUsable(editor)) return true
+
   const nextContent = content || ''
   const parsedJson = safeParseJson(nextContent.trim())
   if (parsedJson) return isJsonEqual(editor.getJSON(), parsedJson)
@@ -307,7 +313,7 @@ export default function TiptapEditor({
   })
 
   useEffect(() => {
-    if (!editor) return
+    if (!isEditorUsable(editor)) return
     const nextContent = content || ''
     if (!isSameEditorContent(editor, nextContent)) {
       editor.commands.setContent(normalizeEditorContent(nextContent), { emitUpdate: false })
@@ -385,7 +391,7 @@ export default function TiptapEditor({
   }, [editor])
 
   const menuBarContent = useMemo(() => {
-    if (!editor) return null
+    if (!isEditorUsable(editor)) return null
 
     return (
       <MenuBar
@@ -409,6 +415,8 @@ export default function TiptapEditor({
     isFullscreen,
   ])
 
+  const canPortalToolbar = !!toolbarContainer?.isConnected && !isFullscreen
+
   return (
     <div
       className={`tiptap-editor-container${fillHeight ? ' tiptap-editor-container--fill' : ''}${
@@ -417,7 +425,7 @@ export default function TiptapEditor({
       style={style}
     >
       {slotBeforeMenu}
-      {toolbarContainer && !isFullscreen ? createPortal(menuBarContent, toolbarContainer) : menuBarContent}
+      {canPortalToolbar ? createPortal(menuBarContent, toolbarContainer) : menuBarContent}
       {slotAfterMenu}
       {editor ? (
         <>

@@ -80,7 +80,7 @@ export type ContentArticleCategory = string
 export type ContentArticleLayoutTheme = 'clean' | 'warm' | 'magazine'
 export type ContentArticleImageMode = 'generate' | 'fetch' | 'none'
 export type ContentArticleResearchDepth = 'quick' | 'standard' | 'deep'
-export type ContentAutomationStage = 'topic' | 'research' | 'generate' | 'review' | 'wechat_draft' | 'publish'
+export type ContentAutomationStage = 'topic' | 'editorial_decision' | 'research' | 'evidence' | 'plan' | 'generate' | 'review' | 'quality_gate' | 'draft_ready' | 'local_draft' | 'wechat_draft' | 'publish'
 export type ContentAutomationStatus = 'PENDING' | 'RUNNING' | 'SUCCESS' | 'FAILED' | 'SKIPPED'
 
 export interface ContentAutomationLog {
@@ -120,6 +120,8 @@ export interface ContentAutomationView {
   logs: ContentAutomationLog[]
   jobs: ContentAutomationJob[]
   publishRecords: ContentWechatPublishRecord[]
+  artifacts?: Array<Record<string, unknown>>
+  qualityGate?: Record<string, unknown> | null
 }
 
 export interface ContentArticle {
@@ -174,6 +176,7 @@ export interface ContentAgentRunPayload {
   length?: ContentArticleLength
   generateCover?: boolean
   autoWechatDraft?: boolean
+  autoPublish?: boolean
 }
 
 export interface ContentWechatDraftResult {
@@ -187,6 +190,20 @@ export interface ContentAgentRunResult {
   automation: ContentAutomationView
   topic: ContentHotTopic & Record<string, unknown>
   draft: ContentWechatDraftResult
+}
+
+export type ContentAgentJobStatus = 'PENDING' | 'RUNNING' | 'SUCCESS' | 'FAILED'
+
+export interface ContentAgentRunJob {
+  jobId: string
+  status: ContentAgentJobStatus
+  errorMessage?: string | null
+  article?: ContentArticle | null
+  automation?: ContentAutomationView | null
+  topic?: (ContentHotTopic & Record<string, unknown>) | null
+  draft?: ContentWechatDraftResult | null
+  createdAt?: string
+  updatedAt?: string
 }
 
 export interface LoginResponse {

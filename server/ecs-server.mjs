@@ -2,6 +2,7 @@ import { createReadStream, existsSync, statSync } from 'node:fs'
 import { extname, join, normalize, resolve, sep } from 'node:path'
 import { fileURLToPath } from 'node:url'
 import http from 'node:http'
+import https from 'node:https'
 
 const __dirname = fileURLToPath(new URL('.', import.meta.url))
 const rootDir = resolve(__dirname, '..')
@@ -217,6 +218,11 @@ async function handleRemoteAssetProxy(req, res, incomingUrl, options) {
       redirect: 'follow',
     })
   } catch (error) {
+    if (isOreateCdnTarget(target)) {
+      console.warn('Asset proxy fetch failed for Oreate CDN, retrying with node https fallback:', error?.message || error)
+      await proxyRemoteAssetViaNodeRequest(req, res, target, options, true)
+      return
+    }
     console.error('Asset proxy failed:', error)
     sendJson(res, 502, { message: options.upstreamFailureMessage })
     return
@@ -226,6 +232,67 @@ async function handleRemoteAssetProxy(req, res, incomingUrl, options) {
     copyHeaders: options.responseHeaders,
     extraHeaders: [[options.markerHeader, options.markerValue]],
     headOnly: req.method === 'HEAD',
+  })
+}
+
+function isOreateCdnTarget(target) {
+  const hostname = target.hostname.toLowerCase()
+  return hostname === 'cdn.oreateai.com' || hostname.endsWith('.oreateai.com')
+}
+
+function proxyRemoteAssetViaNodeRequest(req, res, target, options, allowInsecureTls = false) {
+  return new Promise((resolve) => {
+    const client = target.protocol === 'https:' ? https : http
+    const requestOptions = {
+      method: req.method || 'GET',
+      headers: Object.fromEntries(
+        Array.from(options.requestHeaders || [])
+          .map((name) => [name, req.headers[name]])
+          .filter(([, value]) => typeof value === 'string')
+      ),
+    }
+
+    if (target.protocol === 'https:' && allowInsecureTls) {
+      requestOptions.agent = new https.Agent({ rejectUnauthorized: false })
+    }
+
+    const upstreamReq = client.request(target, requestOptions, (upstreamRes) => {
+      const responseHeaders = {}
+      for (const name of options.responseHeaders || []) {
+        const value = upstreamRes.headers[name.toLowerCase()]
+        if (value) responseHeaders[name] = Array.isArray(value) ? value.join(', ') : value
+      }
+      for (const [name, value] of options.extraHeaders || [[options.markerHeader, options.markerValue]]) {
+        responseHeaders[name] = value
+      }
+      if (!responseHeaders['cache-control'] && !responseHeaders['Cache-Control']) {
+        responseHeaders['Cache-Control'] = 'public, max-age=3600'
+      }
+      res.writeHead(upstreamRes.statusCode || 502, responseHeaders)
+      if (req.method === 'HEAD') {
+        upstreamRes.resume()
+        res.end()
+        resolve()
+        return
+      }
+      upstreamRes.on('end', resolve)
+      upstreamRes.on('error', (error) => {
+        console.error('Asset proxy fallback stream failed:', error)
+        if (!res.headersSent) sendJson(res, 502, { message: options.upstreamFailureMessage })
+        else res.end()
+        resolve()
+      })
+      upstreamRes.pipe(res)
+    })
+
+    upstreamReq.on('error', (error) => {
+      console.error('Asset proxy fallback failed:', error)
+      if (!res.headersSent) sendJson(res, 502, { message: options.upstreamFailureMessage })
+      else res.end()
+      resolve()
+    })
+    upstreamReq.setTimeout(30000, () => upstreamReq.destroy(new Error('Asset proxy fallback timeout')))
+    upstreamReq.end()
   })
 }
 

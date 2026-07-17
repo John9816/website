@@ -3,7 +3,7 @@ import { App as AntApp } from 'antd'
 import { Copy, ImageIcon, LoaderCircle, LogIn, RefreshCw, Sparkles } from 'lucide-react'
 import { Link as RouterLink } from 'react-router-dom'
 import { listSharedImages } from '../api/public'
-import ImageStudio from '../components/ImageStudio'
+import OreateImageStudio from '../components/OreateImageStudio'
 import ImagePreviewOverlay from '../components/ImagePreviewOverlay'
 import TopbarNav from '../components/TopbarNav'
 import TopbarUserMenu from '../components/TopbarUserMenu'
@@ -92,7 +92,7 @@ export default function AiImagePage() {
 
       <main className={mainClassName}>
         {auth.token ? (
-          <ImageStudio layout="standalone" />
+          <OreateImageStudio />
         ) : (
           <div className="ai-image-page__guest">
             <section className="ai-image-page__hero">

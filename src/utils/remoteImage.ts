@@ -13,6 +13,11 @@ export function buildImageProxyUrl(url: string) {
   return `${IMAGE_PROXY_PATH}?url=${encodeURIComponent(url)}`
 }
 
+function shouldProxyRemoteImage(target: URL) {
+  const host = target.hostname.toLowerCase()
+  return host === 'cdn.oreateai.com' || host.endsWith('.oreateai.com')
+}
+
 function parseRemoteUrl(url: string) {
   try {
     return new URL(url)
@@ -36,7 +41,7 @@ export function normalizeRemoteImageUrl(
   if (!target) return url
   if (options?.requireUsableAssetPath && !hasUsableAssetPath(target)) return undefined
 
-  if (isHttpsPage() && !isLocalHostname() && target.protocol === 'http:') {
+  if (isHttpsPage() && !isLocalHostname() && (target.protocol === 'http:' || shouldProxyRemoteImage(target))) {
     return buildImageProxyUrl(target.toString())
   }
 
