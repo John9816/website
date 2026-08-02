@@ -1,6 +1,6 @@
 import { Suspense, lazy, useEffect, useRef } from 'react'
-import { Link as RouterLink, Outlet } from 'react-router-dom'
-import { LogIn } from 'lucide-react'
+import { Link as RouterLink, Outlet, useLocation } from 'react-router-dom'
+import { LogIn, Sparkles } from 'lucide-react'
 import TopbarNav from '../components/TopbarNav'
 import TopbarUserMenu from '../components/TopbarUserMenu'
 import ThemeToggle from '../components/ThemeToggle'
@@ -8,14 +8,17 @@ import { useAuth } from '../context/AuthContext'
 import { useMusicPlayer } from '../context/MusicPlayerContext'
 import '../styles/topbar.css'
 import '../styles/music.css'
+import '../styles/music-promo.css'
 
 const MusicPlayerBar = lazy(() => import('../components/MusicPlayerBar'))
 
 export default function MusicLayout() {
   const auth = useAuth()
   const { current } = useMusicPlayer()
+  const location = useLocation()
   const pageRef = useRef<HTMLDivElement | null>(null)
   const topbarRef = useRef<HTMLElement | null>(null)
+  const showPromoLauncher = location.pathname !== '/music/app'
 
   useEffect(() => {
     const page = pageRef.current
@@ -63,6 +66,13 @@ export default function MusicLayout() {
       <div className={`music-body${current ? ' music-body--with-player' : ''}`}>
         <Outlet />
       </div>
+
+      {showPromoLauncher ? (
+        <RouterLink className="music-promo-launcher" to="/music/app">
+          <Sparkles size={16} />
+          <span>下载 App</span>
+        </RouterLink>
+      ) : null}
 
       <Suspense fallback={null}>
         <MusicPlayerBar />

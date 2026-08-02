@@ -132,6 +132,7 @@ export interface ContentArticle {
   contentHtml: string
   coverPrompt?: string | null
   coverImageUrl?: string | null
+  inlineImages?: ContentArticleInlineImage[]
   topics: ContentHotTopic[]
   tags: string[]
   riskTips: string[]
@@ -140,6 +141,10 @@ export interface ContentArticle {
   layoutTheme?: ContentArticleLayoutTheme | null
   imageMode?: ContentArticleImageMode | null
   automation?: ContentAutomationView | Record<string, unknown> | null
+  plan?: Record<string, unknown> | null
+  evidenceSources?: Array<Record<string, unknown>>
+  review?: Record<string, unknown> | null
+  qualityScore?: number | null
   status: ContentArticleStatus
   wechatMediaId?: string | null
   wechatPublishId?: string | null
@@ -147,6 +152,44 @@ export interface ContentArticle {
   errorMessage?: string | null
   createdAt?: string
   updatedAt?: string
+}
+
+export interface ContentQualityGate {
+  decision?: string | null
+  score?: number | null
+  contractScore?: number | null
+  reviewScore?: number | null
+  minScore?: number | null
+  publishable?: boolean | null
+  reason?: string | null
+  issues?: string[]
+  hasEvidence?: boolean
+  hasPlan?: boolean
+  hasReview?: boolean
+  hasCoverImage?: boolean
+  metrics?: Record<string, unknown>
+}
+
+export interface ContentArticleInlineImage {
+  slotId: string
+  sectionKey: string
+  sectionTitle: string
+  prompt?: string | null
+  alt: string
+  sourceType: 'ai' | 'open_image'
+  sourceUrl: string
+  sourcePageUrl?: string | null
+  author?: string | null
+  license?: string | null
+  attribution?: string | null
+  mimeType?: string | null
+  width?: number | null
+  height?: number | null
+  byteSize?: number | null
+  sha256?: string | null
+  wechatUrl?: string | null
+  status: 'READY' | 'FAILED'
+  failureReason?: string | null
 }
 
 export interface ContentArticleGeneratePayload {
@@ -194,9 +237,27 @@ export interface ContentAgentRunResult {
 
 export type ContentAgentJobStatus = 'PENDING' | 'RUNNING' | 'SUCCESS' | 'FAILED'
 
+/** Coarse pipeline stages from content-agent / generate-async jobs. */
+export type ContentGeneratePipelineStage =
+  | 'queued'
+  | 'topic'
+  | 'research'
+  | 'plan'
+  | 'write'
+  | 'review'
+  | 'visual'
+  | 'gate'
+  | 'done'
+  | 'failed'
+  | string
+
 export interface ContentAgentRunJob {
   jobId: string
   status: ContentAgentJobStatus
+  /** Pipeline stage key (research/plan/write/…). */
+  stage?: ContentGeneratePipelineStage | null
+  /** Human-readable stage label from backend (Chinese). */
+  stageLabel?: string | null
   errorMessage?: string | null
   article?: ContentArticle | null
   automation?: ContentAutomationView | null
@@ -244,8 +305,32 @@ export interface AdminUserView {
   avatarUrl?: string | null
   role: 'ADMIN' | 'USER'
   enabled: boolean
+  lastLoginAt?: string | null
   createdAt: string
   updatedAt: string
+}
+
+export interface AdminUserDetailView {
+  id: number
+  username: string
+  email?: string | null
+  avatarUrl?: string | null
+  role: 'ADMIN' | 'USER'
+  enabled: boolean
+  registerIp?: string | null
+  createdAt: string
+  updatedAt: string
+  lastLoginAt?: string | null
+  lastLoginIp?: string | null
+  loginCount: number
+  activeSessions: number
+  imageCount: number
+  articleCount: number
+  kbDocCount: number
+  conversationCount: number
+  musicFavoriteCount: number
+  playlistCount: number
+  playHistoryCount: number
 }
 
 export interface ImageGenerateDataItem {

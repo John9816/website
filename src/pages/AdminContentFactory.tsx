@@ -43,7 +43,7 @@ import {
 import {
   adminCreateWechatDraft,
   adminDeleteContentArticle,
-  adminGenerateContentArticle,
+  adminGenerateContentArticleAsync,
   adminGetContentAgentJob,
   adminGetContentAutomation,
   adminGetContentArticle,
@@ -51,7 +51,9 @@ import {
   adminGetHotTopics,
   adminListContentArticles,
   adminPublishWechatArticle,
+  adminRefreshContentArticleVisuals,
   adminRetryContentAutomationJob,
+  adminReviseContentArticle,
   adminRunContentAgent,
   adminUpdateContentArticle,
 } from '../api/admin'
@@ -72,6 +74,7 @@ import type {
   ContentArticleStatus,
   ContentFactoryStatus,
   ContentHotTopic,
+  ContentQualityGate,
 } from '../types'
 import '../styles/admin-content-factory.css'
 
@@ -84,9 +87,6 @@ type GenerateValues = {
   researchDepth: ContentArticleResearchDepth
   autoWechatDraft: boolean
   autoPublish: boolean
-  angle?: string
-  audience?: string
-  tone?: string
   length: ContentArticleLength
   generateCover: boolean
   coverStyle?: string
@@ -123,9 +123,6 @@ const categoryMeta: Record<
   {
     label: string
     color: string
-    angle: string
-    audience: string
-    tone: string
     coverStyle: string
     note: string
   }
@@ -133,29 +130,20 @@ const categoryMeta: Record<
   '科技 / 互联网': {
     label: '科技 / 互联网',
     color: 'blue',
-    angle: '先讲这件事和普通人有什么关系，再拆平台、产品、公司和行业里的信息差',
-    audience: '想快速看懂科技互联网热点、少被标题带节奏的公众号读者',
-    tone: '像朋友聊天，直接、有梗、有判断，但别装专家，拒绝正式和学术腔',
     coverStyle: '热点解读感，科技产品和信息流元素，清爽醒目',
-    note: '适合 AI、平台规则、互联网产品、商业模式和大厂动态。',
+    note: '适合 AI、平台规则、互联网产品、商业模式和大厂动态。按爆款推文写法自动成稿。',
   },
   '教育 / 职场': {
     label: '教育 / 职场',
     color: 'gold',
-    angle: '从升学、就业、转行、职场选择里的具体坑切入，讲清楚普通人该注意什么',
-    audience: '关注成长、就业、职场变化和自我提升的公众号读者',
-    tone: '口语化、像过来人聊天，少讲大道理，多讲真实处境和选择成本',
     coverStyle: '职场桌面、学习资料、信息卡片，明亮但不鸡汤',
-    note: '适合就业、考证、AI 职场影响、教育政策和个人成长。',
+    note: '适合就业、考证、AI 职场影响、教育政策和个人成长。按爆款推文写法自动成稿。',
   },
   '财政金融': {
     label: '财政金融',
     color: 'cyan',
-    angle: '先翻译政策、市场和公司新闻里的关键信息差，再落到钱包、工作和决策影响',
-    audience: '想看懂财经热点但不想读研报黑话的公众号读者',
-    tone: '通俗、直白、像朋友解释新闻，避免金融黑话和学术腔',
     coverStyle: '财经数据、城市商业、简洁信息图，可信但不严肃',
-    note: '适合消费、宏观政策、公司财报、资本市场和个人财务决策。',
+    note: '适合消费、宏观政策、公司财报、资本市场和个人财务决策。按爆款推文写法自动成稿。',
   },
 }
 
@@ -163,11 +151,8 @@ const defaultCategoryKey = '科技 / 互联网'
 const fallbackCategoryMeta = {
   label: '自定义栏目',
   color: 'blue',
-  angle: '先找出热点里读者没注意到的信息差，再讲清楚它会影响谁、怎么影响',
-  audience: '关注信息差型热点解读的公众号读者',
-  tone: '像朋友聊天，口语化，有判断但不端着，拒绝正式和学术腔',
   coverStyle: '热点信息卡片，清晰醒目，适合订阅号首图',
-  note: '自定义栏目会按你输入的名称保存，写作角度、读者和语气可单独调整。',
+  note: '自定义栏目会按你输入的名称保存；正文按爆款公众号写法生成，无需再填语气/读者。',
 }
 
 function getCategoryMeta(category?: string | null) {
@@ -187,8 +172,8 @@ const layoutThemeOptions: Array<{ label: string; value: ContentArticleLayoutThem
 ]
 
 const imageModeOptions: Array<{ label: string; value: ContentArticleImageMode }> = [
-  { label: '生成封面', value: 'generate' },
-  { label: '抓取图片', value: 'fetch' },
+  { label: 'AI 生图优先（推荐）', value: 'generate' },
+  { label: '开放图库', value: 'fetch' },
   { label: '不配图', value: 'none' },
 ]
 
@@ -201,39 +186,37 @@ const researchDepthOptions: Array<{ label: string; value: ContentArticleResearch
 const strategyPresets: StrategyPreset[] = [
   {
     key: 'trend_digest',
-    title: '热点信息差',
-    description: '先把热点讲人话，再拆背后容易被忽略的利益、规则和影响。',
+    title: '冲打开率',
+    description: '短平快：强标题+扎心开场，服务点击与完读。',
     values: {
       researchDepth: 'quick',
       length: 'short',
       layoutTheme: 'clean',
-      imageMode: 'fetch',
-      tone: '像朋友聊天，直白、有判断、有信息差，但不端着也不学术',
+      imageMode: 'generate',
     },
   },
   {
     key: 'evidence_feature',
-    title: '拆解长文',
-    description: '把一个热点拆成背景、变化、坑点和普通人该怎么判断。',
+    title: '冲完读转发',
+    description: '长文：场景→拆穿→坑→清单，便于收藏转发。',
     values: {
       researchDepth: 'deep',
       length: 'long',
       layoutTheme: 'magazine',
       imageMode: 'generate',
-      tone: '口语化但有证据，像懂行朋友把复杂事掰开讲清楚',
     },
   },
   {
     key: 'wechat_safe',
-    title: '订阅号草稿',
-    description: '生成后只进入微信草稿箱，适合人工改标题、补案例后发布。',
+    title: '冲关注转化',
+    description: '标准篇幅+留言问题+轻关注引导，适合推草稿后人工精修标题。',
     values: {
       researchDepth: 'standard',
       length: 'standard',
       layoutTheme: 'warm',
+      imageMode: 'generate',
       autoWechatDraft: true,
       autoPublish: false,
-      tone: '自然、口语化、像朋友提醒你一个容易错过的信息差',
     },
   },
 ]
@@ -278,7 +261,7 @@ const automationStatusMeta: Record<ContentAutomationStatus, { label: string; bad
 
 const accountProfile = {
   name: '早一步信息差',
-  positioning: '信息差型热点解读',
+  positioning: '爆款热点拆解 · 涨阅读涨关注',
   appId: 'wx235122c49e42e7c3',
   freePublishEnabled: false,
 }
@@ -294,14 +277,12 @@ const defaultGenerateValues: GenerateValues = {
   category: defaultCategoryKey,
   topic: '',
   layoutTheme: 'clean',
+  // Prefer open stock images: production AI image group often has no distributor.
   imageMode: 'generate',
   researchEnabled: true,
   researchDepth: 'standard',
   autoWechatDraft: false,
   autoPublish: false,
-  angle: categoryMeta[defaultCategoryKey].angle,
-  audience: categoryMeta[defaultCategoryKey].audience,
-  tone: categoryMeta[defaultCategoryKey].tone,
   length: 'standard',
   generateCover: true,
   coverStyle: categoryMeta[defaultCategoryKey].coverStyle,
@@ -316,28 +297,83 @@ function stripHtml(html?: string | null) {
     .trim()
 }
 
+function isReadyInlineImage(image: NonNullable<ContentArticle['inlineImages']>[number]) {
+  return image.status === 'READY' && Boolean(image.sourceUrl || image.wechatUrl)
+}
+
+function readQualityGate(article: ContentArticle | null): ContentQualityGate | null {
+  if (!article?.automation || typeof article.automation !== 'object') return null
+  const gate = (article.automation as ContentAutomationView).qualityGate
+  if (!gate || typeof gate !== 'object') return null
+  return gate as ContentQualityGate
+}
+
 function getArticleQuality(article: ContentArticle | null) {
   if (!article) {
     return {
       score: 0,
       words: 0,
+      decision: null as string | null,
+      reason: null as string | null,
+      issues: [] as string[],
       checks: [] as Array<{ label: string; passed: boolean; hint: string }>,
     }
   }
 
   const text = stripHtml(article.contentHtml || article.contentMarkdown)
   const words = text.length
+  const inlineImages = article.inlineImages || []
+  const readyInlineImages = inlineImages.filter(isReadyInlineImage)
+  const failedInlineImages = inlineImages.filter((image) => image.status === 'FAILED')
+  const gate = readQualityGate(article)
+  const metrics = (gate?.metrics || {}) as Record<string, unknown>
+  const readyFromGate =
+    typeof metrics.readyInlineImageCount === 'number' ? metrics.readyInlineImageCount : readyInlineImages.length
   const checks = [
+    {
+      label: '发布门禁',
+      passed: gate?.publishable === true || gate?.decision === 'pass',
+      hint: gate?.reason || article.errorMessage || '后端发布契约未通过前不能同步微信。',
+    },
+    {
+      label: '内联图就绪',
+      passed: readyFromGate >= 2 && failedInlineImages.length === 0,
+      hint: '发布就绪文章需要 2-3 张可用内联图，且不能包含失败资产。',
+    },
     { label: '标题完整', passed: article.title.trim().length >= 8, hint: '标题建议 8-32 字，别太短也别塞满关键词。' },
     { label: '摘要可用', passed: Boolean(article.digest && article.digest.trim().length >= 24), hint: '摘要会影响分享卡片和草稿可读性。' },
     { label: '正文充足', passed: words >= 1200, hint: '标准公众号正文建议至少 1200 字。' },
-    { label: '封面就绪', passed: Boolean(article.coverImageUrl), hint: '没有封面时可先存草稿，发布前补齐。' },
-    { label: '选题来源', passed: article.topics.length > 0, hint: '保留热榜来源方便回看选题依据。' },
+    { label: '封面就绪', passed: Boolean(article.coverImageUrl || metrics.hasCoverImage === true), hint: '缺少封面会阻断微信草稿同步。' },
+    {
+      label: '证据与计划',
+      passed: Boolean(gate?.hasEvidence || (article.evidenceSources && article.evidenceSources.length > 0))
+        && Boolean(gate?.hasPlan || article.plan),
+      hint: '缺少证据包或写作计划时，事实与结构稳定性更弱。',
+    },
     { label: '风险较低', passed: article.riskTips.length === 0, hint: '存在风险提示时建议人工审稿。' },
   ]
-  const score = Math.round((checks.filter((item) => item.passed).length / checks.length) * 100)
+  const heuristicScore = Math.round((checks.filter((item) => item.passed).length / checks.length) * 100)
+  const backendScore =
+    typeof article.qualityScore === 'number'
+      ? article.qualityScore
+      : typeof gate?.score === 'number'
+        ? gate.score
+        : null
+  const score = backendScore == null ? heuristicScore : Math.min(backendScore, heuristicScore)
+  const issues = Array.isArray(gate?.issues)
+    ? gate.issues.filter((item): item is string => typeof item === 'string')
+    : article.errorMessage
+      ? [article.errorMessage]
+      : []
 
-  return { score, words, checks }
+  return {
+    score,
+    words,
+    decision: gate?.decision || null,
+    reason: gate?.reason || article.errorMessage || null,
+    issues,
+    checks,
+  }
 }
 
 function isAutomationView(value: unknown): value is ContentAutomationView {
@@ -486,10 +522,13 @@ export default function AdminContentFactory() {
   const [articleDetailLoading, setArticleDetailLoading] = useState(false)
   const [automationLoading, setAutomationLoading] = useState(false)
   const [generating, setGenerating] = useState(false)
+  const [generatePhase, setGeneratePhase] = useState<string | null>(null)
   const [agentRunning, setAgentRunning] = useState(false)
   const [saving, setSaving] = useState(false)
   const [deletingArticleId, setDeletingArticleId] = useState<number | null>(null)
   const [wechatAction, setWechatAction] = useState<'draft' | 'publish' | null>(null)
+  const [revising, setRevising] = useState(false)
+  const [refreshingVisuals, setRefreshingVisuals] = useState(false)
   const [activePresetKey, setActivePresetKey] = useState(strategyPresets[0].key)
   const [automation, setAutomation] = useState<NormalizedAutomation | null>(null)
 
@@ -521,15 +560,38 @@ export default function AdminContentFactory() {
   }, [articles])
 
   const quality = useMemo(() => getArticleQuality(activeArticle), [activeArticle])
+  const qualityGate = useMemo(() => readQualityGate(activeArticle), [activeArticle])
+  const inlineImages = activeArticle?.inlineImages ?? []
+  const readyInlineImages = inlineImages.filter(isReadyInlineImage)
+  const failedInlineImages = inlineImages.filter((image) => image.status === 'FAILED')
+  const inlineImagesReady = readyInlineImages.length >= 2 && failedInlineImages.length === 0
+  const hasDefaultWechatCover = Boolean(status?.configs.find((item) => item.key === 'wechat.coverMediaId')?.ready)
+  const backendPublishable = qualityGate?.publishable === true || qualityGate?.decision === 'pass'
+  const activeArticleAssetsReady = Boolean(
+    activeArticle
+      && (activeArticle.coverImageUrl || hasDefaultWechatCover)
+      && inlineImagesReady
+      && (qualityGate == null || backendPublishable || !activeArticle.errorMessage),
+  )
   const progressPercent = activeArticle
     ? activeArticle.status === 'PUBLISHED'
       ? 100
       : activeArticle.status === 'WECHAT_DRAFT'
         ? 80
-        : 56
+        : qualityGate?.decision === 'pass'
+          ? 68
+          : 56
     : 18
   const riskCount = activeArticle?.riskTips.length ?? 0
-  const publishBlocked = !status?.wechatReady || !accountProfile.freePublishEnabled || generating || saving || Boolean(wechatAction)
+  const publishBlocked =
+    !status?.wechatReady
+    || !accountProfile.freePublishEnabled
+    || !activeArticleAssetsReady
+    || (qualityGate != null && !backendPublishable)
+    || Boolean(activeArticle?.errorMessage)
+    || generating
+    || saving
+    || Boolean(wechatAction)
 
   const loadStatus = async () => {
     setStatusLoading(true)
@@ -631,6 +693,30 @@ export default function AdminContentFactory() {
     )
   }
 
+  /** Fill the core topic input from a hot item (one-click, does not toggle selection). */
+  const fillTopicFromHot = (topic: ContentHotTopic) => {
+    generateForm.setFieldValue('topic', topic.title)
+    setSelectedTopicIds((previous) =>
+      previous.includes(topic.id) ? previous : [...previous, topic.id],
+    )
+    message.success(`已填入话题：${topic.title}`)
+  }
+
+  const jobPhaseLabel = (job: ContentAgentRunJob) => {
+    if (job.stageLabel?.trim()) return job.stageLabel.trim()
+    if (job.status === 'PENDING') return '排队中…'
+    if (job.status === 'FAILED') return job.errorMessage || '失败'
+    if (job.status === 'SUCCESS') return '草稿已就绪'
+    if (job.stage === 'research') return '在找公开线索…'
+    if (job.stage === 'plan') return '在定核心判断与小节…'
+    if (job.stage === 'write') return '在写正文…'
+    if (job.stage === 'review') return '在审稿与定向改写…'
+    if (job.stage === 'visual') return '在配封面和插图…'
+    if (job.stage === 'gate') return '在做发布就绪检查…'
+    if (job.stage === 'topic') return '自动选题中…'
+    return '处理中…'
+  }
+
   const changeCategory = (category: string, applyDefaults = false) => {
     const nextCategory = category.trim()
     if (!nextCategory) return
@@ -640,9 +726,6 @@ export default function AdminContentFactory() {
     if (applyDefaults) {
       generateForm.setFieldsValue({
         category: nextCategory,
-        angle: meta.angle,
-        audience: meta.audience,
-        tone: meta.tone,
         coverStyle: meta.coverStyle,
       })
     } else {
@@ -663,28 +746,80 @@ export default function AdminContentFactory() {
     }
   }
 
+  const pollJobUntilDone = async (jobId: string, onTick?: (job: ContentAgentRunJob) => void) => {
+    let job = await adminGetContentAgentJob(jobId)
+    onTick?.(job)
+    for (let attempt = 0; attempt < 200 && !isAgentJobFinished(job); attempt += 1) {
+      await sleep(attempt < 8 ? 1200 : attempt < 30 ? 2000 : 3000)
+      job = await adminGetContentAgentJob(jobId)
+      onTick?.(job)
+    }
+    return job
+  }
+
+  const finishGenerateJob = async (job: ContentAgentRunJob, successFallback: string) => {
+    if (!isAgentJobFinished(job)) {
+      message.warning('生成仍在后台运行，请稍后刷新「最近生成」列表查看')
+      await loadArticles()
+      return
+    }
+    if (job.status === 'FAILED') {
+      message.error(job.errorMessage || '生成失败')
+      return
+    }
+    if (!job.article) {
+      message.warning('任务已完成但未返回文章，请刷新列表')
+      await loadArticles()
+      return
+    }
+    upsertArticle(job.article)
+    if (job.automation) {
+      setAutomation({ ...job.automation, source: 'backend' })
+    }
+    setDrawerOpen(true)
+    await loadArticles()
+    if (job.article.errorMessage) {
+      message.warning(`草稿已生成，但尚未达到发布就绪：${job.article.errorMessage}`)
+    } else if (job.draft?.mode === 'wechat') {
+      message.success('文章已生成并进入微信草稿箱')
+    } else {
+      message.success(successFallback)
+    }
+  }
+
   const generateArticle = async () => {
     const values = await generateForm.validateFields()
     const topic = values.topic?.trim()
+    if (!topic && selectedTopics.length === 0) {
+      message.warning('请填写核心话题，或先勾选下方热点选题')
+      return
+    }
     const payload: ContentArticleGeneratePayload = {
       ...values,
-      topic: topic || undefined,
+      topic: topic || selectedTopics[0]?.title,
       category: activeCategory,
       autoPublish: false,
+      // WeChat draft only after human confirms readiness; gate blocks anyway when not ready.
+      autoWechatDraft: false,
       generateCover: values.imageMode !== 'none',
+      researchEnabled: values.researchEnabled !== false,
       topics: selectedTopics,
     }
 
     setGenerating(true)
+    setGeneratePhase('已提交生成任务…')
     try {
-      const article = await adminGenerateContentArticle(payload)
-      upsertArticle(article)
-      setDrawerOpen(true)
-      message.success(values.autoWechatDraft ? '文章已生成，已提交微信草稿流程' : '文章已生成')
+      const started = await adminGenerateContentArticleAsync(payload)
+      message.info(`生成任务已启动：${started.jobId}`)
+      const job = await pollJobUntilDone(started.jobId, (current) => {
+        setGeneratePhase(jobPhaseLabel(current))
+      })
+      await finishGenerateJob(job, '文章草稿已生成，可在右侧检查质量后推微信')
     } catch (error) {
       message.error((error as Error).message)
     } finally {
       setGenerating(false)
+      setGeneratePhase(null)
     }
   }
 
@@ -692,52 +827,31 @@ export default function AdminContentFactory() {
     const values = generateForm.getFieldsValue()
     const topic = values.topic?.trim()
     setAgentRunning(true)
+    setGeneratePhase('自动选题 Agent 启动…')
     try {
-      let job = await adminRunContentAgent({
+      const started = await adminRunContentAgent({
         category: activeCategory,
         topic: topic || undefined,
-        instruction: values.angle || activePreset.description,
+        instruction: activePreset.description,
         length: values.length || 'standard',
-        generateCover: false,
-        autoWechatDraft: true,
+        generateCover: values.imageMode !== 'none',
+        // Prefer local draft first; user pushes WeChat after quality check.
+        autoWechatDraft: false,
         autoPublish: false,
       })
-      message.info(`Agent 任务已启动：${job.jobId}`)
-      for (let attempt = 0; attempt < 180 && !isAgentJobFinished(job); attempt += 1) {
-        await sleep(attempt < 10 ? 1500 : 3000)
-        job = await adminGetContentAgentJob(job.jobId)
-        if (job.automation) {
-          setAutomation({ ...job.automation, source: 'backend' })
+      message.info(`Agent 任务已启动：${started.jobId}`)
+      const job = await pollJobUntilDone(started.jobId, (current) => {
+        if (current.automation) {
+          setAutomation({ ...current.automation, source: 'backend' })
         }
-      }
-      if (!isAgentJobFinished(job)) {
-        message.warning('Agent 执行超时，任务仍在后台运行，请稍后刷新查看')
-        return
-      }
-      if (job.status === 'FAILED') {
-        message.error(job.errorMessage || 'Agent 执行失败')
-        return
-      }
-      if (!job.article || !job.automation) {
-        message.warning('Agent 已完成，但未返回文章数据，请刷新列表查看')
-        await loadArticles()
-        return
-      }
-      upsertArticle(job.article)
-      setAutomation({ ...job.automation, source: 'backend' })
-      setDrawerOpen(true)
-      await loadArticles()
-      if (job.article.errorMessage) {
-        message.warning(`Agent 已完成，但存在告警：${job.article.errorMessage}`)
-      } else if (job.draft?.mode === 'wechat') {
-        message.success('Agent 已完成：文章已生成并进入微信草稿箱')
-      } else {
-        message.success('Agent 已完成：文章已生成，微信草稿失败时已保留为本站本地草稿')
-      }
+        setGeneratePhase(jobPhaseLabel(current))
+      })
+      await finishGenerateJob(job, 'Agent 已完成：草稿可检查后推微信')
     } catch (error) {
       message.error((error as Error).message)
     } finally {
       setAgentRunning(false)
+      setGeneratePhase(null)
     }
   }
 
@@ -778,8 +892,50 @@ export default function AdminContentFactory() {
     }
   }
 
+  const reviseArticle = async () => {
+    if (!activeArticle) return
+    setRevising(true)
+    try {
+      const article = await adminReviseContentArticle(activeArticle.id)
+      upsertArticle(article)
+      await loadAutomation(article.id)
+      if (article.errorMessage) {
+        message.warning(`定向改写完成，仍未过门禁：${article.errorMessage}`)
+      } else {
+        message.success('定向改写完成，质量门禁已更新')
+      }
+    } catch (error) {
+      message.error((error as Error).message)
+    } finally {
+      setRevising(false)
+    }
+  }
+
+  const refreshVisuals = async () => {
+    if (!activeArticle) return
+    setRefreshingVisuals(true)
+    try {
+      const article = await adminRefreshContentArticleVisuals(activeArticle.id)
+      upsertArticle(article)
+      await loadAutomation(article.id)
+      if (article.errorMessage) {
+        message.warning(`配图已刷新，仍有交付问题：${article.errorMessage}`)
+      } else {
+        message.success('封面与内联图已重新生成')
+      }
+    } catch (error) {
+      message.error((error as Error).message)
+    } finally {
+      setRefreshingVisuals(false)
+    }
+  }
+
   const createWechatDraft = async () => {
     if (!activeArticle) return
+    if (!activeArticleAssetsReady) {
+      message.warning('缺少封面或 2 张可用内联图，不能创建微信草稿')
+      return
+    }
     setWechatAction('draft')
     try {
       const result = await adminCreateWechatDraft(activeArticle.id)
@@ -803,6 +959,10 @@ export default function AdminContentFactory() {
 
   const publishWechat = () => {
     if (!activeArticle) return
+    if (publishBlocked) {
+      message.warning('当前文章未达到发布条件')
+      return
+    }
     modal.confirm({
       title: '发布到微信公众号',
       content: accountProfile.freePublishEnabled
@@ -865,8 +1025,8 @@ export default function AdminContentFactory() {
   const articleStatus = activeArticle ? statusMeta[activeArticle.status] : null
   const activeArticleCategory = activeArticle?.category ? getCategoryMeta(activeArticle.category) : null
   const activeCategoryMeta = getCategoryMeta(activeCategory)
-  const hasDefaultWechatCover = Boolean(status?.configs.find((item) => item.key === 'wechat.coverMediaId')?.ready)
   const missingWechatCover = Boolean(activeArticle && !activeArticle.coverImageUrl && !hasDefaultWechatCover)
+  const missingInlineImages = Boolean(activeArticle && !inlineImagesReady)
   const isLocalWechatDraft = Boolean(activeArticle?.wechatMediaId?.startsWith('local-'))
   const copyText = async (text?: string | null) => {
     if (!text) return
@@ -884,8 +1044,12 @@ export default function AdminContentFactory() {
         <div>
           <Typography.Title level={3}>内容工厂</Typography.Title>
           <Typography.Paragraph type="secondary">
-            {accountProfile.name} · {accountProfile.positioning}。默认按订阅号草稿流程生成，进入公众号后台人工发布。
+            {accountProfile.name} · {accountProfile.positioning}。推荐路径：填话题或勾选热点 → 生成草稿 → 看门禁分与问题 → 改稿或推微信草稿。
+            生成在后台异步执行，避免页面超时。
           </Typography.Paragraph>
+          {generatePhase ? (
+            <Alert type="info" showIcon message={generatePhase} style={{ marginTop: 8 }} />
+          ) : null}
         </div>
         <Space wrap>
           <Button icon={<ReloadOutlined />} onClick={() => void loadStatus()} loading={statusLoading}>
@@ -1035,7 +1199,19 @@ export default function AdminContentFactory() {
                 <List
                   dataSource={hotTopics}
                   renderItem={(topic) => (
-                    <List.Item className="content-factory__topic-row">
+                    <List.Item
+                      className="content-factory__topic-row"
+                      actions={[
+                        <Button
+                          key="fill"
+                          type="link"
+                          size="small"
+                          onClick={() => fillTopicFromHot(topic)}
+                        >
+                          填入话题
+                        </Button>,
+                      ]}
+                    >
                       <Checkbox
                         checked={selectedTopicIds.includes(topic.id)}
                         onChange={(event) => toggleTopic(topic.id, event.target.checked)}
@@ -1043,7 +1219,7 @@ export default function AdminContentFactory() {
                       <button
                         type="button"
                         className="content-factory__topic-main"
-                        onClick={() => toggleTopic(topic.id, !selectedTopicIds.includes(topic.id))}
+                        onClick={() => fillTopicFromHot(topic)}
                       >
                         <span className="content-factory__topic-title">{topic.title}</span>
                         <span className="content-factory__topic-meta">
@@ -1070,17 +1246,6 @@ export default function AdminContentFactory() {
               </Form.Item>
               <Form.Item name="imageMode" label="图片模式">
                 <Segmented block options={imageModeOptions} />
-              </Form.Item>
-            </div>
-            <Form.Item name="angle" label="切入角度">
-              <Input placeholder="例如：先讲清热点背后的信息差，再落到普通人会受什么影响" />
-            </Form.Item>
-            <div className="content-factory__form-grid">
-              <Form.Item name="audience" label="目标读者">
-                <Input placeholder="例如：想快速看懂热点、不想被标题带节奏的读者" />
-              </Form.Item>
-              <Form.Item name="tone" label="语气">
-                <Input placeholder="例如：像朋友聊天，口语化，有判断但不端着" />
               </Form.Item>
             </div>
             <div className="content-factory__form-grid content-factory__form-grid--three">
@@ -1125,34 +1290,65 @@ export default function AdminContentFactory() {
               <Button
                 type="primary"
                 size="large"
-                icon={<RocketOutlined />}
-                onClick={() => void runContentAgent()}
-                loading={agentRunning}
-                disabled={generating}
-              >
-                运行自动化 Agent
-              </Button>
-              <Button
-                size="large"
                 icon={<EditOutlined />}
                 onClick={() => void generateArticle()}
                 loading={generating}
                 disabled={agentRunning || hotLoading || (!watchedTopic?.trim() && hotTopics.length === 0)}
               >
-                手动生成正文
+                生成文章草稿
+              </Button>
+              <Button
+                size="large"
+                icon={<RocketOutlined />}
+                onClick={() => void runContentAgent()}
+                loading={agentRunning}
+                disabled={generating}
+              >
+                自动选题并生成
               </Button>
             </div>
+            <Typography.Paragraph type="secondary" style={{ marginTop: 8, marginBottom: 0 }}>
+              主按钮按当前话题/热点写稿；副按钮让 Agent 先选题再写。两者都先落本站草稿，过门禁后再推微信。
+            </Typography.Paragraph>
           </Form>
         </Card>
 
         <Card className="content-factory__panel" title="最近生成">
           <div className="content-factory__quality">
             <div className="content-factory__quality-summary">
-              <Typography.Text type="secondary">文章质量评分</Typography.Text>
+              <Typography.Text type="secondary">发布契约评分</Typography.Text>
               <Typography.Title level={4}>{quality.score}</Typography.Title>
-              <Typography.Text type="secondary">{quality.words} 字</Typography.Text>
+              <Typography.Text type="secondary">
+                {quality.words} 字
+                {quality.decision ? ` · ${quality.decision}` : ''}
+                {typeof activeArticle?.qualityScore === 'number' ? ` · 后端 ${activeArticle.qualityScore}` : ''}
+              </Typography.Text>
             </div>
-            <Progress percent={quality.score} showInfo={false} />
+            <Progress
+              percent={quality.score}
+              showInfo={false}
+              status={quality.decision === 'pass' ? 'success' : quality.decision === 'block' ? 'exception' : 'active'}
+            />
+            {quality.reason ? (
+              <Alert
+                className="content-factory__gate-alert"
+                type={quality.decision === 'pass' ? 'success' : quality.decision === 'block' ? 'error' : 'warning'}
+                showIcon
+                message={
+                  quality.decision === 'pass'
+                    ? '可进入微信草稿流程'
+                    : '草稿已保存，但还不能推微信（先改稿或重生成）'
+                }
+                description={quality.reason}
+              />
+            ) : null}
+            {quality.issues.length > 1 ? (
+              <ul className="content-factory__gate-issues">
+                {quality.issues.slice(0, 5).map((issue) => (
+                  <li key={issue}>{issue}</li>
+                ))}
+              </ul>
+            ) : null}
             <div className="content-factory__quality-checks">
               {quality.checks.map((check) => (
                 <Badge
@@ -1389,10 +1585,30 @@ export default function AdminContentFactory() {
               icon={<SaveOutlined />}
               onClick={() => void saveArticle()}
               loading={saving}
-              disabled={!activeArticle || articleDetailLoading}
+              disabled={!activeArticle || articleDetailLoading || revising || refreshingVisuals}
             >
               保存
             </Button>
+            <Tooltip title="按审稿意见定向改写正文，不重选题">
+              <Button
+                icon={<EditOutlined />}
+                onClick={() => void reviseArticle()}
+                loading={revising}
+                disabled={!activeArticle || articleDetailLoading || saving || refreshingVisuals || generating}
+              >
+                定向改写
+              </Button>
+            </Tooltip>
+            <Tooltip title="只重生成封面与内联图，并重新检查交付就绪">
+              <Button
+                icon={<PictureOutlined />}
+                onClick={() => void refreshVisuals()}
+                loading={refreshingVisuals}
+                disabled={!activeArticle || articleDetailLoading || saving || revising || generating}
+              >
+                重配图
+              </Button>
+            </Tooltip>
             <Button
               danger
               icon={<DeleteOutlined />}
@@ -1402,12 +1618,12 @@ export default function AdminContentFactory() {
             >
               删除
             </Button>
-            <Tooltip title={status?.wechatReady ? '' : '请先配置微信公众号 AppID 和 AppSecret'}>
+            <Tooltip title={!status?.wechatReady ? '请先配置微信公众号 AppID 和 AppSecret' : activeArticleAssetsReady ? '' : '缺少封面或 2 张可用内联图，不能创建微信草稿'}>
               <Button
                 icon={<CloudUploadOutlined />}
                 onClick={() => void createWechatDraft()}
                 loading={wechatAction === 'draft'}
-                disabled={!activeArticle || articleDetailLoading || !status?.wechatReady}
+                disabled={!activeArticle || articleDetailLoading || !status?.wechatReady || !activeArticleAssetsReady || revising || refreshingVisuals}
               >
                 存为微信草稿
               </Button>
@@ -1449,6 +1665,15 @@ export default function AdminContentFactory() {
                 showIcon
                 message="微信草稿缺少封面素材"
                 description="微信草稿箱要求封面 thumb_media_id。请给文章设置封面图，或在系统配置中填写 wechat.coverMediaId。"
+              />
+            ) : null}
+
+            {missingInlineImages ? (
+              <Alert
+                type="warning"
+                showIcon
+                message="内联图片未达到发布标准"
+                description={`当前可用内联图 ${readyInlineImages.length} 张，失败 ${failedInlineImages.length} 张。发布就绪文章需要 2-3 张不同位置的可用内联图。`}
               />
             ) : null}
 
@@ -1500,6 +1725,56 @@ export default function AdminContentFactory() {
               </div>
             ) : null}
 
+            <div className="content-factory__visual-assets">
+              <div className="content-factory__visual-assets-header">
+                <Typography.Text strong>内联图片资产</Typography.Text>
+                <Space size={6} wrap>
+                  <Tag color={inlineImagesReady ? 'success' : 'warning'}>
+                    {readyInlineImages.length}/2 可用
+                  </Tag>
+                  {failedInlineImages.length ? <Tag color="error">{failedInlineImages.length} 失败</Tag> : null}
+                </Space>
+              </div>
+              {inlineImages.length ? (
+                <List
+                  size="small"
+                  dataSource={inlineImages}
+                  renderItem={(image) => (
+                    <List.Item className="content-factory__visual-asset">
+                      <div className="content-factory__visual-thumb">
+                        {image.sourceUrl || image.wechatUrl ? (
+                          <img src={image.sourceUrl || image.wechatUrl || ''} alt={image.alt || image.sectionTitle} />
+                        ) : (
+                          <PictureOutlined />
+                        )}
+                      </div>
+                      <div className="content-factory__visual-body">
+                        <Space size={6} wrap>
+                          <Tag color={image.status === 'READY' ? 'success' : 'error'}>{image.status}</Tag>
+                          <Tag color={image.sourceType === 'ai' ? 'purple' : 'blue'}>
+                            {image.sourceType === 'ai' ? 'AI' : 'Open image'}
+                          </Tag>
+                          {image.wechatUrl ? <Tag color="geekblue">WeChat URL</Tag> : null}
+                        </Space>
+                        <Typography.Text strong>{image.sectionTitle || image.sectionKey || image.slotId}</Typography.Text>
+                        <Typography.Text type="secondary">
+                          {[image.alt, image.author, image.license].filter(Boolean).join(' · ') || '暂无描述'}
+                        </Typography.Text>
+                        {image.failureReason ? (
+                          <Typography.Text type="danger">{image.failureReason}</Typography.Text>
+                        ) : null}
+                        {image.attribution ? (
+                          <Typography.Text type="secondary">{image.attribution}</Typography.Text>
+                        ) : null}
+                      </div>
+                    </List.Item>
+                  )}
+                />
+              ) : (
+                <Empty image={Empty.PRESENTED_IMAGE_SIMPLE} description="暂无内联图片资产" />
+              )}
+            </div>
+
             <Tabs
               items={[
                 {
@@ -1519,7 +1794,14 @@ export default function AdminContentFactory() {
                   label: '预览',
                   children: (
                     <article
-                      className="content-factory__preview"
+                      className={[
+                        'content-factory__preview',
+                        'content-factory__preview--phone',
+                        activeArticle.layoutTheme
+                          ? `content-factory__preview--${activeArticle.layoutTheme}`
+                          : 'content-factory__preview--clean',
+                      ].join(' ')}
+                      data-layout={activeArticle.layoutTheme || 'clean'}
                       dangerouslySetInnerHTML={{ __html: watchedHtml || activeArticle.contentHtml }}
                     />
                   ),

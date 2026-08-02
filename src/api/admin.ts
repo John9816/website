@@ -2,6 +2,7 @@ import { request } from './client'
 import type {
   Category,
   AdminUserView,
+  AdminUserDetailView,
   ContentAgentRunJob,
   ContentAgentRunPayload,
   ContentAutomationView,
@@ -111,6 +112,9 @@ export const adminListUsers = (query: {
   enabled?: boolean
 } = {}) => request<PageView<AdminUserView>>('/api/admin/users', { auth: true, query })
 
+export const adminGetUserDetail = (id: number) =>
+  request<AdminUserDetailView>(`/api/admin/users/${id}`, { auth: true })
+
 export const adminCreateUser = (body: {
   username: string
   email: string
@@ -129,6 +133,9 @@ export const adminResetUserPassword = (id: number, password: string) =>
     auth: true,
     body: { password },
   })
+
+export const adminDeleteUser = (id: number) =>
+  request<void>(`/api/admin/users/${id}`, { method: 'DELETE', auth: true })
 
 // Content factory
 export const adminGetContentStatus = () =>
@@ -178,6 +185,14 @@ export const adminGenerateContentArticle = (body: ContentArticleGeneratePayload)
     body,
   })
 
+/** Preferred path: long pipeline runs in background; poll with adminGetContentAgentJob. */
+export const adminGenerateContentArticleAsync = (body: ContentArticleGeneratePayload) =>
+  request<ContentAgentRunJob>('/api/admin/content/articles/generate-async', {
+    method: 'POST',
+    auth: true,
+    body,
+  })
+
 export const adminUpdateContentArticle = (
   id: number,
   body: Pick<ContentArticle, 'title' | 'category' | 'digest' | 'contentMarkdown' | 'contentHtml' | 'coverImageUrl'>,
@@ -186,6 +201,20 @@ export const adminUpdateContentArticle = (
     method: 'PUT',
     auth: true,
     body,
+  })
+
+/** Directed rewrite from stored review/evidence; re-gates quality. */
+export const adminReviseContentArticle = (id: number) =>
+  request<ContentArticle>(`/api/admin/content/articles/${id}/revise`, {
+    method: 'POST',
+    auth: true,
+  })
+
+/** Re-run cover + inline images only; re-gates delivery readiness. */
+export const adminRefreshContentArticleVisuals = (id: number) =>
+  request<ContentArticle>(`/api/admin/content/articles/${id}/visuals`, {
+    method: 'POST',
+    auth: true,
   })
 
 export const adminDeleteContentArticle = (id: number) =>

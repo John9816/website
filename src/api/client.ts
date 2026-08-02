@@ -102,11 +102,9 @@ export class ApiError extends Error {
 
 function normalizeApiErrorMessage(message: string | undefined): string {
   const raw = String(message || '').trim()
-  const prefix = 'Oreate upstream error:'
-  const jsonText = raw.startsWith(prefix) ? raw.slice(prefix.length).trim() : raw
-  if (jsonText.startsWith('{')) {
+  if (raw.startsWith('{')) {
     try {
-      const parsed = JSON.parse(jsonText) as { detail?: unknown; message?: unknown }
+      const parsed = JSON.parse(raw) as { detail?: unknown; message?: unknown }
       const detail = parsed.detail
       if (detail && typeof detail === 'object') {
         const record = detail as Record<string, unknown>

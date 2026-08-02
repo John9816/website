@@ -3,17 +3,23 @@ import {
   App as AntApp,
   Button,
   Card,
+  Descriptions,
   Form,
   Input,
   Modal,
+  Popconfirm,
   Select,
   Space,
+  Spin,
+  Statistic,
   Switch,
   Table,
   Tag,
   Typography,
 } from 'antd'
 import {
+  DeleteOutlined,
+  InfoCircleOutlined,
   KeyOutlined,
   PlusOutlined,
   ReloadOutlined,
@@ -22,12 +28,14 @@ import {
 } from '@ant-design/icons'
 import {
   adminCreateUser,
+  adminDeleteUser,
+  adminGetUserDetail,
   adminListUsers,
   adminResetUserPassword,
   adminUpdateUser,
 } from '../api/admin'
 import { useAuth } from '../context/AuthContext'
-import type { AdminUserView } from '../types'
+import type { AdminUserDetailView, AdminUserView } from '../types'
 import { ACCOUNT_EMAIL_HINT, ACCOUNT_EMAIL_PATTERN } from '../utils/email'
 import '../styles/admin-users.css'
 
@@ -58,6 +66,9 @@ export default function AdminUsers() {
   const [createOpen, setCreateOpen] = useState(false)
   const [editing, setEditing] = useState<AdminUserView | null>(null)
   const [resetting, setResetting] = useState<AdminUserView | null>(null)
+  const [detailOpen, setDetailOpen] = useState(false)
+  const [detailLoading, setDetailLoading] = useState(false)
+  const [detail, setDetail] = useState<AdminUserDetailView | null>(null)
   const [createForm] = Form.useForm()
   const [editForm] = Form.useForm()
   const [passwordForm] = Form.useForm()
@@ -144,6 +155,41 @@ export default function AdminUsers() {
     }
   }
 
+  const openDetail = async (user: AdminUserView) => {
+    setDetailOpen(true)
+    setDetail(null)
+    setDetailLoading(true)
+    try {
+      setDetail(await adminGetUserDetail(user.id))
+    } catch (error) {
+      message.error((error as Error).message)
+      setDetailOpen(false)
+    } finally {
+      setDetailLoading(false)
+    }
+  }
+
+  const deleteUser = async (user: AdminUserView) => {
+    if (user.id === auth.user?.id) {
+      message.warning('不能删除当前登录的管理员账号')
+      return
+    }
+    setSaving(true)
+    try {
+      await adminDeleteUser(user.id)
+      message.success(`已删除用户 ${user.username}`)
+      if (detail?.id === user.id) {
+        setDetailOpen(false)
+        setDetail(null)
+      }
+      await load()
+    } catch (error) {
+      message.error((error as Error).message)
+    } finally {
+      setSaving(false)
+    }
+  }
+
   return (
     <div className="admin-users admin-page">
       <div className="admin-users__header admin-page__header">
@@ -212,7 +258,7 @@ export default function AdminUsers() {
           rowKey="id"
           dataSource={rows}
           loading={loading}
-          scroll={{ x: 1480 }}
+          scroll={{ x: 1730 }}
           pagination={{
             current: page + 1,
             pageSize: PAGE_SIZE,
@@ -292,6 +338,13 @@ export default function AdminUsers() {
               ),
             },
             {
+              title: '最近登录',
+              dataIndex: 'lastLoginAt',
+              width: 190,
+              render: (value?: string | null) =>
+                value ? formatDate(value) : <span className="admin-users__empty">从未登录</span>,
+            },
+            {
               title: '注册时间',
               dataIndex: 'createdAt',
               width: 190,
@@ -306,10 +359,13 @@ export default function AdminUsers() {
             {
               title: '操作',
               key: 'actions',
-              width: 220,
+              width: 360,
               fixed: 'right',
               render: (_, row) => (
-                <Space>
+                <Space wrap>
+                  <Button type="text" icon={<InfoCircleOutlined />} onClick={() => void openDetail(row)}>
+                    详情
+                  </Button>
                   <Button type="text" icon={<UserSwitchOutlined />} onClick={() => openEdit(row)}>
                     权限
                   </Button>
@@ -323,6 +379,24 @@ export default function AdminUsers() {
                   >
                     重置密码
                   </Button>
+                  <Popconfirm
+                    title={`确认删除用户「${row.username}」？`}
+                    description="将永久删除该账号及其关联数据，且无法恢复。"
+                    okText="删除"
+                    cancelText="取消"
+                    okButtonProps={{ danger: true, loading: saving }}
+                    disabled={row.id === auth.user?.id}
+                    onConfirm={() => void deleteUser(row)}
+                  >
+                    <Button
+                      type="text"
+                      danger
+                      icon={<DeleteOutlined />}
+                      disabled={row.id === auth.user?.id}
+                    >
+                      删除
+                    </Button>
+                  </Popconfirm>
                 </Space>
               ),
             },
@@ -400,6 +474,60 @@ export default function AdminUsers() {
           </Form.Item>
           <Typography.Text type="secondary">保存后，该用户现有登录会话会立即失效。</Typography.Text>
         </Form>
+      </Modal>
+
+      <Modal
+        title={`用户详情：${detail?.username || ''}`}
+        open={detailOpen}
+        onCancel={() => setDetailOpen(false)}
+        footer={null}
+        width={720}
+        destroyOnClose
+      >
+        {detailLoading || !detail ? (
+          <div className="admin-users__detail-loading">
+            <Spin />
+          </div>
+        ) : (
+          <div className="admin-users__detail">
+            <Descriptions column={2} size="small" bordered>
+              <Descriptions.Item label="ID">#{detail.id}</Descriptions.Item>
+              <Descriptions.Item label="角色">
+                <Tag color={detail.role === 'ADMIN' ? 'blue' : 'default'}>
+                  {detail.role === 'ADMIN' ? '管理员' : '普通用户'}
+                </Tag>
+              </Descriptions.Item>
+              <Descriptions.Item label="邮箱" span={2}>
+                {detail.email || '未设置'}
+              </Descriptions.Item>
+              <Descriptions.Item label="状态">
+                {detail.enabled ? '已启用' : '已停用'}
+              </Descriptions.Item>
+              <Descriptions.Item label="活跃会话">{detail.activeSessions}</Descriptions.Item>
+              <Descriptions.Item label="注册时间">{formatDate(detail.createdAt)}</Descriptions.Item>
+              <Descriptions.Item label="注册 IP">{detail.registerIp || '-'}</Descriptions.Item>
+              <Descriptions.Item label="最近登录">
+                {detail.lastLoginAt ? formatDate(detail.lastLoginAt) : '从未登录'}
+              </Descriptions.Item>
+              <Descriptions.Item label="登录 IP">{detail.lastLoginIp || '-'}</Descriptions.Item>
+              <Descriptions.Item label="登录次数">{detail.loginCount}</Descriptions.Item>
+              <Descriptions.Item label="最后更新">{formatDate(detail.updatedAt)}</Descriptions.Item>
+            </Descriptions>
+
+            <Typography.Title level={5} className="admin-users__detail-title">
+              内容资产
+            </Typography.Title>
+            <div className="admin-users__detail-stats">
+              <Statistic title="生成图片" value={detail.imageCount} />
+              <Statistic title="文章" value={detail.articleCount} />
+              <Statistic title="知识库文档" value={detail.kbDocCount} />
+              <Statistic title="AI 会话" value={detail.conversationCount} />
+              <Statistic title="音乐收藏" value={detail.musicFavoriteCount} />
+              <Statistic title="歌单" value={detail.playlistCount} />
+              <Statistic title="播放记录" value={detail.playHistoryCount} />
+            </div>
+          </div>
+        )}
       </Modal>
     </div>
   )

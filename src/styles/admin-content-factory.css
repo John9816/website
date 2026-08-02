@@ -112,6 +112,18 @@
   background: var(--panel-alt);
 }
 
+.content-factory__gate-alert {
+  margin-top: 2px;
+}
+
+.content-factory__gate-issues {
+  margin: 0;
+  padding-left: 1.2rem;
+  color: var(--text-secondary, #667085);
+  font-size: 12px;
+  line-height: 1.5;
+}
+
 .content-factory__quality-summary {
   display: flex;
   align-items: baseline;
@@ -515,6 +527,57 @@
   object-fit: cover;
 }
 
+.content-factory__visual-assets {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  margin-bottom: 10px;
+  padding: 12px;
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  background: var(--panel-alt);
+}
+
+.content-factory__visual-assets-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+}
+
+.content-factory__visual-asset.ant-list-item {
+  align-items: flex-start;
+  gap: 12px;
+  padding-inline: 0;
+}
+
+.content-factory__visual-thumb {
+  display: grid;
+  width: 84px;
+  min-width: 84px;
+  aspect-ratio: 4 / 3;
+  place-items: center;
+  overflow: hidden;
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  background: var(--panel);
+  color: var(--muted);
+}
+
+.content-factory__visual-thumb img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+
+.content-factory__visual-body {
+  display: flex;
+  min-width: 0;
+  flex: 1;
+  flex-direction: column;
+  gap: 4px;
+}
+
 .content-factory__editor.ant-input {
   height: clamp(420px, calc(100dvh - 360px), 760px);
   min-height: 420px;
@@ -534,12 +597,32 @@
   overflow-y: auto;
   overscroll-behavior: contain;
   scrollbar-gutter: stable;
-  padding: 20px;
+  padding: 16px 12px 24px;
   border: 1px solid var(--border);
-  border-radius: 8px;
-  background: var(--panel);
-  color: var(--text);
-  line-height: 1.75;
+  border-radius: 12px;
+  background: #f3f4f6;
+  color: #1f2937;
+  line-height: 1.85;
+  font-size: 16px;
+}
+
+/* Phone-frame feel so themed WeChat HTML reads closer to the official account. */
+.content-factory__preview--phone {
+  max-width: 420px;
+  margin: 0 auto;
+  box-shadow: 0 10px 30px rgba(15, 23, 42, 0.08);
+}
+
+.content-factory__preview--warm {
+  background: linear-gradient(180deg, #fff7ed 0%, #f3f4f6 48%);
+}
+
+.content-factory__preview--magazine {
+  background: linear-gradient(180deg, #eff6ff 0%, #f3f4f6 42%);
+}
+
+.content-factory__preview--clean {
+  background: #f3f4f6;
 }
 
 .content-factory__editor.ant-input:focus,
@@ -548,33 +631,72 @@
   box-shadow: 0 0 0 4px var(--accent-soft);
 }
 
+/* Fallback typography when HTML lacks inline styles (legacy drafts). */
+.content-factory__preview section[data-content-factory='wechat'] {
+  background: #fff;
+  border-radius: 10px;
+  padding: 4px 2px 8px;
+}
+
 .content-factory__preview h1,
-.content-factory__preview h2 {
+.content-factory__preview h2,
+.content-factory__preview h3 {
   margin: 1.2em 0 0.55em;
-  color: var(--text);
-  line-height: 1.35;
+  color: #1f2937;
+  line-height: 1.4;
+  font-weight: 700;
 }
 
 .content-factory__preview h1:first-child,
-.content-factory__preview h2:first-child {
+.content-factory__preview h2:first-child,
+.content-factory__preview section > h1:first-child,
+.content-factory__preview section > h2:first-child {
   margin-top: 0;
 }
 
 .content-factory__preview p {
   margin: 0 0 1em;
+  text-align: justify;
+  word-break: break-word;
 }
 
 .content-factory__preview blockquote {
   margin: 0 0 1em;
-  padding: 10px 12px;
-  border-left: 3px solid var(--accent);
+  padding: 12px 14px;
+  border-left: 4px solid var(--accent);
+  border-radius: 8px;
   background: var(--accent-soft);
-  color: var(--text);
+  color: #374151;
+}
+
+.content-factory__preview ul,
+.content-factory__preview ol {
+  margin: 0 0 1em;
+  padding-left: 1.25em;
+}
+
+.content-factory__preview li {
+  margin: 0 0 0.45em;
+  line-height: 1.75;
+}
+
+.content-factory__preview strong {
+  font-weight: 700;
+}
+
+.content-factory__preview hr {
+  border: 0;
+  height: 1px;
+  margin: 1.5em 0;
+  background: rgba(148, 163, 184, 0.55);
 }
 
 .content-factory__preview img {
+  display: block;
   max-width: 100%;
+  width: 100%;
   height: auto;
+  margin: 0.75em auto;
   border-radius: 8px;
 }
 

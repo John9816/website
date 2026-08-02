@@ -104,6 +104,28 @@
   padding-top: 8px;
 }
 
+.admin-users__detail-loading {
+  display: flex;
+  justify-content: center;
+  padding: 48px 0;
+}
+
+.admin-users__detail-title {
+  margin: 20px 0 12px;
+}
+
+.admin-users__detail-stats {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 16px;
+}
+
+@media (max-width: 640px) {
+  .admin-users__detail-stats {
+    grid-template-columns: repeat(2, 1fr);
+  }
+}
+
 @media (max-width: 760px) {
   .admin-users__header {
     align-items: stretch;

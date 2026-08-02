@@ -1,0 +1,14 @@
+User-agent: *
+Allow: /$
+Allow: /music
+Allow: /music/app
+Disallow: /login
+Disallow: /register
+Disallow: /admin
+Disallow: /ai-chat
+Disallow: /ai-image
+Disallow: /kb/share/
+Disallow: /music/share/
+Disallow: /api/
+
+Sitemap: https://hi.751152.xyz/sitemap.xml

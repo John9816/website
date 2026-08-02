@@ -1,0 +1,1 @@
+{"model":"mimo-v2-flash","messages":[{"role":"system","content":"You are a WeChat writer. Return strict JSON only."},{"role":"user","content":"Write a Chinese WeChat article JSON with title,digest,contentMarkdown,coverPrompt. Topic: how ordinary people use AI at work. About 1000 Chinese chars. Scene opening, 3 sections, follow CTA."}],"max_tokens":2500}

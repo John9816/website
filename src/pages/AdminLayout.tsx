@@ -8,7 +8,6 @@ import {
   KeyOutlined,
   LinkOutlined,
   LogoutOutlined,
-  PictureOutlined,
   RocketOutlined,
   SettingOutlined,
   TeamOutlined,
@@ -42,7 +41,6 @@ export default function AdminLayout() {
   const isLight = mode === 'light'
   const contentFactoryVisible = canUseContentFactory(auth.user)
   const systemConfigVisible = canManageSystemConfig(auth.user)
-  const oreatePoolVisible = auth.user?.role === 'ADMIN'
 
   if (!auth.token) {
     return <Navigate to="/admin/login" state={{ from: location.pathname }} replace />
@@ -84,14 +82,6 @@ export default function AdminLayout() {
       key: '/admin/content',
       icon: <RocketOutlined />,
       title: '内容工厂',
-    })
-  }
-
-  if (oreatePoolVisible) {
-    navItems.splice(contentFactoryVisible ? 3 : 2, 0, {
-      key: '/admin/oreate-pool',
-      icon: <PictureOutlined />,
-      title: '生图号池',
     })
   }
 

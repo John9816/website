@@ -20,6 +20,7 @@ const LoginPage = lazy(() => import('./pages/LoginPage'))
 const RegisterPage = lazy(() => import('./pages/RegisterPage'))
 const MusicLayout = lazy(() => import('./pages/MusicLayout'))
 const MusicPage = lazy(() => import('./pages/MusicPage'))
+const MusicPromoPage = lazy(() => import('./pages/MusicPromoPage'))
 const AiChatPage = lazy(() => import('./pages/AiChatPage'))
 const AiImagePage = lazy(() => import('./pages/AiImagePage'))
 const MusicPlaylistDetailPage = lazy(
@@ -37,7 +38,6 @@ const AdminContentFactory = lazy(() => import('./pages/AdminContentFactory'))
 const AdminPassword = lazy(() => import('./pages/AdminPassword'))
 const AdminUsers = lazy(() => import('./pages/AdminUsers'))
 const AdminKnowledgeBase = lazy(() => import('./pages/AdminKnowledgeBase'))
-const AdminOreatePool = lazy(() => import('./pages/AdminOreatePool'))
 const KbSharePage = lazy(() => import('./pages/KbSharePage'))
 
 function RouteFallback() {
@@ -255,6 +255,7 @@ export default function App() {
                     <Route path="/kb/share/:token" element={<KbSharePage />} />
                     <Route path="/music" element={<MusicLayout />}>
                       <Route index element={<MusicPage />} />
+                      <Route path="app" element={<MusicPromoPage />} />
                       <Route path="share/:token" element={<MusicSharePage />} />
                       <Route
                         path="toplist/:source/:id"
@@ -304,14 +305,6 @@ export default function App() {
                         }
                       />
                       <Route path="kb" element={<AdminKnowledgeBase />} />
-                      <Route
-                        path="oreate-pool"
-                        element={
-                          <RequireAdminPermission permission="oreatePool">
-                            <AdminOreatePool />
-                          </RequireAdminPermission>
-                        }
-                      />
                       <Route
                         path="users"
                         element={

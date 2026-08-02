@@ -1,4 +1,4 @@
-import { createReadStream, existsSync, statSync } from 'node:fs'
+import { createReadStream, existsSync, readFileSync, statSync } from 'node:fs'
 import { extname, join, normalize, resolve, sep } from 'node:path'
 import { fileURLToPath } from 'node:url'
 import http from 'node:http'
@@ -42,6 +42,68 @@ const mediaResponseHeaders = [
   'etag',
   'last-modified',
 ]
+const MUSIC_INSTALLER_ROUTE = '/api/public/music/installer/latest'
+const MUSIC_UPDATE_MANIFEST_URL = 'https://api.751152.xyz/updates/latest.json'
+const MUSIC_INSTALLER_FALLBACK = {
+  version: '1.1.24',
+  buildNumber: 35,
+  title: '柒伍壹壹音乐',
+  channel: 'DuckMusic',
+  fileName: 'DuckMusic-v1.1.24-arm64-v8a.apk',
+  downloadUrl: 'https://api.751152.xyz/updates/DuckMusic-v1.1.24-arm64-v8a.apk',
+  releasedAt: '2026-07-31',
+  notes:
+    'Android 音乐客户端：多音源搜索播放、榜单歌单、云端收藏与历史、歌词队列、网络电台与电视直播、AI 生图与视频解析。',
+  platform: 'Android',
+  minAndroid: '8.0',
+  packageName: 'com.music.player',
+}
+
+function mapMusicInstallerRelease(manifest) {
+  const downloads = manifest?.downloads ?? {}
+  const downloadUrl = (
+    downloads['arm64-v8a'] ||
+    downloads.arm64 ||
+    manifest?.downloadUrl ||
+    manifest?.download_url ||
+    ''
+  )
+    .toString()
+    .trim()
+  if (!downloadUrl || !manifest?.version) return null
+  const fileName =
+    downloadUrl.split('/').pop()?.split('?')[0] || `DuckMusic-v${manifest.version}.apk`
+  return {
+    version: String(manifest.version).replace(/^v/i, ''),
+    buildNumber: typeof manifest.buildNumber === 'number' ? manifest.buildNumber : null,
+    title: '柒伍壹壹音乐',
+    channel: 'DuckMusic',
+    fileName,
+    downloadUrl,
+    releasedAt: new Date().toISOString().slice(0, 10),
+    notes: String(manifest.description || '').trim() || MUSIC_INSTALLER_FALLBACK.notes,
+    platform: 'Android',
+    minAndroid: '8.0',
+    packageName: 'com.music.player',
+  }
+}
+
+async function resolveMusicInstallerRelease() {
+  try {
+    const response = await fetch(MUSIC_UPDATE_MANIFEST_URL, {
+      headers: {
+        Accept: 'application/json',
+        'User-Agent': 'website-music-promo/1.0',
+      },
+      signal: AbortSignal.timeout(5000),
+    })
+    if (!response.ok) return MUSIC_INSTALLER_FALLBACK
+    const manifest = await response.json()
+    return mapMusicInstallerRelease(manifest) ?? MUSIC_INSTALLER_FALLBACK
+  } catch {
+    return MUSIC_INSTALLER_FALLBACK
+  }
+}
 
 const contentTypes = new Map([
   ['.css', 'text/css; charset=utf-8'],
@@ -59,7 +121,82 @@ const contentTypes = new Map([
   ['.webp', 'image/webp'],
   ['.woff', 'font/woff'],
   ['.woff2', 'font/woff2'],
+  ['.xml', 'application/xml; charset=utf-8'],
 ])
+
+const SITE_ORIGIN = process.env.SITE_ORIGIN || 'https://hi.751152.xyz'
+const SITE_NAME = '个人导航'
+const DEFAULT_DESCRIPTION =
+  '个人导航与工作台：常用网站导航、AI 对话、AI 生图、在线音乐与知识库，一站直达。'
+
+// 服务端逐路由 meta，与前端 src/hooks/usePageTitle.ts 保持一致。
+// 爬虫无需执行 JS 即可读到正确的 title/description/canonical。
+const routeMeta = [
+  {
+    prefix: '/music/app',
+    title: '柒伍壹壹音乐 App',
+    description:
+      '下载柒伍壹壹音乐 Android 客户端：多音源搜索播放、榜单歌单、云端收藏、歌词队列、电台电视直播与实用工具。',
+    index: true,
+  },
+  { prefix: '/music', title: '音乐', description: '在线音乐聚合：QQ、网易云、酷我搜索、播放、歌词、榜单与歌单，一处畅听。', index: true },
+  { prefix: '/', title: '首页', description: DEFAULT_DESCRIPTION, index: true, exact: true },
+]
+
+function metaForPath(pathname) {
+  const clean = pathname.replace(/\/+$/, '') || '/'
+  for (const m of routeMeta) {
+    if (m.exact ? clean === m.prefix : clean === m.prefix || clean.startsWith(m.prefix + '/')) {
+      // 分享等动态子路径含私有内容，即便命中前缀也不收录
+      const isDynamicShare = clean.startsWith('/music/share') || clean.startsWith('/kb/share')
+      return { ...m, index: m.index && !isDynamicShare, path: clean }
+    }
+  }
+  return { title: SITE_NAME, description: DEFAULT_DESCRIPTION, index: false, path: clean }
+}
+
+function escapeHtml(str) {
+  return str.replace(/[&<>"]/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c]))
+}
+
+let indexHtmlCache = null
+function readIndexHtml() {
+  const p = join(distDir, 'index.html')
+  if (!indexHtmlCache || indexHtmlCache.mtimeMs !== statSync(p).mtimeMs) {
+    indexHtmlCache = { html: readFileSync(p, 'utf8'), mtimeMs: statSync(p).mtimeMs }
+  }
+  return indexHtmlCache.html
+}
+
+function renderIndexHtml(pathname) {
+  const meta = metaForPath(pathname)
+  const fullTitle =
+    meta.title === SITE_NAME ? SITE_NAME : `${escapeHtml(meta.title)} - ${SITE_NAME}`
+  const desc = escapeHtml(meta.description)
+  const canonical = `${SITE_ORIGIN}${meta.path === '/' ? '/' : meta.path}`
+  const robots = meta.index ? 'index,follow' : 'noindex,nofollow'
+
+  let html = readIndexHtml()
+  html = html.replace(/<title>[\s\S]*?<\/title>/i, `<title>${fullTitle}</title>`)
+  html = replaceMeta(html, 'name', 'description', desc)
+  html = replaceMeta(html, 'name', 'robots', robots)
+  html = replaceMeta(html, 'property', 'og:title', fullTitle)
+  html = replaceMeta(html, 'property', 'og:description', desc)
+  html = replaceMeta(html, 'property', 'og:url', canonical)
+  html = replaceMeta(html, 'name', 'twitter:title', fullTitle)
+  html = replaceMeta(html, 'name', 'twitter:description', desc)
+  html = html.replace(
+    /<link\s+rel="canonical"[^>]*>/i,
+    meta.index ? `<link rel="canonical" href="${canonical}" />` : '',
+  )
+  return html
+}
+
+function replaceMeta(html, attr, key, value) {
+  const re = new RegExp(`<meta\\s+${attr}="${key}"[^>]*>`, 'i')
+  const tag = `<meta ${attr}="${key}" content="${value}" />`
+  return re.test(html) ? html.replace(re, tag) : html.replace(/<\/head>/i, `  ${tag}\n  </head>`)
+}
 
 const server = http.createServer(async (req, res) => {
   try {
@@ -90,6 +227,21 @@ const server = http.createServer(async (req, res) => {
         responseHeaders: mediaResponseHeaders,
         validateTarget: validateMediaTarget,
         upstreamFailureMessage: 'Failed to fetch upstream media.',
+      })
+      return
+    }
+
+    if (requestUrl.pathname === MUSIC_INSTALLER_ROUTE) {
+      if (req.method !== 'GET') {
+        sendJson(res, 405, { message: 'Method not allowed.' })
+        return
+      }
+
+      const data = await resolveMusicInstallerRelease()
+      sendJson(res, 200, {
+        code: 0,
+        message: 'ok',
+        data,
       })
       return
     }
@@ -378,7 +530,30 @@ function serveStatic(req, res, requestUrl) {
 
   const filePath = resolveFilePath(pathname)
   const candidate = filePath && getExistingFile(filePath)
-  const finalPath = candidate || join(distDir, 'index.html')
+
+  // SPA 路由回退：没有对应的真实文件、或解析到的就是 index.html（含首页 "/")时，
+  // 返回带逐路由 meta 的 index.html，让爬虫无需执行 JS 即可读到正确的
+  // title/description/canonical。真实静态资源（js/css/图片等）走原样直发。
+  const servesIndexHtml =
+    !candidate || normalize(candidate) === normalize(join(distDir, 'index.html'))
+  if (servesIndexHtml) {
+    const indexPath = join(distDir, 'index.html')
+    if (!existsSync(indexPath)) {
+      sendJson(res, 404, { message: 'Not found.' })
+      return
+    }
+    const html = renderIndexHtml(pathname)
+    const body = Buffer.from(html, 'utf8')
+    res.writeHead(200, {
+      'Content-Length': String(body.byteLength),
+      'Content-Type': 'text/html; charset=utf-8',
+      'Cache-Control': 'no-cache',
+    })
+    res.end(req.method === 'HEAD' ? undefined : body)
+    return
+  }
+
+  const finalPath = candidate
 
   if (!isInsideDist(finalPath) || !existsSync(finalPath)) {
     sendJson(res, 404, { message: 'Not found.' })
