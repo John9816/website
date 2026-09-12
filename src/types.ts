@@ -271,8 +271,14 @@ export interface LoginResponse {
   token: string
   tokenType: string
   expiresInMinutes: number
+  refreshToken: string
   username: string
   role?: string
+}
+
+export interface EmailVerificationCodeView {
+  resendAfterSeconds: number
+  expiresInSeconds: number
 }
 
 export interface UserCreditView {
@@ -778,6 +784,13 @@ export interface ImportedPlaylist {
   updatedAt?: string
 }
 
+export interface PlaylistFavoriteStatusView {
+  source: MusicSourceId
+  playlistId: string
+  favorite: boolean
+  userPlaylistId: number | null
+}
+
 export interface ImportedPlaylistItem {
   id: number
   playlistId: number
@@ -807,4 +820,41 @@ export interface ImportPlaylistRequest {
 
 export interface UpdatePlaylistRequest {
   name?: string
+}
+
+// Membership / redeem codes
+export type RedeemCodeType = 'DAY' | 'WEEK' | 'MONTH' | 'YEAR' | 'LIFETIME'
+export type RedeemCodeStatus = 'UNUSED' | 'REDEEMED' | 'REVOKED'
+
+export interface MembershipView {
+  type?: RedeemCodeType | null
+  typeName?: string | null
+  active: boolean
+  lifetime: boolean
+  expiresAt?: string | null
+  remainingSeconds?: number | null
+}
+
+export interface RedeemResultView {
+  message: string
+  membership: MembershipView
+}
+
+export interface RedeemCodeAdminView {
+  id: number
+  codePreview: string
+  type: RedeemCodeType
+  typeName: string
+  status: RedeemCodeStatus
+  redeemedByUserId?: number | null
+  redeemedAt?: string | null
+  revokedAt?: string | null
+  createdAt?: string
+}
+
+export interface RedeemCodeBatchView {
+  type: RedeemCodeType
+  typeName: string
+  quantity: number
+  codes: string[]
 }

@@ -23,7 +23,6 @@ import {
   Search,
   SendHorizontal,
   Settings,
-  Sparkles,
   StopCircle,
   Trash2,
   Upload,
@@ -44,9 +43,7 @@ import {
 } from '../api/ai'
 import { ApiError } from '../api/client'
 import MessageMarkdown from '../components/MessageMarkdown'
-import TopbarNav from '../components/TopbarNav'
-import TopbarUserMenu from '../components/TopbarUserMenu'
-import ThemeToggle from '../components/ThemeToggle'
+import SiteHeader from '../components/SiteHeader'
 import { useAuth } from '../context/AuthContext'
 import type {
   AiChatMessageView,
@@ -56,8 +53,8 @@ import type {
   AiModelView,
   AiVoiceView,
 } from '../types'
+import { writeClipboardText } from '../utils/clipboard'
 import { groupConversations } from '../utils/groupConversations'
-import '../styles/topbar.css'
 import '../styles/ai-chat.css'
 
 const CONVERSATION_PAGE_SIZE = 100
@@ -268,7 +265,7 @@ function CopyButton({ text, onCopied, onError }: CopyButtonProps) {
 
   const handleClick = async () => {
     try {
-      await navigator.clipboard.writeText(text)
+      await writeClipboardText(text)
       setCopied(true)
       onCopied()
       if (timerRef.current) window.clearTimeout(timerRef.current)
@@ -508,7 +505,9 @@ export default function AiChatPage() {
   const [audioInputUrl, setAudioInputUrl] = useState('')
   const [audioInputFileData, setAudioInputFileData] = useState('')
   const [audioInputFileName, setAudioInputFileName] = useState('')
-  const [isSidebarOpen, setIsSidebarOpen] = useState(true)
+  const [isSidebarOpen, setIsSidebarOpen] = useState(
+    () => !window.matchMedia('(max-width: 768px)').matches,
+  )
   const [showAdvancedSettings, setShowAdvancedSettings] = useState(false)
   const [bootstrapping, setBootstrapping] = useState(false)
   const [_conversationsLoading, setConversationsLoading] = useState(false)
@@ -604,11 +603,11 @@ export default function AiChatPage() {
         : ''
   const hasAudioInput = activeAudioInputValue.length > 0
   const composerBlockedReason = noModelsConfigured
-    ? '管理员尚未配置可用文本模型'
+    ? '暂时没有可用的对话模型'
     : !supportsTextConversation
-      ? '当前模型不支持文本对话，请切换到具备 text_chat 能力的模型'
+      ? '当前模型不支持文本对话，请更换模型'
       : hasAudioInput && !supportsAudioInput
-        ? '当前模型不支持语音输入，请切换到具备 audio_input 能力的模型'
+        ? '当前模型不支持语音输入，请更换模型或移除音频'
         : null
 
   const filteredConversations = useMemo(() => {
@@ -1191,7 +1190,10 @@ export default function AiChatPage() {
         isActive={item.id === activeConversationId}
         disabled={sending}
         deleting={deletingConversationId === item.id}
-        onSelect={setActiveConversationId}
+        onSelect={(id) => {
+          setActiveConversationId(id)
+          if (window.matchMedia('(max-width: 768px)').matches) setIsSidebarOpen(false)
+        }}
         onDelete={handleDeleteConversation}
       />
     ))
@@ -1213,12 +1215,10 @@ export default function AiChatPage() {
           {searchQuery.trim() ? (
             <>
               <span>没有匹配的会话</span>
-              <small>试试其他关键字，或清空搜索框查看全部历史。</small>
             </>
           ) : (
             <>
-              <span>还没有任何会话</span>
-              <small>先创建一个空会话，或直接输入内容后发送。</small>
+              <span>还没有对话记录</span>
             </>
           )}
         </div>
@@ -1256,7 +1256,6 @@ export default function AiChatPage() {
         <div className="ai-chat__empty-stage">
           <Bot size={28} />
           <h3>开始新对话</h3>
-          <p>在下方输入消息，或点击左侧新建会话。</p>
         </div>
       )
     }
@@ -1276,7 +1275,6 @@ export default function AiChatPage() {
           <div className="ai-chat__empty-stage">
             <MessagesSquare size={28} />
             <h3>开始对话</h3>
-            <p>发送你的第一条消息吧。</p>
           </div>
         )}
 
@@ -1328,44 +1326,21 @@ export default function AiChatPage() {
 
   return (
     <div className="ai-chat">
-      <header className="topbar">
-        <RouterLink to="/" className="topbar-brand" aria-label="返回首页">
-          <span className="brand-dot" />
-          <span>oldwang</span>
-        </RouterLink>
-
-        <TopbarNav />
-
-        <div className="topbar-actions" aria-label="站点操作">
-          {!auth.token ? (
-            <RouterLink to="/login" className="topbar-action" state={{ from: '/ai-chat' }}>
-              <LogIn size={16} />
-              <span>登录</span>
-            </RouterLink>
-          ) : null}
-          <ThemeToggle />
-          {auth.token && <TopbarUserMenu />}
-        </div>
-      </header>
+      <SiteHeader />
 
       <main className={mainClassName}>
         {!auth.token ? (
           <section className="ai-chat__guest">
             <article className="ai-chat__welcome-card">
               <div className="ai-chat__eyebrow">
-                <Sparkles size={14} />
-                <span>AI Chat</span>
+                <Bot size={16} />
+                <span>AI CHAT</span>
               </div>
-              <h1>智能对话助手</h1>
-              <p>支持多模型切换、流式输出、语音输入与回放。</p>
+              <h1>AI 对话</h1>
             </article>
 
             <article className="ai-chat__login-card">
-              <div className="ai-chat__icon-badge">
-                <Bot size={18} />
-              </div>
               <h2>登录后开始对话</h2>
-              <p>使用站内账号登录即可开始。</p>
               <div className="ai-chat__guest-actions">
                 <RouterLink
                   to="/login"
@@ -1373,7 +1348,7 @@ export default function AiChatPage() {
                   className="ai-chat__button ai-chat__button--primary"
                 >
                   <LogIn size={16} />
-                  <span>去登录</span>
+                  <span>登录</span>
                 </RouterLink>
                 <RouterLink
                   to="/register"
@@ -1387,7 +1362,15 @@ export default function AiChatPage() {
         ) : (
           <section className="ai-chat__shell">
             {isSidebarOpen && (
-              <aside className="ai-chat__sidebar">
+              <button
+                type="button"
+                className="ai-chat__sidebar-scrim"
+                onClick={() => setIsSidebarOpen(false)}
+                aria-label="关闭对话历史"
+              />
+            )}
+            {isSidebarOpen && (
+              <aside className="ai-chat__sidebar" aria-label="对话历史">
                 <div className="ai-chat__sidebar-head">
                   <div className="ai-chat__sidebar-head-left">
                     <button
@@ -1395,13 +1378,17 @@ export default function AiChatPage() {
                       className="ai-chat__icon-button ai-chat__sidebar-toggle"
                       onClick={() => setIsSidebarOpen(false)}
                       title="关闭侧边栏"
+                      aria-label="关闭侧边栏"
                     >
                       <PanelLeftClose size={20} />
                     </button>
                     <button
                       type="button"
                       className="ai-chat__button ai-chat__button--primary ai-chat__new-chat"
-                      onClick={handleCreateConversation}
+                      onClick={() => {
+                        void handleCreateConversation()
+                        if (window.matchMedia('(max-width: 768px)').matches) setIsSidebarOpen(false)
+                      }}
                       disabled={creatingConversation || sending || bootstrapping}
                     >
                       {creatingConversation ? (
@@ -1432,24 +1419,31 @@ export default function AiChatPage() {
             )}
 
             <section className="ai-chat__stage">
-              {!isSidebarOpen && (
-                <button
-                  type="button"
-                  className="ai-chat__icon-button ai-chat__sidebar-reopen"
-                  onClick={() => setIsSidebarOpen(true)}
-                  title="打开侧边栏"
-                >
-                  <PanelLeftOpen size={18} />
-                </button>
-              )}
+              <div className="ai-chat__stage-head">
+                {!isSidebarOpen && (
+                  <button
+                    type="button"
+                    className="ai-chat__icon-button"
+                    onClick={() => setIsSidebarOpen(true)}
+                    title="打开对话历史"
+                    aria-label="打开对话历史"
+                  >
+                    <PanelLeftOpen size={18} />
+                  </button>
+                )}
+                <div className="ai-chat__stage-title">
+                  <h1>{activeConversation?.title || 'AI 对话'}</h1>
+                  <span>{sending ? '正在回复' : '对话工作台'}</span>
+                </div>
+                <RouterLink to="/ai-image" className="ai-chat__stage-link">AI 生图</RouterLink>
+              </div>
 
               {activeConversationModelRemoved && (
                 <div className="ai-chat__stage-alert">
                   <div className="ai-chat__warning-card">
-                    <strong>当前会话模型已移出模型池</strong>
+                    <strong>原对话模型暂不可用</strong>
                     <span>
-                      历史会话仍保留模型 `{activeConversation?.model}`，下一次发送会回退到 `
-                      {nextSendModel ?? '管理员默认模型'}`。
+                      下一条消息将使用 {nextSendModel ?? '默认模型'}。
                     </span>
                   </div>
                 </div>
@@ -1472,6 +1466,9 @@ export default function AiChatPage() {
               </div>
 
               <div className="ai-chat__composer">
+                {composerBlockedReason && (
+                  <p className="ai-chat__composer-notice" role="status">{composerBlockedReason}</p>
+                )}
                 <div className="ai-chat__composer-shell">
                   <div className="ai-chat__composer-textarea-wrap">
                     <textarea
@@ -1481,6 +1478,7 @@ export default function AiChatPage() {
                       onChange={(event) => setDraft(event.target.value)}
                       onKeyDown={handleDraftKeyDown}
                       placeholder="发送消息..."
+                      aria-label="消息内容"
                       maxLength={CHAR_LIMIT}
                       disabled={
                         bootstrapping ||
@@ -1494,11 +1492,26 @@ export default function AiChatPage() {
 
                   <div className="ai-chat__composer-bottom">
                     <div className="ai-chat__composer-actions-left">
+                      <select
+                        aria-label="主对话模型"
+                        className="ai-chat__model-select"
+                        value={selectedModel}
+                        onChange={(event) => setSelectedModel(event.target.value)}
+                        disabled={bootstrapping || sending || creatingConversation || noModelsConfigured}
+                      >
+                        {!selectedModel && <option value="">默认模型</option>}
+                        {textChatModels.map((item) => (
+                          <option key={item.model} value={item.model}>{item.model}</option>
+                        ))}
+                      </select>
                       <button
                         type="button"
                         className={`ai-chat__icon-button ${showAdvancedSettings ? 'is-active' : ''}`}
                         onClick={() => setShowAdvancedSettings(!showAdvancedSettings)}
-                        title="设置"
+                        title="对话设置"
+                        aria-label="对话设置"
+                        aria-expanded={showAdvancedSettings}
+                        aria-controls="ai-chat-settings"
                       >
                         <Settings size={16} />
                       </button>
@@ -1522,6 +1535,8 @@ export default function AiChatPage() {
                         }
                         onClick={handlePrimaryClick}
                         disabled={sendDisabled}
+                        aria-label={sending ? '停止回复' : '发送消息'}
+                        title={sending ? '停止回复' : '发送消息'}
                       >
                         {sending ? <StopCircle size={18} /> : <SendHorizontal size={18} />}
                       </button>
@@ -1529,27 +1544,8 @@ export default function AiChatPage() {
                   </div>
 
                   {showAdvancedSettings && (
-                    <div className="ai-chat__advanced-settings">
+                    <div className="ai-chat__advanced-settings" id="ai-chat-settings">
                       <div className="ai-chat__settings-grid">
-                        <label className="ai-chat__setting-item">
-                          <span>模型</span>
-                          <select
-                            aria-label="主对话模型"
-                            className="ai-chat__model-select"
-                            value={selectedModel}
-                            onChange={(event) => setSelectedModel(event.target.value)}
-                            disabled={
-                              bootstrapping || sending || creatingConversation || noModelsConfigured
-                            }
-                          >
-                            {!selectedModel && <option value="">默认</option>}
-                            {textChatModels.map((item) => (
-                              <option key={item.model} value={item.model}>
-                                {item.model}
-                              </option>
-                            ))}
-                          </select>
-                        </label>
                         <label className="ai-chat__setting-item">
                           <input
                             type="checkbox"
@@ -1569,129 +1565,132 @@ export default function AiChatPage() {
                         </label>
                       </div>
 
-                      {(responseAudio || hasAudioInput) && (
-                        <div className="ai-chat__settings-expanded">
-                          {responseAudio && (
-                            <div className="ai-chat__settings-section">
-                              <h4>TTS 设置</h4>
-                              <div className="ai-chat__settings-row">
-                                <select
-                                  value={ttsModel}
-                                  onChange={(event) => setTtsModel(event.target.value)}
-                                >
-                                  <option value="">默认语音模型</option>
-                                  {audioOutputModels.map((item) => (
-                                    <option key={item.model} value={item.model}>
-                                      {item.model}
-                                    </option>
-                                  ))}
-                                </select>
-                                <input
-                                  type="text"
-                                  value={ttsVoice}
-                                  onChange={(event) => setTtsVoice(event.target.value)}
-                                  placeholder="音色"
-                                  list="ai-chat-voice-list"
-                                />
-                                <datalist id="ai-chat-voice-list">
-                                  {voices.map((voice) => (
-                                    <option key={voice.id} value={voice.id}>
-                                      {voice.label}
-                                    </option>
-                                  ))}
-                                </datalist>
-                              </div>
-                              <div className="ai-chat__settings-row">
-                                <select
-                                  value={ttsFormat}
-                                  onChange={(event) => setTtsFormat(event.target.value)}
-                                  aria-label="语音格式"
-                                >
-                                  <option value="wav">wav</option>
-                                  <option value="mp3">mp3</option>
-                                  <option value="opus">opus</option>
-                                  <option value="aac">aac</option>
-                                  <option value="flac">flac</option>
-                                </select>
-                                <input
-                                  type="text"
-                                  value={ttsPrompt}
-                                  onChange={(event) => setTtsPrompt(event.target.value)}
-                                  placeholder="风格提示"
-                                />
-                              </div>
-                              <div className="ai-chat__tts-preview">
-                                <button
-                                  type="button"
-                                  className="ai-chat__button ai-chat__button--secondary"
-                                  onClick={() => void handleTtsPreview()}
-                                  disabled={ttsPreviewLoading}
-                                  title={selectedVoiceLabel || undefined}
-                                >
-                                  {ttsPreviewLoading ? (
-                                    <LoaderCircle size={14} className="ai-chat__spinner" />
-                                  ) : (
-                                    <Play size={14} />
-                                  )}
-                                  <span>试听</span>
-                                </button>
-                                {ttsPreviewUrl && (
-                                  <audio
-                                    controls
-                                    autoPlay
-                                    src={ttsPreviewUrl}
-                                    aria-label="TTS 试听"
-                                  />
+                      <div className="ai-chat__settings-expanded">
+                        {responseAudio && (
+                          <div className="ai-chat__settings-section">
+                            <h4>语音回放</h4>
+                            <div className="ai-chat__settings-row">
+                              <select
+                                value={ttsModel}
+                                onChange={(event) => setTtsModel(event.target.value)}
+                                aria-label="语音模型"
+                              >
+                                <option value="">默认语音模型</option>
+                                {audioOutputModels.map((item) => (
+                                  <option key={item.model} value={item.model}>
+                                    {item.model}
+                                  </option>
+                                ))}
+                              </select>
+                              <input
+                                type="text"
+                                value={ttsVoice}
+                                onChange={(event) => setTtsVoice(event.target.value)}
+                                placeholder="音色"
+                                aria-label="音色"
+                                list="ai-chat-voice-list"
+                              />
+                              <datalist id="ai-chat-voice-list">
+                                {voices.map((voice) => (
+                                  <option key={voice.id} value={voice.id}>
+                                    {voice.label}
+                                  </option>
+                                ))}
+                              </datalist>
+                            </div>
+                            <div className="ai-chat__settings-row">
+                              <select
+                                value={ttsFormat}
+                                onChange={(event) => setTtsFormat(event.target.value)}
+                                aria-label="语音格式"
+                              >
+                                <option value="wav">wav</option>
+                                <option value="mp3">mp3</option>
+                                <option value="opus">opus</option>
+                                <option value="aac">aac</option>
+                                <option value="flac">flac</option>
+                              </select>
+                              <input
+                                type="text"
+                                value={ttsPrompt}
+                                onChange={(event) => setTtsPrompt(event.target.value)}
+                                placeholder="风格提示"
+                                aria-label="语音风格"
+                              />
+                            </div>
+                            <div className="ai-chat__tts-preview">
+                              <button
+                                type="button"
+                                className="ai-chat__button ai-chat__button--secondary"
+                                onClick={() => void handleTtsPreview()}
+                                disabled={ttsPreviewLoading}
+                                title={selectedVoiceLabel || undefined}
+                              >
+                                {ttsPreviewLoading ? (
+                                  <LoaderCircle size={14} className="ai-chat__spinner" />
+                                ) : (
+                                  <Play size={14} />
                                 )}
-                              </div>
+                                <span>试听</span>
+                              </button>
+                              {ttsPreviewUrl && (
+                                <audio
+                                  controls
+                                  autoPlay
+                                  src={ttsPreviewUrl}
+                                  aria-label="TTS 试听"
+                                />
+                              )}
+                            </div>
+                          </div>
+                        )}
+
+                        <div className="ai-chat__settings-section">
+                          <h4>语音输入</h4>
+                          <div className="ai-chat__audio-mode-row">
+                            {(['none', 'upload', 'url'] as AudioInputMode[]).map((mode) => (
+                              <button
+                                key={mode}
+                                type="button"
+                                className={`ai-chat__mode-chip ${audioInputMode === mode ? 'is-active' : ''}`}
+                                onClick={() => handleAudioInputModeChange(mode)}
+                                aria-pressed={audioInputMode === mode}
+                              >
+                                {mode === 'none' ? '不附加' : mode === 'upload' ? '上传' : 'URL'}
+                              </button>
+                            ))}
+                          </div>
+                          {audioInputMode === 'upload' && (
+                            <div className="ai-chat__audio-upload">
+                              <input
+                                ref={audioInputRef}
+                                type="file"
+                                accept="audio/*"
+                                className="ai-chat__sr-only"
+                                onChange={handleAudioFileChange}
+                              />
+                              <button
+                                type="button"
+                                className="ai-chat__button ai-chat__button--secondary"
+                                onClick={() => audioInputRef.current?.click()}
+                              >
+                                <Upload size={14} />
+                                <span>{audioInputFileName || '选择文件'}</span>
+                              </button>
                             </div>
                           )}
-
-                          <div className="ai-chat__settings-section">
-                            <h4>语音输入</h4>
-                            <div className="ai-chat__audio-mode-row">
-                              {(['none', 'upload', 'url'] as AudioInputMode[]).map((mode) => (
-                                <button
-                                  key={mode}
-                                  type="button"
-                                  className={`ai-chat__mode-chip ${audioInputMode === mode ? 'is-active' : ''}`}
-                                  onClick={() => handleAudioInputModeChange(mode)}
-                                >
-                                  {mode === 'none' ? '不附加' : mode === 'upload' ? '上传' : 'URL'}
-                                </button>
-                              ))}
-                            </div>
-                            {audioInputMode === 'upload' && (
-                              <div className="ai-chat__audio-upload">
-                                <input
-                                  ref={audioInputRef}
-                                  type="file"
-                                  accept="audio/*"
-                                  className="ai-chat__sr-only"
-                                  onChange={handleAudioFileChange}
-                                />
-                                <button
-                                  type="button"
-                                  className="ai-chat__button ai-chat__button--secondary"
-                                  onClick={() => audioInputRef.current?.click()}
-                                >
-                                  <Upload size={14} />
-                                  <span>{audioInputFileName || '选择文件'}</span>
-                                </button>
-                              </div>
-                            )}
-                            {audioInputMode === 'url' && (
-                              <input
-                                type="url"
-                                className="ai-chat__input"
-                                value={audioInputUrl}
-                                onChange={(event) => setAudioInputUrl(event.target.value)}
-                                placeholder="音频 URL"
-                              />
-                            )}
-                          </div>
+                          {audioInputMode === 'url' && (
+                            <input
+                              type="url"
+                              className="ai-chat__input"
+                              value={audioInputUrl}
+                              onChange={(event) => setAudioInputUrl(event.target.value)}
+                              placeholder="音频 URL"
+                              aria-label="音频地址"
+                            />
+                          )}
                         </div>
-                      )}
+                      </div>
                     </div>
                   )}
                 </div>

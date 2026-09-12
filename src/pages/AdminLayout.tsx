@@ -1,13 +1,15 @@
-import type { ReactNode } from 'react'
-import { Layout, Menu, Button, Typography, ConfigProvider, Space, theme as antdTheme } from 'antd'
+import { useEffect, useState, type ReactNode } from 'react'
+import { Layout, Menu, Button, Typography, ConfigProvider, Drawer, Grid, Space, Tooltip, theme as antdTheme } from 'antd'
 import type { MenuProps } from 'antd'
 import {
   AppstoreOutlined,
   BookOutlined,
+  GiftOutlined,
   HomeOutlined,
   KeyOutlined,
   LinkOutlined,
   LogoutOutlined,
+  MenuOutlined,
   RocketOutlined,
   SettingOutlined,
   TeamOutlined,
@@ -87,15 +89,21 @@ export default function AdminLayout() {
 
   if (systemConfigVisible) {
     navItems.splice(contentFactoryVisible ? 3 : 2, 0, {
-      key: '/admin/users',
-      icon: <TeamOutlined />,
-      title: '用户管理',
-    })
-
-    navItems.splice(contentFactoryVisible ? 3 : 2, 0, {
       key: '/admin/configs',
       icon: <SettingOutlined />,
       title: '系统配置',
+    })
+
+    navItems.splice(contentFactoryVisible ? 4 : 3, 0, {
+      key: '/admin/redeem-codes',
+      icon: <GiftOutlined />,
+      title: '兑换码',
+    })
+
+    navItems.splice(contentFactoryVisible ? 5 : 4, 0, {
+      key: '/admin/users',
+      icon: <TeamOutlined />,
+      title: '用户管理',
     })
   }
 
@@ -123,10 +131,12 @@ export default function AdminLayout() {
       theme={{
         algorithm: isLight ? antdTheme.defaultAlgorithm : antdTheme.darkAlgorithm,
         token: {
-          colorPrimary: mode === 'dark' ? '#fb7185' : isLight ? '#2563eb' : '#41d1ff',
-          borderRadius: 8,
-          fontFamily:
-            "-apple-system, BlinkMacSystemFont, 'Segoe UI', 'PingFang SC', 'Hiragino Sans GB', 'Microsoft YaHei', sans-serif",
+          colorPrimary: isLight ? '#167d70' : '#6cbba9',
+          colorBgContainer: isLight ? '#ffffff' : '#202724',
+          colorBgLayout: isLight ? '#f5f7f6' : '#171d1a',
+          colorBorder: isLight ? '#e2e8e4' : '#34413a',
+          borderRadius: 6,
+          fontFamily: 'var(--font-sans)',
         },
         components: {
           Layout: {
@@ -165,54 +175,100 @@ function LayoutContent({
   selectedKey: string
   selectedTitle: string
   menuItems: MenuProps['items']
-  auth: any
+  auth: ReturnType<typeof useAuth>
   doLogout: () => void
 }) {
+  const [navigationOpen, setNavigationOpen] = useState(false)
+  const screens = Grid.useBreakpoint()
   const isKnowledgeWorkspace = selectedKey === '/admin/kb'
+
+  useEffect(() => {
+    setNavigationOpen(false)
+  }, [selectedKey])
+
+  useEffect(() => {
+    if (screens.lg) setNavigationOpen(false)
+  }, [screens.lg])
+
+  const navigation = (
+    <>
+      <Link to="/" className="admin-shell__brand">
+        <span className="admin-shell__brand-mark"><AppstoreOutlined /></span>
+        <span className="admin-shell__brand-text">个人导航<small>管理后台</small></span>
+      </Link>
+      <div className="admin-shell__nav-label">工作空间</div>
+      <Menu
+        theme={mode === 'light' ? 'light' : 'dark'}
+        mode="inline"
+        selectedKeys={[selectedKey]}
+        items={menuItems}
+        className="admin-shell__menu"
+        aria-label="后台功能菜单"
+        onClick={() => setNavigationOpen(false)}
+      />
+      <div className="admin-shell__sider-footer">
+        <Link to="/"><HomeOutlined /><span>返回首页</span></Link>
+      </div>
+    </>
+  )
 
   return (
     <Layout hasSider className={`admin-shell${isKnowledgeWorkspace ? ' admin-shell--knowledge' : ''}`}>
       <Sider
         theme={mode === 'light' ? 'light' : 'dark'}
-        breakpoint="lg"
-        collapsedWidth="0"
-        width={240}
+        width={228}
         className="admin-shell__sider"
         aria-label="后台导航"
       >
-        <div className="admin-shell__brand">
-          <span className="admin-shell__brand-mark" />
-          <span className="admin-shell__brand-text">管理后台</span>
-        </div>
-        <Menu
-          theme={mode === 'light' ? 'light' : 'dark'}
-          mode="inline"
-          selectedKeys={[selectedKey]}
-          items={menuItems}
-          className="admin-shell__menu"
-          aria-label="后台功能菜单"
-        />
+        {navigation}
       </Sider>
+      <Drawer
+        title="导航"
+        placement="left"
+        width={280}
+        open={navigationOpen}
+        onClose={() => setNavigationOpen(false)}
+        rootClassName="admin-shell__drawer"
+      >
+        <nav id="admin-mobile-navigation" className="admin-shell__mobile-navigation" aria-label="后台导航">
+          {navigation}
+        </nav>
+      </Drawer>
 
       <Layout className="admin-shell__body">
         <Header className="admin-shell__header">
-          <Typography.Title id="admin-page-title" level={5} className="admin-shell__title">
-            {selectedTitle}
-          </Typography.Title>
+          <div className="admin-shell__heading">
+            <Tooltip title="打开导航">
+              <Button
+                type="text"
+                icon={<MenuOutlined />}
+                className="admin-shell__menu-button"
+                aria-label="打开导航"
+                aria-expanded={navigationOpen}
+                aria-controls="admin-mobile-navigation"
+                onClick={() => setNavigationOpen(true)}
+              />
+            </Tooltip>
+            <span className="admin-shell__breadcrumb">管理后台<span>/</span></span>
+            <Typography.Title id="admin-page-title" level={5} className="admin-shell__title">
+              {selectedTitle}
+            </Typography.Title>
+          </div>
           <div className="admin-shell__header-actions">
             <Typography.Text type="secondary" className="admin-shell__welcome">
-              {auth.username ? `欢迎，${auth.username}` : ''}
+              {auth.username ?? ''}
             </Typography.Text>
-            <Space size={8} className="admin-shell__actions">
-              <Link to="/">
-                <Button type="text" icon={<HomeOutlined />}>
-                  首页
-                </Button>
-              </Link>
-              <Button type="text" danger icon={<LogoutOutlined />} onClick={doLogout}>
-                退出
-              </Button>
+            <Space size={4} className="admin-shell__actions">
+              <Tooltip title="返回首页">
+                <Link to="/" className="admin-shell__home-button" aria-label="返回首页">
+                  <HomeOutlined />
+                </Link>
+              </Tooltip>
               <ThemeToggle bare />
+              <Tooltip title="退出登录">
+                <Button type="text" icon={<LogoutOutlined />} onClick={doLogout} aria-label="退出登录">
+                </Button>
+              </Tooltip>
             </Space>
           </div>
         </Header>

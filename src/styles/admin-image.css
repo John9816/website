@@ -40,7 +40,7 @@
 }
 
 .admin-image--admin {
-  height: calc(100dvh - 64px - 64px);
+  height: calc(var(--app-height) - 64px - 64px);
   margin: -32px;
 }
 
@@ -1238,7 +1238,7 @@
 
 .admin-image__preview-img {
   max-width: 100%;
-  max-height: calc(100dvh - 132px);
+  max-height: calc(var(--app-height) - 132px);
   width: auto;
   height: auto;
   object-fit: contain;
@@ -1249,8 +1249,8 @@
 
 .admin-image__preview-stage {
   width: min(100%, calc(100vw - 80px));
-  height: calc(100dvh - 80px);
-  max-height: calc(100dvh - 80px);
+  height: calc(var(--app-height) - 80px);
+  max-height: calc(var(--app-height) - 80px);
   display: flex;
   align-items: center;
   justify-content: center;
@@ -1317,7 +1317,7 @@
   }
 }
 
-@media (max-width: 1120px) {
+@media (max-width: 1280px) {
   .admin-image {
     grid-template-columns: 84px minmax(320px, 380px) minmax(0, 1fr);
   }
@@ -1383,7 +1383,18 @@
     height: 100%;
     min-height: 0;
     overflow-y: auto;
-    padding: 8px 8px calc(96px + env(safe-area-inset-bottom));
+    padding:
+      8px
+      max(8px, env(safe-area-inset-right))
+      calc(96px + env(safe-area-inset-bottom))
+      max(8px, env(safe-area-inset-left));
+  }
+
+  .admin-image--admin {
+    width: 100%;
+    height: auto;
+    min-height: 100%;
+    margin: 0;
   }
 
   .admin-image__history-scrim {
@@ -1401,7 +1412,7 @@
   .admin-image__controls {
     order: 2;
     height: auto;
-    min-height: min(560px, calc(100dvh - 66px));
+    min-height: min(560px, calc(var(--app-height) - 66px));
   }
 
   .admin-image__workspace {
@@ -1409,7 +1420,7 @@
   }
 
   .admin-image__workspace {
-    min-height: 520px;
+    min-height: min(520px, 68dvh);
   }
 
   .admin-image--history-collapsed {
@@ -1462,7 +1473,7 @@
   }
 
   .admin-image__workspace-head h1 {
-    max-width: 70vw;
+    max-width: min(70vw, calc(100vw - 132px));
   }
 
   .admin-image__preview-overlay {
@@ -1471,8 +1482,8 @@
 
   .admin-image__preview-stage {
     width: min(100%, calc(100vw - 40px));
-    height: calc(100dvh - 40px);
-    max-height: calc(100dvh - 40px);
+    height: calc(var(--app-height) - 40px);
+    max-height: calc(var(--app-height) - 40px);
   }
 }
 
@@ -1639,7 +1650,11 @@
     flex-direction: column;
     height: auto;
     min-height: 100%;
-    padding: 8px 8px calc(24px + env(safe-area-inset-bottom));
+    padding:
+      8px
+      max(8px, env(safe-area-inset-right))
+      calc(24px + env(safe-area-inset-bottom))
+      max(8px, env(safe-area-inset-left));
     overflow-y: auto;
   }
 
@@ -1657,6 +1672,20 @@
     border-radius: 8px;
   }
 
+  .admin-image__section-head,
+  .admin-image__workspace-head,
+  .admin-image__task-banner,
+  .admin-image__history-row {
+    min-width: 0;
+  }
+
+  .admin-image__section-actions,
+  .admin-image__workspace-tools,
+  .admin-image__result-actions {
+    max-width: 100%;
+    flex-wrap: wrap;
+  }
+
   .admin-image--standalone .admin-image__workspace-head {
     margin: 0 -12px 14px;
     padding: 10px 12px;
@@ -1664,7 +1693,11 @@
 
   .admin-image--standalone .admin-image__history {
     position: fixed;
-    inset: max(62px, calc(54px + env(safe-area-inset-top))) 8px 8px;
+    inset:
+      max(62px, calc(54px + env(safe-area-inset-top)))
+      max(8px, env(safe-area-inset-right))
+      max(8px, env(safe-area-inset-bottom))
+      max(8px, env(safe-area-inset-left));
     z-index: 102;
     width: auto;
     display: flex;
@@ -1677,7 +1710,7 @@
   .admin-image--standalone .admin-image__history-scrim {
     display: block;
     position: fixed;
-    inset: 53px 0 0;
+    inset: calc(53px + env(safe-area-inset-top)) 0 0;
     z-index: 101;
     border: 0;
     background: rgba(7, 12, 22, 0.42);
@@ -1751,6 +1784,52 @@
   .admin-image--standalone .admin-image__aspect-grid {
     grid-template-columns: repeat(3, minmax(0, 1fr));
   }
+
+  .admin-image__section-head {
+    align-items: stretch;
+    flex-direction: column;
+  }
+
+  .admin-image__section-actions {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
+  .admin-image__section-actions .admin-image__small-btn {
+    width: 100%;
+  }
+
+  .admin-image__segmented,
+  .admin-image__count-grid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
+  .admin-image__workspace-head {
+    gap: 8px;
+  }
+
+  .admin-image__workspace-tools {
+    flex-wrap: nowrap;
+  }
+
+  .admin-image__preview-overlay {
+    padding:
+      max(8px, env(safe-area-inset-top))
+      max(8px, env(safe-area-inset-right))
+      max(8px, env(safe-area-inset-bottom))
+      max(8px, env(safe-area-inset-left));
+  }
+
+  .admin-image__preview-stage {
+    width: 100%;
+    height: 100%;
+    max-height: 100%;
+  }
+
+  .admin-image__preview-close {
+    top: max(8px, env(safe-area-inset-top));
+    right: max(8px, env(safe-area-inset-right));
+  }
 }
 
 @media (prefers-reduced-motion: reduce) {
@@ -1767,6 +1846,41 @@
   }
 }
 
+@media (hover: none), (pointer: coarse) {
+  .admin-image__icon-btn,
+  .admin-image__small-btn,
+  .admin-image__pager-btn,
+  .admin-image__history-trigger,
+  .admin-image__reference-empty,
+  .admin-image__reference-item button,
+  .admin-image__select,
+  .admin-image__segmented button,
+  .admin-image__count-grid button,
+  .admin-image__aspect-grid button,
+  .admin-image__workspace-tools button,
+  .admin-image__result-actions button,
+  .admin-image__preview-close {
+    min-height: 44px;
+  }
+
+  .admin-image__icon-btn,
+  .admin-image__pager-btn,
+  .admin-image__reference-item button,
+  .admin-image__preview-close {
+    min-width: 44px;
+  }
+
+  .admin-image__resize-handle {
+    display: none;
+  }
+
+  .admin-image button,
+  .admin-image summary,
+  .admin-image select {
+    touch-action: manipulation;
+  }
+}
+
 @media (min-width: 900px) and (max-height: 720px) and (orientation: landscape) {
   .admin-image {
     min-height: 0;
@@ -1775,14 +1889,107 @@
     --image-controls-width: clamp(320px, 26vw, 380px);
   }
 
+  .admin-image--admin {
+    height: calc(100vh - var(--admin-header-height, 52px) - 20px);
+    height: calc(var(--app-height) - var(--admin-header-height, 52px) - 20px);
+    margin: 0;
+  }
+
   .admin-image__history,
   .admin-image__controls,
   .admin-image__workspace {
-    padding-block: 10px;
+    padding-block: 8px;
+  }
+
+  .admin-image__controls-body {
+    padding: 8px 10px 0;
+  }
+
+  .admin-image__topline {
+    margin-bottom: 6px;
+  }
+
+  .admin-image__prompt-field {
+    margin-bottom: 6px;
+  }
+
+  .admin-image__prompt-field textarea,
+  .admin-image--standalone .admin-image__prompt-field textarea {
+    height: 68px;
+    min-height: 68px;
+  }
+
+  .admin-image__advanced {
+    margin-bottom: 6px;
+  }
+
+  .admin-image__section {
+    margin-bottom: 6px;
+    padding: 8px;
+  }
+
+  .admin-image__workspace-head {
+    min-height: 48px;
+    margin-bottom: 8px;
+  }
+
+  .admin-image__result-grid,
+  .admin-image--standalone .admin-image__result-grid {
+    grid-template-columns: repeat(auto-fill, minmax(220px, 1fr));
+    gap: 10px;
+  }
+
+  .admin-image__history {
+    padding: 10px;
+  }
+
+  .admin-image__history-head,
+  .admin-image__history-actions {
+    margin-bottom: 8px;
+  }
+
+  .admin-image__history-card {
+    min-height: 92px;
   }
 
   .admin-image__lightbox {
-    height: calc(100dvh - 24px);
-    max-height: calc(100dvh - 24px);
+    height: calc(100vh - 24px);
+    max-height: calc(100vh - 24px);
+    height: calc(var(--app-height) - 24px);
+    max-height: calc(var(--app-height) - 24px);
+  }
+}
+
+@media (max-width: 900px) and (max-height: 600px) and (orientation: landscape) {
+  .admin-image,
+  .admin-image--standalone,
+  .admin-image--standalone.admin-image--history-collapsed {
+    padding-bottom: max(16px, calc(env(safe-area-inset-bottom) + 8px));
+  }
+
+  .admin-image__controls,
+  .admin-image--standalone .admin-image__workspace {
+    min-height: min(300px, 72dvh);
+  }
+
+  .admin-image--standalone .admin-image__controls-body {
+    padding-top: 10px;
+  }
+
+  .admin-image--standalone .admin-image__prompt-field textarea {
+    height: 72px;
+    min-height: 72px;
+  }
+
+  .admin-image--standalone .admin-image__empty--wide {
+    min-height: 240px;
+  }
+
+  .admin-image--standalone .admin-image__history {
+    inset:
+      max(8px, env(safe-area-inset-top))
+      max(8px, env(safe-area-inset-right))
+      max(8px, env(safe-area-inset-bottom))
+      max(8px, env(safe-area-inset-left));
   }
 }

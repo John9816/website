@@ -76,6 +76,7 @@ import type {
   ContentHotTopic,
   ContentQualityGate,
 } from '../types'
+import { writeClipboardText } from '../utils/clipboard'
 import '../styles/admin-content-factory.css'
 
 type GenerateValues = {
@@ -1031,7 +1032,7 @@ export default function AdminContentFactory() {
   const copyText = async (text?: string | null) => {
     if (!text) return
     try {
-      await navigator.clipboard.writeText(text)
+      await writeClipboardText(text)
       message.success('已复制')
     } catch (error) {
       message.error('复制失败，请手动选择文本')

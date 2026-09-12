@@ -1,17 +1,11 @@
-import { useLayoutEffect, useMemo, useRef, useState, type CSSProperties } from 'react'
-import { NavLink as RouterNavLink, useLocation } from 'react-router-dom'
+import { Compass, Image, MessageSquare, Music2 } from 'lucide-react'
+import { NavLink } from 'react-router-dom'
 
-interface TopbarNavItem {
-  to: string
-  label: string
-  end?: boolean
-}
-
-const NAV_ITEMS: TopbarNavItem[] = [
-  { to: '/', label: '导航', end: true },
-  { to: '/music', label: '音乐' },
-  { to: '/ai-chat', label: 'AI 对话' },
-  { to: '/ai-image', label: 'AI 生图' },
+const NAV_ITEMS = [
+  { to: '/', label: '导航', Icon: Compass, end: true },
+  { to: '/music', label: '音乐', Icon: Music2 },
+  { to: '/ai-chat', label: 'AI 对话', Icon: MessageSquare },
+  { to: '/ai-image', label: 'AI 生图', Icon: Image },
 ]
 
 const preloaders: Record<string, () => Promise<unknown>> = {
@@ -20,7 +14,6 @@ const preloaders: Record<string, () => Promise<unknown>> = {
   '/ai-chat': () => import('../pages/AiChatPage'),
   '/ai-image': () => import('../pages/AiImagePage'),
 }
-
 const preloadedRoutes = new Set<string>()
 
 function preloadRoute(to: string) {
@@ -28,93 +21,24 @@ function preloadRoute(to: string) {
   const preload = preloaders[to]
   if (!preload) return
   preloadedRoutes.add(to)
-  void preload().catch(() => {
-    preloadedRoutes.delete(to)
-  })
-}
-
-function getActiveIndex(pathname: string, items: TopbarNavItem[]) {
-  return Math.max(
-    items.findIndex((item) => {
-      if (item.end) return pathname === item.to
-      return pathname === item.to || pathname.startsWith(`${item.to}/`)
-    }),
-    0,
-  )
+  void preload().catch(() => preloadedRoutes.delete(to))
 }
 
 export default function TopbarNav() {
-  const location = useLocation()
-  const navRef = useRef<HTMLElement | null>(null)
-  const linkRefs = useRef<Array<HTMLAnchorElement | null>>([])
-  const navItems = NAV_ITEMS
-  const activeIndex = useMemo(() => getActiveIndex(location.pathname, navItems), [location.pathname, navItems])
-  const [indicator, setIndicator] = useState({ left: 6, width: 88, ready: false })
-
-  useLayoutEffect(() => {
-    const nav = navRef.current
-    const link = linkRefs.current[activeIndex]
-    if (!nav || !link) return
-
-    const updateIndicator = () => {
-      const navRect = nav.getBoundingClientRect()
-      const linkRect = link.getBoundingClientRect()
-      setIndicator({
-        left: linkRect.left - navRect.left,
-        width: linkRect.width,
-        ready: true,
-      })
-    }
-
-    updateIndicator()
-
-    if (typeof ResizeObserver === 'undefined') {
-      window.addEventListener('resize', updateIndicator)
-      return () => window.removeEventListener('resize', updateIndicator)
-    }
-
-    const observer = new ResizeObserver(updateIndicator)
-    observer.observe(nav)
-    observer.observe(link)
-    return () => observer.disconnect()
-  }, [activeIndex])
-
   return (
-    <nav
-      ref={navRef}
-      className="topbar-nav"
-      aria-label="主导航"
-      style={{
-        '--topbar-indicator-left': `${indicator.left}px`,
-        '--topbar-indicator-width': `${indicator.width}px`,
-      } as CSSProperties}
-    >
-      <span
-        className={`topbar-nav__indicator${indicator.ready ? ' is-ready' : ''}`}
-        aria-hidden="true"
-      />
-      {navItems.map((item, index) => (
-        <RouterNavLink
-          key={item.to}
-          ref={(element) => {
-            linkRefs.current[index] = element
-          }}
-          to={item.to}
-          end={item.end}
-          onPointerEnter={() => preloadRoute(item.to)}
-          onFocus={() => preloadRoute(item.to)}
-          className={({ isActive, isTransitioning }) =>
-            [
-              'topbar-nav__link',
-              isActive ? 'is-active' : '',
-              isTransitioning ? 'is-transitioning' : '',
-            ]
-              .filter(Boolean)
-              .join(' ')
-          }
+    <nav className="topbar-nav" aria-label="主导航">
+      {NAV_ITEMS.map(({ to, label, Icon, end }) => (
+        <NavLink
+          key={to}
+          to={to}
+          end={end}
+          onPointerEnter={() => preloadRoute(to)}
+          onFocus={() => preloadRoute(to)}
+          className={({ isActive }) => `topbar-nav__link${isActive ? ' is-active' : ''}`}
         >
-          <span className="topbar-nav__label">{item.label}</span>
-        </RouterNavLink>
+          <Icon size={17} aria-hidden="true" />
+          <span className="topbar-nav__label">{label}</span>
+        </NavLink>
       ))}
     </nav>
   )

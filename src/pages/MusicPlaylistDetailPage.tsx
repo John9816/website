@@ -2,11 +2,17 @@ import { useCallback, useEffect, useMemo, useRef, useState, type CSSProperties }
 import { App as AntApp, Button } from 'antd'
 import { Link, useLocation, useNavigate, useParams } from 'react-router-dom'
 import { ChevronLeft, Heart, Play, RefreshCcw } from 'lucide-react'
-import { musicPlaylistDetail } from '../api/music'
+import {
+  deletePlaylistFavorite,
+  getPlaylistFavoriteStatus,
+  musicPlaylistDetail,
+  savePlaylistFavorite,
+} from '../api/music'
 import MusicCover from '../components/MusicCover'
 import MusicShareAction from '../components/MusicShareAction'
 import MusicSongTable from '../components/MusicSongTable'
 import { DEFAULT_PAGE_SIZE } from '../constants/pagination'
+import { useAuth } from '../context/AuthContext'
 import { useMusicPlayer } from '../context/MusicPlayerContext'
 import { useMusicFavorites } from '../hooks/useMusicFavorites'
 import type { MusicSourceId, PlaylistDetailView } from '../types'
@@ -40,6 +46,7 @@ function formatPlayCount(value?: number) {
 
 export default function MusicPlaylistDetailPage() {
   const { message } = AntApp.useApp()
+  const auth = useAuth()
   const location = useLocation()
   const navigate = useNavigate()
   const { source, id } = useParams()
@@ -48,6 +55,8 @@ export default function MusicPlaylistDetailPage() {
   const [pageSize, setPageSize] = useState(DEFAULT_PAGE_SIZE)
   const [loading, setLoading] = useState(false)
   const [detail, setDetail] = useState<PlaylistDetailView | null>(null)
+  const [playlistFavorite, setPlaylistFavorite] = useState(false)
+  const [playlistFavoriteLoading, setPlaylistFavoriteLoading] = useState(false)
   const requestIdRef = useRef(0)
   const autoplayPendingRef = useRef(false)
 
@@ -91,6 +100,50 @@ export default function MusicPlaylistDetailPage() {
     autoplayPendingRef.current = false
     void loadPage(page, { autoplay: wantAutoplay })
   }, [id, loadPage, page, validSource])
+
+  useEffect(() => {
+    if (!auth.token || !validSource || !id) {
+      setPlaylistFavorite(false)
+      return
+    }
+
+    let active = true
+    void getPlaylistFavoriteStatus(validSource, id)
+      .then((status) => {
+        if (active) setPlaylistFavorite(status.favorite)
+      })
+      .catch(() => {
+        if (active) setPlaylistFavorite(false)
+      })
+    return () => {
+      active = false
+    }
+  }, [auth.token, id, validSource])
+
+  const togglePlaylistFavorite = async () => {
+    if (!auth.token) {
+      message.info('登录后可收藏歌单')
+      return
+    }
+    if (!validSource || !id || playlistFavoriteLoading) return
+
+    setPlaylistFavoriteLoading(true)
+    try {
+      if (playlistFavorite) {
+        await deletePlaylistFavorite(validSource, id)
+        setPlaylistFavorite(false)
+        message.success('已取消收藏')
+      } else {
+        await savePlaylistFavorite(validSource, id)
+        setPlaylistFavorite(true)
+        message.success('歌单已收藏')
+      }
+    } catch (error) {
+      message.error((error as Error).message)
+    } finally {
+      setPlaylistFavoriteLoading(false)
+    }
+  }
 
   useEffect(() => {
     const total = detail?.total
@@ -213,6 +266,16 @@ export default function MusicPlaylistDetailPage() {
               className="music-hero-refresh-btn"
             >
               刷新
+            </Button>
+            <Button
+              ghost
+              danger={playlistFavorite}
+              size="large"
+              icon={<Heart size={16} fill={playlistFavorite ? 'currentColor' : 'none'} />}
+              loading={playlistFavoriteLoading}
+              onClick={() => void togglePlaylistFavorite()}
+            >
+              {playlistFavorite ? '已收藏' : '收藏歌单'}
             </Button>
           </div>
         </div>

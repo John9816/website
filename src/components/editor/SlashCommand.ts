@@ -35,98 +35,112 @@ type SlashCommandItemsProps = { query: string; editor: Editor }
 const defaultItems = ({ onInsertImage }: { onInsertImage?: () => void }): SlashCommandItem[] => [
   {
     title: EDITOR_TEXT.slashParagraph,
-    keywords: ['p', 'paragraph', 'text'],
+    description: '普通文本段落',
+    keywords: ['p', 'paragraph', 'text', '正文', '段落', '文本'],
     icon: createElement(FontSizeOutlined),
     command: ({ editor, range }) =>
       editor.chain().focus().deleteRange(range).setParagraph().run(),
   },
   {
     title: EDITOR_TEXT.slashHeading1,
-    keywords: ['h1', 'heading1', 'title'],
+    description: '页面主标题',
+    keywords: ['h1', 'heading1', 'title', '一级', '标题'],
     icon: createElement(FontSizeOutlined),
     command: ({ editor, range }) =>
       editor.chain().focus().deleteRange(range).toggleHeading({ level: 1 }).run(),
   },
   {
     title: EDITOR_TEXT.slashHeading2,
-    keywords: ['h2', 'heading2'],
+    description: '章节标题',
+    keywords: ['h2', 'heading2', '二级', '标题'],
     icon: createElement(FontSizeOutlined),
     command: ({ editor, range }) =>
       editor.chain().focus().deleteRange(range).toggleHeading({ level: 2 }).run(),
   },
   {
     title: EDITOR_TEXT.slashHeading3,
-    keywords: ['h3', 'heading3'],
+    description: '小节标题',
+    keywords: ['h3', 'heading3', '三级', '标题'],
     icon: createElement(FontSizeOutlined),
     command: ({ editor, range }) =>
       editor.chain().focus().deleteRange(range).toggleHeading({ level: 3 }).run(),
   },
   {
     title: EDITOR_TEXT.slashHeading4,
-    keywords: ['h4', 'heading4'],
+    description: '四级标题',
+    keywords: ['h4', 'heading4', '四级', '标题'],
     icon: createElement(FontSizeOutlined),
     command: ({ editor, range }) =>
       editor.chain().focus().deleteRange(range).toggleHeading({ level: 4 }).run(),
   },
   {
     title: EDITOR_TEXT.slashHeading5,
-    keywords: ['h5', 'heading5'],
+    description: '五级标题',
+    keywords: ['h5', 'heading5', '五级', '标题'],
     icon: createElement(FontSizeOutlined),
     command: ({ editor, range }) =>
       editor.chain().focus().deleteRange(range).toggleHeading({ level: 5 }).run(),
   },
   {
     title: EDITOR_TEXT.slashHeading6,
-    keywords: ['h6', 'heading6'],
+    description: '六级标题',
+    keywords: ['h6', 'heading6', '六级', '标题'],
     icon: createElement(FontSizeOutlined),
     command: ({ editor, range }) =>
       editor.chain().focus().deleteRange(range).toggleHeading({ level: 6 }).run(),
   },
   {
     title: EDITOR_TEXT.slashBulletList,
-    keywords: ['ul', 'unordered', 'list', 'bullet'],
+    description: '创建项目符号列表',
+    keywords: ['ul', 'unordered', 'list', 'bullet', '无序', '列表'],
     icon: createElement(UnorderedListOutlined),
     command: ({ editor, range }) =>
       editor.chain().focus().deleteRange(range).toggleBulletList().run(),
   },
   {
     title: EDITOR_TEXT.slashOrderedList,
-    keywords: ['ol', 'ordered', 'list', 'number'],
+    description: '创建编号列表',
+    keywords: ['ol', 'ordered', 'list', 'number', '有序', '编号', '列表'],
     icon: createElement(OrderedListOutlined),
     command: ({ editor, range }) =>
       editor.chain().focus().deleteRange(range).toggleOrderedList().run(),
   },
   {
     title: EDITOR_TEXT.slashTaskList,
-    keywords: ['task', 'todo', 'checklist'],
+    description: '创建可勾选任务',
+    keywords: ['task', 'todo', 'checklist', '任务', '待办', '清单'],
     icon: createElement(CheckSquareOutlined),
     command: ({ editor, range }) =>
       editor.chain().focus().deleteRange(range).toggleTaskList().run(),
   },
   {
     title: EDITOR_TEXT.slashQuote,
-    keywords: ['quote', 'blockquote'],
+    description: '突出显示引用内容',
+    keywords: ['quote', 'blockquote', '引用'],
     icon: createElement(LineOutlined),
     command: ({ editor, range }) =>
       editor.chain().focus().deleteRange(range).toggleBlockquote().run(),
   },
   {
     title: EDITOR_TEXT.slashCodeBlock,
-    keywords: ['code', 'codeblock'],
+    description: '插入带语法高亮的代码',
+    keywords: ['code', 'codeblock', '代码', '代码块'],
     icon: createElement(CodeOutlined),
     command: ({ editor, range }) =>
       editor.chain().focus().deleteRange(range).toggleCodeBlock().run(),
   },
   {
     title: EDITOR_TEXT.slashDivider,
-    keywords: ['hr', 'divider', 'rule'],
+    description: '分隔上下文内容',
+    keywords: ['hr', 'divider', 'rule', '分隔线', '分割线'],
     icon: createElement(LineOutlined),
     command: ({ editor, range }) =>
       editor.chain().focus().deleteRange(range).setHorizontalRule().run(),
   },
   {
     title: EDITOR_TEXT.slashTable,
-    keywords: ['table'],
+    description: '插入 3 x 3 表格',
+    keywords: ['table', '表格'],
     icon: createElement(TableOutlined),
     command: ({ editor, range }) =>
       editor
@@ -138,7 +152,8 @@ const defaultItems = ({ onInsertImage }: { onInsertImage?: () => void }): SlashC
   },
   {
     title: EDITOR_TEXT.slashImage,
-    keywords: ['image', 'img', 'picture'],
+    description: '通过链接插入图片',
+    keywords: ['image', 'img', 'picture', '图片', '图像'],
     icon: createElement(PictureOutlined),
     command: ({ editor, range }) => {
       editor.chain().focus().deleteRange(range).run()

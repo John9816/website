@@ -2,7 +2,7 @@ import { createContext, useContext, useEffect, useState, type ReactNode } from '
 
 export type ThemeMode = 'image' | 'light' | 'dark'
 
-export const THEME_MODES: ThemeMode[] = ['image', 'light', 'dark']
+export const THEME_MODES: ThemeMode[] = ['light', 'dark', 'image']
 
 interface ThemeState {
   mode: ThemeMode
@@ -12,21 +12,19 @@ interface ThemeState {
 
 const Ctx = createContext<ThemeState | null>(null)
 const KEY = 'nav.theme'
-const DEFAULT_VERSION_KEY = 'nav.theme.defaultVersion'
-const DEFAULT_VERSION = '2026-07-bg-default'
-const DEFAULT_MODE: ThemeMode = 'image'
+const DEFAULT_MODE: ThemeMode = 'light'
 
 function isThemeMode(value: string | null): value is ThemeMode {
   return value === 'image' || value === 'light' || value === 'dark'
 }
 
 function getInitial(): ThemeMode {
-  if (localStorage.getItem(DEFAULT_VERSION_KEY) !== DEFAULT_VERSION) {
+  try {
+    const saved = localStorage.getItem(KEY)
+    return isThemeMode(saved) ? saved : DEFAULT_MODE
+  } catch {
     return DEFAULT_MODE
   }
-  const saved = localStorage.getItem(KEY)
-  if (isThemeMode(saved)) return saved
-  return DEFAULT_MODE
 }
 
 export function ThemeProvider({ children }: { children: ReactNode }) {
@@ -34,8 +32,11 @@ export function ThemeProvider({ children }: { children: ReactNode }) {
 
   useEffect(() => {
     document.documentElement.setAttribute('data-theme', mode)
-    localStorage.setItem(KEY, mode)
-    localStorage.setItem(DEFAULT_VERSION_KEY, DEFAULT_VERSION)
+    try {
+      localStorage.setItem(KEY, mode)
+    } catch {
+      // The selected theme still works when browser storage is unavailable.
+    }
   }, [mode])
 
   const value: ThemeState = {

@@ -21,7 +21,13 @@ interface AuthState {
   refreshCredits: () => Promise<UserCreditView | null>
   updateProfile: (profile: CurrentUserView) => void
   checkIn: () => Promise<UserCreditView>
-  login: (token: string, username: string, tokenType?: string, profile?: CurrentUserView) => void
+  login: (
+    token: string,
+    username: string,
+    tokenType?: string,
+    profile?: CurrentUserView,
+    refreshToken?: string | null,
+  ) => void
   logout: () => void
 }
 
@@ -113,12 +119,17 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       setCredits(null)
       return null
     }
+    const version = authVersionRef.current
     try {
       const nextCredits = await getUserCredits()
+      if (authVersionRef.current !== version) return null
       setCredits(nextCredits)
       return nextCredits
     } catch (error) {
+      // Keep the app usable when talking to an older backend that predates
+      // the optional credits feature.
       if (error instanceof ApiError && (error.code === 404 || error.code === 405)) {
+        if (authVersionRef.current === version) setCredits(null)
         return null
       }
       throw error
@@ -126,8 +137,9 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   }
 
   const checkIn = async () => {
+    const version = authVersionRef.current
     const nextCredits = await checkInToday()
-    setCredits(nextCredits)
+    if (authVersionRef.current === version) setCredits(nextCredits)
     return nextCredits
   }
 
@@ -173,12 +185,16 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     refreshCredits,
     updateProfile: applyProfile,
     checkIn,
-    login(t, u, tokenType, profile) {
+    login(t, u, tokenType, profile, refreshToken) {
       authVersionRef.current += 1
       setUser(null)
       setCredits(null)
       setProfileLoading(true)
-      setAuthSession(t, tokenType, profile?.username ?? u, { emit: false })
+      setAuthSession(t, tokenType, profile?.username ?? u, {
+        emit: false,
+        refreshToken: refreshToken ?? null,
+        newSession: true,
+      })
       setTok(t)
       setUsername(profile?.username ?? u)
       if (profile) {

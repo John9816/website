@@ -8,11 +8,10 @@ import {
   type PointerEvent as ReactPointerEvent,
   type RefObject,
 } from 'react'
-import { App as AntApp } from 'antd'
+import { App as AntApp, Select } from 'antd'
 import {
   CheckSquare,
   Clipboard,
-  Coins,
   Download,
   ImagePlus,
   LoaderCircle,
@@ -35,6 +34,8 @@ import {
   adminGetImageTask,
   adminListImageTasks,
   adminListImageHistory,
+  adminListImageModels,
+  type ImageModelOption,
   adminRetryImageHistory,
   adminToggleImageHistoryShare,
 } from '../api/admin'
@@ -183,6 +184,11 @@ export default function ImageStudio({ layout = 'admin' }: ImageStudioProps) {
   const [height, setHeight] = useState('1024')
   const [selectedAspect, setSelectedAspect] = useState('1:1')
   const [imageCount, setImageCount] = useState(1)
+  const [model, setModel] = useState('')
+  const [models, setModels] = useState<ImageModelOption[]>([])
+  const [modelsLoading, setModelsLoading] = useState(false)
+  const [modelsLoaded, setModelsLoaded] = useState(false)
+  const modelsRequest = useRef<AbortController | null>(null)
   const [loading, setLoading] = useState(false)
   const [elapsed, setElapsed] = useState(0)
   const [pendingImageCount, setPendingImageCount] = useState(0)
@@ -225,6 +231,23 @@ export default function ImageStudio({ layout = 'admin' }: ImageStudioProps) {
   const [historyReferenceLoadingId, setHistoryReferenceLoadingId] = useState<number | null>(null)
   const [previewUrl, setPreviewUrl] = useState<string | null>(null)
 
+  useEffect(() => () => modelsRequest.current?.abort(), [])
+
+  const loadModels = async () => {
+    if (modelsLoading || modelsLoaded) return
+    const controller = new AbortController()
+    modelsRequest.current = controller
+    setModelsLoading(true)
+    try {
+      setModels(await adminListImageModels(controller.signal))
+      setModelsLoaded(true)
+    } catch (error) {
+      if (!controller.signal.aborted) message.error((error as Error).message)
+    } finally {
+      if (!controller.signal.aborted) setModelsLoading(false)
+    }
+  }
+
   const normalizedSize = width.trim() && height.trim() ? `${width.trim()}x${height.trim()}` : ''
   const layoutStyle = {
     '--image-history-width': `${layoutWidths.history}px`,
@@ -238,10 +261,6 @@ export default function ImageStudio({ layout = 'admin' }: ImageStudioProps) {
     [result, selectedGroup],
   )
   const visibleImageCount = displayImages.length
-  const creditCostPerImage = auth.credits?.imageCreditCost ?? 1
-  const creditBalance = auth.credits?.credits
-  const estimatedCreditCost = Math.max(1, imageCount) * creditCostPerImage
-  const hasEnoughCredits = creditBalance === undefined || creditBalance >= estimatedCreditCost
   const isAwaitingImages = (loading || (!!task && !isTerminalTask(task.status))) && !result
   const pendingSlots = isAwaitingImages
     ? Array.from({ length: Math.max(pendingImageCount, imageCount, 1) }, (_, index) => index + 1)
@@ -523,12 +542,6 @@ export default function ImageStudio({ layout = 'admin' }: ImageStudioProps) {
       return
     }
 
-    if (!hasEnoughCredits) {
-      message.warning(`积分不足，本次需要 ${estimatedCreditCost} 积分，当前剩余 ${creditBalance ?? 0} 积分`)
-      void auth.refreshCredits().catch(() => undefined)
-      return
-    }
-
     clearTaskPolling()
     abortRef.current?.abort()
     const ctrl = new AbortController()
@@ -544,6 +557,7 @@ export default function ImageStudio({ layout = 'admin' }: ImageStudioProps) {
     try {
       const payload = {
         prompt: text,
+        model: model || undefined,
         size: normalizedSize || undefined,
         quality: quality === 'auto' ? undefined : quality,
         n: imageCount,
@@ -1033,6 +1047,24 @@ export default function ImageStudio({ layout = 'admin' }: ImageStudioProps) {
           </summary>
           <div className="admin-image__advanced-body">
         <section className="admin-image__section">
+          <h3 id="image-model-label">模型</h3>
+          <Select
+            aria-labelledby="image-model-label"
+            style={{ width: '100%' }}
+            value={model}
+            disabled={loading}
+            loading={modelsLoading}
+            showSearch
+            optionFilterProp="label"
+            onChange={setModel}
+            onOpenChange={(open) => { if (open) void loadModels() }}
+            options={[
+              { value: '', label: '默认模型' },
+              ...models.map((item) => ({ value: item.id, label: item.id })),
+            ]}
+          />
+        </section>
+        <section className="admin-image__section">
           <h3>质量</h3>
           <div className="admin-image__segmented">
             {QUALITY_OPTIONS.map((option) => (
@@ -1095,7 +1127,7 @@ export default function ImageStudio({ layout = 'admin' }: ImageStudioProps) {
         <section className="admin-image__section">
           <h3>生成张数</h3>
           <div className="admin-image__count-grid">
-            {Array.from({ length: 10 }).map((_, index) => (
+            {Array.from({ length: 3 }).map((_, index) => (
               <button
                 key={index + 1}
                 type="button"
@@ -1110,21 +1142,6 @@ export default function ImageStudio({ layout = 'admin' }: ImageStudioProps) {
         </section>
           </div>
         </details>
-
-        <section className="admin-image__credit-panel">
-          <div>
-            <span>积分余额</span>
-            <strong>{creditBalance ?? '--'}</strong>
-          </div>
-          <div>
-            <span>本次预计消耗</span>
-            <strong>{estimatedCreditCost}</strong>
-          </div>
-          <div>
-            <Coins size={14} />
-            <span>{creditCostPerImage} 积分/张</span>
-          </div>
-        </section>
 
         </div>
 
@@ -1144,7 +1161,7 @@ export default function ImageStudio({ layout = 'admin' }: ImageStudioProps) {
               type="button"
               className="admin-image__generate-btn"
               onClick={() => void handleSubmit()}
-              disabled={!prompt.trim() || !hasEnoughCredits}
+              disabled={!prompt.trim()}
             >
               <SendHorizontal size={16} />
               开始生成

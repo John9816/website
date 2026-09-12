@@ -1,4 +1,4 @@
-import type { ApiEnvelope } from '../types'
+import type { ApiEnvelope, LoginResponse } from '../types'
 
 export const BASE = ((import.meta.env.VITE_API_BASE as string | undefined) ?? '')
   .trim()
@@ -14,6 +14,22 @@ type StoredAuthSession = {
   token: string
   tokenType: string
   username: string | null
+  refreshToken: string | null
+  sessionId: string
+}
+
+type RefreshState = {
+  refreshToken: string
+  promise: Promise<LoginResponse>
+}
+
+let refreshState: RefreshState | null = null
+
+function createSessionId() {
+  if (typeof crypto !== 'undefined' && typeof crypto.randomUUID === 'function') {
+    return crypto.randomUUID()
+  }
+  return `${Date.now()}-${Math.random().toString(36).slice(2)}`
 }
 
 function readAuthSession(): StoredAuthSession | null {
@@ -22,11 +38,19 @@ function readAuthSession(): StoredAuthSession | null {
     if (raw) {
       const value = JSON.parse(raw) as Partial<StoredAuthSession>
       if (typeof value.token === 'string' && value.token) {
-        return {
+        const session: StoredAuthSession = {
           token: value.token,
           tokenType: typeof value.tokenType === 'string' && value.tokenType ? value.tokenType : 'Bearer',
           username: typeof value.username === 'string' && value.username ? value.username : null,
+          refreshToken:
+            typeof value.refreshToken === 'string' && value.refreshToken ? value.refreshToken : null,
+          sessionId:
+            typeof value.sessionId === 'string' && value.sessionId ? value.sessionId : createSessionId(),
         }
+        if (session.sessionId !== value.sessionId) {
+          localStorage.setItem(AUTH_SESSION_KEY, JSON.stringify(session))
+        }
+        return session
       }
     }
   } catch {
@@ -39,6 +63,8 @@ function readAuthSession(): StoredAuthSession | null {
     token: legacyToken,
     tokenType: localStorage.getItem(TOKEN_TYPE_KEY) || 'Bearer',
     username: localStorage.getItem(USER_KEY),
+    refreshToken: null,
+    sessionId: createSessionId(),
   }
   localStorage.setItem(AUTH_SESSION_KEY, JSON.stringify(migrated))
   return migrated
@@ -56,13 +82,29 @@ export function getStoredUsername(): string | null {
   return readAuthSession()?.username ?? null
 }
 
+export function getRefreshToken(): string | null {
+  return readAuthSession()?.refreshToken ?? null
+}
+
+function getAuthSessionId(): string | null {
+  return readAuthSession()?.sessionId ?? null
+}
+
 export function setAuthSession(
   token: string,
   tokenType = 'Bearer',
   username: string | null = null,
-  options: { emit?: boolean } = {},
+  options: { emit?: boolean; refreshToken?: string | null; newSession?: boolean } = {},
 ) {
-  const session: StoredAuthSession = { token, tokenType, username }
+  const previous = readAuthSession()
+  const session: StoredAuthSession = {
+    token,
+    tokenType,
+    username,
+    refreshToken:
+      options.refreshToken !== undefined ? options.refreshToken : previous?.refreshToken ?? null,
+    sessionId: options.newSession ? createSessionId() : previous?.sessionId ?? createSessionId(),
+  }
   localStorage.setItem(AUTH_SESSION_KEY, JSON.stringify(session))
   localStorage.removeItem(TOKEN_KEY)
   localStorage.removeItem(TOKEN_TYPE_KEY)
@@ -78,6 +120,8 @@ export function setToken(token: string | null, tokenType = 'Bearer', options: { 
       token,
       tokenType,
       username: readAuthSession()?.username ?? null,
+      refreshToken: readAuthSession()?.refreshToken ?? null,
+      sessionId: readAuthSession()?.sessionId ?? createSessionId(),
     }
     localStorage.setItem(AUTH_SESSION_KEY, JSON.stringify(session))
   } else {
@@ -130,10 +174,55 @@ type Options = {
   authToken?: string
   authTokenType?: string
   signal?: AbortSignal
+  retryOnUnauthorized?: boolean
+}
+
+async function refreshAccessToken(accessToken: string, refreshToken: string): Promise<LoginResponse> {
+  const response = await request<LoginResponse>('/api/auth/refresh', {
+    method: 'POST',
+    body: { refresh_token: refreshToken },
+    retryOnUnauthorized: false,
+  })
+  if (!response?.token) {
+    throw new ApiError(401, '登录已过期，请重新登录')
+  }
+
+  if (getToken() === accessToken && getRefreshToken() === refreshToken) {
+    setAuthSession(
+      response.token,
+      response.tokenType || 'Bearer',
+      response.username || getStoredUsername(),
+      { refreshToken: response.refreshToken || refreshToken },
+    )
+  }
+  return response
+}
+
+function getOrCreateRefresh(accessToken: string, refreshToken: string): Promise<LoginResponse> {
+  if (refreshState?.refreshToken === refreshToken) {
+    return refreshState.promise
+  }
+
+  const promise = refreshAccessToken(accessToken, refreshToken).finally(() => {
+    if (refreshState?.promise === promise) refreshState = null
+  })
+  refreshState = { refreshToken, promise }
+  return promise
+}
+
+function clearCurrentSession(accessToken: string) {
+  if (getToken() === accessToken) setToken(null)
 }
 
 export async function request<T>(path: string, opts: Options = {}): Promise<T> {
-  const { method = 'GET', body, auth = false, query, signal } = opts
+  const {
+    method = 'GET',
+    body,
+    auth = false,
+    query,
+    signal,
+    retryOnUnauthorized = true,
+  } = opts
   const url = new URL(BASE + path, window.location.origin)
   const isFormData = typeof FormData !== 'undefined' && body instanceof FormData
   if (query) {
@@ -153,9 +242,11 @@ export async function request<T>(path: string, opts: Options = {}): Promise<T> {
   const headers: Record<string, string> = {}
   if (body !== undefined && !isFormData) headers['Content-Type'] = 'application/json'
   let requestToken: string | null = null
+  let requestSessionId: string | null = null
   if (auth) {
     const t = opts.authToken ?? getToken()
     requestToken = t
+    if (t && t === getToken()) requestSessionId = getAuthSessionId()
     const tokenType = opts.authTokenType ?? getTokenType()
     if (t) headers['Authorization'] = `${tokenType} ${t}`
   }
@@ -175,18 +266,68 @@ export async function request<T>(path: string, opts: Options = {}): Promise<T> {
     throw new ApiError(-1, `网络错误: ${(e as Error).message}`)
   }
 
-  if (res.status === 401) {
-    if (!auth || !requestToken || requestToken === getToken()) {
-      setToken(null)
-    }
-    throw new ApiError(401, '登录已过期，请重新登录')
-  }
-
   let json: ApiEnvelope<T>
   try {
     json = (await res.json()) as ApiEnvelope<T>
   } catch {
     throw new ApiError(res.status, `HTTP ${res.status}`)
+  }
+
+  if (res.status === 401) {
+    if (!auth || !requestToken) {
+      throw new ApiError(401, normalizeApiErrorMessage(json.message))
+    }
+    const sentToken = requestToken
+    const isCurrentToken = sentToken === getToken()
+
+    if (!retryOnUnauthorized) {
+      if (isCurrentToken) clearCurrentSession(sentToken)
+      throw new ApiError(401, '登录已过期，请重新登录')
+    }
+
+    if (!isCurrentToken) {
+      const nextToken = getToken()
+      if (nextToken && requestSessionId && requestSessionId === getAuthSessionId()) {
+        return request(path, {
+          ...opts,
+          authToken: nextToken,
+          authTokenType: getTokenType(),
+          retryOnUnauthorized: false,
+        })
+      }
+      throw new ApiError(401, normalizeApiErrorMessage(json.message))
+    }
+
+    const refreshToken = getRefreshToken()
+    if (!refreshToken) {
+      clearCurrentSession(sentToken)
+      throw new ApiError(401, '登录已过期，请重新登录')
+    }
+
+    try {
+      const refreshed = await getOrCreateRefresh(sentToken, refreshToken)
+      const nextToken = getToken()
+      if (
+        !nextToken ||
+        nextToken !== refreshed.token ||
+        !requestSessionId ||
+        requestSessionId !== getAuthSessionId()
+      ) {
+        throw new ApiError(401, '登录状态已变更，请重试')
+      }
+      return request(path, {
+        ...opts,
+        authToken: nextToken,
+        authTokenType: getTokenType(),
+        retryOnUnauthorized: false,
+      })
+    } catch (error) {
+      clearCurrentSession(sentToken)
+      if (error instanceof ApiError && error.code === 401) {
+        throw new ApiError(401, '登录已过期，请重新登录')
+      }
+      throw error
+    }
   }
 
   if (json.code !== 0) {

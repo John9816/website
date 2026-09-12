@@ -25,7 +25,7 @@ export function canAccessAdminPermission(
 }
 
 export function getAdminPermissionForPath(pathname: string): AdminPermission {
-  if (pathname.startsWith('/admin/configs') || pathname.startsWith('/admin/users')) {
+  if (pathname.startsWith('/admin/configs') || pathname.startsWith('/admin/users') || pathname.startsWith('/admin/redeem-codes')) {
     return 'systemConfig'
   }
   if (pathname.startsWith('/admin/content')) {

@@ -3,23 +3,14 @@ import { Link, useLocation, useNavigate } from 'react-router-dom'
 import {
   App as AntApp,
   Button,
-  Card,
   Form,
   Input,
-  Typography,
-  theme as antdTheme,
 } from 'antd'
-import { LockOutlined, UserOutlined } from '@ant-design/icons'
+import { ArrowLeftOutlined, ArrowRightOutlined, LockOutlined, UserOutlined } from '@ant-design/icons'
 import { getCurrentUser, login as apiLogin } from '../api/auth'
 import ThemeToggle from '../components/ThemeToggle'
 import { useAuth } from '../context/AuthContext'
-import { useTheme, type ThemeMode } from '../context/ThemeContext'
-
-function authBackground(mode: ThemeMode) {
-  if (mode === 'light') return '#ffffff'
-  if (mode === 'dark') return '#000000'
-  return `linear-gradient(180deg, rgba(9,23,45,0.62), rgba(10,18,33,0.38)), url('/bank-nav/static/img/background-20260710.webp') center / cover fixed no-repeat`
-}
+import '../styles/auth.css'
 
 export default function LoginPage() {
   const [loading, setLoading] = useState(false)
@@ -27,19 +18,17 @@ export default function LoginPage() {
   const loc = useLocation()
   const auth = useAuth()
   const { message } = AntApp.useApp()
-  const { mode } = useTheme()
-  const { token } = antdTheme.useToken()
 
   const isAdminEntry = loc.pathname.startsWith('/admin')
   const redirectTo =
     (loc.state as { from?: string } | null)?.from ?? (isAdminEntry ? '/admin' : '/')
 
-  const onFinish = async (values: { username: string; password: string }) => {
+  const onFinish = async (values: { identifier: string; password: string }) => {
     setLoading(true)
     try {
-      const data = await apiLogin(values.username, values.password)
+      const data = await apiLogin(values.identifier, values.password)
       const profile = await getCurrentUser(data.token, data.tokenType)
-      auth.login(data.token, data.username, data.tokenType, profile)
+      auth.login(data.token, data.username, data.tokenType, profile, data.refreshToken)
       message.success('登录成功')
       nav(redirectTo, { replace: true })
     } catch (error) {
@@ -50,61 +39,44 @@ export default function LoginPage() {
   }
 
   return (
-    <div
-      className="auth-page"
-      style={{
-        minHeight: '100dvh',
-        display: 'flex',
-        alignItems: 'center',
-        justifyContent: 'center',
-        background: authBackground(mode),
-        padding: 20,
-        position: 'relative',
-      }}
-    >
-      <div className="auth-page__theme">
+    <div className="account-page">
+      <header className="account-page__header">
+        <Link to="/" className="account-page__home">
+          <ArrowLeftOutlined />
+          <span>返回首页</span>
+        </Link>
         <ThemeToggle bare />
-      </div>
+      </header>
 
-      <Card
-        className="auth-page__card"
-        style={{
-          width: 'min(100%, 380px)',
-          background: token.colorBgContainer,
-          borderRadius: 8,
-          border: '1px solid rgba(255,255,255,0.12)',
-          backdropFilter: 'blur(16px)',
-          boxShadow: token.boxShadow,
-        }}
-        bordered={false}
-      >
-        <Typography.Title level={3} style={{ textAlign: 'center', marginBottom: 8 }}>
-          {isAdminEntry ? '管理后台登录' : '账号登录'}
-        </Typography.Title>
-        <Typography.Paragraph
-          type="secondary"
-          style={{ textAlign: 'center', marginBottom: 28 }}
-        >
-          {isAdminEntry ? '登录后进入你的管理后台' : '登录后可继续使用你的账号'}
-        </Typography.Paragraph>
+      <main className="account-page__main">
+        <section className="account-page__form" aria-labelledby="account-title">
+          <div className="account-page__intro">
+            <Link to="/" className="account-page__brand">个人导航<span> / 账号</span></Link>
+            <h1 id="account-title">{isAdminEntry ? '管理后台登录' : '欢迎回来'}</h1>
+            <p>登录你的账号</p>
+          </div>
 
         <Form
+          name="account-login"
           size="large"
           layout="vertical"
+          requiredMark={false}
           onFinish={onFinish}
         >
           <Form.Item
-            name="username"
-            rules={[{ required: true, message: '请输入用户名' }]}
+            label="用户名或邮箱"
+            name="identifier"
+            rules={[{ required: true, message: '请输入用户名或邮箱' }]}
           >
             <Input
               prefix={<UserOutlined />}
-              placeholder="用户名"
+              placeholder="输入用户名或邮箱"
               autoComplete="username"
             />
           </Form.Item>
 
           <Form.Item
+            label="密码"
             name="password"
             rules={[{ required: true, message: '请输入密码' }]}
           >
@@ -115,19 +87,25 @@ export default function LoginPage() {
             />
           </Form.Item>
 
-          <Form.Item style={{ marginBottom: 12 }}>
+          {!isAdminEntry && (
+            <div className="account-page__forgot">
+              <Link to="/forgot-password">忘记密码？</Link>
+            </div>
+          )}
+
+          <Form.Item className="account-page__submit">
             <Button type="primary" htmlType="submit" loading={loading} block>
-              登录
+              登录<ArrowRightOutlined />
             </Button>
           </Form.Item>
         </Form>
 
         {!isAdminEntry && (
-          <Typography.Paragraph style={{ textAlign: 'center', marginBottom: 0 }}>
-            没有账号？<Link to="/register">立即注册</Link>
-          </Typography.Paragraph>
+          <p className="account-page__alternate">还没有账号？<Link to="/register">创建账号</Link></p>
         )}
-      </Card>
+        </section>
+      </main>
+      <footer className="account-page__footer"><Link to="/">751152.xyz</Link></footer>
     </div>
   )
 }

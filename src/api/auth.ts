@@ -1,10 +1,25 @@
-import { ApiError, request, setToken } from './client'
-import type { CurrentUserView, LoginResponse, UserCreditView } from '../types'
+import { request, setToken } from './client'
+import type {
+  CurrentUserView,
+  EmailVerificationCodeView,
+  LoginResponse,
+  UserCreditView,
+} from '../types'
 
-export async function login(username: string, password: string) {
+export async function login(identifier: string, password: string) {
+  const normalizedIdentifier = identifier.trim()
   return request<LoginResponse>('/api/auth/login', {
     method: 'POST',
-    body: { username, password },
+    body: normalizedIdentifier.includes('@')
+      ? { email: normalizedIdentifier, password }
+      : { username: normalizedIdentifier, password },
+  })
+}
+
+export function refreshSession(refreshToken: string) {
+  return request<LoginResponse>('/api/auth/refresh', {
+    method: 'POST',
+    body: { refresh_token: refreshToken },
   })
 }
 
@@ -12,23 +27,38 @@ export function logout() {
   setToken(null)
 }
 
-export async function register(username: string, password: string, email: string) {
-  const body = { username, password, email }
+export function sendRegistrationEmailCode(email: string) {
+  return request<EmailVerificationCodeView>('/api/auth/email-code', {
+    method: 'POST',
+    body: { email },
+  })
+}
 
-  try {
-    return await request<LoginResponse>('/api/auth/register', {
-      method: 'POST',
-      body,
-    })
-  } catch (error) {
-    if (error instanceof ApiError && (error.code === 404 || error.code === 405)) {
-      return request<LoginResponse>('/api/auth/signup', {
-        method: 'POST',
-        body,
-      })
-    }
-    throw error
-  }
+export function sendPasswordResetEmailCode(email: string) {
+  return request<EmailVerificationCodeView>('/api/auth/password-reset/email-code', {
+    method: 'POST',
+    body: { email },
+  })
+}
+
+export function resetPassword(email: string, verificationCode: string, newPassword: string) {
+  return request<void>('/api/auth/password-reset/confirm', {
+    method: 'POST',
+    body: { email, verificationCode, newPassword },
+  })
+}
+
+export async function register(
+  username: string,
+  password: string,
+  email: string,
+  verificationCode: string,
+) {
+  const body = { username, password, email, verificationCode }
+  return request<LoginResponse>('/api/auth/register', {
+    method: 'POST',
+    body,
+  })
 }
 
 export function getCurrentUser(token?: string, tokenType?: string) {

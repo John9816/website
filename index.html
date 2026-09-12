@@ -3,7 +3,10 @@
   <head>
     <meta charset="UTF-8" />
     <link rel="icon" type="image/svg+xml" href="/favicon.svg" />
-    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <meta
+      name="viewport"
+      content="width=device-width, initial-scale=1, viewport-fit=cover, interactive-widget=resizes-content"
+    />
     <meta name="referrer" content="no-referrer" />
     <title>个人导航 - 751152.xyz</title>
     <meta name="description" content="个人导航站，聚合常用网站入口，并提供音乐、知识库分享等公开内容。" />
@@ -32,8 +35,8 @@
         justify-content: center;
         box-sizing: border-box;
         padding: 24px;
-        color: #f4f7fb;
-        background: #102f52;
+        color: var(--text, #242d29);
+        background: var(--bg, #f5f7f6);
         font-family: Arial, "Microsoft YaHei", sans-serif;
         text-align: center;
       }
@@ -49,7 +52,7 @@
         height: 10px;
         margin-bottom: 14px;
         border-radius: 50%;
-        background: #41d1ff;
+        background: #167d70;
         animation: boot-pulse 1.2s ease-in-out infinite;
       }
 
@@ -64,7 +67,7 @@
       }
 
       .boot-fallback span {
-        color: rgba(244, 247, 251, 0.72);
+        color: var(--text-dim, #718079);
         font-size: 13px;
         line-height: 1.7;
       }
@@ -85,7 +88,7 @@
         <div class="boot-fallback__panel">
           <i class="boot-fallback__dot" aria-hidden="true"></i>
           <strong>正在加载导航</strong>
-          <span id="boot-status-copy">首次打开可能需要一点时间，已自动适配车机与旧版浏览器。</span>
+          <span id="boot-status-copy">正在准备你的工作台</span>
         </div>
       </div>
     </div>

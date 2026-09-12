@@ -1,6 +1,7 @@
 import React from 'react'
 import { App as AntApp, Button, Card, Input, Modal, Popconfirm, Space, Typography } from 'antd'
 import { CopyOutlined, LinkOutlined, SyncOutlined } from '@ant-design/icons'
+import { writeClipboardText } from '../../utils/clipboard'
 import { useKbContext } from './context'
 
 function formatDateTime(value?: string | null) {
@@ -12,7 +13,7 @@ function formatDateTime(value?: string | null) {
 
 async function copyText(text: string, success: (msg: string) => void, error: (msg: string) => void) {
   try {
-    await navigator.clipboard.writeText(text)
+    await writeClipboardText(text)
     success('已复制到剪贴板')
   } catch {
     error('复制失败，请检查浏览器权限')

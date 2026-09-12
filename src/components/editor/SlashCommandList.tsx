@@ -35,12 +35,15 @@ export const SlashCommandList = forwardRef<SlashCommandListHandle, SlashCommandL
     const handlers = useMemo(
       () => ({
         upHandler: () => {
+          if (!items.length) return
           setActiveIndex((prev) => (prev - 1 + items.length) % items.length)
         },
         downHandler: () => {
+          if (!items.length) return
           setActiveIndex((prev) => (prev + 1) % items.length)
         },
         enterHandler: () => {
+          if (!items.length) return
           selectItem(activeIndex)
         },
       }),

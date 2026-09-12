@@ -1,23 +1,44 @@
-import { useCallback, useEffect, useMemo, useState } from 'react'
-import { LogIn } from 'lucide-react'
-import { Link as RouterLink } from 'react-router-dom'
+import { useCallback, useDeferredValue, useEffect, useMemo, useRef, useState } from 'react'
+import { Modal, Tooltip } from 'antd'
+import {
+  AlertCircle,
+  ArrowDownLeft,
+  ArrowUpRight,
+  BookOpen,
+  CircleX,
+  Compass,
+  Heart,
+  Image,
+  LayoutGrid,
+  List,
+  MessageCircle,
+  MessageSquare,
+  Music2,
+  RefreshCw,
+  Search,
+} from 'lucide-react'
+import { Link } from 'react-router-dom'
 import { getNav } from '../api/public'
+import { siteImages } from '../utils/siteImages'
 import BeianFooter from '../components/BeianFooter'
 import CategoryIcon from '../components/CategoryIcon'
-import ThemeToggle from '../components/ThemeToggle'
-import TopbarNav from '../components/TopbarNav'
-import TopbarUserMenu from '../components/TopbarUserMenu'
+import SiteHeader from '../components/SiteHeader'
 import type { CategoryWithLinks, NavLink } from '../types'
-import { useAuth } from '../context/AuthContext'
-import { useTheme } from '../context/ThemeContext'
-import '../styles/topbar.css'
 import '../styles/home.css'
 
-const ASSET_BASE = '/bank-nav'
-const HOME_AVATAR_URL = `${ASSET_BASE}/static/img/logo-20260710.webp`
-const SPONSOR_IMAGE_URL = `${ASSET_BASE}/static/img/wxzsm-20260710.webp`
-const WECHAT_IMAGE_URL = `${ASSET_BASE}/static/img/qq-20260710.webp`
-const POLL_INTERVAL_MS = 30_000
+const REFRESH_INTERVAL = 5 * 60 * 1000
+const TOOLS = [
+  { to: '/music', name: '在线音乐', detail: '音乐', Icon: Music2, tone: 'music' },
+  { to: '/ai-chat', name: 'AI 对话', detail: '对话', Icon: MessageSquare, tone: 'chat' },
+  { to: '/ai-image', name: 'AI 生图', detail: '创作', Icon: Image, tone: 'image' },
+  { to: '/admin/kb', name: '知识库', detail: '笔记', Icon: BookOpen, tone: 'knowledge' },
+]
+
+const QR_IMAGES = {
+  contact: { title: '联系我', src: siteImages.contact.url, alt: '联系二维码' },
+  sponsor: { title: '赞助', src: siteImages.sponsor.url, alt: '赞助二维码' },
+}
+
 function sortByOrder<T extends { sortOrder: number }>(items: T[]) {
   return [...items].sort((a, b) => a.sortOrder - b.sortOrder)
 }
@@ -30,320 +51,313 @@ function isResumeLink(link: NavLink) {
   }
 }
 
-function SectionMark() {
-  return (
-    <svg className="icon" viewBox="0 0 1024 1024" aria-hidden="true">
-      <path d="M629.333333 202.666667v213.333333h277.333334v448h-512v-213.333333h-277.333334v-448h512z m213.333334 277.333333h-213.333334v170.666667h-170.666666v149.333333h384v-320z m-277.333334-213.333333h-384v320h213.333334v-170.666667h170.666666v-149.333333z m0 213.333333h-106.666666v106.666667h106.666666v-106.666667z" />
-    </svg>
-  )
+function displayAddress(url: string) {
+  try {
+    const parsed = new URL(url, window.location.origin)
+    return parsed.origin === window.location.origin && parsed.pathname !== '/'
+      ? parsed.pathname
+      : parsed.hostname.replace(/^www\./, '')
+  } catch {
+    return url
+  }
 }
 
-function LocationIcon() {
-  return (
-    <svg className="icon" viewBox="0 0 1024 1024" aria-hidden="true">
-      <path d="M512 249.976471c-99.388235 0-180.705882 81.317647-180.705882 180.705882s81.317647 180.705882 180.705882 180.705882 180.705882-81.317647 180.705882-180.705882-81.317647-180.705882-180.705882-180.705882z m0 301.17647c-66.258824 0-120.470588-54.211765-120.470588-120.470588s54.211765-120.470588 120.470588-120.470588 120.470588 54.211765 120.470588 120.470588-54.211765 120.470588-120.470588 120.470588z" />
-      <path d="M512 39.152941c-216.847059 0-391.529412 174.682353-391.529412 391.529412 0 349.364706 391.529412 572.235294 391.529412 572.235294s391.529412-222.870588 391.529412-572.235294c0-216.847059-174.682353-391.529412-391.529412-391.529412z m0 891.482353C424.658824 873.411765 180.705882 686.682353 180.705882 430.682353c0-183.717647 147.576471-331.294118 331.294118-331.294118s331.294118 147.576471 331.294118 331.294118c0 256-243.952941 442.729412-331.294118 499.952941z" />
-    </svg>
-  )
-}
-
-function SponsorIcon() {
-  return (
-    <svg className="icon" viewBox="0 0 1024 1024" aria-hidden="true">
-      <path d="M995.575172 725.451034c-12.358621-26.835862-38.488276-64.794483-92.689655-94.27862-62.146207-33.721379-136.297931-40.96-208.860689-20.303448l-99.928276 28.424827-279.304828-126.057931H22.775172v489.401379h509.704828l432.375172-195.266207c15.006897-6.708966 26.835862-19.42069 32.662069-34.957241 5.649655-15.36 4.943448-31.955862-1.942069-46.962759z" />
-      <path d="M683.431724 427.431724v-70.62069h-38.311724l30.190345-30.190344-49.964138-49.964138-62.49931 62.49931h-6.002759L494.344828 276.656552l-49.787587 49.964138 30.013793 30.190344h-38.311724v70.62069h88.275862v35.310345h-88.275862v70.62069h88.275862v52.965517h70.62069v-52.965517h88.275862v-70.62069h-88.275862v-35.310345z" />
-    </svg>
-  )
-}
-
-function WechatIcon() {
-  return (
-    <svg className="icon" viewBox="0 0 1024 1024" aria-hidden="true">
-      <path d="M691.537 318.713c11.305 0 22.491 0.83 33.587 2.065-30.178-140.519-180.417-244.922-351.905-244.922-191.721 0-348.77 130.677-348.77 296.612 0 95.781 52.25 174.437 139.561 235.444l-34.884 104.916l121.923-61.138c43.628 8.634 78.631 17.513 122.168 17.513 10.945 0 21.796-0.541 32.559-1.386-6.814-23.317-10.762-47.739-10.762-73.080 0-152.368 130.849-276.023 296.521-276.023zM1009.856 590.545c0-139.436-139.534-253.094-296.248-253.094-165.943 0-296.639 113.657-296.639 253.094 0 139.675 130.698 253.094 296.639 253.094 34.733 0 69.765-8.758 104.646-17.501l95.663 52.383-26.229-87.157c70.007-52.520 122.167-122.164 122.167-200.819z" />
-    </svg>
-  )
-}
-
-function MailIcon() {
-  return (
-    <svg className="icon" viewBox="0 0 1024 1024" aria-hidden="true">
-      <path d="M926.47619 355.644952V780.190476a73.142857 73.142857 0 0 1-73.142857 73.142857H170.666667a73.142857 73.142857 0 0 1-73.142857-73.142857V355.644952l304.103619 257.828572a170.666667 170.666667 0 0 0 220.745142 0L926.47619 355.644952zM853.333333 170.666667a74.044952 74.044952 0 0 1 26.087619 4.778666 72.704 72.704 0 0 1 30.622477 22.186667 73.508571 73.508571 0 0 1 10.678857 17.67619c3.169524 7.509333 5.12 15.652571 5.607619 24.210286L926.47619 243.809524v24.380952L559.469714 581.241905a73.142857 73.142857 0 0 1-91.306666 2.901333l-3.632762-2.925714L97.52381 268.190476v-24.380952a72.899048 72.899048 0 0 1 40.155428-65.292191A72.97219 72.97219 0 0 1 170.666667 170.666667h682.666666z" />
-    </svg>
-  )
-}
-
-function getInitial(name: string) {
-  const trimmed = name.trim()
-  return trimmed ? trimmed.slice(0, 1).toUpperCase() : 'L'
-}
-
-function ProjectCard({ link }: { link: NavLink }) {
+function ResourceCard({ link }: { link: NavLink }) {
   return (
     <a
-      className="projectItem b"
+      className="home-resource"
       href={link.url}
       target="_blank"
       rel="noopener noreferrer"
-      title={link.description ?? link.name}
+      aria-label={`${link.name}（在新窗口打开）`}
     >
-      <div className="projectItemLeft">
-        <h3>{link.name}</h3>
-        <p>{link.description || link.url}</p>
-      </div>
-      <div className="projectItemRight">
-        <span className="runtime-icon">
-          {link.icon ? (
-            <CategoryIcon icon={link.icon} alt={link.name} size={22} />
-          ) : (
-            getInitial(link.name)
-          )}
+      <span className="home-resource__icon" aria-hidden="true">
+        {link.icon ? (
+          <CategoryIcon icon={link.icon} size={23} />
+        ) : (
+          <span>{link.name.trim().slice(0, 1).toUpperCase() || 'L'}</span>
+        )}
+      </span>
+      <span className="home-resource__body">
+        <span className="home-resource__name" title={link.name}>{link.name}</span>
+        <span className="home-resource__description" title={link.description || undefined}>
+          {link.description || displayAddress(link.url)}
         </span>
-      </div>
+        <span className="home-resource__address">{displayAddress(link.url)}</span>
+      </span>
+      <ArrowUpRight className="home-resource__arrow" size={15} aria-hidden="true" />
     </a>
   )
 }
 
 export default function HomePage() {
-  const auth = useAuth()
-  const { mode } = useTheme()
   const [data, setData] = useState<CategoryWithLinks[] | null>(null)
   const [error, setError] = useState<string | null>(null)
-  const [popupImage, setPopupImage] = useState<string | null>(null)
+  const [refreshing, setRefreshing] = useState(false)
+  const [query, setQuery] = useState('')
+  const [selectedCategory, setSelectedCategory] = useState<number | null>(null)
+  const [view, setView] = useState<'grid' | 'list'>('grid')
+  const [qrImage, setQrImage] = useState<keyof typeof QR_IMAGES | null>(null)
+  const requestId = useRef(0)
+  const searchRef = useRef<HTMLInputElement>(null)
+  const deferredQuery = useDeferredValue(query.trim().toLocaleLowerCase())
 
-  const refresh = useCallback(async (silent = false) => {
-    if (!silent) setError(null)
+  const refresh = useCallback(async () => {
+    const currentRequest = ++requestId.current
+    setRefreshing(true)
+    setError(null)
     try {
       const nextData = await getNav()
-      setData(nextData)
-      setError(null)
+      if (currentRequest === requestId.current) setData(nextData)
     } catch (nextError) {
-      setError((nextError as Error).message)
+      if (currentRequest === requestId.current) {
+        setError(nextError instanceof Error ? nextError.message : '暂时无法获取导航数据')
+      }
+    } finally {
+      if (currentRequest === requestId.current) setRefreshing(false)
     }
   }, [])
 
   useEffect(() => {
     void refresh()
-
-    const timer = window.setInterval(() => {
-      void refresh(true)
-    }, POLL_INTERVAL_MS)
-    const onFocus = () => {
-      void refresh(true)
+    const refreshWhenVisible = () => {
+      if (document.visibilityState === 'visible') void refresh()
     }
-
-    window.addEventListener('focus', onFocus)
+    const timer = window.setInterval(refreshWhenVisible, REFRESH_INTERVAL)
+    window.addEventListener('focus', refreshWhenVisible)
+    document.addEventListener('visibilitychange', refreshWhenVisible)
     return () => {
+      requestId.current += 1
       window.clearInterval(timer)
-      window.removeEventListener('focus', onFocus)
+      window.removeEventListener('focus', refreshWhenVisible)
+      document.removeEventListener('visibilitychange', refreshWhenVisible)
     }
   }, [refresh])
 
-  useEffect(() => {
-    if (!popupImage) return
-    const onKeyDown = (event: KeyboardEvent) => {
-      if (event.key === 'Escape') setPopupImage(null)
-    }
-    document.body.style.overflow = 'hidden'
-    window.addEventListener('keydown', onKeyDown)
-    return () => {
-      document.body.style.overflow = ''
-      window.removeEventListener('keydown', onKeyDown)
-    }
-  }, [popupImage])
-
   const categories = useMemo(
-    () =>
-      sortByOrder(data ?? []).reduce<CategoryWithLinks[]>((visibleCategories, category) => {
-        const sortedLinks = sortByOrder(category.links ?? [])
-        const links = sortedLinks.filter((link) => !isResumeLink(link))
-
-        if (sortedLinks.length > 0 && links.length === 0) {
-          return visibleCategories
-        }
-
-        visibleCategories.push({
-          ...category,
-          links,
-        })
-        return visibleCategories
-      }, []),
+    () => sortByOrder(data ?? []).reduce<CategoryWithLinks[]>((visible, category) => {
+      const sortedLinks = sortByOrder(category.links ?? [])
+      const links = sortedLinks.filter((link) => !isResumeLink(link))
+      if (sortedLinks.length === 0 || links.length > 0) visible.push({ ...category, links })
+      return visible
+    }, []),
     [data],
   )
 
-  const totals = useMemo(
-    () => ({
-      categoryCount: categories.length,
-      linkCount: categories.reduce((sum, category) => sum + category.links.length, 0),
-    }),
-    [categories],
-  )
+  useEffect(() => {
+    if (data && selectedCategory !== null && !categories.some(({ id }) => id === selectedCategory)) {
+      setSelectedCategory(null)
+    }
+  }, [categories, data, selectedCategory])
 
-  const timeline = categories.slice(0, 5)
-  const snakeTheme = mode === 'dark' ? 'Dark' : 'Light'
+  const visibleCategories = useMemo(() => categories
+    .filter((category) => selectedCategory === null || category.id === selectedCategory)
+    .map((category) => ({
+      ...category,
+      links: category.links.filter((link) => !deferredQuery ||
+        [link.name, link.description, link.url, category.name]
+          .some((value) => value?.toLocaleLowerCase().includes(deferredQuery))),
+    }))
+    .filter((category) => !deferredQuery || category.links.length > 0),
+  [categories, deferredQuery, selectedCategory])
+
+  const totalCount = categories.reduce((total, category) => total + category.links.length, 0)
+  const resultCount = visibleCategories.reduce((total, category) => total + category.links.length, 0)
+  const activeCategory = categories.find(({ id }) => id === selectedCategory)
+  const currentQr = qrImage ? QR_IMAGES[qrImage] : null
+
+  const clearSearch = () => {
+    setQuery('')
+    searchRef.current?.focus()
+  }
 
   return (
-    <div className="bank-nav-page">
-      <div className="zyyo-filter" />
-      <header className="topbar">
-        <RouterLink to="/" className="topbar-brand" aria-label="返回首页">
-          <span className="brand-dot" />
-          <span>oldwang</span>
-        </RouterLink>
-
-        <TopbarNav />
-
-        <div className="topbar-actions" aria-label="站点操作">
-          {!auth.token ? (
-            <RouterLink to="/login" className="topbar-action" state={{ from: '/' }}>
-              <LogIn size={16} />
-              <span>登录</span>
-            </RouterLink>
-          ) : null}
-          <ThemeToggle />
-          {auth.token && <TopbarUserMenu />}
-        </div>
-      </header>
-      <div className="zyyo-main">
-        <aside className="zyyo-left">
-          <div
-            className="logo"
-            style={{ backgroundImage: `url(${HOME_AVATAR_URL})` }}
-          />
-          <div className="left-div left-des">
-            <div className="left-des-item">
-              <LocationIcon />
-              China · Chengdu
-            </div>
-          </div>
-          <div className="left-div left-tag">
-            <div className="left-tag-item">实时分类 {totals.categoryCount}</div>
-            <div className="left-tag-item">动态链接 {totals.linkCount}</div>
-          </div>
-          <div className="left-div left-time">
-            <ul id="line">
-              {timeline.length ? (
-                timeline.map((category, index) => (
-                  <li key={category.id}>
-                    <div className={`focus${index === 0 ? ' active-focus' : ''}`} />
-                    <div>{category.name}</div>
-                    <div>{category.links.length} links</div>
-                  </li>
-                ))
-              ) : (
-                <li>
-                  <div className="focus active-focus" />
-                  <div>{error ? '加载失败' : '正在加载'}</div>
-                  <div>live</div>
-                </li>
-              )}
-            </ul>
+    <div className="home-page">
+      <SiteHeader />
+      <div className="home-workspace">
+        <aside className="home-sidebar" aria-label="导航分类">
+          <div className="home-sidebar__label">浏览分类</div>
+          <nav className="home-categories" aria-label="资源分类筛选">
+            <button
+              type="button"
+              className={`home-category${selectedCategory === null ? ' is-active' : ''}`}
+              aria-pressed={selectedCategory === null}
+              onClick={() => setSelectedCategory(null)}
+            >
+              <Compass size={17} aria-hidden="true" />
+              <span className="home-category__name">全部站点</span>
+              <span className="home-category__count">{data ? totalCount : '—'}</span>
+            </button>
+            {categories.map((category) => (
+              <button
+                type="button"
+                key={category.id}
+                className={`home-category${selectedCategory === category.id ? ' is-active' : ''}`}
+                aria-pressed={selectedCategory === category.id}
+                onClick={() => setSelectedCategory(category.id)}
+              >
+                <span className="home-category__icon" aria-hidden="true">
+                  <CategoryIcon icon={category.icon || 'folder'} size={17} />
+                </span>
+                <span className="home-category__name" title={category.name}>{category.name}</span>
+                <span className="home-category__count">{category.links.length}</span>
+              </button>
+            ))}
+          </nav>
+          <div className="home-sidebar__bottom">
+            <ArrowDownLeft size={15} aria-hidden="true" />
+            <span>oldwang 的收藏</span>
           </div>
         </aside>
 
-        <section className="zyyo-right">
-          <header>
-            <div
-              className="index-logo"
-              style={{ backgroundImage: `url(${HOME_AVATAR_URL})` }}
-            />
-            <div className="welcome">
-              Hello I&apos; m <span className="gradientText">oldwang</span>
+        <main className="home-main" id="main-content">
+          <header className="home-heading">
+            <div>
+              <p className="home-heading__eyebrow">个人工作台</p>
+              <h1>我的导航<span aria-hidden="true">.</span></h1>
             </div>
-            <div className="description">
-              A real-time <span className="purpleText">navigation</span>
-            </div>
-
-            <div className="iconContainer">
-              <button
-                className="iconItem"
-                type="button"
-                onClick={() => setPopupImage(SPONSOR_IMAGE_URL)}
-              >
-                <SponsorIcon />
-                <div className="iconTip">赞助</div>
-              </button>
-              <button
-                className="iconItem"
-                type="button"
-                onClick={() => setPopupImage(WECHAT_IMAGE_URL)}
-              >
-                <WechatIcon />
-                <div className="iconTip">公众号</div>
-              </button>
-              <a className="iconItem" href="mailto:hello@example.com">
-                <MailIcon />
-                <div className="iconTip">邮箱</div>
-              </a>
-              {!auth.token ? (
-                <RouterLink className="iconItem" to="/login" title="登录">
-                  <SectionMark />
-                  <div className="iconTip">登录</div>
-                </RouterLink>
-              ) : null}
-            </div>
-
-            <div className="tanChiShe">
-              <img
-                id="tanChiShe"
-                src={`${ASSET_BASE}/static/svg/snake-${snakeTheme}.svg`}
-                alt=""
-              />
+            <div className="home-identity">
+              <img src={siteImages.logo.url} width={38} height={38} alt="oldwang" />
+              <span>oldwang</span>
             </div>
           </header>
 
-          <main className="bank-content">
-            {error && <div className="runtime-message">加载失败：{error}</div>}
+          <div className="home-search" role="search">
+            <Search size={21} aria-hidden="true" />
+            <input
+              ref={searchRef}
+              type="search"
+              value={query}
+              onChange={(event) => setQuery(event.target.value)}
+              onKeyDown={(event) => { if (event.key === 'Escape') clearSearch() }}
+              placeholder="搜索站点、工具或分类"
+              aria-label="搜索站点、工具或分类"
+              autoComplete="off"
+              spellCheck={false}
+            />
+            {query && (
+              <Tooltip title="清空搜索">
+                <button type="button" className="home-icon-button" aria-label="清空搜索" onClick={clearSearch}>
+                  <CircleX size={18} aria-hidden="true" />
+                </button>
+              </Tooltip>
+            )}
+          </div>
+
+          <section className="home-tools" aria-labelledby="home-tools-title">
+            <h2 id="home-tools-title">常用工具</h2>
+            <div className="home-tools__grid">
+              {TOOLS.map(({ to, name, detail, Icon, tone }) => (
+                <Link key={to} to={to} className={`home-tool home-tool--${tone}`}>
+                  <span className="home-tool__icon"><Icon size={21} aria-hidden="true" /></span>
+                  <span className="home-tool__copy"><strong>{name}</strong><span>{detail}</span></span>
+                  <ArrowUpRight size={14} className="home-tool__arrow" aria-hidden="true" />
+                </Link>
+              ))}
+            </div>
+          </section>
+
+          <section className="home-directory" aria-labelledby="home-directory-title">
+            <div className="home-directory__bar">
+              <div className="home-directory__heading">
+                <h2 id="home-directory-title">{deferredQuery ? '搜索结果' : activeCategory?.name || '站点收藏'}</h2>
+                <span className="home-directory__count" role="status" aria-live="polite">
+                  {data ? `${resultCount} 个站点` : refreshing ? '加载中' : ''}
+                </span>
+              </div>
+              <div className="home-directory__actions">
+                <Tooltip title="刷新站点">
+                  <button
+                    type="button"
+                    className="home-icon-button"
+                    aria-label="刷新站点"
+                    disabled={refreshing}
+                    onClick={() => void refresh()}
+                  >
+                    <RefreshCw size={16} className={refreshing ? 'home-refreshing' : ''} aria-hidden="true" />
+                  </button>
+                </Tooltip>
+                <div className="home-view-switch" role="group" aria-label="显示方式">
+                  <Tooltip title="网格视图">
+                    <button type="button" aria-label="网格视图" aria-pressed={view === 'grid'} className={`home-icon-button${view === 'grid' ? ' is-active' : ''}`} onClick={() => setView('grid')}>
+                      <LayoutGrid size={16} aria-hidden="true" />
+                    </button>
+                  </Tooltip>
+                  <Tooltip title="列表视图">
+                    <button type="button" aria-label="列表视图" aria-pressed={view === 'list'} className={`home-icon-button${view === 'list' ? ' is-active' : ''}`} onClick={() => setView('list')}>
+                      <List size={17} aria-hidden="true" />
+                    </button>
+                  </Tooltip>
+                </div>
+              </div>
+            </div>
+
+            {error && (
+              <div className="home-error" role="alert">
+                <AlertCircle size={19} aria-hidden="true" />
+                <span><strong>{data ? '站点更新失败' : '站点加载失败'}</strong><span>{error}</span></span>
+                <button type="button" onClick={() => void refresh()} disabled={refreshing}>重试</button>
+              </div>
+            )}
 
             {!data && !error && (
-              <section className="runtime-section">
-                <div className="title">
-                  <SectionMark />
-                  正在加载
-                </div>
-                <div className="projectList">
-                  {Array.from({ length: 8 }).map((_, index) => (
-                    <div className="projectItem b projectItemSkeleton" key={index} />
-                  ))}
-                </div>
-              </section>
-            )}
-
-            {data && !categories.length && (
-              <div className="runtime-message">暂无分类数据</div>
-            )}
-
-            {categories.map((category) => (
-              <section className="runtime-section" key={category.id}>
-                <div className="title">
-                  <SectionMark />
-                  {category.name}
-                </div>
-                {category.links.length ? (
-                  <div className="projectList">
-                    {category.links.map((link) => (
-                      <ProjectCard key={link.id} link={link} />
-                    ))}
+              <div className="home-resource-grid home-loading" aria-label="正在加载站点" aria-busy="true">
+                {Array.from({ length: 9 }, (_, index) => (
+                  <div className="home-resource home-resource--skeleton" key={index} aria-hidden="true">
+                    <span className="home-skeleton-icon" />
+                    <span className="home-skeleton-copy"><span /><span /><span /></span>
                   </div>
-                ) : (
-                  <div className="runtime-message">暂无链接</div>
-                )}
-              </section>
-            ))}
-          </main>
-        </section>
+                ))}
+              </div>
+            )}
+
+            {data && visibleCategories.length === 0 && (
+              <div className="home-empty">
+                {deferredQuery ? <Search size={28} aria-hidden="true" /> : <Compass size={28} aria-hidden="true" />}
+                <h3>{deferredQuery ? '没有找到相关站点' : '暂无站点收藏'}</h3>
+                {deferredQuery && <button type="button" onClick={clearSearch}>清空搜索</button>}
+              </div>
+            )}
+
+            <div className={`home-groups home-groups--${view}`}>
+              {visibleCategories.map((category) => (
+                <section className="home-group" key={category.id} aria-labelledby={`home-category-${category.id}`}>
+                  <div className="home-group__heading">
+                    <span className="home-group__icon" aria-hidden="true"><CategoryIcon icon={category.icon || 'folder'} size={17} /></span>
+                    <h3 id={`home-category-${category.id}`}>{category.name}</h3>
+                    <span>{category.links.length}</span>
+                    <div className="home-group__rule" />
+                  </div>
+                  {category.links.length ? (
+                    <div className="home-resource-grid">
+                      {category.links.map((link) => <ResourceCard key={link.id} link={link} />)}
+                    </div>
+                  ) : <p className="home-group__empty">暂无站点</p>}
+                </section>
+              ))}
+            </div>
+          </section>
+
+          <div className="home-contact-links" aria-label="联系与支持">
+            <button type="button" onClick={() => setQrImage('contact')}><MessageCircle size={15} aria-hidden="true" />联系我</button>
+            <button type="button" onClick={() => setQrImage('sponsor')}><Heart size={15} aria-hidden="true" />赞助</button>
+          </div>
+          <BeianFooter />
+        </main>
       </div>
 
-      <BeianFooter />
-
-      <div
-        className={`tc${popupImage ? ' active' : ''}`}
-        onClick={() => setPopupImage(null)}
-        aria-hidden={!popupImage}
+      <Modal
+        title={currentQr?.title}
+        open={!!currentQr}
+        onCancel={() => setQrImage(null)}
+        footer={null}
+        centered
+        width={350}
+        className="home-qr-modal"
+        destroyOnClose
       >
-        <div className={`tc-main${popupImage ? ' active' : ''}`} onClick={(e) => e.stopPropagation()}>
-          {popupImage && <img className="tc-img" src={popupImage} alt="" />}
-        </div>
-      </div>
+        {currentQr && <img className="home-qr-image" src={currentQr.src} alt={currentQr.alt} />}
+      </Modal>
     </div>
   )
 }

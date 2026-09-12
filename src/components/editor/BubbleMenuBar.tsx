@@ -23,7 +23,7 @@ function BubbleMenuBarInner({ editor, onInsertLink }: Props) {
   const state = useEditorState({
     editor,
     selector: ({ editor: ed }) => {
-      if (!ed) return null
+      if (!ed || ed.isDestroyed) return null
       return {
         isBold: ed.isActive('bold'),
         isItalic: ed.isActive('italic'),
@@ -60,6 +60,7 @@ function BubbleMenuBarInner({ editor, onInsertLink }: Props) {
               type="text"
               className={`editor-toolbar-btn${state.isBold ? ' is-active' : ''}`}
               icon={<BoldOutlined />}
+              onMouseDown={(event) => event.preventDefault()}
               onClick={() => editor.chain().focus().toggleBold().run()}
               aria-label={EDITOR_TEXT.bold}
             />
@@ -70,6 +71,7 @@ function BubbleMenuBarInner({ editor, onInsertLink }: Props) {
               type="text"
               className={`editor-toolbar-btn${state.isItalic ? ' is-active' : ''}`}
               icon={<ItalicOutlined />}
+              onMouseDown={(event) => event.preventDefault()}
               onClick={() => editor.chain().focus().toggleItalic().run()}
               aria-label={EDITOR_TEXT.italic}
             />
@@ -80,6 +82,7 @@ function BubbleMenuBarInner({ editor, onInsertLink }: Props) {
               type="text"
               className={`editor-toolbar-btn${state.isUnderline ? ' is-active' : ''}`}
               icon={<UnderlineOutlined />}
+              onMouseDown={(event) => event.preventDefault()}
               onClick={() => editor.chain().focus().toggleUnderline().run()}
               aria-label={EDITOR_TEXT.underline}
             />
@@ -90,6 +93,7 @@ function BubbleMenuBarInner({ editor, onInsertLink }: Props) {
               type="text"
               className={`editor-toolbar-btn${state.isStrike ? ' is-active' : ''}`}
               icon={<StrikethroughOutlined />}
+              onMouseDown={(event) => event.preventDefault()}
               onClick={() => editor.chain().focus().toggleStrike().run()}
               aria-label="删除线"
             />
@@ -100,6 +104,7 @@ function BubbleMenuBarInner({ editor, onInsertLink }: Props) {
               type="text"
               className={`editor-toolbar-btn${state.isCode ? ' is-active' : ''}`}
               icon={<CodeOutlined />}
+              onMouseDown={(event) => event.preventDefault()}
               onClick={() => editor.chain().focus().toggleCode().run()}
               aria-label={EDITOR_TEXT.inlineCode}
             />
@@ -110,6 +115,7 @@ function BubbleMenuBarInner({ editor, onInsertLink }: Props) {
               type="text"
               className={`editor-toolbar-btn${state.isHighlight ? ' is-active' : ''}`}
               icon={<HighlightOutlined />}
+              onMouseDown={(event) => event.preventDefault()}
               onClick={() => editor.chain().focus().toggleHighlight().run()}
               aria-label={EDITOR_TEXT.highlightColor}
             />
@@ -120,6 +126,7 @@ function BubbleMenuBarInner({ editor, onInsertLink }: Props) {
               type="text"
               className={`editor-toolbar-btn${state.isLink ? ' is-active' : ''}`}
               icon={<LinkOutlined />}
+              onMouseDown={(event) => event.preventDefault()}
               onClick={onInsertLink}
               aria-label={EDITOR_TEXT.insertLink}
             />
@@ -130,6 +137,7 @@ function BubbleMenuBarInner({ editor, onInsertLink }: Props) {
               type="text"
               className="editor-toolbar-btn"
               icon={<ClearOutlined />}
+              onMouseDown={(event) => event.preventDefault()}
               onClick={() => editor.chain().focus().unsetAllMarks().run()}
               aria-label={EDITOR_TEXT.clearFormatting}
             />

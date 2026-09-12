@@ -3,6 +3,7 @@
   flex-direction: column;
   gap: 14px;
   width: 100%;
+  min-width: 0;
 }
 
 .admin-users__header {
@@ -33,7 +34,13 @@
   background: transparent;
 }
 
+.admin-users__filters > * {
+  width: 100%;
+  min-width: 0;
+}
+
 .admin-users__table-card {
+  min-width: 0;
   overflow: hidden;
   border: 0;
   background: transparent;
@@ -48,6 +55,7 @@
 }
 
 .admin-users__identity > span:last-child {
+  min-width: 0;
   display: grid;
   gap: 2px;
 }
@@ -101,7 +109,14 @@
 }
 
 .admin-users__form {
+  min-width: 0;
   padding-top: 8px;
+}
+
+.admin-users__form .ant-input,
+.admin-users__form .ant-input-affix-wrapper,
+.admin-users__form .ant-select {
+  width: 100%;
 }
 
 .admin-users__detail-loading {
@@ -120,6 +135,18 @@
   gap: 16px;
 }
 
+.admin-users__detail,
+.admin-users__detail .ant-descriptions,
+.admin-users__detail .ant-descriptions-view {
+  min-width: 0;
+  max-width: 100%;
+}
+
+.admin-users__detail .ant-descriptions-view {
+  overflow-x: auto;
+  -webkit-overflow-scrolling: touch;
+}
+
 @media (max-width: 640px) {
   .admin-users__detail-stats {
     grid-template-columns: repeat(2, 1fr);
@@ -133,7 +160,7 @@
   }
 
   .admin-users__header > .ant-space {
-    justify-content: flex-end;
+    justify-content: flex-start;
   }
 
   .admin-users__filters {
@@ -152,5 +179,37 @@
 
   .admin-users__filters > .ant-input-affix-wrapper {
     grid-column: auto;
+  }
+
+  .admin-users__detail-stats {
+    grid-template-columns: 1fr;
+    gap: 10px;
+  }
+
+  .admin-users__identity {
+    min-width: 132px;
+  }
+}
+
+@media (hover: none), (pointer: coarse) {
+  .admin-users__filters .ant-btn,
+  .admin-users__filters .ant-input-affix-wrapper,
+  .admin-users__filters .ant-select-selector,
+  .admin-users__table-card .ant-btn {
+    min-height: 44px;
+  }
+}
+
+@media (min-width: 900px) and (max-height: 720px) and (orientation: landscape) {
+  .admin-users {
+    gap: 10px;
+  }
+
+  .admin-users__filters {
+    padding-bottom: 10px;
+  }
+
+  .admin-users__form {
+    padding-top: 0;
   }
 }

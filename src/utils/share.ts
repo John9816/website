@@ -17,5 +17,6 @@ export function toDatetimeLocalValue(value?: string | null) {
 }
 
 export async function copyText(text: string) {
-  await navigator.clipboard.writeText(text)
+  await writeClipboardText(text)
 }
+import { writeClipboardText } from './clipboard'

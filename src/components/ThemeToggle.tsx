@@ -19,13 +19,13 @@ const themeMeta: Record<
     Icon: Wallpaper,
   },
   light: {
-    label: '纯白',
-    title: '切换到纯白皮肤',
+    label: '浅色',
+    title: '切换到浅色主题',
     Icon: Sun,
   },
   dark: {
-    label: '纯黑',
-    title: '切换到纯黑皮肤',
+    label: '深色',
+    title: '切换到深色主题',
     Icon: Moon,
   },
 }

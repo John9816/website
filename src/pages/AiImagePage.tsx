@@ -5,13 +5,11 @@ import { Link as RouterLink } from 'react-router-dom'
 import { listSharedImages } from '../api/public'
 import ImageStudio from '../components/ImageStudio'
 import ImagePreviewOverlay from '../components/ImagePreviewOverlay'
-import TopbarNav from '../components/TopbarNav'
-import TopbarUserMenu from '../components/TopbarUserMenu'
-import ThemeToggle from '../components/ThemeToggle'
+import SiteHeader from '../components/SiteHeader'
 import { DEFAULT_PAGE_SIZE } from '../constants/pagination'
 import { useAuth } from '../context/AuthContext'
 import type { GeneratedImageView } from '../types'
-import '../styles/topbar.css'
+import { writeClipboardText } from '../utils/clipboard'
 import '../styles/ai-chat.css'
 import '../styles/admin-image.css'
 import '../styles/ai-image.css'
@@ -22,12 +20,13 @@ export default function AiImagePage() {
   const { message } = AntApp.useApp()
   const auth = useAuth()
   const mainClassName = `ai-chat__main${auth.token ? ' ai-chat__main--authenticated' : ''}`
-  const pageClassName = `ai-chat${auth.token ? ' ai-chat--image-authenticated' : ''}`
+  const pageClassName = `ai-chat ai-image-page${auth.token ? ' ai-chat--image-authenticated' : ''}`
   const [sharedItems, setSharedItems] = useState<GeneratedImageView[]>([])
   const [sharedTotal, setSharedTotal] = useState(0)
   const [sharedPage, setSharedPage] = useState(1)
   const [sharedLoading, setSharedLoading] = useState(false)
   const [previewUrl, setPreviewUrl] = useState<string | null>(null)
+  const [failedSharedImageIds, setFailedSharedImageIds] = useState<Set<number>>(new Set())
 
   const pageCount = useMemo(
     () => Math.max(1, Math.ceil(sharedTotal / SHARED_PAGE_SIZE)),
@@ -41,6 +40,7 @@ export default function AiImagePage() {
       setSharedItems(data.items)
       setSharedTotal(data.total)
       setSharedPage(nextPage)
+      setFailedSharedImageIds(new Set())
     } catch (e) {
       message.error((e as Error).message)
     } finally {
@@ -55,7 +55,7 @@ export default function AiImagePage() {
       return
     }
     try {
-      await navigator.clipboard.writeText(text)
+      await writeClipboardText(text)
       message.success('提示词已复制')
     } catch {
       message.error('复制失败，请手动复制提示词')
@@ -70,25 +70,7 @@ export default function AiImagePage() {
 
   return (
     <div className={pageClassName}>
-      <header className="topbar">
-        <RouterLink to="/" className="topbar-brand" aria-label="返回首页">
-          <span className="brand-dot" />
-          <span>oldwang</span>
-        </RouterLink>
-
-        <TopbarNav />
-
-        <div className="topbar-actions" aria-label="站点操作">
-          {!auth.token ? (
-            <RouterLink to="/login" className="topbar-action" state={{ from: '/ai-image' }}>
-              <LogIn size={16} />
-              <span>登录</span>
-            </RouterLink>
-          ) : null}
-          <ThemeToggle />
-          {auth.token && <TopbarUserMenu />}
-        </div>
-      </header>
+      <SiteHeader />
 
       <main className={mainClassName}>
         {auth.token ? (
@@ -96,68 +78,50 @@ export default function AiImagePage() {
         ) : (
           <div className="ai-image-page__guest">
             <section className="ai-image-page__hero">
-              <article className="ai-chat__welcome-card">
+              <div className="ai-image-page__title">
                 <div className="ai-chat__eyebrow">
                   <Sparkles size={14} />
-                  <span>AI Image</span>
+                  <span>AI IMAGE</span>
                 </div>
-                <h1>AI 生图工作台</h1>
-                <p>支持多尺寸、多图并发生成，还能把满意的作品公开到分享广场。</p>
-              </article>
-
-              <article className="ai-chat__login-card">
-                <div className="ai-chat__icon-badge">
-                  <Sparkles size={18} />
-                </div>
-                <h2>登录后开始生图</h2>
-                <p>使用站内账号登录即可进入生成页面，并管理自己的生图历史。</p>
-                <div className="ai-chat__guest-actions">
-                  <RouterLink
-                    to="/login"
-                    state={{ from: '/ai-image' }}
-                    className="ai-chat__button ai-chat__button--primary"
-                  >
-                    <LogIn size={16} />
-                    <span>去登录</span>
-                  </RouterLink>
-                  <RouterLink
-                    to="/register"
-                    className="ai-chat__button ai-chat__button--secondary"
-                  >
-                    注册账号
-                  </RouterLink>
-                </div>
-              </article>
+                <h1>AI 生图</h1>
+              </div>
+              <div className="ai-chat__guest-actions">
+                <RouterLink
+                  to="/login"
+                  state={{ from: '/ai-image' }}
+                  className="ai-chat__button ai-chat__button--primary"
+                >
+                  <LogIn size={16} />
+                  <span>登录创作</span>
+                </RouterLink>
+                <RouterLink
+                  to="/register"
+                  className="ai-chat__button ai-chat__button--secondary"
+                >
+                  注册账号
+                </RouterLink>
+              </div>
             </section>
 
             <section className="ai-image-page__shared" aria-labelledby="shared-gallery-title">
               <div className="ai-image-page__shared-head">
                 <div>
-                  <div className="ai-chat__eyebrow">
-                    <ImageIcon size={14} />
-                    <span>Public Share</span>
-                  </div>
-                  <h2 id="shared-gallery-title">公开分享广场</h2>
-                  <p>这里展示用户主动公开的图片作品。登录后，你也可以把自己的作品发布到这里。</p>
+                  <h2 id="shared-gallery-title">公开作品 <span>{sharedTotal}</span></h2>
                 </div>
                 <button
                   type="button"
                   className="ai-image-page__refresh"
                   onClick={() => void loadShared(sharedPage)}
                   disabled={sharedLoading}
+                  aria-label="刷新公开作品"
+                  title="刷新公开作品"
                 >
                   {sharedLoading ? (
                     <LoaderCircle size={15} className="admin-image__spinner" />
                   ) : (
                     <RefreshCw size={15} />
                   )}
-                  <span>刷新</span>
                 </button>
-              </div>
-
-              <div className="ai-image-page__shared-toolbar">
-                <span>{sharedTotal ? `${sharedTotal} 张公开作品` : '公开作品'}</span>
-                <span>点击图片可预览大图</span>
               </div>
 
               {sharedLoading && !sharedItems.length ? (
@@ -180,19 +144,31 @@ export default function AiImagePage() {
                   <div className="ai-image-page__gallery">
                     {sharedItems.map((item) => (
                       <article key={item.id} className="ai-image-page__gallery-card">
-                        {item.imageUrl ? (
+                        {item.imageUrl && !failedSharedImageIds.has(item.id) ? (
                           <button
                             type="button"
                             className="ai-image-page__gallery-image"
                             style={imageAspectStyle(item.size)}
                             onClick={() => setPreviewUrl(item.imageUrl)}
-                            aria-label={`预览图片：${item.prompt || '公开作品'}`}
+                            aria-label="预览公开作品"
                           >
-                            <img src={item.imageUrl} alt={item.prompt || '公开图片'} loading="lazy" />
+                            <img
+                              src={item.imageUrl}
+                              alt={item.prompt || '公开作品'}
+                              loading="lazy"
+                              onError={() => {
+                                setFailedSharedImageIds((current) => {
+                                  const next = new Set(current)
+                                  next.add(item.id)
+                                  return next
+                                })
+                              }}
+                            />
                           </button>
                         ) : (
                           <div className="ai-image-page__gallery-image ai-image-page__gallery-image--empty">
                             <ImageIcon size={28} />
+                            <span>{item.imageUrl ? '原图已失效' : '暂无图片'}</span>
                           </div>
                         )}
                         <div className="ai-image-page__gallery-body">
@@ -215,7 +191,6 @@ export default function AiImagePage() {
                           <div className="ai-image-page__gallery-meta">
                             <span>{item.model || 'image model'}</span>
                             {item.size && <span>{item.size}</span>}
-                            <span>公开作品</span>
                           </div>
                           <time className="ai-image-page__gallery-time" dateTime={item.createdAt}>
                             {formatTime(item.createdAt)}
@@ -236,6 +211,7 @@ export default function AiImagePage() {
                             className={sharedPage === nextPage ? 'is-active' : ''}
                             onClick={() => void loadShared(nextPage)}
                             aria-current={sharedPage === nextPage ? 'page' : undefined}
+                            disabled={sharedLoading}
                           >
                             {nextPage}
                           </button>

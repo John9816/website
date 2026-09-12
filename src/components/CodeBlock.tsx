@@ -1,5 +1,6 @@
 import { useEffect, useRef, useState } from 'react'
 import { Check, Copy } from 'lucide-react'
+import { writeClipboardText } from '../utils/clipboard'
 
 interface CodeBlockProps {
   language: string | null
@@ -18,7 +19,7 @@ export default function CodeBlock({ language, source }: CodeBlockProps) {
 
   const handleCopy = async () => {
     try {
-      await navigator.clipboard.writeText(source)
+      await writeClipboardText(source)
       setCopied(true)
       if (timerRef.current) window.clearTimeout(timerRef.current)
       timerRef.current = window.setTimeout(() => setCopied(false), 1500)

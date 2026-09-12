@@ -14,6 +14,8 @@ dist
 .wrangler-config/
 output/
 *.png
+!public/music-app/duckmusic-icon.png
+!public/music-app/duckmusic-ios-home.png
 .trellis/
 .agents/
 .codex/

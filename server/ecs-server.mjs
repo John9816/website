@@ -311,10 +311,19 @@ async function handleApiProxy(req, res, incomingUrl) {
 
 function buildApiHeaders(req) {
   const headers = new Headers()
+  const forwardedHeaders = new Set([
+    'cf-connecting-ip',
+    'forwarded',
+    'x-forwarded-for',
+    'x-forwarded-host',
+    'x-forwarded-proto',
+    'x-real-ip',
+  ])
 
   for (const [name, value] of Object.entries(req.headers)) {
-    if (!value || hopByHopHeaders.has(name.toLowerCase())) continue
-    if (['host', 'origin', 'referer'].includes(name.toLowerCase())) continue
+    const lowerName = name.toLowerCase()
+    if (!value || hopByHopHeaders.has(lowerName)) continue
+    if (['host', 'origin', 'referer'].includes(lowerName) || forwardedHeaders.has(lowerName)) continue
 
     if (Array.isArray(value)) {
       for (const item of value) headers.append(name, item)
@@ -324,10 +333,22 @@ function buildApiHeaders(req) {
   }
 
   const host = req.headers.host
+  const clientIp = normalizeClientIp(req.headers['x-real-ip']) || normalizeClientIp(req.socket.remoteAddress)
   if (host) headers.set('x-forwarded-host', host)
+  if (clientIp) {
+    headers.set('x-real-ip', clientIp)
+    headers.set('x-forwarded-for', clientIp)
+  }
   headers.set('x-forwarded-proto', 'https')
 
   return headers
+}
+
+function normalizeClientIp(value) {
+  if (typeof value !== 'string') return ''
+  const trimmed = value.trim()
+  if (!trimmed || trimmed.includes(',') || trimmed.includes('\r') || trimmed.includes('\n')) return ''
+  return trimmed.slice(0, 45)
 }
 
 async function handleRemoteAssetProxy(req, res, incomingUrl, options) {

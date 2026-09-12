@@ -40,7 +40,6 @@ type Props = {
 }
 
 type LucideIconComponent = LucideIcon
-type IconLoaderMap = Record<string, () => Promise<{ default: LucideIconComponent }>>
 
 const staticIconRegistry: Record<string, LucideIconComponent> = {
   ai: Sparkles,
@@ -86,19 +85,6 @@ const staticIconRegistry: Record<string, LucideIconComponent> = {
   wrench: Wrench,
 }
 
-let iconLoadersPromise: Promise<IconLoaderMap> | null = null
-const iconCache = new Map<string, LucideIconComponent | null>()
-const iconPromiseCache = new Map<string, Promise<LucideIconComponent | null>>()
-
-function getIconLoaders() {
-  if (!iconLoadersPromise) {
-    iconLoadersPromise = import('lucide-react/dynamicIconImports').then(
-      (module) => module.default as IconLoaderMap,
-    )
-  }
-  return iconLoadersPromise
-}
-
 function isUrl(v: string) {
   return /^https?:\/\//i.test(v) || v.startsWith('/') || v.startsWith('data:')
 }
@@ -114,7 +100,6 @@ function normalizeLucideIconName(value: string) {
 }
 
 export default function CategoryIcon({ icon, alt, size = 20 }: Props) {
-  const [dynamicIcon, setDynamicIcon] = useState<LucideIconComponent | null>(null)
   const [imageFailed, setImageFailed] = useState(false)
 
   const iconKey = useMemo(() => {
@@ -126,53 +111,6 @@ export default function CategoryIcon({ icon, alt, size = 20 }: Props) {
   useEffect(() => {
     setImageFailed(false)
   }, [icon])
-
-  useEffect(() => {
-    let cancelled = false
-
-    if (!iconKey || staticIcon) {
-      setDynamicIcon(null)
-      return () => {
-        cancelled = true
-      }
-    }
-
-    if (iconCache.has(iconKey)) {
-      setDynamicIcon(() => iconCache.get(iconKey) ?? null)
-      return () => {
-        cancelled = true
-      }
-    }
-
-    let iconPromise = iconPromiseCache.get(iconKey)
-    if (!iconPromise) {
-      iconPromise = getIconLoaders()
-        .then((iconLoaders) => {
-          const loadIcon = iconLoaders[iconKey]
-          if (!loadIcon) return null
-          return loadIcon().then((module) => module.default)
-        })
-        .then((module) => {
-          iconCache.set(iconKey, module)
-          return module
-        })
-        .catch(() => {
-          iconCache.set(iconKey, null)
-          return null
-        })
-      iconPromiseCache.set(iconKey, iconPromise)
-    }
-
-    void iconPromise.then((Icon) => {
-      if (!cancelled) {
-        setDynamicIcon(() => Icon)
-      }
-    })
-
-    return () => {
-      cancelled = true
-    }
-  }, [iconKey, staticIcon])
 
   const node = useMemo(() => {
     if (!icon) return null
@@ -191,12 +129,12 @@ export default function CategoryIcon({ icon, alt, size = 20 }: Props) {
         />
       )
     }
-    const Icon = staticIcon ?? dynamicIcon
+    const Icon = staticIcon ?? LinkIcon
     if (Icon) {
       return <Icon size={size} />
     }
-    return <LinkIcon size={size} />
-  }, [alt, dynamicIcon, icon, size, staticIcon])
+    return null
+  }, [alt, icon, imageFailed, size, staticIcon])
 
   return <span className="cat-icon">{node}</span>
 }

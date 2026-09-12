@@ -233,6 +233,15 @@ export const adminPublishWechatArticle = (id: number) =>
   )
 
 // Image
+export interface ImageModelOption {
+  id: string
+  object?: string
+  ownedBy?: string
+}
+
+export const adminListImageModels = (signal?: AbortSignal) =>
+  request<ImageModelOption[]>('/api/user/image/models', { auth: true, signal })
+
 export const adminGenerateImage = async (body: GenerateImagePayload, signal?: AbortSignal) =>
   normalizeImageTaskView(await request<ImageTaskView>('/api/user/image/generate', {
     method: 'POST',

@@ -412,3 +412,74 @@
     bottom: 80px; /* Avoid mobile nav */
   }
 }
+
+/* Cross-device safe areas, touch targets and keyboard avoidance */
+.music-dock {
+  right: max(16px, env(safe-area-inset-right, 0px));
+  bottom: max(16px, env(safe-area-inset-bottom, 0px));
+  max-height: calc(100vh - var(--app-topbar-offset, 56px) - max(32px, env(safe-area-inset-bottom, 0px)));
+  max-height: calc(var(--app-height) - var(--app-topbar-offset, 56px) - max(32px, env(safe-area-inset-bottom, 0px)));
+}
+
+.music-dock__panel-body {
+  max-height: min(240px, 36dvh);
+}
+
+@media (max-width: 768px) {
+  .music-dock {
+    right: max(10px, env(safe-area-inset-right, 0px));
+    bottom: max(80px, calc(env(safe-area-inset-bottom, 0px) + 64px));
+    left: max(10px, env(safe-area-inset-left, 0px));
+    width: auto;
+    max-width: none;
+  }
+
+  .music-dock.is-expanded,
+  .music-dock.is-collapsed {
+    width: auto;
+  }
+
+  body:has(input:focus, textarea:focus, [contenteditable='true']:focus) .music-dock {
+    opacity: 0;
+    pointer-events: none;
+    transform: translateY(calc(100% + 96px));
+  }
+}
+
+@media (hover: none) and (pointer: coarse) {
+  .music-dock__grabber,
+  .music-dock__icon-link,
+  .music-dock__icon-btn,
+  .music-dock__btn,
+  .music-dock__panel-tab,
+  .music-dock__queue-item,
+  .music-dock__lyrics-line {
+    min-width: 44px;
+    min-height: 44px;
+  }
+
+  .music-dock__progress-rail {
+    height: 18px;
+    border-top: 7px solid transparent;
+    border-bottom: 7px solid transparent;
+    background-clip: content-box;
+  }
+}
+
+@media (min-width: 769px) and (max-height: 600px) and (orientation: landscape) {
+  .music-dock {
+    right: max(10px, env(safe-area-inset-right, 0px));
+    bottom: max(10px, env(safe-area-inset-bottom, 0px));
+    max-height: calc(100vh - var(--app-topbar-offset, 54px) - 20px);
+    max-height: calc(var(--app-height) - var(--app-topbar-offset, 54px) - 20px);
+  }
+
+  .music-dock__shell {
+    gap: 6px;
+    padding: 8px 10px;
+  }
+
+  .music-dock__panel-body {
+    max-height: min(150px, 28dvh);
+  }
+}

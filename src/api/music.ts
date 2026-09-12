@@ -18,6 +18,7 @@ import type {
   ToplistListView,
   ImportedPlaylist,
   ImportedPlaylistItem,
+  PlaylistFavoriteStatusView,
   ImportPlaylistRequest,
   UpdatePlaylistRequest,
   MusicSearchType,
@@ -32,6 +33,7 @@ export const musicSearch = (
   type: MusicSearchType = 'song',
 ) =>
   request<SearchResultView>('/api/v1/music/search', {
+    auth: true,
     query: {
       source,
       keyword,
@@ -52,10 +54,11 @@ export const musicPlay = (
   })
 
 export const musicLyric = (source: MusicSourceId, id: string) =>
-  request<LyricView>('/api/v1/music/lyric', { query: { source, id } })
+  request<LyricView>('/api/v1/music/lyric', { auth: true, query: { source, id } })
 
 export const musicToplist = (source: MusicSourceId) =>
   request<ToplistListView>('/api/v1/music/toplist', {
+    auth: true,
     query: { source },
   })
 
@@ -66,6 +69,7 @@ export const musicToplistDetail = (
   pageSize = DEFAULT_PAGE_SIZE,
 ) =>
   request<ToplistDetailView>('/api/v1/music/toplist/detail', {
+    auth: true,
     query: { source, id, page, pageSize },
   })
 
@@ -77,6 +81,7 @@ export const musicPlaylist = (
   order?: string,
 ) =>
   request<PlaylistListView>('/api/v1/music/playlist', {
+    auth: true,
     query: { source, page, pageSize, category, order },
   })
 
@@ -87,6 +92,7 @@ export const musicPlaylistDetail = (
   pageSize = DEFAULT_PAGE_SIZE,
 ) =>
   request<PlaylistDetailView>('/api/v1/music/playlist/detail', {
+    auth: true,
     query: { source, id, page, pageSize },
   })
 
@@ -97,6 +103,7 @@ export const musicAlbumDetail = (
   pageSize = DEFAULT_PAGE_SIZE,
 ) =>
   request<AlbumDetailView>('/api/v1/music/album/detail', {
+    auth: true,
     query: { source, id, page, pageSize },
   })
 
@@ -106,6 +113,7 @@ export const musicNewSongs = (
   pageSize = DEFAULT_PAGE_SIZE,
 ) =>
   request<ToplistDetailView>('/api/v1/music/new', {
+    auth: true,
     query: { source, page, pageSize },
   })
 
@@ -185,6 +193,26 @@ export const importPlaylist = (body: ImportPlaylistRequest) =>
     method: 'POST',
     auth: true,
     body,
+  })
+
+export const getPlaylistFavoriteStatus = (source: MusicSourceId, playlistId: string) =>
+  request<PlaylistFavoriteStatusView>('/api/user/music/playlist-favorites/status', {
+    auth: true,
+    query: { source, playlistId },
+  })
+
+export const savePlaylistFavorite = (source: MusicSourceId, playlistId: string) =>
+  request<ImportedPlaylist>('/api/user/music/playlist-favorites', {
+    method: 'POST',
+    auth: true,
+    body: { source, playlistId },
+  })
+
+export const deletePlaylistFavorite = (source: MusicSourceId, playlistId: string) =>
+  request<void>('/api/user/music/playlist-favorites', {
+    method: 'DELETE',
+    auth: true,
+    query: { source, playlistId },
   })
 
 export const updateImportedPlaylist = (id: number, body: UpdatePlaylistRequest) =>

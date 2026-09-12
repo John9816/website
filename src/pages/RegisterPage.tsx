@@ -1,41 +1,75 @@
-import { useState } from 'react'
+import { useEffect, useState } from 'react'
 import { Link, useNavigate } from 'react-router-dom'
 import {
   App as AntApp,
   Button,
-  Card,
   Form,
   Input,
-  Typography,
-  theme as antdTheme,
 } from 'antd'
-import { LockOutlined, MailOutlined, UserOutlined } from '@ant-design/icons'
-import { getCurrentUser, register as apiRegister } from '../api/auth'
+import {
+  ArrowLeftOutlined,
+  ArrowRightOutlined,
+  LockOutlined,
+  MailOutlined,
+  SafetyCertificateOutlined,
+  UserOutlined,
+} from '@ant-design/icons'
+import {
+  getCurrentUser,
+  register as apiRegister,
+  sendRegistrationEmailCode,
+} from '../api/auth'
 import ThemeToggle from '../components/ThemeToggle'
 import { useAuth } from '../context/AuthContext'
-import { useTheme, type ThemeMode } from '../context/ThemeContext'
 import { ACCOUNT_EMAIL_HINT, ACCOUNT_EMAIL_PATTERN } from '../utils/email'
-
-function authBackground(mode: ThemeMode) {
-  if (mode === 'light') return '#ffffff'
-  if (mode === 'dark') return '#000000'
-  return `linear-gradient(180deg, rgba(9,23,45,0.62), rgba(10,18,33,0.38)), url('/bank-nav/static/img/background-20260710.webp') center / cover fixed no-repeat`
-}
+import '../styles/auth.css'
 
 type RegisterValues = {
   username: string
   email: string
+  verificationCode: string
   password: string
   confirmPassword: string
 }
 
 export default function RegisterPage() {
   const [loading, setLoading] = useState(false)
+  const [codeLoading, setCodeLoading] = useState(false)
+  const [codeCooldown, setCodeCooldown] = useState(0)
+  const [codeEmail, setCodeEmail] = useState('')
+  const [form] = Form.useForm<RegisterValues>()
   const nav = useNavigate()
   const { message } = AntApp.useApp()
   const auth = useAuth()
-  const { mode } = useTheme()
-  const { token } = antdTheme.useToken()
+  const emailValue = Form.useWatch('email', form)
+  const normalizedEmail = emailValue?.trim().toLowerCase() ?? ''
+  const isCurrentEmailCoolingDown = normalizedEmail === codeEmail && codeCooldown > 0
+
+  useEffect(() => {
+    if (codeCooldown <= 0) return
+    const timer = window.setTimeout(() => {
+      setCodeCooldown((value) => Math.max(0, value - 1))
+    }, 1000)
+    return () => window.clearTimeout(timer)
+  }, [codeCooldown])
+
+  const sendEmailCode = async () => {
+    try {
+      await form.validateFields(['email'])
+      const email = form.getFieldValue('email').trim().toLowerCase()
+      setCodeLoading(true)
+      const delivery = await sendRegistrationEmailCode(email)
+      setCodeEmail(email)
+      setCodeCooldown(Math.max(1, Math.ceil(delivery.resendAfterSeconds || 60)))
+      form.setFieldValue('verificationCode', '')
+      const expiresInMinutes = Math.max(1, Math.ceil((delivery.expiresInSeconds || 600) / 60))
+      message.success(`验证码请求已提交，有效期 ${expiresInMinutes} 分钟`)
+    } catch (error) {
+      if (error instanceof Error) message.error(error.message)
+    } finally {
+      setCodeLoading(false)
+    }
+  }
 
   const onFinish = async (values: RegisterValues) => {
     setLoading(true)
@@ -44,9 +78,10 @@ export default function RegisterPage() {
         values.username.trim(),
         values.password,
         values.email.trim().toLowerCase(),
+        values.verificationCode,
       )
       const profile = await getCurrentUser(result.token, result.tokenType)
-      auth.login(result.token, result.username, result.tokenType, profile)
+      auth.login(result.token, result.username, result.tokenType, profile, result.refreshToken)
       message.success('注册成功，已自动登录')
       nav('/', { replace: true })
     } catch (error) {
@@ -57,48 +92,38 @@ export default function RegisterPage() {
   }
 
   return (
-    <div
-      className="auth-page"
-      style={{
-        minHeight: '100dvh',
-        display: 'flex',
-        alignItems: 'center',
-        justifyContent: 'center',
-        background: authBackground(mode),
-        padding: 20,
-        position: 'relative',
-      }}
-    >
-      <div className="auth-page__theme">
+    <div className="account-page account-page--register">
+      <header className="account-page__header">
+        <Link to="/" className="account-page__home">
+          <ArrowLeftOutlined />
+          <span>返回首页</span>
+        </Link>
         <ThemeToggle bare />
-      </div>
+      </header>
 
-      <Card
-        className="auth-page__card auth-page__card--register"
-        style={{
-          width: 'min(100%, 420px)',
-          background: token.colorBgContainer,
-          borderRadius: 8,
-          border: '1px solid rgba(255,255,255,0.12)',
-          backdropFilter: 'blur(16px)',
-          boxShadow: token.boxShadow,
-        }}
-        bordered={false}
-      >
-        <Typography.Title level={3} style={{ textAlign: 'center', marginBottom: 8 }}>
-          用户注册
-        </Typography.Title>
-        <Typography.Paragraph
-          type="secondary"
-          style={{ textAlign: 'center', marginBottom: 28 }}
+      <main className="account-page__main">
+        <section className="account-page__form" aria-labelledby="account-title">
+          <div className="account-page__intro">
+            <Link to="/" className="account-page__brand">个人导航<span> / 账号</span></Link>
+            <h1 id="account-title">创建账号</h1>
+            <p>支持 QQ 邮箱和 @751152.xyz 邮箱</p>
+          </div>
+
+        <Form<RegisterValues>
+          name="account-register"
+          form={form}
+          size="large"
+          layout="vertical"
+          requiredMark={false}
+          onFinish={onFinish}
         >
-          使用 QQ 邮箱或 @751152.xyz 邮箱创建普通用户账号
-        </Typography.Paragraph>
-
-        <Form<RegisterValues> size="large" layout="vertical" onFinish={onFinish}>
           <Form.Item
+            label="用户名"
             name="username"
-            rules={[{ required: true, message: '请输入用户名' }]}
+            rules={[
+              { required: true, message: '请输入用户名' },
+              { min: 3, max: 50, message: '用户名长度为 3-50 个字符' },
+            ]}
           >
             <Input
               prefix={<UserOutlined />}
@@ -108,7 +133,9 @@ export default function RegisterPage() {
           </Form.Item>
 
           <Form.Item
+            label="邮箱"
             name="email"
+            validateFirst
             rules={[
               { required: true, message: '请输入邮箱' },
               {
@@ -121,21 +148,57 @@ export default function RegisterPage() {
               prefix={<MailOutlined />}
               placeholder="QQ 邮箱或 name@751152.xyz"
               autoComplete="email"
+              inputMode="email"
             />
           </Form.Item>
 
           <Form.Item
+            label="邮箱验证码"
+            name="verificationCode"
+            getValueFromEvent={(event) => event.target.value.replace(/\D/g, '').slice(0, 6)}
+            rules={[
+              { required: true, message: '请输入邮箱验证码' },
+              { pattern: /^\d{6}$/, message: '请输入 6 位数字验证码' },
+            ]}
+          >
+            <Input
+              prefix={<SafetyCertificateOutlined />}
+              placeholder="6 位数字"
+              inputMode="numeric"
+              autoComplete="one-time-code"
+              maxLength={6}
+              suffix={
+                <Button
+                  type="link"
+                  size="small"
+                  loading={codeLoading}
+                  disabled={loading || isCurrentEmailCoolingDown}
+                  onClick={() => void sendEmailCode()}
+                  className="account-page__code-button"
+                >
+                  {isCurrentEmailCoolingDown ? `${codeCooldown} 秒后重发` : '获取验证码'}
+                </Button>
+              }
+            />
+          </Form.Item>
+
+          <Form.Item
+            label="密码"
             name="password"
-            rules={[{ required: true, message: '请输入密码' }]}
+            rules={[
+              { required: true, message: '请输入密码' },
+              { min: 6, max: 64, message: '密码长度为 6-64 个字符' },
+            ]}
           >
             <Input.Password
               prefix={<LockOutlined />}
-              placeholder="密码"
+              placeholder="6-64 个字符"
               autoComplete="new-password"
             />
           </Form.Item>
 
           <Form.Item
+            label="确认密码"
             name="confirmPassword"
             dependencies={['password']}
             rules={[
@@ -152,22 +215,22 @@ export default function RegisterPage() {
           >
             <Input.Password
               prefix={<LockOutlined />}
-              placeholder="确认密码"
+              placeholder="再次输入密码"
               autoComplete="new-password"
             />
           </Form.Item>
 
-          <Form.Item style={{ marginBottom: 12 }}>
+          <Form.Item className="account-page__submit">
             <Button type="primary" htmlType="submit" loading={loading} block>
-              注册
+              创建账号<ArrowRightOutlined />
             </Button>
           </Form.Item>
         </Form>
 
-        <Typography.Paragraph style={{ textAlign: 'center', marginBottom: 0 }}>
-          已有账号？<Link to="/login">去登录</Link>
-        </Typography.Paragraph>
-      </Card>
+          <p className="account-page__alternate">已有账号？<Link to="/login">登录账号</Link></p>
+        </section>
+      </main>
+      <footer className="account-page__footer"><Link to="/">751152.xyz</Link></footer>
     </div>
   )
 }

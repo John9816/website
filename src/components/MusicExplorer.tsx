@@ -1,12 +1,11 @@
 import { useCallback, useEffect, useMemo, useRef, useState, Fragment } from 'react'
-import { App as AntApp, Button, Card, Input, Modal, Pagination, Segmented } from 'antd'
+import { App as AntApp, Button, Input, Modal, Pagination, Segmented } from 'antd'
 import {
   ChevronLeft,
   ChevronRight,
   Heart,
   History,
   ListMusic,
-  LogIn,
   Play,
   Search,
   Sparkles,
@@ -15,7 +14,7 @@ import {
   Upload,
   type LucideIcon,
 } from 'lucide-react'
-import { Link, useNavigate, useSearchParams } from 'react-router-dom'
+import { Link, useLocation, useNavigate, useSearchParams } from 'react-router-dom'
 import {
   deleteMusicHistory,
   getMusicFavorites,
@@ -29,6 +28,7 @@ import {
 } from '../api/music'
 import { DEFAULT_PAGE_SIZE, PAGE_SIZE_OPTIONS } from '../constants/pagination'
 import { useAuth } from '../context/AuthContext'
+import { siteImages } from '../utils/siteImages'
 import { useMusicPlayer } from '../context/MusicPlayerContext'
 import { useMusicFavorites } from '../hooks/useMusicFavorites'
 import type {
@@ -52,22 +52,26 @@ import MusicSongTable from './MusicSongTable'
 
 type MusicView = 'toplist' | 'playlist' | 'new' | 'history' | 'favorites' | 'search' | 'my-playlists'
 
-const VIEW_OPTIONS: Array<{
+type MusicViewOption = {
   label: string
   value: MusicView
   icon: LucideIcon
   searchMode?: boolean
   authRequired?: boolean
-}> = [
+}
+
+const VIEW_OPTIONS: MusicViewOption[] = [
   {
     label: '榜单',
     value: 'toplist',
     icon: Trophy,
+    authRequired: true,
   },
   {
     label: '歌单',
     value: 'playlist',
     icon: ListMusic,
+    authRequired: true,
   },
   {
     label: '我的歌单',
@@ -79,22 +83,26 @@ const VIEW_OPTIONS: Array<{
     label: '新歌',
     value: 'new',
     icon: Sparkles,
+    authRequired: true,
   },
   {
     label: '历史',
     value: 'history',
     icon: History,
+    authRequired: true,
   },
   {
     label: '喜欢',
     value: 'favorites',
     icon: Heart,
+    authRequired: true,
   },
   {
     label: '搜索',
     value: 'search',
     icon: Search,
     searchMode: true,
+    authRequired: true,
   },
 ]
 
@@ -286,16 +294,14 @@ function normalizeImportPlaylistUrl(value: string) {
   }
 }
 
-function MusicAuthPrompt() {
+function MusicAuthPrompt({ returnPath, viewLabel }: { returnPath: string; viewLabel: string }) {
   return (
     <div className="music-auth-prompt">
-      <span className="music-auth-prompt__icon">
-        <LogIn size={18} />
-      </span>
-      <strong>登录后可使用播放历史和我喜欢的音乐</strong>
-      <p>公开音乐浏览不受影响，但这两个模块依赖你的个人账户数据。</p>
+      <img className="music-auth-prompt__art" src={siteImages.musicIcon.url} alt="" width={64} height={64} />
+      <strong>登录后继续浏览{viewLabel}</strong>
+      <p>收藏的歌单，熟悉的旋律。</p>
       <div className="music-auth-prompt__actions">
-        <Link to="/login">
+        <Link to="/login" state={{ from: returnPath }}>
           <Button type="primary">去登录</Button>
         </Link>
         <Link to="/register">
@@ -309,6 +315,7 @@ function MusicAuthPrompt() {
 export default function MusicExplorer() {
   const { message } = AntApp.useApp()
   const auth = useAuth()
+  const location = useLocation()
   const navigate = useNavigate()
   const [searchParams, setSearchParams] = useSearchParams()
   const { playPlaylist, setPlaylist } = useMusicPlayer()
@@ -378,6 +385,10 @@ export default function MusicExplorer() {
   const urlSearchRef = useRef('')
 
   const view = isMusicView(searchParams.get('view')) ? searchParams.get('view') : 'toplist'
+  const currentViewOption = VIEW_OPTIONS.find((item) => item.value === view)
+  const currentViewRequiresAuth = currentViewOption?.authRequired === true
+  const showAuthPrompt = currentViewRequiresAuth && !auth.token
+  const returnPath = `${location.pathname}${location.search}${location.hash}`
 
   const historySongs = useMemo(() => historyItems.map(toSongSearchItem), [historyItems])
   const favoriteSongs = useMemo(() => favoriteItems.map(toSongSearchItem), [favoriteItems])
@@ -408,6 +419,16 @@ export default function MusicExplorer() {
     [searchParams, setSearchParams],
   )
 
+  const handleViewSelect = useCallback(
+    (item: MusicViewOption) => {
+      if (item.authRequired && !auth.token) {
+        message.info(`登录后可使用${item.label}`)
+      }
+      setView(item.value)
+    },
+    [auth.token, message, setView],
+  )
+
   const searchSongs = useCallback(
     async (
       nextKeyword: string,
@@ -416,6 +437,8 @@ export default function MusicExplorer() {
       nextSource = searchSource,
       nextType = searchType,
     ) => {
+      if (!auth.token) return
+
       const trimmed = nextKeyword.trim()
       if (!trimmed) {
         message.warning('请输入关键词')
@@ -457,11 +480,11 @@ export default function MusicExplorer() {
         setSearching(false)
       }
     },
-    [message, searchPageSize, searchSource, searchType, setPlaylist],
+    [auth.token, message, searchPageSize, searchSource, searchType, setPlaylist],
   )
 
   useEffect(() => {
-    if (view !== 'search') return
+    if (view !== 'search' || !auth.token) return
 
     const nextKeyword = (searchParams.get('keyword') || searchParams.get('q') || '').trim()
     if (!nextKeyword) return
@@ -479,7 +502,7 @@ export default function MusicExplorer() {
     setSearchSource(nextSource)
     setSearchType(nextType)
     void searchSongs(nextKeyword, 1, searchPageSize, nextSource, nextType)
-  }, [searchPageSize, searchParams, searchSongs, searchSource, view])
+  }, [auth.token, searchPageSize, searchParams, searchSongs, searchSource, view])
 
   const searchByMeta = useCallback(
     (nextKeyword: string, nextSource: MusicSourceId, nextType: MusicSearchType = 'song') => {
@@ -502,6 +525,7 @@ export default function MusicExplorer() {
   )
 
   const loadToplists = useCallback(async () => {
+    if (!auth.token) return
     setToplistLoading(true)
     try {
       const data = await musicToplist(toplistSource)
@@ -511,9 +535,10 @@ export default function MusicExplorer() {
     } finally {
       setToplistLoading(false)
     }
-  }, [message, toplistSource])
+  }, [auth.token, message, toplistSource])
 
   const loadPlaylists = useCallback(async () => {
+    if (!auth.token) return
     const requestId = ++playlistRequestIdRef.current
     setPlaylistLoading(true)
     try {
@@ -534,9 +559,10 @@ export default function MusicExplorer() {
       if (requestId !== playlistRequestIdRef.current) return
       setPlaylistLoading(false)
     }
-  }, [message, playlistCategory, playlistPage, playlistPageSize, playlistSource])
+  }, [auth.token, message, playlistCategory, playlistPage, playlistPageSize, playlistSource])
 
   const loadNewSongs = useCallback(async () => {
+    if (!auth.token) return
     const requestId = ++newSongsRequestIdRef.current
     setNewSongsLoading(true)
     try {
@@ -557,7 +583,7 @@ export default function MusicExplorer() {
       if (requestId !== newSongsRequestIdRef.current) return
       setNewSongsLoading(false)
     }
-  }, [message, newSongsPage, newSongsPageSize, newSource, setPlaylist])
+  }, [auth.token, message, newSongsPage, newSongsPageSize, newSource, setPlaylist])
 
   const loadHistory = useCallback(async () => {
     if (!auth.token) return
@@ -636,20 +662,20 @@ export default function MusicExplorer() {
   }, [importUrl, loadMyPlaylists, message])
 
   useEffect(() => {
-    if (view === 'toplist') void loadToplists()
-  }, [view, loadToplists])
+    if (view === 'toplist' && auth.token) void loadToplists()
+  }, [auth.token, view, loadToplists])
 
   useEffect(() => {
-    if (view === 'playlist') void loadPlaylists()
-  }, [view, loadPlaylists])
+    if (view === 'playlist' && auth.token) void loadPlaylists()
+  }, [auth.token, view, loadPlaylists])
 
   useEffect(() => {
     if (view === 'my-playlists' && auth.token) void loadMyPlaylists()
   }, [auth.token, loadMyPlaylists, view])
 
   useEffect(() => {
-    if (view === 'new') void loadNewSongs()
-  }, [view, loadNewSongs])
+    if (view === 'new' && auth.token) void loadNewSongs()
+  }, [auth.token, view, loadNewSongs])
 
   useEffect(() => {
     if (view === 'history' && auth.token) void loadHistory()
@@ -879,13 +905,17 @@ export default function MusicExplorer() {
 
   return (
     <Fragment>
-      <Card className="music-browser" bordered={false} styles={{ body: { padding: 0 } }}>
+      <main className="music-browser" aria-label="音乐工作台">
         <div
           className={`music-browser__layout${
             view === 'search' ? ' music-browser__layout--search' : ''
           }`}
         >
           <aside className="music-browser__sidebar">
+            <Link to="/music" className="music-browser__identity">
+              <img src={siteImages.musicIcon.url} alt="" width={36} height={36} />
+              <span><strong>DuckMusic</strong><small>我的音乐空间</small></span>
+            </Link>
             <nav className="music-browser__side-nav" aria-label="音乐功能导航">
               {VIEW_OPTIONS.map((item) => {
                 const Icon = item.icon
@@ -899,7 +929,7 @@ export default function MusicExplorer() {
                       item.searchMode ? ' music-browser__side-item--search' : ''
                     }`}
                     aria-pressed={isActive}
-                    onClick={() => setView(item.value)}
+                    onClick={() => handleViewSelect(item)}
                   >
                     <span className="music-browser__side-item-icon">
                       <Icon size={18} strokeWidth={isActive ? 2.5 : 2} />
@@ -940,7 +970,14 @@ export default function MusicExplorer() {
             </div>
 
             <div className="music-browser__content">
-          {view === 'search' && (
+          {showAuthPrompt ? (
+            <MusicAuthPrompt
+              returnPath={returnPath}
+              viewLabel={currentViewOption?.label ?? '音乐功能'}
+            />
+          ) : null}
+
+          {!showAuthPrompt && view === 'search' && (
             <>
               <section className="music-search-stage" aria-label="独立搜索">
                 <div className="music-search-stage__controls">
@@ -1074,7 +1111,7 @@ export default function MusicExplorer() {
             </>
           )}
 
-          {view === 'toplist' && (
+          {!showAuthPrompt && view === 'toplist' && (
             <>
               <div className="music-view-controls music-view-controls--compact">
                 <Segmented
@@ -1115,7 +1152,7 @@ export default function MusicExplorer() {
             </>
           )}
 
-          {view === 'playlist' && (
+          {!showAuthPrompt && view === 'playlist' && (
             <>
               <div className="music-view-controls music-view-controls--stack">
                 <Segmented
@@ -1215,7 +1252,7 @@ export default function MusicExplorer() {
             </>
           )}
 
-          {view === 'new' && (
+          {!showAuthPrompt && view === 'new' && (
             <>
               <div className="music-view-controls music-view-controls--compact">
                 <Segmented
@@ -1261,10 +1298,10 @@ export default function MusicExplorer() {
             </>
           )}
 
-          {view === 'history' && (
+          {!showAuthPrompt && view === 'history' && (
             <>
               {!auth.token ? (
-                <MusicAuthPrompt />
+                <MusicAuthPrompt returnPath={returnPath} viewLabel="播放历史" />
               ) : (
                 <>
                   <div className="music-library-toolbar">
@@ -1301,10 +1338,10 @@ export default function MusicExplorer() {
             </>
           )}
 
-          {view === 'favorites' && (
+          {!showAuthPrompt && view === 'favorites' && (
             <>
               {!auth.token ? (
-                <MusicAuthPrompt />
+                <MusicAuthPrompt returnPath={returnPath} viewLabel="我喜欢的音乐" />
               ) : (
                 <>
                   <div className="music-library-toolbar">
@@ -1341,10 +1378,10 @@ export default function MusicExplorer() {
             </>
           )}
 
-          {view === 'my-playlists' && (
+          {!showAuthPrompt && view === 'my-playlists' && (
             <>
               {!auth.token ? (
-                <MusicAuthPrompt />
+                <MusicAuthPrompt returnPath={returnPath} viewLabel="我的歌单" />
               ) : (
                 <>
                   <div className="music-library-toolbar">
@@ -1431,7 +1468,7 @@ export default function MusicExplorer() {
           </div>
         </div>
       </div>
-    </Card>
+    </main>
 
     <Modal
       title="导入歌单"

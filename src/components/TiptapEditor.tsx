@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useMemo, useState, type CSSProperties } from 'react'
+import { useCallback, useEffect, useMemo, useRef, useState, type CSSProperties } from 'react'
 import { createPortal } from 'react-dom'
 import { EditorContent, ReactNodeViewRenderer, useEditor, type Editor } from '@tiptap/react'
 import StarterKit from '@tiptap/starter-kit'
@@ -17,19 +17,21 @@ import { TextStyle } from '@tiptap/extension-text-style'
 import CodeBlockLowlight from '@tiptap/extension-code-block-lowlight'
 import Highlight from '@tiptap/extension-highlight'
 import TextAlign from '@tiptap/extension-text-align'
-import { all, createLowlight } from 'lowlight'
+import dart from 'highlight.js/lib/languages/dart'
+import { common, createLowlight } from 'lowlight'
 import { App as AntApp } from 'antd'
 import { MenuBar } from './editor/MenuBar'
 import { BubbleMenuBar } from './editor/BubbleMenuBar'
 import { CodeBlockView } from './editor/CodeBlockView'
-import { FloatingMenuBar } from './editor/FloatingMenuBar'
+import { EditorShortcuts } from './editor/EditorShortcuts'
+import { ImagePlaceholder } from './editor/ImagePlaceholderExtension'
 import { ImagePromptModal } from './editor/ImagePromptModal'
 import { LinkPromptModal, type LinkPromptValue } from './editor/LinkPromptModal'
 import { SlashCommand } from './editor/SlashCommand'
 import { isJsonEqual, safeParseJson } from './editor/serialize'
 import '../styles/tiptap.css'
 
-const lowlight = createLowlight(all)
+const lowlight = createLowlight({ ...common, dart })
 const MAX_IMAGE_EDGE = 1600
 
 const TEXT = {
@@ -79,12 +81,6 @@ const TEXT = {
   insertImageFailed: '\u63d2\u5165\u56fe\u7247\u5931\u8d25',
   editorPlaceholder: '\u8f93\u5165\u5185\u5bb9\u2026',
 } as const
-
-type EditorViewLike = {
-  state: any
-  dispatch: (transaction: any) => void
-  focus: () => void
-}
 
 interface TiptapEditorProps {
   content: string
@@ -190,67 +186,109 @@ export default function TiptapEditor({
   const [imageUploading, setImageUploading] = useState(false)
   const [imageModalOpen, setImageModalOpen] = useState(false)
   const [linkModalOpen, setLinkModalOpen] = useState(false)
+  const editorRef = useRef<Editor | null>(null)
+  const onChangeRef = useRef(onChange)
+  const pendingImageUploadsRef = useRef(0)
+
+  useEffect(() => {
+    onChangeRef.current = onChange
+  }, [onChange])
 
   const openImageModal = useCallback(() => {
     setImageModalOpen(true)
   }, [])
 
-  const insertImageIntoView = useCallback(
-    (view: EditorViewLike | null | undefined, src: string, alt?: string, pos?: number) => {
-      if (!view) return
-
-      const imageNode = view.state.schema.nodes.image?.create({ src, alt })
-      if (!imageNode) return
-
-      const transaction =
-        typeof pos === 'number'
-          ? view.state.tr.insert(pos, imageNode)
-          : view.state.tr.replaceSelectionWith(imageNode)
-
-      view.dispatch(transaction.scrollIntoView())
-      view.focus()
-    },
-    [],
-  )
+  const openLinkModal = useCallback(() => {
+    setLinkModalOpen(true)
+  }, [])
 
   const handleImageFiles = useCallback(
-    async (files: FileList | File[] | null, view?: EditorViewLike | null, dropPos?: number) => {
+    async (files: FileList | File[] | null, targetEditor?: Editor | null, dropPos?: number) => {
       const imageFiles = Array.from(files ?? []).filter((file) => file.type.startsWith('image/'))
       if (!imageFiles.length) return false
+      const activeEditor = targetEditor ?? editorRef.current
+      if (!isEditorUsable(activeEditor)) return false
 
+      const uploads = imageFiles.map((file, index) => ({
+        file,
+        id: `image-${Date.now()}-${index}-${Math.random().toString(36).slice(2, 8)}`,
+        alt: file.name.replace(/\.[^.]+$/, ''),
+      }))
+      const placeholders = uploads.map(({ id }) => ({
+        type: 'imagePlaceholder',
+        attrs: { id },
+      }))
+      const inserted = typeof dropPos === 'number'
+        ? activeEditor.chain().focus().insertContentAt(dropPos, placeholders).run()
+        : activeEditor.chain().focus().insertContent(placeholders).run()
+      if (!inserted) return false
+
+      pendingImageUploadsRef.current += uploads.length
       setImageUploading(true)
       try {
-        let nextPos = dropPos
-        for (const file of imageFiles) {
-          const src = uploadImage ? await uploadImage(file) : await imageFileToDataUrl(file)
-          insertImageIntoView(view, src, file.name.replace(/\.[^.]+$/, ''), nextPos)
-          if (typeof nextPos === 'number' && view?.state?.schema?.nodes?.image) {
-            const imageNode = view.state.schema.nodes.image.create({ src })
-            nextPos += imageNode.nodeSize
+        const results = await Promise.allSettled(
+          uploads.map(async ({ file, id, alt }) => {
+            try {
+              const src = uploadImage ? await uploadImage(file) : await imageFileToDataUrl(file)
+              if (!isEditorUsable(activeEditor)) return false
+              const replaced = activeEditor.commands.replaceImagePlaceholder(id, { src, alt })
+              if (!replaced) throw new Error(TEXT.insertImageFailed)
+              return true
+            } catch (error) {
+              if (isEditorUsable(activeEditor)) {
+                activeEditor.commands.removeImagePlaceholder(id)
+              }
+              throw error
+            }
+          }),
+        )
+        const successCount = results.filter(
+          (result) => result.status === 'fulfilled' && result.value,
+        ).length
+        const failedResult = results.find((result) => result.status === 'rejected')
+        if (successCount) {
+          message.success(`${TEXT.insertedImages}${successCount}${TEXT.imageUnit}`)
+        }
+        if (failedResult?.status === 'rejected') {
+          message.error((failedResult.reason as Error)?.message || TEXT.insertImageFailed)
+        }
+        return successCount > 0
+      } finally {
+        pendingImageUploadsRef.current = Math.max(
+          0,
+          pendingImageUploadsRef.current - uploads.length,
+        )
+        if (pendingImageUploadsRef.current === 0) {
+          setImageUploading(false)
+          if (isEditorUsable(activeEditor)) {
+            onChangeRef.current(activeEditor.getHTML(), JSON.stringify(activeEditor.getJSON()))
           }
         }
-        message.success(`${TEXT.insertedImages}${imageFiles.length}${TEXT.imageUnit}`)
-        return true
-      } catch (error) {
-        message.error((error as Error).message || TEXT.insertImageFailed)
-        return false
-      } finally {
-        setImageUploading(false)
       }
     },
-    [insertImageIntoView, message, uploadImage],
+    [message, uploadImage],
   )
 
   const editor = useEditor({
     extensions: [
       StarterKit.configure({
         codeBlock: false,
+        link: false,
+        underline: false,
       }),
       Underline,
       Link.configure({
         openOnClick: false,
+        autolink: true,
+        linkOnPaste: true,
+        HTMLAttributes: {
+          rel: 'noopener noreferrer',
+        },
       }),
-      Image,
+      Image.configure({
+        allowBase64: true,
+      }),
+      ImagePlaceholder,
       Placeholder.configure({
         placeholder: TEXT.editorPlaceholder,
       }),
@@ -260,6 +298,7 @@ export default function TiptapEditor({
       }),
       Table.configure({
         resizable: true,
+        allowTableNodeSelection: true,
       }),
       TableRow,
       TableHeader,
@@ -283,15 +322,18 @@ export default function TiptapEditor({
       SlashCommand.configure({
         onInsertImage: openImageModal,
       }),
+      EditorShortcuts.configure({
+        onInsertLink: openLinkModal,
+      }),
     ],
     content: normalizeEditorContent(content || ''),
     editorProps: {
-      handlePaste: (view, event) => {
+      handlePaste: (_view, event) => {
         const files = event.clipboardData?.files
         if (!files?.length) return false
         if (!Array.from(files).some((file) => file.type.startsWith('image/'))) return false
         event.preventDefault()
-        void handleImageFiles(files, view as EditorViewLike)
+        void handleImageFiles(files, editorRef.current)
         return true
       },
       handleDrop: (view, event) => {
@@ -303,14 +345,22 @@ export default function TiptapEditor({
           left: event.clientX,
           top: event.clientY,
         })
-        void handleImageFiles(files, view as EditorViewLike, coordinates?.pos)
+        void handleImageFiles(files, editorRef.current, coordinates?.pos)
         return true
       },
     },
     onUpdate: ({ editor: nextEditor }) => {
-      onChange(nextEditor.getHTML(), JSON.stringify(nextEditor.getJSON()))
+      if (pendingImageUploadsRef.current > 0) return
+      onChangeRef.current(nextEditor.getHTML(), JSON.stringify(nextEditor.getJSON()))
     },
   })
+
+  useEffect(() => {
+    editorRef.current = editor
+    return () => {
+      if (editorRef.current === editor) editorRef.current = null
+    }
+  }, [editor])
 
   useEffect(() => {
     if (!isEditorUsable(editor)) return
@@ -327,6 +377,17 @@ export default function TiptapEditor({
     return () => {
       document.body.style.overflow = previousOverflow
     }
+  }, [isFullscreen])
+
+  useEffect(() => {
+    if (!isFullscreen) return
+    const handleKeyDown = (event: KeyboardEvent) => {
+      if (event.key !== 'Escape') return
+      event.preventDefault()
+      setIsFullscreen(false)
+    }
+    window.addEventListener('keydown', handleKeyDown)
+    return () => window.removeEventListener('keydown', handleKeyDown)
   }, [isFullscreen])
 
   const style = {
@@ -353,11 +414,6 @@ export default function TiptapEditor({
   const handleCancelImageUrl = useCallback(() => {
     setImageModalOpen(false)
     editor?.chain().focus().run()
-  }, [editor])
-
-  const handleInsertLink = useCallback(() => {
-    if (!editor) return
-    setLinkModalOpen(true)
   }, [editor])
 
   const handleConfirmLink = useCallback(
@@ -399,9 +455,9 @@ export default function TiptapEditor({
         imageUploading={imageUploading}
         isFullscreen={isFullscreen}
         onInsertImageUrl={handleInsertImageUrl}
-        onInsertLink={handleInsertLink}
+        onInsertLink={openLinkModal}
         onSelectImageFiles={(files) => {
-          void handleImageFiles(files, editor.view as unknown as EditorViewLike)
+          void handleImageFiles(files, editor)
         }}
         toggleFullscreen={() => setIsFullscreen((value) => !value)}
       />
@@ -410,9 +466,9 @@ export default function TiptapEditor({
     editor,
     handleImageFiles,
     handleInsertImageUrl,
-    handleInsertLink,
     imageUploading,
     isFullscreen,
+    openLinkModal,
   ])
 
   const canPortalToolbar = !!toolbarContainer?.isConnected && !isFullscreen
@@ -427,12 +483,7 @@ export default function TiptapEditor({
       {slotBeforeMenu}
       {canPortalToolbar ? createPortal(menuBarContent, toolbarContainer) : menuBarContent}
       {slotAfterMenu}
-      {editor ? (
-        <>
-          <BubbleMenuBar editor={editor} onInsertLink={handleInsertLink} />
-          <FloatingMenuBar editor={editor} onInsertImage={handleInsertImageUrl} />
-        </>
-      ) : null}
+      {isEditorUsable(editor) ? <BubbleMenuBar editor={editor} onInsertLink={openLinkModal} /> : null}
       <EditorContent
         editor={editor}
         className={`editor-content${fillHeight ? ' editor-content--fill' : ''}`}
@@ -444,7 +495,7 @@ export default function TiptapEditor({
       />
       <LinkPromptModal
         open={linkModalOpen}
-        initialUrl={editor?.getAttributes('link').href ?? ''}
+        initialUrl={isEditorUsable(editor) ? editor.getAttributes('link').href ?? '' : ''}
         onCancel={handleCancelLink}
         onConfirm={handleConfirmLink}
       />

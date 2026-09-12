@@ -18,6 +18,7 @@ const HomePage = lazy(() => import('./pages/HomePage'))
 const GlobalMusicDock = lazy(() => import('./components/GlobalMusicDock'))
 const LoginPage = lazy(() => import('./pages/LoginPage'))
 const RegisterPage = lazy(() => import('./pages/RegisterPage'))
+const ForgotPasswordPage = lazy(() => import('./pages/ForgotPasswordPage'))
 const MusicLayout = lazy(() => import('./pages/MusicLayout'))
 const MusicPage = lazy(() => import('./pages/MusicPage'))
 const MusicPromoPage = lazy(() => import('./pages/MusicPromoPage'))
@@ -37,6 +38,7 @@ const AdminConfigs = lazy(() => import('./pages/AdminConfigs'))
 const AdminContentFactory = lazy(() => import('./pages/AdminContentFactory'))
 const AdminPassword = lazy(() => import('./pages/AdminPassword'))
 const AdminUsers = lazy(() => import('./pages/AdminUsers'))
+const AdminRedeemCodes = lazy(() => import('./pages/AdminRedeemCodes'))
 const AdminKnowledgeBase = lazy(() => import('./pages/AdminKnowledgeBase'))
 const KbSharePage = lazy(() => import('./pages/KbSharePage'))
 
@@ -63,22 +65,13 @@ function RouteFallback() {
 function ThemedAntd({ children }: { children: ReactNode }) {
   const { mode } = useTheme()
   const isLight = mode === 'light'
-  const isDark = mode === 'dark'
-  const colorPrimary = isDark ? '#f76cc6' : isLight ? '#2563eb' : '#41d1ff'
-  const colorText = isLight ? '#111827' : '#f4f7fb'
-  const colorTextSecondary = isLight ? 'rgba(71,85,105,0.78)' : 'rgba(226,235,245,0.72)'
-  const colorBgBase = isDark ? '#000000' : isLight ? '#ffffff' : '#102f52'
-  const colorBgContainer = isDark
-    ? 'rgba(13, 15, 20, 0.84)'
-    : isLight
-      ? 'rgba(255, 255, 255, 0.94)'
-      : 'rgba(8, 20, 40, 0.68)'
-  const colorBgElevated = isDark
-    ? 'rgba(18, 23, 31, 0.96)'
-    : isLight
-      ? 'rgba(255, 255, 255, 0.98)'
-      : 'rgba(10, 24, 48, 0.92)'
-  const colorBorder = isLight ? 'rgba(15, 23, 42, 0.12)' : 'rgba(255, 255, 255, 0.14)'
+  const colorPrimary = isLight ? '#167d70' : '#79c5b1'
+  const colorText = isLight ? '#242d29' : '#e8eeea'
+  const colorTextSecondary = isLight ? '#718079' : '#a0afa6'
+  const colorBgBase = isLight ? '#f5f7f6' : '#171d1a'
+  const colorBgContainer = isLight ? '#ffffff' : '#202724'
+  const colorBgElevated = isLight ? '#ffffff' : '#272f2b'
+  const colorBorder = isLight ? '#e2e8e4' : '#34413a'
   return (
     <ConfigProvider
       locale={zhCN}
@@ -90,21 +83,17 @@ function ThemedAntd({ children }: { children: ReactNode }) {
           controlHeight: 40,
           controlHeightLG: 44,
           controlHeightSM: 32,
-          fontFamily:
-            "-apple-system, BlinkMacSystemFont, 'Segoe UI', 'PingFang SC', 'Hiragino Sans GB', 'Microsoft YaHei', sans-serif",
+          fontFamily: 'var(--font-sans)',
           colorText,
+          colorTextLightSolid: isLight ? '#ffffff' : '#132a22',
           colorTextSecondary,
           colorBgBase,
           colorBgContainer,
           colorBgElevated,
           colorBorder,
           colorBorderSecondary: isLight ? 'rgba(15, 23, 42, 0.08)' : 'rgba(255, 255, 255, 0.09)',
-          colorFillTertiary: isDark
-            ? 'rgba(247,108,198,0.12)'
-            : isLight
-              ? 'rgba(37,99,235,0.09)'
-              : 'rgba(65,209,255,0.12)',
-          boxShadow: isLight ? '0 18px 44px rgba(15,23,42,0.10)' : '0 18px 44px rgba(0,0,0,0.26)',
+          colorFillTertiary: isLight ? '#f0f3f1' : '#2a342e',
+          boxShadow: isLight ? '0 8px 28px rgba(30,52,41,0.08)' : '0 8px 28px rgba(0,0,0,0.16)',
           motionDurationFast: '0.12s',
           motionDurationMid: '0.18s',
           motionEaseOut: 'cubic-bezier(0.2, 0.82, 0.2, 1)',
@@ -120,7 +109,7 @@ function ThemedAntd({ children }: { children: ReactNode }) {
           Input: {
             borderRadius: 8,
             activeShadow: `0 0 0 4px ${
-              isDark ? 'rgba(247,108,198,0.14)' : isLight ? 'rgba(37,99,235,0.14)' : 'rgba(65,209,255,0.14)'
+              isLight ? 'rgba(22,125,112,0.12)' : 'rgba(121,197,177,0.12)'
             }`,
           },
           Select: {
@@ -276,6 +265,7 @@ export default function App() {
                     </Route>
                     <Route path="/login" element={<LoginPage />} />
                     <Route path="/register" element={<RegisterPage />} />
+                    <Route path="/forgot-password" element={<ForgotPasswordPage />} />
                     <Route path="/admin/login" element={<LoginPage />} />
                     <Route
                       path="/admin"
@@ -305,6 +295,14 @@ export default function App() {
                         }
                       />
                       <Route path="kb" element={<AdminKnowledgeBase />} />
+                      <Route
+                        path="redeem-codes"
+                        element={
+                          <RequireAdminPermission permission="systemConfig">
+                            <AdminRedeemCodes />
+                          </RequireAdminPermission>
+                        }
+                      />
                       <Route
                         path="users"
                         element={

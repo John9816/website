@@ -46,7 +46,7 @@ const AUTOSAVE_DELAY_MS = 6500
 const LOCAL_DRAFT_DELAY_MS = 600
 
 function editorInitialContent(doc: KbDoc) {
-  return doc.contentHtml || doc.contentJson || ''
+  return doc.contentJson || doc.contentHtml || ''
 }
 
 function draftStorageKey(docId: number) {
@@ -287,6 +287,15 @@ export function useKbDocs(activeSpaceId: number | null) {
     contentJson: '',
     formValues: {},
   })
+  const localDraftTimerRef = useRef<number | null>(null)
+  const autosaveTimerRef = useRef<number | null>(null)
+
+  const latestEditStateRef = useRef({
+    editTitle: '',
+    editSummary: '',
+    editContentHtml: '',
+    editContentJson: '',
+  })
 
   const loadTree = useCallback(
     async (spaceId: number, signal?: AbortSignal) => {
@@ -437,18 +446,20 @@ export function useKbDocs(activeSpaceId: number | null) {
 
   const buildLocalDraft = useCallback((): KbLocalDraft | null => {
     if (!selectedDoc || inlineEditingDocId !== selectedDoc.id) return null
+
+    const current = latestEditStateRef.current
     return {
       docId: selectedDoc.id,
-      title: editTitle,
-      summary: editSummary,
-      contentHtml: editContentHtml,
-      contentJson: editContentJson,
-      formValues: normalizeFormValues(inlineDocForm.getFieldsValue()),
+      title: current.editTitle,
+      summary: current.editSummary,
+      contentHtml: current.editContentHtml,
+      contentJson: current.editContentJson,
+      formValues: normalizeFormValues(inlineDocForm.getFieldsValue(true)),
       updatedAt: Date.now(),
       baseUpdatedAt: selectedDoc.updatedAt,
       baseVersionNo: selectedDoc.versionNo,
     }
-  }, [editContentHtml, editContentJson, editSummary, editTitle, inlineDocForm, inlineEditingDocId, selectedDoc])
+  }, [inlineDocForm, inlineEditingDocId, selectedDoc])
 
   const restoreLocalDraft = useCallback(() => {
     if (!localDraft || !selectedDoc || localDraft.docId !== selectedDoc.id) return
@@ -456,7 +467,7 @@ export function useKbDocs(activeSpaceId: number | null) {
     setEditSummary(localDraft.summary)
     setEditContentHtml(localDraft.contentHtml)
     setEditContentJson(localDraft.contentJson)
-    setEditInitialContent(localDraft.contentHtml || localDraft.contentJson || '')
+    setEditInitialContent(localDraft.contentJson || localDraft.contentHtml || '')
     inlineDocForm.setFieldsValue(localDraft.formValues)
     setInlineDocFormRevision((revision) => revision + 1)
     setLocalDraft(null)
@@ -489,9 +500,9 @@ export function useKbDocs(activeSpaceId: number | null) {
       setAutosaveStatus('draft')
       return
     }
-    const values = options.silent
-      ? normalizeFormValues(inlineDocForm.getFieldsValue()) as DocFormValues
-      : await inlineDocForm.validateFields()
+    if (!options.silent) await inlineDocForm.validateFields()
+    // Property fields are stored before their drawer mounts.
+    const values = normalizeFormValues(inlineDocForm.getFieldsValue(true)) as DocFormValues
     if (!values.status) {
       setAutosaveStatus('draft')
       return
@@ -715,7 +726,7 @@ export function useKbDocs(activeSpaceId: number | null) {
     if (editContentJson !== (selectedDoc.contentJson ?? '')) return true
 
     if (lastSavedValuesRef.current) {
-      const currentValues = inlineDocForm.getFieldsValue()
+      const currentValues = inlineDocForm.getFieldsValue(true)
       const saved = lastSavedValuesRef.current
       if (formValuesChanged(currentValues, saved)) return true
     }
@@ -743,30 +754,61 @@ export function useKbDocs(activeSpaceId: number | null) {
       summary: editSummary,
       contentHtml: editContentHtml,
       contentJson: editContentJson,
-      formValues: normalizeFormValues(inlineDocForm.getFieldsValue()),
+      formValues: normalizeFormValues(inlineDocForm.getFieldsValue(true)),
+    }
+
+    latestEditStateRef.current = {
+      editTitle: editTitle.trim(),
+      editSummary,
+      editContentHtml,
+      editContentJson,
     }
   }, [editContentHtml, editContentJson, editSummary, editTitle, inlineDocForm, inlineDocFormRevision, inlineEditingDocId])
 
   useEffect(() => {
     if (!inlineEditingDocId || !isDirty) return
+    if (localDraftTimerRef.current !== null) {
+      window.clearTimeout(localDraftTimerRef.current)
+      localDraftTimerRef.current = null
+    }
     const timer = window.setTimeout(() => {
+      localDraftTimerRef.current = null
       const draft = buildLocalDraft()
       if (!draft) return
       writeLocalDraft(draft)
       setAutosaveStatus((status) => (status === 'saving' || status === 'pending' ? status : 'draft'))
     }, LOCAL_DRAFT_DELAY_MS)
 
-    return () => window.clearTimeout(timer)
+    localDraftTimerRef.current = timer
+
+    return () => {
+      if (localDraftTimerRef.current !== null) {
+        window.clearTimeout(localDraftTimerRef.current)
+        localDraftTimerRef.current = null
+      }
+    }
   }, [buildLocalDraft, inlineDocFormRevision, inlineEditingDocId, isDirty])
 
   useEffect(() => {
     if (!inlineEditingDocId || !selectedDoc || !isDirty || inlineDocSaving) return
-    setAutosaveStatus('pending')
+    if (autosaveTimerRef.current !== null) {
+      window.clearTimeout(autosaveTimerRef.current)
+      autosaveTimerRef.current = null
+    }
+    setAutosaveStatus((status) => status === 'error' ? status : 'pending')
     const timer = window.setTimeout(() => {
+      autosaveTimerRef.current = null
       void saveInlineDoc({ exitAfterSave: false, silent: true })
     }, AUTOSAVE_DELAY_MS)
 
-    return () => window.clearTimeout(timer)
+    autosaveTimerRef.current = timer
+
+    return () => {
+      if (autosaveTimerRef.current !== null) {
+        window.clearTimeout(autosaveTimerRef.current)
+        autosaveTimerRef.current = null
+      }
+    }
   }, [inlineDocFormRevision, inlineDocSaving, inlineEditingDocId, isDirty, saveInlineDoc, selectedDoc])
 
   useEffect(() => {
