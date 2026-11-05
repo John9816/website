@@ -5,6 +5,7 @@ import type {
   AdminUserDetailView,
   ContentAgentRunJob,
   ContentAgentRunPayload,
+  ContentAutopilotSettings,
   ContentAutomationView,
   ContentArticle,
   ContentArticleGeneratePayload,
@@ -96,9 +97,9 @@ export const adminDeleteLink = (id: number) =>
 // Configs
 export const adminListConfigs = () =>
   request<SysConfig[]>('/api/admin/configs', { auth: true })
-export const adminCreateConfig = (body: Partial<SysConfig>) =>
+export const adminCreateConfig = (body: Partial<SysConfig> & { preserveValue?: boolean }) =>
   request<SysConfig>('/api/admin/configs', { method: 'POST', auth: true, body })
-export const adminUpdateConfig = (id: number, body: Partial<SysConfig>) =>
+export const adminUpdateConfig = (id: number, body: Partial<SysConfig> & { preserveValue?: boolean }) =>
   request<SysConfig>(`/api/admin/configs/${id}`, { method: 'PUT', auth: true, body })
 export const adminDeleteConfig = (id: number) =>
   request<void>(`/api/admin/configs/${id}`, { method: 'DELETE', auth: true })
@@ -141,6 +142,23 @@ export const adminDeleteUser = (id: number) =>
 export const adminGetContentStatus = () =>
   request<ContentFactoryStatus>('/api/admin/content/status', { auth: true })
 
+export const adminGetContentAutopilot = () =>
+  request<ContentAutopilotSettings>('/api/admin/content/autopilot', { auth: true })
+
+export const adminUpdateContentAutopilot = (body: Pick<ContentAutopilotSettings,
+  'enabled' | 'times' | 'categories' | 'autoPublish' | 'generateCover'>) =>
+  request<ContentAutopilotSettings>('/api/admin/content/autopilot', {
+    method: 'PUT',
+    auth: true,
+    body,
+  })
+
+export const adminRunContentAutopilot = () =>
+  request<ContentAgentRunJob>('/api/admin/content/autopilot/run', {
+    method: 'POST',
+    auth: true,
+  })
+
 export const adminGetContentAutomation = (articleId?: number) =>
   request<ContentAutomationView | null>('/api/admin/content/automation', {
     auth: true,
@@ -161,9 +179,10 @@ export const adminRunContentAgent = (body: ContentAgentRunPayload) =>
     body,
   })
 
-export const adminGetContentAgentJob = (jobId: string) =>
+export const adminGetContentAgentJob = (jobId: string, signal?: AbortSignal) =>
   request<ContentAgentRunJob>(`/api/admin/content/automation/run/${jobId}`, {
     auth: true,
+    signal,
   })
 
 export const adminGetHotTopics = (limit = 12, category?: string) =>

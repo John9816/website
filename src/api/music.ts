@@ -46,11 +46,13 @@ export const musicSearch = (
 export const musicPlay = (
   source: MusicSourceId,
   id: string,
-  quality: MusicQuality = 'flac',
+  quality: MusicQuality = '320k',
+  options: { signal?: AbortSignal; prefetch?: boolean } = {},
 ) =>
   request<PlayInfo>('/api/v1/music/play', {
     auth: true,
-    query: { source, id, quality },
+    query: { source, id, quality, prefetch: options.prefetch || undefined },
+    signal: options.signal,
   })
 
 export const musicLyric = (source: MusicSourceId, id: string) =>

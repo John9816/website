@@ -277,6 +277,17 @@
   overflow: hidden;
 }
 
+.admin-shell--editor-focused .admin-shell__sider,
+.admin-shell--editor-focused .admin-shell__menu-button,
+.admin-shell--editor-focused .admin-shell__home-button,
+.admin-shell--editor-focused .admin-shell__header-actions button[aria-label='退出登录'] {
+  display: none;
+}
+
+.admin-shell--editor-focused .admin-shell__body.ant-layout {
+  margin-left: 0;
+}
+
 .admin-shell--workspace .admin-shell__sider.ant-layout-sider {
   display: none;
 }

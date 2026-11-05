@@ -1,5 +1,7 @@
+import { useEffect, useRef, useState } from 'react'
 import { NodeViewContent, NodeViewWrapper, type NodeViewProps } from '@tiptap/react'
-import { Select } from 'antd'
+import { Select, Tooltip } from 'antd'
+import { Check, Copy } from 'lucide-react'
 import { EDITOR_TEXT } from './texts'
 
 const CodeNodeViewContent = NodeViewContent as unknown as React.ComponentType<{ as?: string; className?: string }>
@@ -37,6 +39,38 @@ const SUPPORTED_LANGUAGES = [
 export function CodeBlockView({ node, updateAttributes, extension }: NodeViewProps) {
   const currentLanguage = (node.attrs.language as string) || 'plaintext'
   const defaultLanguage = (extension.options as { defaultLanguage?: string }).defaultLanguage
+  const [copied, setCopied] = useState(false)
+  const copyTimerRef = useRef<number | null>(null)
+
+  useEffect(() => {
+    return () => {
+      if (copyTimerRef.current !== null) window.clearTimeout(copyTimerRef.current)
+    }
+  }, [])
+
+  const handleCopy = async () => {
+    const text = node.textContent ?? ''
+    try {
+      if (navigator.clipboard?.writeText) {
+        await navigator.clipboard.writeText(text)
+      } else {
+        const textarea = document.createElement('textarea')
+        textarea.value = text
+        textarea.style.position = 'fixed'
+        textarea.style.opacity = '0'
+        document.body.appendChild(textarea)
+        textarea.select()
+        const ok = document.execCommand('copy')
+        document.body.removeChild(textarea)
+        if (!ok) throw new Error(EDITOR_TEXT.copyFailed)
+      }
+      setCopied(true)
+      if (copyTimerRef.current !== null) window.clearTimeout(copyTimerRef.current)
+      copyTimerRef.current = window.setTimeout(() => setCopied(false), 1800)
+    } catch {
+      setCopied(false)
+    }
+  }
 
   return (
     <NodeViewWrapper className="editor-code-block">
@@ -55,6 +89,18 @@ export function CodeBlockView({ node, updateAttributes, extension }: NodeViewPro
             (option?.value as string).toLowerCase().includes(input.toLowerCase())
           }
         />
+        <Tooltip title={copied ? EDITOR_TEXT.codeCopied : EDITOR_TEXT.copyCode}>
+          <button
+            type="button"
+            className={`editor-code-block__copy${copied ? ' is-copied' : ''}`}
+            onMouseDown={(event) => event.preventDefault()}
+            onClick={() => void handleCopy()}
+            aria-label={EDITOR_TEXT.copyCode}
+          >
+            {copied ? <Check size={13} /> : <Copy size={13} />}
+            <span>{copied ? EDITOR_TEXT.codeCopied : EDITOR_TEXT.copyCode}</span>
+          </button>
+        </Tooltip>
       </div>
       <pre>
         <CodeNodeViewContent as="code" />

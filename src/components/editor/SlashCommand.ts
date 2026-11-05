@@ -7,15 +7,22 @@ import Suggestion, {
 import { ReactRenderer } from '@tiptap/react'
 import tippy, { type Instance as TippyInstance } from 'tippy.js'
 import {
-  CheckSquareOutlined,
-  CodeOutlined,
-  FontSizeOutlined,
-  LineOutlined,
-  OrderedListOutlined,
-  PictureOutlined,
-  TableOutlined,
-  UnorderedListOutlined,
-} from '@ant-design/icons'
+  Code2,
+  Heading1,
+  Heading2,
+  Heading3,
+  Heading4,
+  Heading5,
+  Heading6,
+  ImagePlus,
+  List,
+  ListChecks,
+  ListOrdered,
+  Minus,
+  Quote,
+  Table2,
+  Type,
+} from 'lucide-react'
 import { createElement } from 'react'
 import {
   SlashCommandList,
@@ -32,116 +39,104 @@ type SlashCommandSuggestionOptions = SuggestionOptions<SlashCommandItem, SlashCo
 type SlashCommandSuggestionProps = SuggestionProps<SlashCommandItem, SlashCommandItem>
 type SlashCommandItemsProps = { query: string; editor: Editor }
 
+const headingItem = (
+  level: 1 | 2 | 3 | 4 | 5 | 6,
+  title: string,
+  description: string,
+  icon: React.ReactNode,
+): SlashCommandItem => ({
+  title,
+  description,
+  hint: EDITOR_TEXT.slashHintHeading,
+  keywords: [`h${level}`, `heading${level}`, String(level), '标题', 'heading'],
+  icon,
+  group: EDITOR_TEXT.slashGroupBasic,
+  command: ({ editor, range }) =>
+    editor.chain().focus().deleteRange(range).setHeading({ level }).run(),
+})
+
 const defaultItems = ({ onInsertImage }: { onInsertImage?: () => void }): SlashCommandItem[] => [
   {
     title: EDITOR_TEXT.slashParagraph,
     description: '普通文本段落',
     keywords: ['p', 'paragraph', 'text', '正文', '段落', '文本'],
-    icon: createElement(FontSizeOutlined),
+    icon: createElement(Type, { size: 16 }),
+    group: EDITOR_TEXT.slashGroupBasic,
     command: ({ editor, range }) =>
       editor.chain().focus().deleteRange(range).setParagraph().run(),
   },
+  headingItem(1, EDITOR_TEXT.slashHeading1, '页面主标题', createElement(Heading1, { size: 16 })),
+  headingItem(2, EDITOR_TEXT.slashHeading2, '章节标题', createElement(Heading2, { size: 16 })),
+  headingItem(3, EDITOR_TEXT.slashHeading3, '小节标题', createElement(Heading3, { size: 16 })),
+  headingItem(4, EDITOR_TEXT.slashHeading4, '四级标题', createElement(Heading4, { size: 16 })),
+  headingItem(5, EDITOR_TEXT.slashHeading5, '五级标题', createElement(Heading5, { size: 16 })),
+  headingItem(6, EDITOR_TEXT.slashHeading6, '六级标题', createElement(Heading6, { size: 16 })),
   {
-    title: EDITOR_TEXT.slashHeading1,
-    description: '页面主标题',
-    keywords: ['h1', 'heading1', 'title', '一级', '标题'],
-    icon: createElement(FontSizeOutlined),
+    title: EDITOR_TEXT.slashQuote,
+    description: '突出显示引用内容',
+    hint: EDITOR_TEXT.slashHintQuote,
+    keywords: ['quote', 'blockquote', '引用'],
+    icon: createElement(Quote, { size: 16 }),
+    group: EDITOR_TEXT.slashGroupBasic,
     command: ({ editor, range }) =>
-      editor.chain().focus().deleteRange(range).toggleHeading({ level: 1 }).run(),
+      editor.chain().focus().deleteRange(range).toggleBlockquote().run(),
   },
   {
-    title: EDITOR_TEXT.slashHeading2,
-    description: '章节标题',
-    keywords: ['h2', 'heading2', '二级', '标题'],
-    icon: createElement(FontSizeOutlined),
+    title: EDITOR_TEXT.slashDivider,
+    description: '分隔上下文内容',
+    hint: EDITOR_TEXT.slashHintDivider,
+    keywords: ['hr', 'divider', 'rule', '分隔线', '分割线'],
+    icon: createElement(Minus, { size: 16 }),
+    group: EDITOR_TEXT.slashGroupBasic,
     command: ({ editor, range }) =>
-      editor.chain().focus().deleteRange(range).toggleHeading({ level: 2 }).run(),
-  },
-  {
-    title: EDITOR_TEXT.slashHeading3,
-    description: '小节标题',
-    keywords: ['h3', 'heading3', '三级', '标题'],
-    icon: createElement(FontSizeOutlined),
-    command: ({ editor, range }) =>
-      editor.chain().focus().deleteRange(range).toggleHeading({ level: 3 }).run(),
-  },
-  {
-    title: EDITOR_TEXT.slashHeading4,
-    description: '四级标题',
-    keywords: ['h4', 'heading4', '四级', '标题'],
-    icon: createElement(FontSizeOutlined),
-    command: ({ editor, range }) =>
-      editor.chain().focus().deleteRange(range).toggleHeading({ level: 4 }).run(),
-  },
-  {
-    title: EDITOR_TEXT.slashHeading5,
-    description: '五级标题',
-    keywords: ['h5', 'heading5', '五级', '标题'],
-    icon: createElement(FontSizeOutlined),
-    command: ({ editor, range }) =>
-      editor.chain().focus().deleteRange(range).toggleHeading({ level: 5 }).run(),
-  },
-  {
-    title: EDITOR_TEXT.slashHeading6,
-    description: '六级标题',
-    keywords: ['h6', 'heading6', '六级', '标题'],
-    icon: createElement(FontSizeOutlined),
-    command: ({ editor, range }) =>
-      editor.chain().focus().deleteRange(range).toggleHeading({ level: 6 }).run(),
+      editor.chain().focus().deleteRange(range).setHorizontalRule().run(),
   },
   {
     title: EDITOR_TEXT.slashBulletList,
     description: '创建项目符号列表',
+    hint: EDITOR_TEXT.slashHintList,
     keywords: ['ul', 'unordered', 'list', 'bullet', '无序', '列表'],
-    icon: createElement(UnorderedListOutlined),
+    icon: createElement(List, { size: 16 }),
+    group: EDITOR_TEXT.slashGroupList,
     command: ({ editor, range }) =>
       editor.chain().focus().deleteRange(range).toggleBulletList().run(),
   },
   {
     title: EDITOR_TEXT.slashOrderedList,
     description: '创建编号列表',
+    hint: EDITOR_TEXT.slashHintList,
     keywords: ['ol', 'ordered', 'list', 'number', '有序', '编号', '列表'],
-    icon: createElement(OrderedListOutlined),
+    icon: createElement(ListOrdered, { size: 16 }),
+    group: EDITOR_TEXT.slashGroupList,
     command: ({ editor, range }) =>
       editor.chain().focus().deleteRange(range).toggleOrderedList().run(),
   },
   {
     title: EDITOR_TEXT.slashTaskList,
     description: '创建可勾选任务',
+    hint: EDITOR_TEXT.slashHintList,
     keywords: ['task', 'todo', 'checklist', '任务', '待办', '清单'],
-    icon: createElement(CheckSquareOutlined),
+    icon: createElement(ListChecks, { size: 16 }),
+    group: EDITOR_TEXT.slashGroupList,
     command: ({ editor, range }) =>
       editor.chain().focus().deleteRange(range).toggleTaskList().run(),
   },
   {
-    title: EDITOR_TEXT.slashQuote,
-    description: '突出显示引用内容',
-    keywords: ['quote', 'blockquote', '引用'],
-    icon: createElement(LineOutlined),
-    command: ({ editor, range }) =>
-      editor.chain().focus().deleteRange(range).toggleBlockquote().run(),
-  },
-  {
     title: EDITOR_TEXT.slashCodeBlock,
     description: '插入带语法高亮的代码',
+    hint: EDITOR_TEXT.slashHintCode,
     keywords: ['code', 'codeblock', '代码', '代码块'],
-    icon: createElement(CodeOutlined),
+    icon: createElement(Code2, { size: 16 }),
+    group: EDITOR_TEXT.slashGroupAdvanced,
     command: ({ editor, range }) =>
       editor.chain().focus().deleteRange(range).toggleCodeBlock().run(),
-  },
-  {
-    title: EDITOR_TEXT.slashDivider,
-    description: '分隔上下文内容',
-    keywords: ['hr', 'divider', 'rule', '分隔线', '分割线'],
-    icon: createElement(LineOutlined),
-    command: ({ editor, range }) =>
-      editor.chain().focus().deleteRange(range).setHorizontalRule().run(),
   },
   {
     title: EDITOR_TEXT.slashTable,
     description: '插入 3 x 3 表格',
     keywords: ['table', '表格'],
-    icon: createElement(TableOutlined),
+    icon: createElement(Table2, { size: 16 }),
+    group: EDITOR_TEXT.slashGroupAdvanced,
     command: ({ editor, range }) =>
       editor
         .chain()
@@ -154,7 +149,8 @@ const defaultItems = ({ onInsertImage }: { onInsertImage?: () => void }): SlashC
     title: EDITOR_TEXT.slashImage,
     description: '通过链接插入图片',
     keywords: ['image', 'img', 'picture', '图片', '图像'],
-    icon: createElement(PictureOutlined),
+    icon: createElement(ImagePlus, { size: 16 }),
+    group: EDITOR_TEXT.slashGroupAdvanced,
     command: ({ editor, range }) => {
       editor.chain().focus().deleteRange(range).run()
       onInsertImage?.()
@@ -185,6 +181,7 @@ const renderSuggestion: SlashCommandSuggestionOptions['render'] = () => {
         interactive: true,
         trigger: 'manual',
         placement: 'bottom-start',
+        maxWidth: 'none',
       })
     },
     onUpdate: (props: SlashCommandSuggestionProps) => {

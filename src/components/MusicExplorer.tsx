@@ -148,6 +148,8 @@ const NETEASE_PLAYLIST_CATEGORIES = [
 ]
 
 const ALL_QUALITIES: MusicQuality[] = ['128k', '320k', 'flac', 'flac24bit']
+const SEARCH_PAGE_SIZE_OPTIONS = [10, 20, 30]
+const PLAYLIST_PAGE_SIZE_OPTIONS = [10, 20, 50]
 
 function sourceLabel(source: MusicSourceId) {
   return SOURCE_OPTIONS.find((item) => item.value === source)?.label ?? source
@@ -332,6 +334,7 @@ export default function MusicExplorer() {
   })
   const [searchPage, setSearchPage] = useState(1)
   const [searchPageSize, setSearchPageSize] = useState(DEFAULT_PAGE_SIZE)
+  const [searchTotal, setSearchTotal] = useState<number | null>(null)
   const [lastKeyword, setLastKeyword] = useState('')
   const [lastSearchSource, setLastSearchSource] = useState<MusicSourceId>('qq')
   const [lastSearchType, setLastSearchType] = useState<MusicSearchType>('song')
@@ -468,6 +471,7 @@ export default function MusicExplorer() {
         })
         setSearchPage(nextPage)
         setSearchPageSize(nextPageSize)
+        setSearchTotal(data.total ?? null)
         setLastKeyword(trimmed)
         setLastSearchSource(nextSource)
         setLastSearchType(nextType)
@@ -721,7 +725,7 @@ export default function MusicExplorer() {
   const activeSearchCollectionItems =
     lastSearchType === 'song' ? [] : searchCollections[lastSearchType]
   const activeSearchResultCount =
-    lastSearchType === 'song' ? searchResults.length : activeSearchCollectionItems.length
+    searchTotal ?? (lastSearchType === 'song' ? searchResults.length : activeSearchCollectionItems.length)
 
   const stageMeta = useMemo(() => {
     switch (view) {
@@ -1052,7 +1056,8 @@ export default function MusicExplorer() {
                       emptyText={lastSearchTypeOption.emptyText}
                       page={searchPage}
                       pageSize={searchPageSize}
-                      total={pageTotal(searchPage, searchPageSize, searchResults.length)}
+                      total={pageTotal(searchPage, searchPageSize, searchResults.length, searchTotal)}
+                      pageSizeOptions={SEARCH_PAGE_SIZE_OPTIONS}
                       onPageChange={(nextPage, nextPageSize) => {
                         void searchSongs(
                           lastKeyword || keyword,
@@ -1072,7 +1077,7 @@ export default function MusicExplorer() {
                       <div className="music-search-groups">
                         {renderSearchCollectionResults(lastSearchType, activeSearchCollectionItems)}
                       </div>
-                      {activeSearchCollectionItems.length > 0 && (
+                      {(activeSearchCollectionItems.length > 0 || searchPage > 1) && (
                         <div className="music-pagination music-pagination--bottom">
                           <Pagination
                             current={searchPage}
@@ -1081,6 +1086,7 @@ export default function MusicExplorer() {
                               searchPage,
                               searchPageSize,
                               activeSearchCollectionItems.length,
+                              searchTotal,
                             )}
                             onChange={(nextPage, nextPageSize) => {
                               void searchSongs(
@@ -1097,7 +1103,7 @@ export default function MusicExplorer() {
                               popupClassName: 'music-pagination-size-dropdown',
                             }}
                             showQuickJumper={false}
-                            pageSizeOptions={PAGE_SIZE_OPTIONS}
+                            pageSizeOptions={SEARCH_PAGE_SIZE_OPTIONS}
                             showTotal={(totalItems, range) =>
                               `${range[0]}-${range[1]} / ${totalItems}`
                             }
@@ -1237,7 +1243,7 @@ export default function MusicExplorer() {
                         popupClassName: 'music-pagination-size-dropdown',
                       }}
                       showQuickJumper={false}
-                      pageSizeOptions={PAGE_SIZE_OPTIONS}
+                      pageSizeOptions={PLAYLIST_PAGE_SIZE_OPTIONS}
                       showTotal={(totalItems, range) =>
                         `${range[0]}-${range[1]} / ${totalItems}`
                       }

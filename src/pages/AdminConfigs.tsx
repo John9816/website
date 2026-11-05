@@ -25,6 +25,11 @@ import type { SysConfig } from '../types'
 const sortConfigs = (items: SysConfig[]) =>
   [...items].sort((a, b) => a.configKey.localeCompare(b.configKey) || a.id - b.id)
 
+const isSecretKey = (key: string) => {
+  const normalized = key.toLowerCase().replace(/[_-]/g, '')
+  return /secret|password|token|apikey|credential/.test(normalized) || normalized.endsWith('.key')
+}
+
 export default function AdminConfigs() {
   const [rows, setRows] = useState<SysConfig[]>([])
   const [loading, setLoading] = useState(false)
@@ -32,6 +37,9 @@ export default function AdminConfigs() {
   const [open, setOpen] = useState(false)
   const [editing, setEditing] = useState<SysConfig | null>(null)
   const [form] = Form.useForm()
+  const configKey = Form.useWatch('configKey', form) as string | undefined
+  const editingSecret = Boolean(editing && (editing.sensitive || isSecretKey(editing.configKey)))
+  const secretField = isSecretKey(configKey || '')
   const { message } = AntApp.useApp()
 
   const load = async () => {
@@ -56,15 +64,21 @@ export default function AdminConfigs() {
   }
   const openEdit = (row: SysConfig) => {
     setEditing(row)
-    form.setFieldsValue(row)
+    form.setFieldsValue({ ...row, configValue: row.sensitive || isSecretKey(row.configKey) ? '' : row.configValue })
     setOpen(true)
   }
 
   const submit = async () => {
     const values = await form.validateFields()
+    const preserveValue = editingSecret && !values.configValue?.trim()
+    if (!editing && !values.configValue?.trim()) {
+      form.setFields([{ name: 'configValue', errors: ['请输入配置内容'] }])
+      return
+    }
     setSubmitLoading(true)
     try {
-      const saved = editing ? await adminUpdateConfig(editing.id, values) : await adminCreateConfig(values)
+      const body = { ...values, preserveValue }
+      const saved = editing ? await adminUpdateConfig(editing.id, body) : await adminCreateConfig(body)
       setRows((previous) =>
         sortConfigs([saved, ...previous.filter((item) => item.id !== saved.id)]),
       )
@@ -141,9 +155,11 @@ export default function AdminConfigs() {
                 title: '配置内容 Value',
                 dataIndex: 'configValue',
                 ellipsis: true,
-                render: (v: string) => (
+                render: (v: string | null, row: SysConfig) => (
                   <Tag style={{ border: 'none', background: 'rgba(0,0,0,0.04)', maxWidth: '100%', overflow: 'hidden', textOverflow: 'ellipsis' }}>
-                    {v && v.length > 50 ? `${v.slice(0, 50)}…` : v}
+                    {row.sensitive || isSecretKey(row.configKey)
+                      ? (row.configured ?? Boolean(v)) ? '已配置 · 已隐藏' : '未配置'
+                      : v && v.length > 50 ? `${v.slice(0, 50)}…` : v || '未配置'}
                   </Tag>
                 ),
               },
@@ -203,14 +219,16 @@ export default function AdminConfigs() {
             rules={[{ required: true, message: '请输入配置 Key' }]}
             tooltip="建议使用小写字母和点号分隔，如 image.api.key"
           >
-            <Input placeholder="例如：image.api.key" maxLength={100} size="large" />
+            <Input placeholder="例如：image.api.key" maxLength={100} size="large" disabled={editingSecret} />
           </Form.Item>
           <Form.Item
             name="configValue"
-            label="配置内容 Value"
-            rules={[{ required: true, message: '请输入配置 Value' }]}
+            label={secretField ? '密钥值' : '配置内容 Value'}
+            extra={editingSecret && secretField ? '留空将保留现有密钥，输入新值才会替换。' : undefined}
           >
-            <Input.TextArea rows={4} placeholder="请输入配置内容，支持多行文本或 JSON" size="large" />
+            {secretField
+              ? <Input.Password placeholder={editingSecret ? '留空保留现有密钥' : '请输入密钥'} autoComplete="new-password" size="large" />
+              : <Input.TextArea rows={4} placeholder="请输入配置内容，支持多行文本或 JSON" size="large" />}
           </Form.Item>
           <Form.Item name="description" label="备注说明">
             <Input placeholder="简要说明该配置的用途" maxLength={255} size="large" />

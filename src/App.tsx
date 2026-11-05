@@ -3,6 +3,7 @@ import { BrowserRouter, Navigate, Route, Routes, useLocation } from 'react-route
 import { App as AntApp, ConfigProvider, Spin, theme as antdTheme } from 'antd'
 import zhCN from 'antd/locale/zh_CN'
 import { AuthProvider, useAuth } from './context/AuthContext'
+import { MEMBERSHIP_ENABLED } from './config/features'
 import { MusicPlayerProvider, useMusicPlayer } from './context/MusicPlayerContext'
 import { ThemeProvider, useTheme } from './context/ThemeContext'
 import { usePageTitle } from './hooks/usePageTitle'
@@ -41,6 +42,7 @@ const AdminUsers = lazy(() => import('./pages/AdminUsers'))
 const AdminRedeemCodes = lazy(() => import('./pages/AdminRedeemCodes'))
 const AdminKnowledgeBase = lazy(() => import('./pages/AdminKnowledgeBase'))
 const KbSharePage = lazy(() => import('./pages/KbSharePage'))
+const DevEditorPreview = lazy(() => import('./pages/DevEditorPreview'))
 
 function RouteFallback() {
   return (
@@ -297,11 +299,11 @@ export default function App() {
                       <Route path="kb" element={<AdminKnowledgeBase />} />
                       <Route
                         path="redeem-codes"
-                        element={
+                        element={MEMBERSHIP_ENABLED ? (
                           <RequireAdminPermission permission="systemConfig">
                             <AdminRedeemCodes />
                           </RequireAdminPermission>
-                        }
+                        ) : <Navigate to="/admin" replace />}
                       />
                       <Route
                         path="users"
@@ -313,6 +315,9 @@ export default function App() {
                       />
                       <Route path="password" element={<AdminPassword />} />
                     </Route>
+                    {import.meta.env.DEV ? (
+                      <Route path="/dev/editor" element={<DevEditorPreview />} />
+                    ) : null}
                     <Route path="*" element={<Navigate to="/" replace />} />
                   </Routes>
                 </Suspense>

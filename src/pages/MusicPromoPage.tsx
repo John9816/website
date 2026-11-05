@@ -8,7 +8,6 @@ import {
   Cloud,
   Disc3,
   Download,
-  ExternalLink,
   Headphones,
   Heart,
   Laptop,
@@ -43,17 +42,19 @@ type PlatformOption = {
   format: string
 }
 
-const RELEASES_URL = 'https://github.com/John9816/music/releases'
+// Mirror verified, published assets before changing this version.
+const DESKTOP_VERSION = '1.1.46'
+const DOWNLOAD_BASE = 'https://hi.751152.xyz/downloads/music'
 
 const FALLBACK_INSTALLER: MusicInstallerReleaseView = {
-  version: '1.1.39',
-  buildNumber: 50,
+  version: '1.1.46',
+  buildNumber: 57,
   title: '柒伍壹壹音乐',
   channel: 'DuckMusic Flutter',
-  fileName: 'DuckMusic-Flutter-v1.1.39-Android-arm64-v8a.apk',
+  fileName: 'DuckMusic-Flutter-v1.1.46-Android-arm64-v8a.apk',
   downloadUrl:
-    'https://api.751152.xyz/updates/DuckMusic-Flutter-v1.1.39-Android-arm64-v8a.apk',
-  releasedAt: '2026-08-12',
+    'https://api.751152.xyz/updates/DuckMusic-Flutter-v1.1.46-Android-arm64-v8a.apk',
+  releasedAt: '2026-09-11',
   notes: '一套 Flutter 代码覆盖 Android、iOS、Windows 与 macOS。',
   platform: 'Android',
   minAndroid: '8.0',
@@ -68,7 +69,7 @@ const platforms: PlatformOption[] = [
     icon: Smartphone,
     eyebrow: '随身听',
     title: 'Android 版',
-    description: '从 GitHub Releases 获取 APK。支持后台播放、通知栏控制与本地下载。',
+    description: '从本站服务器直接下载 APK。支持后台播放、通知栏控制与本地下载。',
     requirement: 'Android 8.0 或更高版本',
     format: 'APK · arm64-v8a',
   },
@@ -79,9 +80,9 @@ const platforms: PlatformOption[] = [
     icon: Apple,
     eyebrow: '移动端',
     title: 'iOS 版',
-    description: '与其他客户端共享音乐库和账号，当前通过测试渠道分发。',
+    description: '与其他客户端共享音乐库和账号，提供需自行签名安装的 IPA 测试包。',
     requirement: 'iOS 15 或更高版本',
-    format: 'Test build',
+    format: 'IPA · 需自行签名',
   },
   {
     id: 'windows',
@@ -90,7 +91,7 @@ const platforms: PlatformOption[] = [
     icon: Laptop,
     eyebrow: '桌面端',
     title: 'Windows 版',
-    description: '为键鼠和大屏优化的音乐工作台，安装包随版本同步发布。',
+    description: '为键鼠和大屏优化的音乐工作台，EXE 安装包从本站服务器直接下载。',
     requirement: 'Windows 10 / 11 · 64 位',
     format: 'EXE installer',
   },
@@ -101,7 +102,7 @@ const platforms: PlatformOption[] = [
     icon: Apple,
     eyebrow: '桌面端',
     title: 'macOS 版',
-    description: '原生窗口体验，提供 Apple Silicon 与 Intel 两种构建。',
+    description: '原生窗口体验，提供 Apple Silicon 与 Intel 两种构建的直接下载。',
     requirement: 'macOS 12 或更高版本',
     format: 'DMG · Apple Silicon / Intel',
   },
@@ -142,10 +143,10 @@ const songs = [
 ]
 
 const installNotes: Record<PlatformId, string[]> = {
-  android: ['打开 GitHub Releases 下载 APK', '按系统提示允许本次安装', '登录后自动同步音乐库'],
-  ios: ['获取当前测试版本', '按分发页提示完成安装', '使用同一账号登录'],
-  windows: ['打开 GitHub Releases', '下载最新 Windows EXE', '运行安装器并登录'],
-  macos: ['打开 GitHub Releases', '按芯片下载对应 DMG', '拖入应用程序并登录'],
+  android: ['点击按钮直接下载 APK', '按系统提示允许本次安装', '登录后自动同步音乐库'],
+  ios: ['直接下载 IPA 测试包', '在电脑上使用签名工具完成签名与安装', '使用同一账号登录'],
+  windows: ['点击按钮直接下载 EXE', '打开下载的安装程序', '按安装向导完成安装并登录'],
+  macos: ['选择 Apple Silicon 或 Intel 芯片', '直接下载对应的 DMG 测试包', '请先阅读下方签名状态说明'],
 }
 
 function detectPlatform(): PlatformId {
@@ -166,6 +167,7 @@ function formatSize(bytes?: number) {
 
 export default function MusicPromoPage() {
   const [selectedPlatform, setSelectedPlatform] = useState<PlatformId>('android')
+  const [macArchitecture, setMacArchitecture] = useState<'arm64' | 'x64'>('arm64')
   const [installer, setInstaller] = useState<MusicInstallerReleaseView | null>(null)
   const [installerError, setInstallerError] = useState(false)
 
@@ -203,27 +205,25 @@ export default function MusicPromoPage() {
   const download = useMemo(() => {
     if (selectedPlatform === 'android') {
       return {
-        href: RELEASES_URL,
-        label: '获取 Android 版',
-        external: true,
-        available: true,
+        href: activeInstaller.downloadUrl,
+        label: '直接下载 Android 版',
       }
     }
     if (selectedPlatform === 'ios') {
       return {
-        href: RELEASES_URL,
-        label: '查看 iOS 发布',
-        external: true,
-        available: true,
+        href: `${DOWNLOAD_BASE}/DuckMusic-Flutter-v${DESKTOP_VERSION}-iOS-unsigned.ipa`,
+        label: '下载 iOS IPA（需签名）',
       }
     }
     return {
-      href: RELEASES_URL,
-      label: selectedPlatform === 'windows' ? '获取 Windows 版' : '获取 macOS 版',
-      external: true,
-      available: true,
+      href: `${DOWNLOAD_BASE}/DuckMusic-Flutter-v${DESKTOP_VERSION}-${
+        selectedPlatform === 'windows' ? 'Windows-x64-setup.exe' : `macOS-${macArchitecture}.dmg`
+      }`,
+      label: selectedPlatform === 'windows'
+        ? '直接下载 Windows 版'
+        : `下载 macOS ${macArchitecture === 'arm64' ? 'Apple Silicon' : 'Intel'} 版`,
     }
-  }, [selectedPlatform])
+  }, [selectedPlatform, macArchitecture, activeInstaller.downloadUrl])
 
   return (
     <main className="music-promo">
@@ -272,26 +272,53 @@ export default function MusicPromoPage() {
             ))}
           </div>
 
+          {selectedPlatform === 'macos' ? (
+            <div
+              className="music-promo__platform-picker"
+              role="group"
+              aria-label="选择 Mac 芯片"
+              style={{ gridTemplateColumns: 'repeat(2, 1fr)' }}
+            >
+              {(['arm64', 'x64'] as const).map((architecture) => (
+                <button
+                  key={architecture}
+                  type="button"
+                  aria-pressed={macArchitecture === architecture}
+                  className={macArchitecture === architecture ? 'is-active' : undefined}
+                  onClick={() => setMacArchitecture(architecture)}
+                >
+                  {architecture === 'arm64' ? 'Apple Silicon' : 'Intel'}
+                </button>
+              ))}
+            </div>
+          ) : null}
+
           <div className="music-promo__primary-actions">
             <a
               className="music-promo__download"
               href={download.href}
-              target={download.external ? '_blank' : undefined}
-              rel={download.external ? 'noopener noreferrer' : undefined}
+              target="_blank"
+              rel="noopener noreferrer"
             >
-              {download.available ? <Download size={18} /> : <ExternalLink size={18} />}
+              <Download size={18} />
               <span>{download.label}</span>
             </a>
             <span className="music-promo__version">
-              {selectedPlatform === 'android' ? androidVersion : platform.format}
+              {selectedPlatform === 'android' ? androidVersion : `v${DESKTOP_VERSION} · ${platform.format}`}
               {selectedPlatform === 'android' && sizeLabel ? ` · ${sizeLabel}` : ''}
             </span>
           </div>
 
           <p className="music-promo__trust">
             <ShieldCheck size={15} aria-hidden="true" />
-            官方构建 · 免费更新 · 无广告干扰
+            本站直连下载 · 无需访问 GitHub
           </p>
+          {selectedPlatform === 'macos' ? (
+            <p className="music-promo__availability">
+              当前 macOS v{DESKTOP_VERSION} 测试包存在签名问题，可能被系统阻止打开。
+              建议先使用网页版，等待签名修复版本。
+            </p>
+          ) : null}
         </div>
 
         <div className="music-promo__stage" data-platform={selectedPlatform}>
@@ -403,7 +430,14 @@ export default function MusicPromoPage() {
           </ol>
           {selectedPlatform === 'ios' ? (
             <p className="music-promo__availability">
-              iOS 公测版尚未在 App Store 公开上架。获取测试版本前，请确认设备与测试渠道要求。
+              此 IPA 未签名，不能在 iPhone 或 iPad 上直接点击安装。
+              请在电脑上使用签名工具安装；需要即开即用时，可先使用网页版。
+            </p>
+          ) : null}
+          {selectedPlatform === 'macos' ? (
+            <p className="music-promo__availability">
+              当前提供 v{DESKTOP_VERSION} 原版测试包，存在已知签名问题。
+              直连下载不会修复签名；建议先使用网页版，等待签名修复版本。
             </p>
           ) : null}
           <a

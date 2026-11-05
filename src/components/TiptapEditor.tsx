@@ -1,10 +1,9 @@
 import { useCallback, useEffect, useMemo, useRef, useState, type CSSProperties } from 'react'
 import { createPortal } from 'react-dom'
-import { EditorContent, ReactNodeViewRenderer, useEditor, type Editor } from '@tiptap/react'
+import { EditorContent, ReactNodeViewRenderer, useEditor, useEditorState, type Editor } from '@tiptap/react'
 import StarterKit from '@tiptap/starter-kit'
 import Underline from '@tiptap/extension-underline'
 import Link from '@tiptap/extension-link'
-import Image from '@tiptap/extension-image'
 import Placeholder from '@tiptap/extension-placeholder'
 import TaskList from '@tiptap/extension-task-list'
 import TaskItem from '@tiptap/extension-task-item'
@@ -19,22 +18,30 @@ import Highlight from '@tiptap/extension-highlight'
 import TextAlign from '@tiptap/extension-text-align'
 import dart from 'highlight.js/lib/languages/dart'
 import { common, createLowlight } from 'lowlight'
-import { App as AntApp } from 'antd'
+import { App as AntApp, Button } from 'antd'
+import { Heading2, ListTodo, Pilcrow } from 'lucide-react'
 import { MenuBar } from './editor/MenuBar'
 import { BubbleMenuBar } from './editor/BubbleMenuBar'
+import { BlockHandle } from './editor/BlockHandle'
 import { CodeBlockView } from './editor/CodeBlockView'
 import { EditorShortcuts } from './editor/EditorShortcuts'
+import { FocusModeExtension, setFocusModeEnabled } from './editor/FocusMode'
 import { ImagePlaceholder } from './editor/ImagePlaceholderExtension'
+import { ImageExtended } from './editor/ImageNodeView'
 import { ImagePromptModal } from './editor/ImagePromptModal'
 import { LinkPromptModal, type LinkPromptValue } from './editor/LinkPromptModal'
 import { SlashCommand } from './editor/SlashCommand'
 import { isJsonEqual, safeParseJson } from './editor/serialize'
+import { MarkdownShortcuts } from './editor/MarkdownShortcuts'
+import { BlockOps } from './editor/BlockOps'
+import { EDITOR_TEXT } from './editor/texts'
 import '../styles/tiptap.css'
 
 const lowlight = createLowlight({ ...common, dart })
 const MAX_IMAGE_EDGE = 1600
 
 const TEXT = {
+  ...EDITOR_TEXT,
   undo: '\u64a4\u9500',
   redo: '\u91cd\u505a',
   heading: '\u6807\u9898',
@@ -79,7 +86,9 @@ const TEXT = {
   insertedImages: '\u5df2\u63d2\u5165 ',
   imageUnit: ' \u5f20\u56fe\u7247',
   insertImageFailed: '\u63d2\u5165\u56fe\u7247\u5931\u8d25',
-  editorPlaceholder: '\u8f93\u5165\u5185\u5bb9\u2026',
+  editorPlaceholder: '\u8f93\u5165\u5185\u5bb9\uff0c\u6216\u8f93\u5165 / \u67e5\u770b\u5185\u5bb9\u5757',
+  starterTitle: '\u4ece\u4e00\u4e2a\u5185\u5bb9\u5f00\u59cb',
+  starterHint: '\u4e5f\u53ef\u4ee5\u8f93\u5165 / \u9009\u62e9\u5176\u4ed6\u5185\u5bb9\u5757',
 } as const
 
 interface TiptapEditorProps {
@@ -92,6 +101,7 @@ interface TiptapEditorProps {
   slotBeforeMenu?: React.ReactNode
   slotAfterMenu?: React.ReactNode
   toolbarContainer?: HTMLElement | null
+  showWritingStarter?: boolean
 }
 
 function normalizeEditorContent(content: string) {
@@ -180,9 +190,11 @@ export default function TiptapEditor({
   slotBeforeMenu,
   slotAfterMenu,
   toolbarContainer,
+  showWritingStarter = false,
 }: TiptapEditorProps) {
   const { message } = AntApp.useApp()
   const [isFullscreen, setIsFullscreen] = useState(false)
+  const [isFocusMode, setIsFocusMode] = useState(false)
   const [imageUploading, setImageUploading] = useState(false)
   const [imageModalOpen, setImageModalOpen] = useState(false)
   const [linkModalOpen, setLinkModalOpen] = useState(false)
@@ -285,12 +297,22 @@ export default function TiptapEditor({
           rel: 'noopener noreferrer',
         },
       }),
-      Image.configure({
+      ImageExtended.configure({
         allowBase64: true,
       }),
       ImagePlaceholder,
       Placeholder.configure({
-        placeholder: TEXT.editorPlaceholder,
+        placeholder: ({ node }) => {
+          if (node.type.name === 'heading') {
+            const level = Number(node.attrs?.level ?? 1)
+            if (level <= 1) return TEXT.placeholderHeading1
+            if (level === 2) return TEXT.placeholderHeading2
+            return TEXT.placeholderHeading3
+          }
+          if (node.type.name === 'blockquote') return TEXT.placeholderQuote
+          if (node.type.name === 'codeBlock') return TEXT.placeholderCode
+          return TEXT.placeholderParagraph
+        },
       }),
       TaskList,
       TaskItem.configure({
@@ -325,6 +347,9 @@ export default function TiptapEditor({
       EditorShortcuts.configure({
         onInsertLink: openLinkModal,
       }),
+      MarkdownShortcuts,
+      BlockOps,
+      FocusModeExtension,
     ],
     content: normalizeEditorContent(content || ''),
     editorProps: {
@@ -355,6 +380,11 @@ export default function TiptapEditor({
     },
   })
 
+  const editorIsEmpty = useEditorState({
+    editor,
+    selector: ({ editor: activeEditor }) => activeEditor?.isEmpty ?? true,
+  })
+
   useEffect(() => {
     editorRef.current = editor
     return () => {
@@ -369,6 +399,12 @@ export default function TiptapEditor({
       editor.commands.setContent(normalizeEditorContent(nextContent), { emitUpdate: false })
     }
   }, [content, editor])
+
+  // 专注模式：通过 ProseMirror 装饰为光标所在顶层块打标记，CSS 淡化其余块
+  useEffect(() => {
+    if (!isEditorUsable(editor)) return
+    setFocusModeEnabled(editor, isFocusMode)
+  }, [editor, isFocusMode])
 
   useEffect(() => {
     if (!isFullscreen) return
@@ -396,11 +432,6 @@ export default function TiptapEditor({
     '--editor-max-height':
       typeof maxHeight === 'number' ? `${maxHeight}px` : maxHeight,
   } as CSSProperties
-
-  const handleInsertImageUrl = useCallback(() => {
-    if (!editor) return
-    openImageModal()
-  }, [editor, openImageModal])
 
   const handleConfirmImageUrl = useCallback(
     (value: { url: string; alt?: string }) => {
@@ -452,24 +483,16 @@ export default function TiptapEditor({
     return (
       <MenuBar
         editor={editor}
-        imageUploading={imageUploading}
         isFullscreen={isFullscreen}
-        onInsertImageUrl={handleInsertImageUrl}
-        onInsertLink={openLinkModal}
+        isFocusMode={isFocusMode}
+        onToggleFocusMode={() => setIsFocusMode((value) => !value)}
         onSelectImageFiles={(files) => {
           void handleImageFiles(files, editor)
         }}
         toggleFullscreen={() => setIsFullscreen((value) => !value)}
       />
     )
-  }, [
-    editor,
-    handleImageFiles,
-    handleInsertImageUrl,
-    imageUploading,
-    isFullscreen,
-    openLinkModal,
-  ])
+  }, [editor, handleImageFiles, isFullscreen, isFocusMode])
 
   const canPortalToolbar = !!toolbarContainer?.isConnected && !isFullscreen
 
@@ -477,13 +500,49 @@ export default function TiptapEditor({
     <div
       className={`tiptap-editor-container${fillHeight ? ' tiptap-editor-container--fill' : ''}${
         isFullscreen ? ' tiptap-editor-container--fullscreen' : ''
-      }`}
+      }${isFocusMode ? ' tiptap-editor-container--focus' : ''}`}
       style={style}
+      aria-busy={imageUploading}
     >
       {slotBeforeMenu}
       {canPortalToolbar ? createPortal(menuBarContent, toolbarContainer) : menuBarContent}
       {slotAfterMenu}
+      {showWritingStarter && isEditorUsable(editor) && editorIsEmpty ? (
+        <div className="editor-writing-starter" aria-label="写作起点">
+          <div className="editor-writing-starter__copy">
+            <strong>{TEXT.starterTitle}</strong>
+            <span>{TEXT.starterHint}</span>
+          </div>
+          <div className="editor-writing-starter__actions">
+            <Button
+              size="small"
+              icon={<Pilcrow size={15} />}
+              onMouseDown={(event) => event.preventDefault()}
+              onClick={() => editor.chain().focus().setTextSelection(1).run()}
+            >
+              写正文
+            </Button>
+            <Button
+              size="small"
+              icon={<Heading2 size={15} />}
+              onMouseDown={(event) => event.preventDefault()}
+              onClick={() => editor.chain().focus().setTextSelection(1).setHeading({ level: 2 }).run()}
+            >
+              加标题
+            </Button>
+            <Button
+              size="small"
+              icon={<ListTodo size={15} />}
+              onMouseDown={(event) => event.preventDefault()}
+              onClick={() => editor.chain().focus().setTextSelection(1).toggleTaskList().run()}
+            >
+              待办清单
+            </Button>
+          </div>
+        </div>
+      ) : null}
       {isEditorUsable(editor) ? <BubbleMenuBar editor={editor} onInsertLink={openLinkModal} /> : null}
+      <BlockHandle editor={editor} onInsertImageByUrl={openImageModal} />
       <EditorContent
         editor={editor}
         className={`editor-content${fillHeight ? ' editor-content--fill' : ''}`}

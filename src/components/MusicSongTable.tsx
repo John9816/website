@@ -1,6 +1,6 @@
 import { Empty, Pagination, Space, Table, Typography } from 'antd'
 import { useCallback, useMemo, type ReactNode } from 'react'
-import { Pause, Play } from 'lucide-react'
+import { Loader2, Pause, Play } from 'lucide-react'
 import { PAGE_SIZE_OPTIONS } from '../constants/pagination'
 import MusicCover from './MusicCover'
 import { useMusicPlayer } from '../context/MusicPlayerContext'
@@ -14,6 +14,7 @@ type Props = {
   page: number
   pageSize: number
   total?: number | null
+  pageSizeOptions?: number[]
   onPageChange?: (nextPage: number, nextPageSize: number) => void
   renderActions?: (row: SongSearchItem) => ReactNode
   actionColumnWidth?: number
@@ -59,6 +60,7 @@ export default function MusicSongTable({
   page,
   pageSize,
   total,
+  pageSizeOptions = PAGE_SIZE_OPTIONS,
   onPageChange,
   renderActions,
   actionColumnWidth = 76,
@@ -69,6 +71,7 @@ export default function MusicSongTable({
     current,
     isPlaying,
     playLoading,
+    pendingTrackKey,
     preferredQuality,
     unsupportedFormat,
     playSong,
@@ -80,17 +83,27 @@ export default function MusicSongTable({
     [current?.id, current?.source],
   )
 
+  const isLoadingRow = useCallback(
+    (row: SongSearchItem) =>
+      playLoading &&
+      (pendingTrackKey
+        ? pendingTrackKey === `${row.source}:${row.id}:${preferredQuality}`
+        : isPlayingRow(row)),
+    [isPlayingRow, pendingTrackKey, playLoading, preferredQuality],
+  )
+
   const handleRowActivate = useCallback((row: SongSearchItem) => {
+    if (isLoadingRow(row)) return
     if (isPlayingRow(row) && !unsupportedFormat) {
       togglePlay()
       return
     }
 
     void playSong(row, preferredQuality)
-  }, [isPlayingRow, playSong, preferredQuality, togglePlay, unsupportedFormat])
+  }, [isLoadingRow, isPlayingRow, playSong, preferredQuality, togglePlay, unsupportedFormat])
 
   const paginationNode = useMemo(() => (
-    onPageChange && songs.length > 0 ? (
+    onPageChange && (songs.length > 0 || page > 1) ? (
       <div className="music-pagination music-pagination--bottom">
         <Pagination
           current={page}
@@ -103,12 +116,12 @@ export default function MusicSongTable({
             popupClassName: 'music-pagination-size-dropdown',
           }}
           showQuickJumper={false}
-          pageSizeOptions={PAGE_SIZE_OPTIONS}
+          pageSizeOptions={pageSizeOptions}
           showTotal={(totalItems, range) => `${range[0]}-${range[1]} / ${totalItems}`}
         />
       </div>
     ) : null
-  ), [onPageChange, page, pageSize, songs.length, total])
+  ), [onPageChange, page, pageSize, pageSizeOptions, songs.length, total])
 
   const rowClassName = useCallback(
     (row: SongSearchItem) => (isPlayingRow(row) ? 'music-row-active' : ''),
@@ -224,7 +237,7 @@ export default function MusicSongTable({
             width: actionColumnWidth,
             render: (_value, row) => (
               <Space size={8} className="music-song-table__actions">
-                {isPlayingRow(row) && isPlaying ? (
+                {isPlayingRow(row) && isPlaying && !isLoadingRow(row) ? (
                   <button
                     type="button"
                     className="ctrl-btn"
@@ -243,7 +256,7 @@ export default function MusicSongTable({
                     type="button"
                     className="ctrl-btn primary"
                     style={{ width: 32, height: 32, boxShadow: 'none' }}
-                    disabled={playLoading && isPlayingRow(row)}
+                    disabled={isLoadingRow(row)}
                     onClick={(event) => {
                       event.stopPropagation()
                       handleRowActivate(row)
@@ -251,7 +264,11 @@ export default function MusicSongTable({
                     aria-label="播放"
                     title="播放"
                   >
-                    <Play size={16} />
+                    {isLoadingRow(row) ? (
+                      <Loader2 size={16} className="ctrl-btn__spinner" />
+                    ) : (
+                      <Play size={16} />
+                    )}
                   </button>
                 )}
                 {renderActions?.(row)}
@@ -263,11 +280,11 @@ export default function MusicSongTable({
           handleRowActivate,
           isPlaying,
           isPlayingRow,
+          isLoadingRow,
           onSearchAlbum,
           onSearchArtist,
           page,
           pageSize,
-          playLoading,
           renderActions,
           togglePlay,
         ])}

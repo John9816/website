@@ -32,7 +32,9 @@ export interface CategoryWithLinks extends Category {
 export interface SysConfig {
   id: number
   configKey: string
-  configValue: string
+  configValue: string | null
+  sensitive?: boolean
+  configured?: boolean
   description?: string | null
   createdAt?: string
   updatedAt?: string
@@ -49,6 +51,16 @@ export interface ContentFactoryStatus {
   imageReady: boolean
   wechatReady: boolean
   configs: ContentStatusConfig[]
+}
+
+export interface ContentAutopilotSettings {
+  enabled: boolean
+  times: string[]
+  categories: string[]
+  autoPublish: boolean
+  generateCover: boolean
+  nextRunAt?: string | null
+  blockers: string[]
 }
 
 export interface ContentHotSource {
@@ -74,7 +86,7 @@ export interface ContentHotTopicsView {
   items: ContentHotTopic[]
 }
 
-export type ContentArticleStatus = 'DRAFT' | 'WECHAT_DRAFT' | 'PUBLISHED'
+export type ContentArticleStatus = 'DRAFT' | 'WECHAT_DRAFT' | 'PUBLISH_SUBMITTED' | 'PUBLISH_FAILED' | 'PUBLISHED'
 export type ContentArticleLength = 'short' | 'standard' | 'long'
 export type ContentArticleCategory = string
 export type ContentArticleLayoutTheme = 'clean' | 'warm' | 'magazine'
@@ -121,7 +133,7 @@ export interface ContentAutomationView {
   jobs: ContentAutomationJob[]
   publishRecords: ContentWechatPublishRecord[]
   artifacts?: Array<Record<string, unknown>>
-  qualityGate?: Record<string, unknown> | null
+  qualityGate?: ContentQualityGate | null
 }
 
 export interface ContentArticle {

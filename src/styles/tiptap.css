@@ -1,18 +1,26 @@
+/* ==========================================================================
+   富文本编辑器（语雀 / 钉钉文档风格）
+   - 设计令牌优先继承站点全局变量（--accent / --panel / --text 等）
+   - 仅在本组件内使用时回退到内置值，保证独立可用
+   ========================================================================== */
+
 .tiptap-editor-container {
   --editor-min-height: 300px;
   --editor-max-height: 600px;
-  --editor-bg: #ffffff;
-  --editor-panel: #f8fafc;
-  --editor-panel-strong: #eef2f7;
-  --editor-border: #d9e0ea;
-  --editor-border-strong: #c8d1de;
-  --editor-text: #0f172a;
-  --editor-text-dim: #64748b;
-  --editor-accent: #d33a31;
-  --editor-accent-soft: rgba(211, 58, 49, 0.12);
-  --editor-shadow: 0 16px 36px rgba(15, 23, 42, 0.08);
+  --editor-bg: var(--panel, #ffffff);
+  --editor-panel: var(--panel-alt, #f0f3f1);
+  --editor-panel-strong: var(--hover, #f0f4f2);
+  --editor-border: var(--border, #e2e8e4);
+  --editor-border-strong: var(--border-strong, #c7d4cc);
+  --editor-text: var(--text, #242d29);
+  --editor-text-dim: var(--text-dim, #718079);
+  --editor-accent: var(--accent, #167d70);
+  --editor-accent-soft: var(--accent-soft, #e9f4ef);
+  --editor-shadow: 0 1px 2px rgb(30 52 41 / 4%), 0 12px 32px rgb(30 52 41 / 6%);
+  --editor-code-bg: #0f172a;
+  --editor-code-text: #e2e8f0;
   border: 1px solid var(--editor-border);
-  border-radius: 8px;
+  border-radius: 10px;
   overflow: hidden;
   display: flex;
   flex-direction: column;
@@ -21,30 +29,18 @@
   box-shadow: var(--editor-shadow);
 }
 
-[data-theme='dark'] .tiptap-editor-container {
-  --editor-bg: #111827;
-  --editor-panel: rgba(255, 255, 255, 0.04);
-  --editor-panel-strong: rgba(255, 255, 255, 0.08);
-  --editor-border: rgba(255, 255, 255, 0.08);
-  --editor-border-strong: rgba(255, 255, 255, 0.14);
-  --editor-text: #f8fafc;
-  --editor-text-dim: rgba(226, 232, 240, 0.72);
-  --editor-accent-soft: rgba(235, 100, 91, 0.18);
-  --editor-shadow: none;
-}
+/* ==========================================================================
+   工具栏
+   ========================================================================== */
 
 .editor-menu-bar {
   display: flex;
   align-items: flex-start;
   justify-content: space-between;
   gap: 12px;
-  padding: 12px;
+  padding: 10px 12px;
   border-bottom: 1px solid var(--editor-border);
-  background:
-    linear-gradient(180deg, rgba(255, 255, 255, 0.5), transparent 100%),
-    var(--editor-panel);
-  backdrop-filter: saturate(140%) blur(14px);
-  -webkit-backdrop-filter: saturate(140%) blur(14px);
+  background: var(--editor-panel);
   flex: 0 0 auto;
 }
 
@@ -52,7 +48,7 @@
   display: flex;
   flex: 1;
   flex-wrap: nowrap;
-  gap: 10px;
+  gap: 8px;
   min-width: 0;
   overflow-x: auto;
   overflow-y: hidden;
@@ -64,52 +60,32 @@
   align-items: center;
   justify-content: flex-end;
   flex-wrap: wrap;
-  gap: 8px;
+  gap: 6px;
   flex-shrink: 0;
-}
-
-.editor-toolbar-hint {
-  display: inline-flex;
-  align-items: center;
-  min-height: 32px;
-  padding: 0 12px;
-  border-radius: 999px;
-  background: var(--editor-panel-strong);
-  color: var(--editor-text-dim);
-  font-size: 12px;
-  font-weight: 600;
-  white-space: nowrap;
 }
 
 .menu-group {
   display: inline-flex;
   align-items: center;
-  gap: 4px;
-  min-height: 40px;
-  padding: 4px;
-  border: 1px solid var(--editor-border);
-  border-radius: 6px;
-  background: rgba(255, 255, 255, 0.7);
-  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.5);
-}
-
-[data-theme='dark'] .menu-group {
-  background: rgba(15, 23, 42, 0.38);
-  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.03);
+  gap: 2px;
+  min-height: 36px;
+  padding: 2px;
+  border-radius: 8px;
+  background: transparent;
 }
 
 .menu-group--field {
-  gap: 8px;
-  padding-inline: 8px;
+  gap: 6px;
+  padding-inline: 6px;
 }
 
 .editor-toolbar-btn.ant-btn {
-  width: 32px;
-  min-width: 32px;
-  height: 32px;
+  width: 30px;
+  min-width: 30px;
+  height: 30px;
   padding: 0;
   border: 0;
-  border-radius: 5px;
+  border-radius: 6px;
   background: transparent;
   color: var(--editor-text-dim);
   box-shadow: none;
@@ -117,26 +93,22 @@
   transition:
     transform 0.16s ease,
     color 0.16s ease,
-    background 0.16s ease,
-    box-shadow 0.16s ease;
+    background 0.16s ease;
 }
 
 .editor-toolbar-btn.ant-btn:hover:not(:disabled) {
-  transform: translateY(-1px);
-  background: rgba(255, 255, 255, 0.75);
-  color: var(--editor-text);
-  box-shadow: 0 8px 18px rgba(15, 23, 42, 0.08);
+  background: var(--editor-accent-soft);
+  color: var(--editor-accent);
 }
 
 [data-theme='dark'] .editor-toolbar-btn.ant-btn:hover:not(:disabled) {
   background: rgba(255, 255, 255, 0.08);
-  box-shadow: none;
 }
 
 .editor-toolbar-btn.ant-btn.is-active {
   background: var(--editor-accent-soft);
   color: var(--editor-accent);
-  box-shadow: inset 0 0 0 1px rgba(211, 58, 49, 0.14);
+  box-shadow: inset 0 0 0 1px color-mix(in srgb, var(--editor-accent) 22%, transparent);
 }
 
 .editor-toolbar-btn.ant-btn.is-danger {
@@ -153,36 +125,59 @@
 }
 
 .editor-toolbar-select.ant-select .ant-select-selector {
-  min-height: 32px !important;
-  border-radius: 5px !important;
+  min-height: 30px !important;
+  border-radius: 6px !important;
   border-color: transparent !important;
   background: transparent !important;
   color: var(--editor-text) !important;
   box-shadow: none !important;
   padding-inline: 10px !important;
+  font-size: 13px !important;
 }
 
 .editor-toolbar-select.ant-select:hover .ant-select-selector,
 .editor-toolbar-select.ant-select.ant-select-focused .ant-select-selector {
-  background: rgba(255, 255, 255, 0.72) !important;
-  box-shadow: inset 0 0 0 1px rgba(15, 23, 42, 0.06) !important;
-}
-
-[data-theme='dark'] .editor-toolbar-select.ant-select:hover .ant-select-selector,
-[data-theme='dark'] .editor-toolbar-select.ant-select.ant-select-focused .ant-select-selector {
-  background: rgba(255, 255, 255, 0.08) !important;
-  box-shadow: none !important;
+  background: var(--editor-bg) !important;
+  box-shadow: inset 0 0 0 1px var(--editor-border-strong) !important;
 }
 
 .editor-toolbar-color .ant-color-picker-trigger {
-  width: 32px;
-  min-width: 32px;
-  height: 32px;
+  width: 30px;
+  min-width: 30px;
+  height: 30px;
   border: 0;
-  border-radius: 5px;
+  border-radius: 6px;
   background: transparent;
   box-shadow: none;
 }
+
+.editor-char-count {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  color: var(--editor-text-dim);
+  font-size: 11px;
+  white-space: nowrap;
+  font-variant-numeric: tabular-nums;
+}
+
+.editor-char-count__reading {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.editor-char-count__reading::before {
+  content: '';
+  width: 3px;
+  height: 3px;
+  border-radius: 50%;
+  background: var(--editor-border-strong);
+}
+
+/* ==========================================================================
+   编辑区排版（语雀文档观感）
+   ========================================================================== */
 
 .editor-content {
   min-height: var(--editor-min-height);
@@ -220,28 +215,88 @@
 
 .ProseMirror {
   min-height: var(--editor-min-height);
-  padding: 18px 20px 28px;
+  padding: 20px 22px 40px;
   box-sizing: border-box;
   outline: none;
   color: var(--editor-text);
+  font-size: 15px;
+  line-height: 1.75;
   scroll-margin-bottom: 96px;
+  word-break: break-word;
 }
 
 .editor-content--fill .ProseMirror {
   min-height: 100%;
 }
 
+.ProseMirror ::selection {
+  background: color-mix(in srgb, var(--editor-accent) 18%, transparent);
+}
+
 .ProseMirror p.is-editor-empty:first-child::before {
   content: attr(data-placeholder);
   float: left;
-  color: #94a3b8;
+  color: var(--editor-text-dim);
+  opacity: 0.7;
   pointer-events: none;
   height: 0;
 }
 
+.ProseMirror > * + * {
+  margin-top: 0.15em;
+}
+
+.ProseMirror p {
+  margin: 0.55em 0;
+}
+
+.ProseMirror h1,
+.ProseMirror h2,
+.ProseMirror h3,
+.ProseMirror h4,
+.ProseMirror h5,
+.ProseMirror h6 {
+  margin-top: 1.7em;
+  margin-bottom: 0.55em;
+  font-weight: 600;
+  line-height: 1.3;
+  color: var(--editor-text);
+  scroll-margin-top: 24px;
+}
+
+.ProseMirror h1 {
+  font-size: 1.8em;
+}
+
+.ProseMirror h2 {
+  font-size: 1.45em;
+}
+
+.ProseMirror h3 {
+  font-size: 1.2em;
+}
+
+.ProseMirror h4 {
+  font-size: 1.05em;
+}
+
+.ProseMirror h5 {
+  font-size: 0.95em;
+}
+
+.ProseMirror h6 {
+  font-size: 0.9em;
+  color: var(--editor-text-dim);
+}
+
 .ProseMirror ul,
 .ProseMirror ol {
-  padding: 0 0 0 1.2rem;
+  padding: 0 0 0 1.35em;
+  margin: 0.55em 0;
+}
+
+.ProseMirror li p {
+  margin: 0.2em 0;
 }
 
 .ProseMirror ul[data-type='taskList'] {
@@ -258,11 +313,63 @@
   flex: 0 0 auto;
   margin-right: 0.5rem;
   user-select: none;
+  line-height: 1.75;
 }
 
 .ProseMirror ul[data-type='taskList'] li > div {
   flex: 1 1 auto;
 }
+
+.ProseMirror blockquote {
+  border-left: 3px solid color-mix(in srgb, var(--editor-accent) 45%, var(--editor-border));
+  padding-left: 14px;
+  margin: 0.9em 0;
+  color: var(--editor-text-dim);
+}
+
+.ProseMirror hr {
+  height: 1px;
+  border: 0;
+  margin: 2.2em 0;
+  background: linear-gradient(
+    90deg,
+    transparent,
+    var(--editor-border-strong),
+    transparent
+  );
+}
+
+.ProseMirror a {
+  color: var(--editor-accent);
+  text-decoration: underline;
+  text-decoration-thickness: 1px;
+  text-underline-offset: 3px;
+}
+
+.ProseMirror code {
+  background: color-mix(in srgb, var(--editor-text-dim) 12%, transparent);
+  padding: 0.18em 0.42em;
+  border-radius: 5px;
+  font-family: 'SFMono-Regular', Consolas, 'Liberation Mono', Menlo, monospace;
+  font-size: 0.86em;
+}
+
+.ProseMirror pre code {
+  background: transparent;
+  padding: 0;
+}
+
+.ProseMirror mark {
+  background-color: #ffe066;
+  padding: 0 2px;
+  border-radius: 4px;
+}
+
+[data-theme='dark'] .ProseMirror mark {
+  background-color: #744210;
+}
+
+/* ---- 表格 ---- */
 
 .ProseMirror table {
   border-collapse: collapse;
@@ -277,14 +384,15 @@
 .ProseMirror th {
   min-width: 1em;
   border: 1px solid var(--editor-border);
-  padding: 8px 10px;
+  padding: 7px 10px;
   vertical-align: top;
   box-sizing: border-box;
   position: relative;
+  font-size: 0.94em;
 }
 
 .ProseMirror th {
-  font-weight: 700;
+  font-weight: 600;
   text-align: left;
   background-color: var(--editor-panel);
 }
@@ -294,7 +402,7 @@
   position: absolute;
   content: '';
   inset: 0;
-  background: rgba(59, 130, 246, 0.12);
+  background: color-mix(in srgb, var(--editor-accent) 14%, transparent);
   pointer-events: none;
 }
 
@@ -304,7 +412,8 @@
   top: 0;
   bottom: -2px;
   width: 4px;
-  background-color: #93c5fd;
+  background-color: var(--editor-accent);
+  opacity: 0.6;
   pointer-events: none;
 }
 
@@ -312,240 +421,317 @@
   overflow-x: auto;
 }
 
+/* ==========================================================================
+   图片节点视图
+   ========================================================================== */
+
 .ProseMirror img {
   display: block;
-  max-width: min(100%, 920px);
+  max-width: 100%;
   height: auto;
-  margin: 1.2rem auto;
   border-radius: 8px;
-  box-shadow: 0 18px 36px rgba(15, 23, 42, 0.12);
 }
 
-.ProseMirror mark {
-  background-color: #ffe066;
-  padding: 0 2px;
-  border-radius: 4px;
+.editor-image-node {
+  position: relative;
+  display: block;
+  margin: 1.3rem 0;
+  line-height: 0;
 }
 
-[data-theme='dark'] .ProseMirror mark {
-  background-color: #744210;
+.editor-image-node__img {
+  display: block;
+  max-width: 100%;
+  height: auto;
+  border-radius: 8px;
+  box-shadow: 0 10px 28px rgb(15 23 42 / 10%);
 }
 
-.ProseMirror blockquote {
-  border-left: 4px solid var(--editor-border-strong);
-  padding-left: 1rem;
+.editor-image-node[data-align='left'] .editor-image-node__img {
   margin-left: 0;
-  margin-right: 0;
-  color: var(--editor-text-dim);
+  margin-right: auto;
 }
 
-.ProseMirror hr {
-  height: 1px;
-  border: 0;
-  margin: 2rem 0;
-  background: linear-gradient(
-    90deg,
-    transparent,
-    var(--editor-border-strong),
-    transparent
-  );
+.editor-image-node[data-align='center'] .editor-image-node__img {
+  margin-left: auto;
+  margin-right: auto;
 }
+
+.editor-image-node[data-align='right'] .editor-image-node__img {
+  margin-left: auto;
+  margin-right: 0;
+}
+
+.editor-image-node[data-selected='true'] .editor-image-node__img {
+  outline: 2px solid var(--editor-accent);
+  outline-offset: 3px;
+}
+
+.editor-image-node.ProseMirror-selectednode .editor-image-node__img {
+  outline: none;
+}
+
+.editor-image-toolbar {
+  position: absolute;
+  top: -42px;
+  left: 50%;
+  transform: translateX(-50%);
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  padding: 3px;
+  border: 1px solid var(--editor-border);
+  border-radius: 8px;
+  background: var(--editor-bg);
+  box-shadow: 0 10px 28px rgb(15 23 42 / 14%);
+  z-index: 6;
+  line-height: 1;
+}
+
+.editor-image-toolbar__group {
+  display: inline-flex;
+  align-items: center;
+  gap: 1px;
+}
+
+.editor-image-toolbar__group + .editor-image-toolbar__group {
+  margin-left: 3px;
+  padding-left: 4px;
+  border-left: 1px solid var(--editor-border);
+}
+
+.editor-image-toolbar__btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 24px;
+  height: 24px;
+  padding: 0 5px;
+  border: 0;
+  border-radius: 5px;
+  background: transparent;
+  color: var(--editor-text-dim);
+  font-size: 11px;
+  cursor: pointer;
+  transition: background 0.14s ease, color 0.14s ease;
+}
+
+.editor-image-toolbar__btn:hover {
+  background: var(--editor-accent-soft);
+  color: var(--editor-accent);
+}
+
+.editor-image-toolbar__btn.is-active {
+  background: var(--editor-accent-soft);
+  color: var(--editor-accent);
+  font-weight: 600;
+}
+
+.editor-image-toolbar__btn.is-danger:hover {
+  background: rgb(220 38 38 / 10%);
+  color: #dc2626;
+}
+
+/* ==========================================================================
+   代码块
+   ========================================================================== */
 
 .ProseMirror .editor-code-block {
   position: relative;
-  margin: 1rem 0;
+  margin: 1.1rem 0;
   overflow: hidden;
-  border-radius: 8px;
-  background: #0f172a;
+  border-radius: 10px;
+  background: var(--editor-code-bg);
 }
 
 .editor-code-block__header {
   display: flex;
-  justify-content: flex-end;
-  padding: 8px 10px 0;
-  background: #0f172a;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  padding: 7px 8px 5px 12px;
+  background: var(--editor-code-bg);
 }
 
 .editor-code-block__header .code-block-lang-picker.ant-select {
-  min-width: 132px;
+  min-width: 124px;
 }
 
 .editor-code-block__header .ant-select-selector {
-  min-height: 28px !important;
+  min-height: 26px !important;
   border-color: rgba(148, 163, 184, 0.24) !important;
   border-radius: 7px !important;
   background: rgba(15, 23, 42, 0.88) !important;
   color: #e2e8f0 !important;
   box-shadow: none !important;
+  font-size: 12px !important;
 }
 
 .editor-code-block__header .ant-select-selection-item {
+  color: #e2e8f0 !important;
+}
+
+.editor-code-block__copy {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  height: 24px;
+  padding: 0 8px;
+  border: 1px solid rgba(148, 163, 184, 0.24);
+  border-radius: 6px;
+  background: rgba(15, 23, 42, 0.6);
+  color: #94a3b8;
+  font-size: 11px;
+  cursor: pointer;
+  transition: color 0.14s ease, border-color 0.14s ease;
+}
+
+.editor-code-block__copy:hover {
   color: #e2e8f0;
+  border-color: rgba(148, 163, 184, 0.5);
+}
+
+.editor-code-block__copy.is-copied {
+  color: #56d364;
+  border-color: rgba(86, 211, 100, 0.4);
 }
 
 .ProseMirror pre {
-  background: #0f172a;
-  color: #e2e8f0;
-  padding: 1rem 1.1rem;
-  border-radius: 8px;
+  background: var(--editor-code-bg);
+  color: var(--editor-code-text);
+  padding: 0.9rem 1.1rem 1.1rem;
+  border-radius: 10px;
   overflow-x: auto;
   font-family: 'SFMono-Regular', Consolas, 'Liberation Mono', Menlo, monospace;
-  font-size: 0.875rem;
+  font-size: 0.84rem;
   line-height: 1.65;
 }
 
 .ProseMirror .editor-code-block pre {
   margin: 0;
   border-radius: 0;
-  padding-top: 0.75rem;
 }
 
-.ProseMirror code {
-  background: rgba(148, 163, 184, 0.14);
-  padding: 0.18em 0.42em;
-  border-radius: 6px;
-  font-family: 'SFMono-Regular', Consolas, 'Liberation Mono', Menlo, monospace;
-  font-size: 0.875em;
+/* 语法高亮（暗色代码底） */
+.ProseMirror pre .hljs-comment,
+.ProseMirror pre .hljs-quote {
+  color: #8b9bb4;
+  font-style: italic;
 }
 
-[data-theme='dark'] .ProseMirror code {
-  background: rgba(148, 163, 184, 0.18);
+.ProseMirror pre .hljs-keyword,
+.ProseMirror pre .hljs-selector-tag,
+.ProseMirror pre .hljs-literal,
+.ProseMirror pre .hljs-section,
+.ProseMirror pre .hljs-name {
+  color: #ff7b72;
 }
 
-.ProseMirror pre code {
-  background: transparent;
-  padding: 0;
+.ProseMirror pre .hljs-string,
+.ProseMirror pre .hljs-meta .hljs-string,
+.ProseMirror pre .hljs-addition {
+  color: #a5d6ff;
 }
 
-.ProseMirror h1,
-.ProseMirror h2,
-.ProseMirror h3,
-.ProseMirror h4,
-.ProseMirror h5,
-.ProseMirror h6 {
-  margin-top: 1.5em;
-  margin-bottom: 0.5em;
-  font-weight: 700;
-  line-height: 1.2;
-  color: var(--editor-text);
+.ProseMirror pre .hljs-number,
+.ProseMirror pre .hljs-variable,
+.ProseMirror pre .hljs-template-variable,
+.ProseMirror pre .hljs-attr,
+.ProseMirror pre .hljs-attribute {
+  color: #79c0ff;
 }
 
-.ProseMirror h1 {
-  font-size: 2rem;
+.ProseMirror pre .hljs-title,
+.ProseMirror pre .hljs-title.class_,
+.ProseMirror pre .hljs-title.function_,
+.ProseMirror pre .hljs-title.inheritance__ {
+  color: #d2a8ff;
 }
 
-.ProseMirror h2 {
-  font-size: 1.5rem;
+.ProseMirror pre .hljs-built_in,
+.ProseMirror pre .hljs-type,
+.ProseMirror pre .hljs-symbol,
+.ProseMirror pre .hljs-bullet {
+  color: #ffa657;
 }
 
-.ProseMirror h3 {
-  font-size: 1.25rem;
+.ProseMirror pre .hljs-deletion {
+  color: #ffa198;
 }
 
-.ProseMirror h4 {
-  font-size: 1.125rem;
-}
-
-.ProseMirror h5 {
-  font-size: 1rem;
-}
-
-.ProseMirror h6 {
-  font-size: 0.875rem;
-}
-
-.ProseMirror p {
-  margin: 0.7em 0;
-}
-
-.ProseMirror a {
-  color: #2563eb;
-  text-decoration: underline;
-  text-decoration-thickness: 1px;
-  text-underline-offset: 3px;
-}
-
-[data-theme='dark'] .ProseMirror a {
-  color: #60a5fa;
-}
+/* ==========================================================================
+   浮动菜单 / Slash 菜单 / 更多面板 / 表格选择器
+   ========================================================================== */
 
 .editor-bubble-menu,
-.editor-floating-menu,
 .editor-slash-command-list,
-.editor-slash-empty {
-  --editor-bg: #ffffff;
-  --editor-panel: #f8fafc;
-  --editor-border: #d9e0ea;
-  --editor-text: #0f172a;
-  --editor-text-dim: #64748b;
-  --editor-accent: #d33a31;
-  --editor-accent-soft: rgba(211, 58, 49, 0.12);
+.editor-slash-empty,
+.editor-block-insert-menu {
+  --editor-bg: var(--panel, #ffffff);
+  --editor-panel: var(--panel-alt, #f0f3f1);
+  --editor-border: var(--border, #e2e8e4);
+  --editor-border-strong: var(--border-strong, #c7d4cc);
+  --editor-text: var(--text, #242d29);
+  --editor-text-dim: var(--text-dim, #718079);
+  --editor-accent: var(--accent, #167d70);
+  --editor-accent-soft: var(--accent-soft, #e9f4ef);
   z-index: 1100;
   color: var(--editor-text);
   font-family: inherit;
 }
 
-[data-theme='dark'] .editor-bubble-menu,
-[data-theme='dark'] .editor-floating-menu,
-[data-theme='dark'] .editor-slash-command-list,
-[data-theme='dark'] .editor-slash-empty {
-  --editor-bg: #111827;
-  --editor-panel: #1f2937;
-  --editor-border: rgba(255, 255, 255, 0.14);
-  --editor-text: #f8fafc;
-  --editor-text-dim: rgba(226, 232, 240, 0.76);
-  --editor-accent: #ef6b63;
-  --editor-accent-soft: rgba(239, 107, 99, 0.18);
-}
-
-.editor-bubble-menu__inner,
-.editor-floating-menu__inner {
+.editor-bubble-menu__inner {
   display: inline-flex;
   align-items: center;
   gap: 2px;
   padding: 4px;
-  border: 1px solid color-mix(in srgb, var(--editor-border) 86%, transparent);
+  border: 1px solid var(--editor-border);
   border-radius: 8px;
-  background: color-mix(in srgb, var(--editor-bg) 94%, #ffffff);
-  box-shadow: 0 10px 28px rgba(15, 23, 42, 0.14);
+  background: var(--editor-bg);
+  box-shadow: 0 10px 28px rgb(15 23 42 / 14%);
 }
 
-[data-theme='dark'] .editor-bubble-menu__inner,
-[data-theme='dark'] .editor-floating-menu__inner {
-  background: color-mix(in srgb, var(--editor-bg) 92%, #111827);
-  box-shadow: 0 14px 34px rgba(0, 0, 0, 0.32);
+.editor-bubble-menu__divider {
+  width: 1px;
+  height: 18px;
+  margin: 0 3px;
+  background: var(--editor-border);
 }
 
-.editor-bubble-menu .editor-toolbar-btn.ant-btn,
-.editor-floating-menu .editor-toolbar-btn.ant-btn {
+.editor-bubble-menu .editor-toolbar-btn.ant-btn {
   width: 28px;
   min-width: 28px;
   height: 28px;
   border-radius: 6px;
 }
 
-.editor-floating-menu__inner {
-  flex-direction: column;
-}
-
-.editor-floating-menu__inner .editor-toolbar-btn.ant-btn {
-  font-size: 11px;
-  font-weight: 700;
-}
-
-.editor-slash-command-list,
-.editor-slash-empty {
-  width: 252px;
-  max-height: 320px;
+.editor-slash-command-list {
+  width: 268px;
+  max-height: 340px;
   overflow-y: auto;
   padding: 6px;
-  border: 1px solid color-mix(in srgb, var(--editor-border) 86%, transparent);
-  border-radius: 8px;
+  border: 1px solid var(--editor-border);
+  border-radius: 10px;
   background: var(--editor-bg);
-  box-shadow: 0 18px 42px rgba(15, 23, 42, 0.16);
+  box-shadow: 0 18px 42px rgb(15 23 42 / 16%);
+}
+
+.editor-slash-group + .editor-slash-group {
+  margin-top: 4px;
+  padding-top: 4px;
+  border-top: 1px solid var(--editor-border);
+}
+
+.editor-slash-group__title {
+  padding: 3px 8px 4px;
+  color: var(--editor-text-dim);
+  font-size: 11px;
+  font-weight: 600;
+  letter-spacing: 0.02em;
 }
 
 .editor-slash-empty {
+  width: 252px;
   padding: 12px;
   color: var(--editor-text-dim);
   font-size: 12px;
@@ -553,7 +739,7 @@
 
 .editor-slash-item {
   width: 100%;
-  min-height: 38px;
+  min-height: 40px;
   display: flex;
   align-items: center;
   gap: 9px;
@@ -568,23 +754,30 @@
 
 .editor-slash-item:hover,
 .editor-slash-item.is-active {
-  background: color-mix(in srgb, var(--editor-accent-soft) 54%, transparent);
+  background: var(--editor-accent-soft);
 }
 
 .editor-slash-item__icon {
-  width: 22px;
-  height: 22px;
+  width: 24px;
+  height: 24px;
   display: inline-grid;
   place-items: center;
   flex: 0 0 auto;
+  border-radius: 6px;
+  background: var(--editor-panel);
   color: var(--editor-text-dim);
+}
+
+.editor-slash-item.is-active .editor-slash-item__icon {
+  background: var(--editor-bg);
+  color: var(--editor-accent);
 }
 
 .editor-slash-item__body {
   min-width: 0;
   display: flex;
   flex-direction: column;
-  gap: 2px;
+  gap: 1px;
 }
 
 .editor-slash-item__title {
@@ -603,38 +796,27 @@
   white-space: nowrap;
 }
 
-.editor-image-preview {
-  max-height: 220px;
-  overflow: hidden;
-  display: grid;
-  place-items: center;
-  border: 1px solid var(--editor-border);
-  border-radius: 8px;
-  background: var(--editor-panel);
-}
-
-.editor-image-preview img {
-  display: block;
-  max-width: 100%;
-  max-height: 220px;
-  object-fit: contain;
+.editor-slash-item__hint {
+  margin-left: auto;
+  padding-left: 8px;
+  flex: 0 0 auto;
+  color: var(--editor-text-dim);
+  font-size: 10px;
+  white-space: nowrap;
+  opacity: 0.75;
 }
 
 .editor-toolbar-popover-trigger {
   display: inline-flex;
 }
 
-.editor-char-count {
-  color: var(--editor-text-dim);
-  font-size: 11px;
-  white-space: nowrap;
-}
-
 .editor-more-panel {
-  --editor-panel: #f8fafc;
-  --editor-border: #d9e0ea;
-  --editor-text-dim: #64748b;
-  width: 244px;
+  --editor-panel: var(--panel-alt, #f0f3f1);
+  --editor-border: var(--border, #e2e8e4);
+  --editor-text-dim: var(--text-dim, #718079);
+  --editor-accent: var(--accent, #167d70);
+  --editor-accent-soft: var(--accent-soft, #e9f4ef);
+  width: 248px;
   display: grid;
   gap: 12px;
 }
@@ -663,7 +845,7 @@
 .editor-more-panel__row--icons {
   padding: 3px;
   border: 1px solid var(--editor-border);
-  border-radius: 6px;
+  border-radius: 8px;
   background: var(--editor-panel);
 }
 
@@ -693,12 +875,12 @@
 }
 
 .editor-table-picker {
-  --editor-panel: #f8fafc;
-  --editor-border: #d9e0ea;
-  --editor-text-dim: #64748b;
-  --editor-accent: #d33a31;
-  --editor-accent-soft: rgba(211, 58, 49, 0.12);
-  width: 228px;
+  --editor-panel: var(--panel-alt, #f0f3f1);
+  --editor-border: var(--border, #e2e8e4);
+  --editor-text-dim: var(--text-dim, #718079);
+  --editor-accent: var(--accent, #167d70);
+  --editor-accent-soft: var(--accent-soft, #e9f4ef);
+  width: 232px;
 }
 
 .editor-table-picker__header {
@@ -745,14 +927,114 @@
   transform: scale(0.96);
 }
 
-[data-theme='dark'] .editor-more-panel,
-[data-theme='dark'] .editor-table-picker {
-  --editor-panel: #1f2937;
-  --editor-border: rgba(255, 255, 255, 0.14);
-  --editor-text-dim: rgba(226, 232, 240, 0.76);
-  --editor-accent: #ef6b63;
-  --editor-accent-soft: rgba(239, 107, 99, 0.18);
+/* ==========================================================================
+   块手柄（左侧 + 与拖拽）
+   ========================================================================== */
+
+.editor-block-handle {
+  position: fixed;
+  z-index: 1050;
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  padding: 2px;
+  border: 1px solid var(--editor-border);
+  border-radius: 8px;
+  background: var(--editor-bg);
+  box-shadow: 0 6px 18px rgb(15 23 42 / 10%);
+  opacity: 0.9;
+  transition: opacity 0.14s ease;
 }
+
+.editor-block-handle:hover {
+  opacity: 1;
+}
+
+.editor-block-handle__btn {
+  width: 22px;
+  height: 22px;
+  display: grid;
+  place-items: center;
+  border: 0;
+  border-radius: 5px;
+  background: transparent;
+  color: var(--editor-text-dim);
+  cursor: pointer;
+  transition: background 0.14s ease, color 0.14s ease;
+}
+
+.editor-block-handle__btn:hover {
+  background: var(--editor-accent-soft);
+  color: var(--editor-accent);
+}
+
+.editor-block-handle__btn--drag {
+  cursor: grab;
+}
+
+.editor-block-handle__btn--drag:active {
+  cursor: grabbing;
+}
+
+.editor-drop-indicator {
+  position: fixed;
+  z-index: 1040;
+  height: 2px;
+  border-radius: 2px;
+  background: var(--editor-accent);
+  pointer-events: none;
+}
+
+.editor-drop-indicator::before {
+  content: '';
+  position: absolute;
+  left: -3px;
+  top: -2px;
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  background: var(--editor-accent);
+}
+
+.editor-block-insert-menu {
+  width: 172px;
+  display: grid;
+  gap: 1px;
+  max-height: 330px;
+  overflow-y: auto;
+}
+
+.editor-block-insert-menu__item {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  width: 100%;
+  min-height: 30px;
+  padding: 4px 8px;
+  border: 0;
+  border-radius: 6px;
+  background: transparent;
+  color: var(--editor-text);
+  font-size: 13px;
+  text-align: left;
+  cursor: pointer;
+  transition: background 0.14s ease, color 0.14s ease;
+}
+
+.editor-block-insert-menu__item:hover {
+  background: var(--editor-accent-soft);
+  color: var(--editor-accent);
+}
+
+.editor-block-insert-menu__icon {
+  display: inline-grid;
+  place-items: center;
+  color: var(--editor-text-dim);
+}
+
+/* ==========================================================================
+   图片上传占位 / 图片 URL 预览
+   ========================================================================== */
 
 .editor-image-placeholder {
   min-height: 120px;
@@ -762,7 +1044,7 @@
   gap: 8px;
   margin: 16px 0;
   border: 1px dashed var(--editor-border-strong);
-  border-radius: 8px;
+  border-radius: 10px;
   background: var(--editor-panel);
   color: var(--editor-text-dim);
 }
@@ -775,6 +1057,40 @@
 .editor-image-placeholder__hint {
   font-size: 12px;
 }
+
+.editor-image-preview {
+  max-height: 220px;
+  overflow: hidden;
+  display: grid;
+  place-items: center;
+  border: 1px solid var(--editor-border);
+  border-radius: 8px;
+  background: var(--editor-panel);
+}
+
+.editor-image-preview img {
+  display: block;
+  max-width: 100%;
+  max-height: 220px;
+  object-fit: contain;
+}
+
+/* ==========================================================================
+   专注模式
+   ========================================================================== */
+
+.tiptap-editor-container--focus .ProseMirror > * {
+  opacity: 0.32;
+  transition: opacity 0.18s ease;
+}
+
+.tiptap-editor-container--focus .ProseMirror > .is-focus-active {
+  opacity: 1;
+}
+
+/* ==========================================================================
+   响应式
+   ========================================================================== */
 
 @media (max-width: 960px) {
   .editor-menu-bar {
@@ -791,6 +1107,12 @@
 }
 
 @media (max-width: 640px) {
+  .tiptap-editor-container {
+    --editor-min-height: 260px;
+    width: 100%;
+    max-width: 100%;
+  }
+
   .editor-menu-bar {
     gap: 6px;
     padding: 6px 8px;
@@ -811,7 +1133,7 @@
     width: 34px;
     min-width: 34px;
     height: 34px;
-    border-radius: 5px;
+    border-radius: 6px;
   }
 
   .editor-toolbar-select--block {
@@ -820,15 +1142,120 @@
 
   .editor-toolbar-select.ant-select .ant-select-selector {
     min-height: 34px !important;
-    border-radius: 5px !important;
+    border-radius: 6px !important;
   }
 
   .ProseMirror {
-    padding-inline: 14px;
+    padding: 16px 16px max(120px, calc(env(safe-area-inset-bottom) + 96px));
+    font-size: 16px;
+  }
+
+  .ProseMirror pre,
+  .ProseMirror .editor-code-block {
+    max-width: 100%;
+  }
+
+  .editor-bubble-menu__inner {
+    gap: 4px;
+    padding: 4px;
+  }
+
+  .editor-slash-command-list {
+    width: min(300px, calc(100vw - 24px));
+  }
+
+  .editor-slash-item {
+    min-height: 44px;
+  }
+
+  .editor-more-panel {
+    width: min(300px, calc(100vw - 24px));
+  }
+
+  .editor-more-panel__row {
+    flex-wrap: wrap;
+  }
+
+  .editor-more-panel__section--commands,
+  .editor-more-panel__insert-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .editor-more-panel .ant-btn {
+    min-height: 44px;
+  }
+
+  .editor-table-picker {
+    width: min(280px, calc(100vw - 24px));
+    overflow-x: auto;
+  }
+
+  .editor-table-picker__grid {
+    width: max-content;
+    grid-template-columns: repeat(6, 36px);
+  }
+
+  .editor-table-picker__grid button {
+    width: 36px;
+    height: 36px;
+    touch-action: manipulation;
+  }
+
+  .editor-image-toolbar {
+    top: auto;
+    bottom: -42px;
   }
 }
 
-/* Cross-device editor controls, scroll surfaces and viewport fallbacks. */
+/* 触屏与窄屏不显示块手柄，改用 / 菜单 */
+@media (pointer: coarse), (max-width: 1080px) {
+  .editor-block-handle,
+  .editor-drop-indicator {
+    display: none !important;
+  }
+}
+
+@media (hover: none) and (pointer: coarse) {
+  .editor-slash-item,
+  .editor-more-panel .ant-btn {
+    min-height: 44px;
+    touch-action: manipulation;
+  }
+}
+
+@media (min-width: 900px) and (max-height: 720px) and (orientation: landscape) {
+  .tiptap-editor-container {
+    --editor-min-height: 180px;
+    --editor-max-height: calc(100svh - 132px);
+  }
+
+  .editor-menu-bar {
+    gap: 6px;
+    padding-block: 4px;
+  }
+
+  .menu-group {
+    min-height: 40px;
+  }
+
+  .editor-content {
+    scroll-padding-bottom: 72px;
+  }
+
+  .ProseMirror {
+    min-height: 180px;
+    padding-block: 12px 72px;
+  }
+
+  .editor-slash-command-list,
+  .editor-slash-empty,
+  .editor-more-panel,
+  .editor-block-insert-menu {
+    max-height: calc(100svh - 20px);
+  }
+}
+
+/* 跨设备：滚动表面与触控优化 */
 .editor-menu-bar,
 .editor-menu-bar__groups,
 .editor-menu-bar__actions {
@@ -844,7 +1271,7 @@
 .editor-content,
 .ProseMirror .tableWrapper,
 .editor-slash-command-list,
-.editor-slash-empty,
+.editor-block-insert-menu,
 .editor-more-panel {
   -webkit-overflow-scrolling: touch;
 }
@@ -864,27 +1291,10 @@
 }
 
 .editor-bubble-menu__inner,
-.editor-floating-menu__inner {
-  max-width: calc(100vw - 24px);
-  max-width: calc(100svw - 24px);
-}
-
-.editor-bubble-menu__inner {
-  overflow-x: auto;
-  overscroll-behavior-inline: contain;
-  touch-action: pan-x;
-}
-
-.editor-floating-menu__inner {
-  max-height: min(320px, calc(100vh - 24px));
-  max-height: min(320px, calc(100svh - 24px));
-  overflow-y: auto;
-}
-
 .editor-slash-command-list,
 .editor-slash-empty,
 .editor-more-panel,
-.editor-table-picker {
+.editor-block-insert-menu {
   max-width: calc(100vw - 24px);
   max-width: calc(100svw - 24px);
 }
@@ -892,8 +1302,8 @@
 .editor-slash-command-list,
 .editor-slash-empty,
 .editor-more-panel {
-  max-height: min(320px, calc(100vh - 24px));
-  max-height: min(320px, calc(100svh - 24px));
+  max-height: min(340px, calc(100vh - 24px));
+  max-height: min(340px, calc(100svh - 24px));
   overflow-y: auto;
   overscroll-behavior: contain;
 }
@@ -933,159 +1343,5 @@
   .ProseMirror .tableWrapper table {
     min-width: 640px;
     table-layout: auto;
-  }
-}
-
-@media (max-width: 640px) {
-  .tiptap-editor-container {
-    --editor-min-height: 260px;
-    width: 100%;
-    max-width: 100%;
-  }
-
-  .editor-menu-bar {
-    width: 100%;
-    scroll-padding-inline: 8px;
-  }
-
-  .editor-menu-bar__groups,
-  .editor-menu-bar__actions {
-    gap: 6px;
-  }
-
-  .editor-toolbar-btn.ant-btn,
-  .editor-toolbar-color .ant-color-picker-trigger,
-  .editor-bubble-menu .editor-toolbar-btn.ant-btn,
-  .editor-floating-menu .editor-toolbar-btn.ant-btn {
-    width: 44px;
-    min-width: 44px;
-    height: 44px;
-    touch-action: manipulation;
-  }
-
-  .editor-toolbar-select.ant-select .ant-select-selector {
-    min-height: 44px !important;
-  }
-
-  .menu-group {
-    min-height: 44px;
-    padding-block: 0;
-  }
-
-  .editor-toolbar-hint {
-    display: none;
-  }
-
-  .editor-content {
-    scroll-padding-bottom: max(120px, calc(env(safe-area-inset-bottom) + 96px));
-  }
-
-  .ProseMirror {
-    min-height: max(260px, calc(100svh - 260px));
-    padding: 16px 14px max(120px, calc(env(safe-area-inset-bottom) + 96px));
-    font-size: 16px;
-    scroll-margin-bottom: max(120px, calc(env(safe-area-inset-bottom) + 96px));
-  }
-
-  .ProseMirror pre,
-  .ProseMirror .editor-code-block {
-    max-width: 100%;
-  }
-
-  .editor-bubble-menu__inner {
-    gap: 4px;
-    padding: 4px;
-  }
-
-  .editor-floating-menu__inner {
-    flex-direction: row;
-    overflow-x: auto;
-  }
-
-  .editor-slash-command-list,
-  .editor-slash-empty {
-    width: min(320px, calc(100svw - 24px));
-  }
-
-  .editor-slash-item {
-    min-height: 44px;
-  }
-
-  .editor-more-panel {
-    width: min(300px, calc(100svw - 24px));
-  }
-
-  .editor-more-panel__row {
-    flex-wrap: wrap;
-  }
-
-  .editor-more-panel__section--commands,
-  .editor-more-panel__insert-grid {
-    grid-template-columns: 1fr;
-  }
-
-  .editor-more-panel .ant-btn {
-    min-height: 44px;
-  }
-
-  .editor-table-picker {
-    width: min(280px, calc(100svw - 24px));
-    overflow-x: auto;
-  }
-
-  .editor-table-picker__grid {
-    width: max-content;
-    grid-template-columns: repeat(6, 36px);
-  }
-
-  .editor-table-picker__grid button {
-    width: 36px;
-    height: 36px;
-    touch-action: manipulation;
-  }
-}
-
-@media (hover: none) and (pointer: coarse) {
-  .editor-toolbar-btn.ant-btn:hover:not(:disabled) {
-    transform: none;
-    box-shadow: none;
-  }
-
-  .editor-slash-item,
-  .editor-more-panel .ant-btn {
-    min-height: 44px;
-    touch-action: manipulation;
-  }
-}
-
-@media (min-width: 900px) and (max-height: 720px) and (orientation: landscape) {
-  .tiptap-editor-container {
-    --editor-min-height: 180px;
-    --editor-max-height: calc(100svh - 132px);
-  }
-
-  .editor-menu-bar {
-    gap: 6px;
-    padding-block: 4px;
-  }
-
-  .menu-group {
-    min-height: 40px;
-  }
-
-  .editor-content {
-    scroll-padding-bottom: 72px;
-  }
-
-  .ProseMirror {
-    min-height: 180px;
-    padding-block: 12px 72px;
-  }
-
-  .editor-slash-command-list,
-  .editor-slash-empty,
-  .editor-more-panel,
-  .editor-floating-menu__inner {
-    max-height: calc(100svh - 20px);
   }
 }

@@ -152,7 +152,7 @@ export interface KbContextState {
   handleDeleteTag: (id: number) => Promise<void>
   openCreateDoc: (parentIdOverride?: number | null) => Promise<void>
   openEditDoc: (doc: { id: number }) => Promise<void>
-  handleSaveInlineDoc: () => Promise<void>
+  handleSaveInlineDoc: () => Promise<boolean>
   handleDeleteDoc: (docId: number) => Promise<void>
   handleMoveDoc: (docId: number, target: { parentId: number | null; sortOrder?: number }) => Promise<void>
   confirmDeleteDoc: (docId: number, title: string) => void
@@ -163,6 +163,7 @@ export interface KbContextState {
   handleRestoreVersion: () => Promise<void>
   enterInlineEdit: (doc: KbDoc) => void
   exitInlineEdit: () => void
+  requestExitInlineEdit: (nextParentId?: number | null) => void
   restoreLocalDraft: () => void
   discardLocalDraft: () => void
 }

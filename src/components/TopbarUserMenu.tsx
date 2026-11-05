@@ -19,6 +19,7 @@ import { Link as RouterLink } from 'react-router-dom'
 import { updateUserProfile, uploadUserAvatar } from '../api/auth'
 import { getMembership, redeemMembershipCode } from '../api/membership'
 import { useAuth } from '../context/AuthContext'
+import { MEMBERSHIP_ENABLED } from '../config/features'
 import type { MembershipView } from '../types'
 import { writeClipboardText } from '../utils/clipboard'
 import { ACCOUNT_EMAIL_HINT, ACCOUNT_EMAIL_PATTERN } from '../utils/email'
@@ -112,7 +113,7 @@ export default function TopbarUserMenu() {
   const membershipActive = isMembershipActive(membership, membershipNow)
 
   useEffect(() => {
-    if (!auth.token) {
+    if (!MEMBERSHIP_ENABLED || !auth.token) {
       setMembership(null)
       return
     }
@@ -211,6 +212,7 @@ export default function TopbarUserMenu() {
   }
 
   const handleRedeem = async () => {
+    if (!MEMBERSHIP_ENABLED) return
     const values = await redeemForm.validateFields()
     setRedeeming(true)
     try {
@@ -228,6 +230,7 @@ export default function TopbarUserMenu() {
   }
 
   const openRedeem = () => {
+    if (!MEMBERSHIP_ENABLED) return
     setOpen(false)
     setRedeemOpen(true)
   }
@@ -280,7 +283,7 @@ export default function TopbarUserMenu() {
         )}
       </div>
 
-      <div className="topbar-user-card__membership">
+      {MEMBERSHIP_ENABLED && <div className="topbar-user-card__membership">
         <div className="topbar-user-card__membership-head">
           <span>会员状态</span>
           {membershipLoading ? (
@@ -300,7 +303,7 @@ export default function TopbarUserMenu() {
             <b>{formatMembershipRemaining(membership, membershipNow)}</b>
           </div>
         )}
-      </div>
+      </div>}
 
       <RouterLink
         to="/admin"
@@ -332,10 +335,10 @@ export default function TopbarUserMenu() {
         </button>
       )}
 
-      <button type="button" className="topbar-user-card__redeem" onClick={openRedeem}>
+      {MEMBERSHIP_ENABLED && <button type="button" className="topbar-user-card__redeem" onClick={openRedeem}>
         <Ticket size={15} />
         <span>兑换会员卡</span>
-      </button>
+      </button>}
 
       <button
         type="button"
@@ -350,7 +353,7 @@ export default function TopbarUserMenu() {
 
   return (
     <>
-      <a
+      {MEMBERSHIP_ENABLED && <a
         className="topbar-redeem-entry"
         href={QQ_GROUP_JOIN_URL}
         title={`加入 QQ 群 ${QQ_GROUP_NUMBER} 获取兑换码`}
@@ -359,7 +362,7 @@ export default function TopbarUserMenu() {
         <Ticket size={15} />
         <span className="topbar-redeem-entry__desktop">加群领兑换码</span>
         <span className="topbar-redeem-entry__mobile">领兑换码</span>
-      </a>
+      </a>}
       <Popover
         trigger="click"
         placement="bottomRight"
@@ -383,7 +386,7 @@ export default function TopbarUserMenu() {
           <ChevronDown size={14} className="topbar-user-trigger__chevron" />
         </button>
       </Popover>
-      <Modal
+      {MEMBERSHIP_ENABLED && <Modal
         title="兑换会员卡"
         open={redeemOpen}
         confirmLoading={redeeming}
@@ -431,7 +434,7 @@ export default function TopbarUserMenu() {
             <Input placeholder="OW-XXXX-XXXX-XXXX-XXXX" autoComplete="off" />
           </Form.Item>
         </Form>
-      </Modal>
+      </Modal>}
       <Modal
         title="编辑资料"
         open={profileOpen}

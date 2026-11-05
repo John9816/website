@@ -23,6 +23,7 @@ import { siteImages } from '../utils/siteImages'
 import BeianFooter from '../components/BeianFooter'
 import CategoryIcon from '../components/CategoryIcon'
 import SiteHeader from '../components/SiteHeader'
+import HomeOrbit from '../components/HomeOrbit'
 import type { CategoryWithLinks, NavLink } from '../types'
 import '../styles/home.css'
 
@@ -212,14 +213,16 @@ export default function HomePage() {
 
         <main className="home-main" id="main-content">
           <header className="home-heading">
-            <div>
+            <div className="home-heading__copy">
               <p className="home-heading__eyebrow">个人工作台</p>
               <h1>我的导航<span aria-hidden="true">.</span></h1>
+              <p className="home-heading__description">收藏好用的，连接有趣的。</p>
+              <div className="home-identity">
+                <img src={siteImages.logo.url} width={28} height={28} alt="oldwang" />
+                <span>oldwang</span>
+              </div>
             </div>
-            <div className="home-identity">
-              <img src={siteImages.logo.url} width={38} height={38} alt="oldwang" />
-              <span>oldwang</span>
-            </div>
+            <HomeOrbit />
           </header>
 
           <div className="home-search" role="search">

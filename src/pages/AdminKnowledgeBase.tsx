@@ -1,8 +1,9 @@
-import { useEffect, useState } from 'react'
+import { useContext, useEffect, useState } from 'react'
 import { Button, Empty } from 'antd'
 import { MenuFoldOutlined, MenuUnfoldOutlined, PlusOutlined } from '@ant-design/icons'
 import { KbContextProvider } from './kb/KbContextProvider'
 import { useKbContext } from './kb/context'
+import { AdminEditorFocusContext } from './AdminEditorFocusContext'
 import KbSidebar from './kb/KbSidebar'
 import KbMain from './kb/KbMain'
 import KbPropertyDrawer from './kb/KbPropertyDrawer'
@@ -13,6 +14,7 @@ import '../styles/kb-admin.css'
 
 function AdminKnowledgeBaseContent() {
   const [sidebarCollapsed, setSidebarCollapsed] = useState(false)
+  const setEditorFocused = useContext(AdminEditorFocusContext)
   const context = useKbContext()
   const {
     spaces,
@@ -29,7 +31,13 @@ function AdminKnowledgeBaseContent() {
     docPageSize,
     tagFilterId,
     isDirty,
+    inlineEditingDocId,
   } = context
+
+  useEffect(() => {
+    setEditorFocused?.(inlineEditingDocId !== null)
+    return () => setEditorFocused?.(false)
+  }, [inlineEditingDocId, setEditorFocused])
 
   useEffect(() => {
     const controller = new AbortController()

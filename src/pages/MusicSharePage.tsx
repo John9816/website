@@ -38,7 +38,7 @@ function toSongSearchItem(data: MusicPublicShareView): SongSearchItem {
 export default function MusicSharePage() {
   const { message } = AntApp.useApp()
   const { token } = useParams<{ token: string }>()
-  const { playPlaylist } = useMusicPlayer()
+  const { playPlaylist, playResolvedSong } = useMusicPlayer()
   const [loading, setLoading] = useState(true)
   const [share, setShare] = useState<MusicPublicShareView | null>(null)
   const [error, setError] = useState<string | null>(null)
@@ -86,6 +86,10 @@ export default function MusicSharePage() {
 
   const handlePlay = async () => {
     if (!shareSong || !share) return
+    if (share.playInfo?.playUrl) {
+      await playResolvedSong(shareSong, share.playInfo, share.requestedQuality)
+      return
+    }
     await playPlaylist([shareSong], 0, share.requestedQuality)
   }
 

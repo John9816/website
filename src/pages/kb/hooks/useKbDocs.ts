@@ -1,5 +1,5 @@
-import { useCallback, useEffect, useMemo, useRef, useState, useDeferredValue } from 'react'
-import { App as AntApp, Form } from 'antd'
+import { createElement, useCallback, useEffect, useMemo, useRef, useState, useDeferredValue } from 'react'
+import { App as AntApp, Button, Form, Space } from 'antd'
 import {
   createKbDoc,
   deleteKbDoc,
@@ -42,8 +42,37 @@ type EditorSnapshot = {
   formValues: Partial<DocFormValues>
 }
 
-const AUTOSAVE_DELAY_MS = 6500
+const AUTOSAVE_DELAY_MS = 1800
 const LOCAL_DRAFT_DELAY_MS = 600
+
+function EditorLeaveActions({
+  onContinue,
+  onDiscard,
+  onSave,
+}: {
+  onContinue: () => void
+  onDiscard: () => void
+  onSave: () => Promise<void>
+}) {
+  const [saving, setSaving] = useState(false)
+
+  const handleSave = async () => {
+    setSaving(true)
+    try {
+      await onSave()
+    } finally {
+      setSaving(false)
+    }
+  }
+
+  return createElement(
+    Space,
+    { wrap: true, className: 'kb-editor-leave-actions' },
+    createElement(Button, { disabled: saving, onClick: onContinue }, '继续编辑'),
+    createElement(Button, { danger: true, disabled: saving, onClick: onDiscard }, '放弃修改'),
+    createElement(Button, { type: 'primary', loading: saving, onClick: () => void handleSave() }, '保存并离开'),
+  )
+}
 
 function editorInitialContent(doc: KbDoc) {
   return doc.contentJson || doc.contentHtml || ''
@@ -493,19 +522,25 @@ export function useKbDocs(activeSpaceId: number | null) {
       loadTags?: any
     } = {},
   ) => {
-    if (!selectedDoc || inlineEditingDocId !== selectedDoc.id) return
+    if (!selectedDoc || inlineEditingDocId !== selectedDoc.id) return false
     const trimmedTitle = editTitle.trim()
     if (!trimmedTitle) {
       if (!options.silent) message.error('请输入标题')
       setAutosaveStatus('draft')
-      return
+      return false
     }
-    if (!options.silent) await inlineDocForm.validateFields()
+    if (!options.silent) {
+      try {
+        await inlineDocForm.validateFields()
+      } catch {
+        return false
+      }
+    }
     // Property fields are stored before their drawer mounts.
     const values = normalizeFormValues(inlineDocForm.getFieldsValue(true)) as DocFormValues
     if (!values.status) {
       setAutosaveStatus('draft')
-      return
+      return false
     }
     const nextParentId = values.parentId ?? null
     const nextTagIds = [...(values.tagIds ?? [])].sort((a, b) => a - b)
@@ -533,7 +568,7 @@ export function useKbDocs(activeSpaceId: number | null) {
     if (!hasEditorChanges && !hasChangeNote) {
       setAutosaveStatus('saved')
       if (options.exitAfterSave) exitInlineEdit()
-      return
+      return true
     }
     latestEditorSnapshotRef.current = savedSnapshot
 
@@ -622,17 +657,19 @@ export function useKbDocs(activeSpaceId: number | null) {
           loadDocs({ spaceId: targetSpaceId }),
         ])
       }
+      return true
     } catch (error) {
       setAutosaveStatus('error')
       setAutosaveError((error as Error).message)
       if (!options.silent) message.error((error as Error).message)
+      return false
     } finally {
       setInlineDocSaving(false)
     }
   }, [editContentHtml, editContentJson, editSummary, editTitle, exitInlineEdit, inlineDocForm, inlineEditingDocId, loadDocs, loadSelectedDoc, loadTree, message, selectedDoc])
 
   const handleSaveInlineDoc = useCallback(async (loadSpaces: any, loadTags: any) => {
-    await saveInlineDoc({
+    return saveInlineDoc({
       exitAfterSave: true,
       silent: false,
       loadSpaces,
@@ -734,6 +771,58 @@ export function useKbDocs(activeSpaceId: number | null) {
     return false
   }, [editContentHtml, editContentJson, editSummary, editTitle, inlineDocForm, inlineDocFormRevision, inlineEditingDocId, selectedDoc])
 
+  const requestExitInlineEdit = useCallback((nextParentId?: number | null) => {
+    const navigateAfterExit = () => {
+      if (nextParentId !== undefined) setSelectedParentId(nextParentId)
+    }
+
+    if (!inlineEditingDocId || !selectedDoc || selectedDoc.id !== inlineEditingDocId) {
+      if (inlineEditingDocId) exitInlineEdit()
+      navigateAfterExit()
+      return
+    }
+    if (nextParentId === selectedParentId) return
+    if (!isDirty) {
+      exitInlineEdit()
+      navigateAfterExit()
+      return
+    }
+
+    let dialog: { destroy: () => void } | undefined
+    const discardChanges = () => {
+      removeLocalDraft(selectedDoc.id)
+      dialog?.destroy()
+      exitInlineEdit()
+      navigateAfterExit()
+    }
+    const saveChanges = async () => {
+      const saved = await saveInlineDoc({ exitAfterSave: true, silent: false })
+      if (saved) {
+        dialog?.destroy()
+        navigateAfterExit()
+      }
+    }
+
+    dialog = modal.confirm({
+      title: '当前文档有未保存修改',
+      content: '保存后离开会保留全部修改；放弃修改会丢弃当前草稿。',
+      icon: null,
+      okCancel: false,
+      closable: false,
+      keyboard: false,
+      maskClosable: false,
+      footer: () => createElement(EditorLeaveActions, {
+        onContinue: () => dialog?.destroy(),
+        onDiscard: discardChanges,
+        onSave: saveChanges,
+      }),
+    })
+  }, [exitInlineEdit, inlineEditingDocId, isDirty, modal, saveInlineDoc, selectedDoc, selectedParentId])
+
+  const requestSelectParentId = useCallback((nextParentId: number | null) => {
+    requestExitInlineEdit(nextParentId)
+  }, [requestExitInlineEdit])
+
   const inlineDocParentOptions = useMemo(
     () => flattenTreeOptions(tree, '', inlineEditingDocId ?? undefined),
     [inlineEditingDocId, tree],
@@ -820,7 +909,7 @@ export function useKbDocs(activeSpaceId: number | null) {
   }, [selectedParentId, loadSelectedDoc])
 
   return {
-    tree, treeLoading, selectedParentId, setSelectedParentId,
+    tree, treeLoading, selectedParentId, setSelectedParentId: requestSelectParentId,
     selectedDoc, selectedDocLoading, treeContextMenu, setTreeContextMenu,
     docs, docsLoading, docTotal, docPage, setDocPage, docPageSize, setDocPageSize,
     selectedRowKeys, setSelectedRowKeys, inlineEditingDocId, inlineDocSaving,
@@ -833,6 +922,7 @@ export function useKbDocs(activeSpaceId: number | null) {
     keyword, setKeyword, deferredKeyword,
     loadTree, loadDocs, loadSelectedDoc, openCreateDoc, openEditDoc,
     handleSaveInlineDoc, handleDeleteDoc, handleMoveDoc, confirmDeleteDoc, enterInlineEdit, exitInlineEdit,
+    requestExitInlineEdit,
     restoreLocalDraft, discardLocalDraft, handleInlineDocFormValuesChange,
   }
 }

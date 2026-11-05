@@ -4126,6 +4126,134 @@
   }
 }
 
+/* Knowledge editing is a focused writing surface with explicit save and leave actions. */
+.admin-kb-page .kb-admin-shell:has(.kb-admin-workspace--editing) {
+  grid-template-columns: minmax(0, 1fr);
+}
+
+.admin-kb-page .kb-admin-shell:has(.kb-admin-workspace--editing) > .kb-admin-sidebar,
+.admin-kb-page .kb-admin-shell:has(.kb-admin-workspace--editing) > .kb-admin-mobile-nav {
+  display: none;
+}
+
+.admin-kb-page .kb-admin-workspace--editing .kb-admin-editor-head {
+  padding: 26px clamp(24px, 5vw, 64px) 10px;
+}
+
+.admin-kb-page .kb-admin-workspace--editing .kb-admin-edit__title {
+  min-height: 48px;
+  font-size: 34px;
+  line-height: 1.24;
+}
+
+.admin-kb-page .kb-admin-workspace--editing .kb-admin-editor-toolbar .editor-menu-bar {
+  justify-content: flex-start;
+}
+
+.admin-kb-page .kb-admin-workspace--editing .kb-admin-edit__tiptap-toolbar-wrapper {
+  padding-inline: clamp(18px, 5vw, 64px);
+}
+
+.admin-kb-page .kb-admin-workspace--editing .kb-admin-edit__editor {
+  padding-inline: clamp(24px, 5vw, 64px);
+}
+
+.admin-kb-page .kb-admin-workspace--editing .kb-admin-edit__editor .editor-content,
+.admin-kb-page .kb-admin-workspace--editing .kb-admin-edit__editor .ProseMirror {
+  min-height: max(280px, calc(100svh - var(--admin-header-height, 56px) - 340px));
+}
+
+.editor-writing-starter {
+  width: min(100%, 980px);
+  margin: 4px auto 18px;
+  padding: 14px 0 16px;
+  border-bottom: 1px solid color-mix(in srgb, var(--border) 72%, transparent);
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 18px;
+}
+
+.editor-writing-starter__copy {
+  min-width: 0;
+  display: grid;
+  gap: 4px;
+}
+
+.editor-writing-starter__copy strong {
+  color: var(--text);
+  font-size: 14px;
+  font-weight: 650;
+}
+
+.editor-writing-starter__copy span {
+  color: var(--text-dim);
+  font-size: 12px;
+}
+
+.editor-writing-starter__actions {
+  flex: 0 0 auto;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.editor-writing-starter__actions .ant-btn {
+  min-height: 32px;
+  border-radius: 5px;
+  box-shadow: none;
+}
+
+.kb-admin-editor-actionbar__actions .ant-btn-primary {
+  min-width: 112px;
+  white-space: nowrap;
+}
+
+.kb-editor-leave-actions {
+  width: 100%;
+  justify-content: flex-end;
+}
+
+@media (max-width: 640px) {
+  .admin-kb-page .kb-admin-workspace--editing .kb-admin-editor-head {
+    padding: 20px 18px 8px;
+  }
+
+  .admin-kb-page .kb-admin-workspace--editing .kb-admin-edit__title {
+    min-height: 42px;
+    font-size: 30px;
+  }
+
+  .admin-kb-page .kb-admin-workspace--editing .kb-admin-edit__tiptap-toolbar-wrapper {
+    padding-inline: 8px;
+  }
+
+  .admin-kb-page .kb-admin-workspace--editing .kb-admin-edit__editor {
+    padding-inline: 18px;
+  }
+
+  .editor-writing-starter {
+    align-items: flex-start;
+    flex-direction: column;
+    gap: 10px;
+    margin-top: 0;
+  }
+
+  .editor-writing-starter__actions {
+    width: 100%;
+    flex-wrap: wrap;
+  }
+
+  .kb-editor-leave-actions {
+    flex-direction: column-reverse;
+    align-items: stretch;
+  }
+
+  .kb-editor-leave-actions .ant-btn {
+    width: 100%;
+  }
+}
+
 
 /* Final fix: local draft alert is a real grid row and must stay clickable above the editor. */
 .admin-kb-page .kb-admin-workspace--editing > .kb-admin-editor-shell {

@@ -10,6 +10,7 @@ import {
 import type { ReactNode } from 'react'
 import { App as AntApp } from 'antd'
 import { musicPlay } from '../api/music'
+import { useAuth } from './AuthContext'
 import type { MusicQuality, PlayInfo, SongSearchItem } from '../types'
 import {
   describeMediaError,
@@ -22,7 +23,63 @@ type AutoNextHandler = () => void | Promise<void>
 export type PlayMode = 'sequence' | 'repeat-one' | 'shuffle'
 
 const PLAY_MODE_KEY = 'music-player-play-mode'
+const PREFERRED_QUALITY_KEY = 'music-player-preferred-quality'
 const PLAY_MODE_ORDER: PlayMode[] = ['sequence', 'repeat-one', 'shuffle']
+const PLAY_INFO_CACHE_FALLBACK_TTL_MS = 60_000
+const PLAY_INFO_CACHE_MAX_TTL_MS = 5 * 60_000
+const CACHED_PLAY_INFO_MAX_TTL_MS = 60_000
+const PLAY_INFO_CACHE_MAX_ENTRIES = 50
+
+type PlayInfoCacheEntry = {
+  info: PlayInfo
+  expiresAt: number
+}
+
+type PlayInfoInFlight = {
+  controller: AbortController
+  prefetch: boolean
+  promise: Promise<PlayInfo>
+}
+
+type PlayInfoResolution = {
+  controller: AbortController | null
+  needsPlayRecord: boolean
+  promise: Promise<PlayInfo>
+}
+
+function playInfoKey(row: Pick<SongSearchItem, 'source' | 'id'>, quality: MusicQuality) {
+  return `${row.source}:${row.id}:${quality}`
+}
+
+function isMusicQuality(value: string | null): value is MusicQuality {
+  return value === '128k' || value === '320k' || value === 'flac' || value === 'flac24bit'
+}
+
+function getInitialPreferredQuality(): MusicQuality {
+  if (typeof window === 'undefined') return '320k'
+  const stored = window.localStorage.getItem(PREFERRED_QUALITY_KEY)
+  return isMusicQuality(stored) ? stored : '320k'
+}
+
+function getPlayInfoExpiry(info: PlayInfo, now = Date.now()) {
+  const rawTtlMs =
+    typeof info.expireSec === 'number' && Number.isFinite(info.expireSec) && info.expireSec > 0
+      ? info.expireSec * 1000
+      : PLAY_INFO_CACHE_FALLBACK_TTL_MS
+  const reportedTtlMs = Math.min(
+    rawTtlMs,
+    info.fromCache ? CACHED_PLAY_INFO_MAX_TTL_MS : PLAY_INFO_CACHE_MAX_TTL_MS,
+  )
+  const safetyMarginMs = Math.min(30_000, Math.max(5_000, reportedTtlMs * 0.1))
+  return now + Math.max(0, reportedTtlMs - safetyMarginMs)
+}
+
+function isCanceledRequest(error: unknown) {
+  return (
+    (error instanceof DOMException && error.name === 'AbortError') ||
+    (typeof error === 'object' && error !== null && 'code' in error && error.code === -2)
+  )
+}
 
 function getInitialPlayMode(): PlayMode {
   if (typeof window === 'undefined') return 'sequence'
@@ -58,6 +115,7 @@ type MusicPlayerContextValue = {
   volume: number
   muted: boolean
   playLoading: boolean
+  pendingTrackKey: string | null
   unsupportedFormat: string | null
   preferredQuality: MusicQuality
   playMode: PlayMode
@@ -72,6 +130,11 @@ type MusicPlayerContextValue = {
   playFromQueue: (index: number, quality?: MusicQuality) => Promise<void>
   setPreferredQuality: (quality: MusicQuality) => void
   playSong: (row: SongSearchItem, quality?: MusicQuality) => Promise<void>
+  playResolvedSong: (
+    row: SongSearchItem,
+    info: PlayInfo,
+    quality?: MusicQuality,
+  ) => Promise<void>
   togglePlay: () => void
   playPrev: () => void
   playNext: () => void
@@ -87,8 +150,18 @@ const MusicPlayerContext = createContext<MusicPlayerContextValue | null>(null)
 
 export function MusicPlayerProvider({ children }: { children: ReactNode }) {
   const { message } = AntApp.useApp()
+  const { token: authToken } = useAuth()
   const audioRef = useRef<HTMLAudioElement | null>(null)
   const autoNextHandlerRef = useRef<AutoNextHandler | null>(null)
+  const playGenerationRef = useRef(0)
+  const activePlayRequestRef = useRef<{
+    controller: AbortController | null
+    key: string
+  } | null>(null)
+  const playInfoCacheRef = useRef<Map<string, PlayInfoCacheEntry>>(new Map())
+  const playInfoInFlightRef = useRef<Map<string, PlayInfoInFlight>>(new Map())
+  const playRecordRequestsRef = useRef<Map<string, AbortController>>(new Map())
+  const previousAuthTokenRef = useRef(authToken)
   const [hasAutoNextHandler, setHasAutoNextHandler] = useState(false)
 
   const [current, setCurrent] = useState<PlayInfo | null>(null)
@@ -98,9 +171,10 @@ export function MusicPlayerProvider({ children }: { children: ReactNode }) {
   const [volume, setVolumeState] = useState(1)
   const [muted, setMuted] = useState(false)
   const [playLoading, setPlayLoading] = useState(false)
+  const [pendingTrackKey, setPendingTrackKey] = useState<string | null>(null)
   const [playlist, setPlaylistState] = useState<SongSearchItem[]>([])
   const [preferredQuality, setPreferredQualityState] =
-    useState<MusicQuality>('flac')
+    useState<MusicQuality>(getInitialPreferredQuality)
   const [playMode, setPlayModeState] = useState<PlayMode>(getInitialPlayMode)
 
   const unsupportedFormat = useMemo(
@@ -126,6 +200,139 @@ export function MusicPlayerProvider({ children }: { children: ReactNode }) {
     setPlaylistState(items)
   }, [])
 
+  const cachePlayInfo = useCallback(
+    (row: Pick<SongSearchItem, 'source' | 'id'>, quality: MusicQuality, info: PlayInfo) => {
+      const cache = playInfoCacheRef.current
+      const now = Date.now()
+      for (const [key, entry] of cache) {
+        if (entry.expiresAt <= now) cache.delete(key)
+      }
+
+      const key = playInfoKey(row, quality)
+      const expiresAt = getPlayInfoExpiry(info, now)
+      cache.delete(key)
+      if (expiresAt > now) cache.set(key, { info, expiresAt })
+
+      while (cache.size > PLAY_INFO_CACHE_MAX_ENTRIES) {
+        const oldestKey = cache.keys().next().value
+        if (typeof oldestKey !== 'string') break
+        cache.delete(oldestKey)
+      }
+    },
+    [],
+  )
+
+  const getCachedPlayInfo = useCallback(
+    (row: Pick<SongSearchItem, 'source' | 'id'>, quality: MusicQuality) => {
+      const key = playInfoKey(row, quality)
+      const entry = playInfoCacheRef.current.get(key)
+      if (!entry) return null
+      if (entry.expiresAt <= Date.now()) {
+        playInfoCacheRef.current.delete(key)
+        return null
+      }
+      playInfoCacheRef.current.delete(key)
+      playInfoCacheRef.current.set(key, entry)
+      return entry.info
+    },
+    [],
+  )
+
+  const invalidatePlayInfo = useCallback(
+    (row: Pick<SongSearchItem, 'source' | 'id'>, quality: MusicQuality) => {
+      const key = playInfoKey(row, quality)
+      playInfoCacheRef.current.delete(key)
+      playRecordRequestsRef.current.get(key)?.abort()
+      playRecordRequestsRef.current.delete(key)
+    },
+    [],
+  )
+
+  const resolvePlayInfo = useCallback(
+    (
+      row: Pick<SongSearchItem, 'source' | 'id'>,
+      quality: MusicQuality,
+      prefetch: boolean,
+    ): PlayInfoResolution => {
+      const key = playInfoKey(row, quality)
+      const cached = getCachedPlayInfo(row, quality)
+      if (cached) {
+        return {
+          controller: null,
+          needsPlayRecord: !prefetch,
+          promise: Promise.resolve(cached),
+        }
+      }
+
+      const existing = playInfoInFlightRef.current.get(key)
+      if (existing) {
+        return {
+          controller: existing.prefetch ? null : existing.controller,
+          needsPlayRecord: !prefetch && existing.prefetch,
+          promise: existing.promise,
+        }
+      }
+
+      const controller = new AbortController()
+      const promise = musicPlay(row.source, row.id, quality, {
+        prefetch,
+        signal: controller.signal,
+      })
+        .then((info) => {
+          cachePlayInfo(row, quality, info)
+          return info
+        })
+        .finally(() => {
+          const currentRequest = playInfoInFlightRef.current.get(key)
+          if (currentRequest?.promise === promise) {
+            playInfoInFlightRef.current.delete(key)
+          }
+        })
+
+      playInfoInFlightRef.current.set(key, { controller, prefetch, promise })
+      return {
+        controller,
+        needsPlayRecord: false,
+        promise,
+      }
+    },
+    [cachePlayInfo, getCachedPlayInfo],
+  )
+
+  const recordCachedPlayback = useCallback(
+    (row: Pick<SongSearchItem, 'source' | 'id'>, quality: MusicQuality) => {
+      const key = playInfoKey(row, quality)
+      if (playRecordRequestsRef.current.has(key)) return
+
+      const controller = new AbortController()
+      playRecordRequestsRef.current.set(key, controller)
+      void musicPlay(row.source, row.id, quality, { signal: controller.signal })
+        .then((info) => cachePlayInfo(row, quality, info))
+        .catch(() => {})
+        .finally(() => {
+          if (playRecordRequestsRef.current.get(key) === controller) {
+            playRecordRequestsRef.current.delete(key)
+          }
+        })
+    },
+    [cachePlayInfo],
+  )
+
+  const applyPlayInfo = useCallback(
+    (row: SongSearchItem, info: PlayInfo, quality: MusicQuality) => {
+      setPreferredQualityState(quality)
+      setCurrent({
+        ...info,
+        requestedQuality: quality,
+        coverUrl: resolveCoverUrl(info.coverUrl, row.coverUrl),
+      })
+      setCurrentTime(0)
+      setDuration(info.durationSec ?? 0)
+      setPlayLoading(true)
+    },
+    [],
+  )
+
   const setPreferredQuality = useCallback((quality: MusicQuality) => {
     setPreferredQualityState(quality)
   }, [])
@@ -143,23 +350,55 @@ export function MusicPlayerProvider({ children }: { children: ReactNode }) {
 
   const playSong = useCallback(
     async (row: SongSearchItem, quality = preferredQuality) => {
+      const key = playInfoKey(row, quality)
+      const previousRequest = activePlayRequestRef.current
+      if (previousRequest && previousRequest.key !== key) {
+        previousRequest.controller?.abort()
+      }
+
+      const generation = ++playGenerationRef.current
       setPlayLoading(true)
+      setPendingTrackKey(key)
       setPreferredQualityState(quality)
+      let applied = false
       try {
-        const info = await musicPlay(row.source, row.id, quality)
-        setCurrent({
-          ...info,
-          coverUrl: resolveCoverUrl(info.coverUrl, row.coverUrl),
-        })
-        setCurrentTime(0)
-        setDuration(info.durationSec ?? 0)
+        const resolution = resolvePlayInfo(row, quality, false)
+        activePlayRequestRef.current = { controller: resolution.controller, key }
+        const info = await resolution.promise
+        if (generation !== playGenerationRef.current) return
+        if (resolution.needsPlayRecord) recordCachedPlayback(row, quality)
+        applyPlayInfo(row, info, quality)
+        applied = true
       } catch (error) {
-        message.error((error as Error).message)
+        if (generation === playGenerationRef.current && !isCanceledRequest(error)) {
+          message.error((error as Error).message)
+        }
       } finally {
-        setPlayLoading(false)
+        if (generation === playGenerationRef.current) {
+          activePlayRequestRef.current = null
+          setPendingTrackKey(null)
+          if (!applied) setPlayLoading(false)
+        }
       }
     },
-    [message, preferredQuality],
+    [applyPlayInfo, message, preferredQuality, recordCachedPlayback, resolvePlayInfo],
+  )
+
+  const playResolvedSong = useCallback(
+    async (row: SongSearchItem, info: PlayInfo, quality = info.requestedQuality) => {
+      activePlayRequestRef.current?.controller?.abort()
+      activePlayRequestRef.current = null
+      playGenerationRef.current += 1
+      const resolvedQuality = quality || preferredQuality
+      const key = playInfoKey(row, resolvedQuality)
+      setPendingTrackKey(key)
+      setPlayLoading(true)
+      setPlaylistState([row])
+      cachePlayInfo(row, resolvedQuality, info)
+      applyPlayInfo(row, info, resolvedQuality)
+      setPendingTrackKey(null)
+    },
+    [applyPlayInfo, cachePlayInfo, preferredQuality],
   )
 
   const playPlaylist = useCallback(
@@ -189,7 +428,8 @@ export function MusicPlayerProvider({ children }: { children: ReactNode }) {
     if (!el || !current || unsupportedFormat) return false
     el.currentTime = 0
     setCurrentTime(0)
-    void el.play().catch(() => {})
+    setPlayLoading(true)
+    void el.play().catch(() => setPlayLoading(false))
     return true
   }, [current, unsupportedFormat])
 
@@ -218,14 +458,18 @@ export function MusicPlayerProvider({ children }: { children: ReactNode }) {
     if (!el || !current || unsupportedFormat) return
 
     if (el.paused) {
+      setPlayLoading(true)
       void el.play().catch(() => {
+        setPlayLoading(false)
+        invalidatePlayInfo(current, current.requestedQuality)
         message.warning('播放失败，链接可能已经过期，请重新点一次这首歌。')
       })
       return
     }
 
     el.pause()
-  }, [current, message, unsupportedFormat])
+    setPlayLoading(false)
+  }, [current, invalidatePlayInfo, message, unsupportedFormat])
 
   const seekToTime = useCallback(
     (time: number) => {
@@ -252,6 +496,11 @@ export function MusicPlayerProvider({ children }: { children: ReactNode }) {
     if (typeof window === 'undefined') return
     window.localStorage.setItem(PLAY_MODE_KEY, playMode)
   }, [playMode])
+
+  useEffect(() => {
+    if (typeof window === 'undefined') return
+    window.localStorage.setItem(PREFERRED_QUALITY_KEY, preferredQuality)
+  }, [preferredQuality])
 
   const setAutoNextHandler = useCallback(
     (handler: AutoNextHandler | null) => {
@@ -298,6 +547,7 @@ export function MusicPlayerProvider({ children }: { children: ReactNode }) {
     if (!current || !unsupportedFormat) return
 
     setIsPlaying(false)
+    setPlayLoading(false)
     message.error(
       `当前返回的是 ${unsupportedFormat} 格式，浏览器无法直接播放。请切换音质或音源后重试。`,
     )
@@ -311,11 +561,46 @@ export function MusicPlayerProvider({ children }: { children: ReactNode }) {
 
     el.load()
     void el.play().catch((error: DOMException) => {
+      setPlayLoading(false)
       if (error?.name === 'NotAllowedError') {
         message.warning('浏览器阻止了自动播放，请手动点一下播放按钮。')
       }
     })
   }, [current, message, unsupportedFormat])
+
+  useEffect(() => {
+    if (playMode !== 'sequence' || !current || currentIndex < 0) return
+    const nextSong = playlist[currentIndex + 1]
+    if (!nextSong) return
+
+    const resolution = resolvePlayInfo(nextSong, preferredQuality, true)
+    void resolution.promise.catch(() => {})
+  }, [current, currentIndex, playMode, playlist, preferredQuality, resolvePlayInfo])
+
+  useEffect(() => {
+    if (previousAuthTokenRef.current === authToken) return
+    previousAuthTokenRef.current = authToken
+    playGenerationRef.current += 1
+    activePlayRequestRef.current?.controller?.abort()
+    activePlayRequestRef.current = null
+    for (const request of playInfoInFlightRef.current.values()) request.controller.abort()
+    for (const controller of playRecordRequestsRef.current.values()) controller.abort()
+    playInfoInFlightRef.current.clear()
+    playRecordRequestsRef.current.clear()
+    playInfoCacheRef.current.clear()
+    setPendingTrackKey(null)
+    setPlayLoading(false)
+  }, [authToken])
+
+  useEffect(
+    () => () => {
+      playGenerationRef.current += 1
+      activePlayRequestRef.current?.controller?.abort()
+      for (const request of playInfoInFlightRef.current.values()) request.controller.abort()
+      for (const controller of playRecordRequestsRef.current.values()) controller.abort()
+    },
+    [],
+  )
 
   useEffect(() => {
     const el = audioRef.current
@@ -335,6 +620,7 @@ export function MusicPlayerProvider({ children }: { children: ReactNode }) {
       volume,
       muted,
       playLoading,
+      pendingTrackKey,
       unsupportedFormat,
       preferredQuality,
       playMode,
@@ -345,6 +631,7 @@ export function MusicPlayerProvider({ children }: { children: ReactNode }) {
       playFromQueue,
       setPreferredQuality,
       playSong,
+      playResolvedSong,
       togglePlay,
       playPrev,
       playNext,
@@ -365,6 +652,7 @@ export function MusicPlayerProvider({ children }: { children: ReactNode }) {
       duration,
       isPlaying,
       muted,
+      pendingTrackKey,
       playMode,
       playLoading,
       playNext,
@@ -372,6 +660,7 @@ export function MusicPlayerProvider({ children }: { children: ReactNode }) {
       playPrev,
       playPlaylist,
       playSong,
+      playResolvedSong,
       playlist,
       preferredQuality,
       seekToTime,
@@ -395,6 +684,10 @@ export function MusicPlayerProvider({ children }: { children: ReactNode }) {
         src={current ? normalizeMediaUrl(current.playUrl) : undefined}
         preload="metadata"
         style={{ display: 'none' }}
+        onLoadStart={() => setPlayLoading(true)}
+        onWaiting={() => setPlayLoading(true)}
+        onStalled={() => setPlayLoading(true)}
+        onCanPlay={() => setPlayLoading(false)}
         onTimeUpdate={(event) =>
           setCurrentTime((event.target as HTMLAudioElement).currentTime)
         }
@@ -405,6 +698,10 @@ export function MusicPlayerProvider({ children }: { children: ReactNode }) {
           }
         }}
         onPlay={() => setIsPlaying(true)}
+        onPlaying={() => {
+          setIsPlaying(true)
+          setPlayLoading(false)
+        }}
         onPause={() => setIsPlaying(false)}
         onEnded={() => {
           setIsPlaying(false)
@@ -413,6 +710,8 @@ export function MusicPlayerProvider({ children }: { children: ReactNode }) {
         onError={(event) => {
           const el = event.currentTarget as HTMLAudioElement
           setIsPlaying(false)
+          setPlayLoading(false)
+          if (current) invalidatePlayInfo(current, current.requestedQuality)
           message.error(
             `播放失败：${describeMediaError(el.error)}。`,
           )

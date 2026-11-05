@@ -16,6 +16,7 @@ import {
 } from '@ant-design/icons'
 import { Link, Navigate, Outlet, useLocation, useNavigate } from 'react-router-dom'
 import { useAuth } from '../context/AuthContext'
+import { MEMBERSHIP_ENABLED } from '../config/features'
 import { useTheme, type ThemeMode } from '../context/ThemeContext'
 import ThemeToggle from '../components/ThemeToggle'
 import {
@@ -25,6 +26,7 @@ import {
   getAdminPermissionForPath,
   getFirstAccessibleAdminPath,
 } from '../utils/permissions'
+import { AdminEditorFocusContext } from './AdminEditorFocusContext'
 import '../styles/admin-shell.css'
 
 const { Header, Sider, Content } = Layout
@@ -36,6 +38,7 @@ type AdminNavItem = {
 }
 
 export default function AdminLayout() {
+  const [editorFocused, setEditorFocused] = useState(false)
   const auth = useAuth()
   const location = useLocation()
   const navigate = useNavigate()
@@ -94,13 +97,15 @@ export default function AdminLayout() {
       title: '系统配置',
     })
 
-    navItems.splice(contentFactoryVisible ? 4 : 3, 0, {
-      key: '/admin/redeem-codes',
-      icon: <GiftOutlined />,
-      title: '兑换码',
-    })
+    if (MEMBERSHIP_ENABLED) {
+      navItems.splice(contentFactoryVisible ? 4 : 3, 0, {
+        key: '/admin/redeem-codes',
+        icon: <GiftOutlined />,
+        title: '兑换码',
+      })
+    }
 
-    navItems.splice(contentFactoryVisible ? 5 : 4, 0, {
+    navItems.splice((contentFactoryVisible ? 4 : 3) + (MEMBERSHIP_ENABLED ? 1 : 0), 0, {
       key: '/admin/users',
       icon: <TeamOutlined />,
       title: '用户管理',
@@ -158,6 +163,8 @@ export default function AdminLayout() {
         menuItems={menuItems}
         auth={auth}
         doLogout={doLogout}
+        editorFocused={editorFocused}
+        setEditorFocused={setEditorFocused}
       />
     </ConfigProvider>
   )
@@ -170,6 +177,8 @@ function LayoutContent({
   menuItems,
   auth,
   doLogout,
+  editorFocused,
+  setEditorFocused,
 }: {
   mode: ThemeMode
   selectedKey: string
@@ -177,6 +186,8 @@ function LayoutContent({
   menuItems: MenuProps['items']
   auth: ReturnType<typeof useAuth>
   doLogout: () => void
+  editorFocused: boolean
+  setEditorFocused: (focused: boolean) => void
 }) {
   const [navigationOpen, setNavigationOpen] = useState(false)
   const screens = Grid.useBreakpoint()
@@ -185,6 +196,11 @@ function LayoutContent({
   useEffect(() => {
     setNavigationOpen(false)
   }, [selectedKey])
+
+  useEffect(() => {
+    if (editorFocused) setNavigationOpen(false)
+    if (!isKnowledgeWorkspace) setEditorFocused(false)
+  }, [editorFocused, isKnowledgeWorkspace, setEditorFocused])
 
   useEffect(() => {
     if (screens.lg) setNavigationOpen(false)
@@ -213,7 +229,7 @@ function LayoutContent({
   )
 
   return (
-    <Layout hasSider className={`admin-shell${isKnowledgeWorkspace ? ' admin-shell--knowledge' : ''}`}>
+    <Layout hasSider className={`admin-shell${isKnowledgeWorkspace ? ' admin-shell--knowledge' : ''}${editorFocused ? ' admin-shell--editor-focused' : ''}`}>
       <Sider
         theme={mode === 'light' ? 'light' : 'dark'}
         width={228}
@@ -273,7 +289,9 @@ function LayoutContent({
           </div>
         </Header>
         <Content className="admin-shell__content" role="main" aria-labelledby="admin-page-title">
-          <Outlet />
+          <AdminEditorFocusContext.Provider value={setEditorFocused}>
+            <Outlet />
+          </AdminEditorFocusContext.Provider>
         </Content>
       </Layout>
     </Layout>

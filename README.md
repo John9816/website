@@ -21,6 +21,29 @@ npm run dev
 
 Default local URL: `http://localhost:5173`
 
+## Homepage animation
+
+The homepage includes a local Three.js orbit illustration beside the title. Drag to rotate,
+move the pointer for parallax, or click for a ripple. Keyboard users can use the arrow keys
+to rotate and Enter/Space for the ripple. The adjacent button pauses or resumes the animation.
+
+The scene follows the selected theme, loads only when visible, stops rendering offscreen or
+in a hidden tab, and releases its WebGL resources on route exit. Touch devices use fewer
+particles and a capped pixel ratio while retaining vertical scrolling. Reduced-motion users
+get a static illustration without downloading Three.js; unsupported WebGL2 and GPU failures
+also fall back to that illustration.
+
+With the dev server running, verify rendering, controls, navigation, resource cleanup,
+responsive layout and fallback behavior using an installed Playwright runtime:
+
+```bash
+node deploy/verify-home-orbit-ui.mjs
+```
+
+Set `PLAYWRIGHT_MODULE` to a Playwright module path if it is not installed locally,
+`SMOKE_BASE_URL` to test another server, and `SMOKE_SCREENSHOT_DIR` to choose the screenshot
+directory. API responses in this check use isolated fixtures.
+
 ## API Strategy
 
 The frontend should prefer same-origin `/api/*` requests.

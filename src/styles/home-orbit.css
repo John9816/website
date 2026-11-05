@@ -1,0 +1,160 @@
+.home-orbit {
+  position: relative;
+  flex: 0 0 310px;
+  width: 310px;
+  max-width: 46%;
+  align-self: center;
+  color: var(--accent);
+}
+
+.home-orbit__stage {
+  position: relative;
+  height: 190px;
+  isolation: isolate;
+}
+
+.home-orbit__canvas,
+.home-orbit__fallback,
+.home-orbit__interaction {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+}
+
+.home-orbit__canvas {
+  pointer-events: none;
+  opacity: 0;
+  transition: opacity 450ms ease;
+}
+
+.home-orbit__canvas canvas {
+  display: block;
+  width: 100%;
+  height: 100%;
+}
+
+.home-orbit__fallback {
+  display: grid;
+  place-items: center;
+  pointer-events: none;
+}
+
+.home-orbit.is-ready .home-orbit__canvas { opacity: 1; }
+.home-orbit.is-ready .home-orbit__fallback { visibility: hidden; }
+
+.home-orbit__globe {
+  position: absolute;
+  width: 105px;
+  height: 105px;
+  border: 1px solid currentColor;
+  border-radius: 50%;
+  background: radial-gradient(ellipse at 30% 25%, var(--accent-soft), transparent 75%);
+  opacity: 0.65;
+}
+
+.home-orbit__globe::before,
+.home-orbit__globe::after {
+  content: '';
+  position: absolute;
+  inset: 0 25%;
+  border: 1px solid currentColor;
+  border-radius: 50%;
+  opacity: 0.5;
+}
+
+.home-orbit__globe::after { inset: 25% 0; }
+
+.home-orbit__ring {
+  position: absolute;
+  width: 185px;
+  height: 70px;
+  border: 1px solid currentColor;
+  border-radius: 50%;
+  opacity: 0.4;
+}
+
+.home-orbit__ring--one { transform: rotate(-25deg); }
+.home-orbit__ring--two { transform: rotate(35deg); }
+
+.home-orbit__satellite {
+  position: absolute;
+  width: 7px;
+  height: 7px;
+  margin: -46px 0 0 165px;
+  border-radius: 50%;
+  background: var(--accent-warm);
+}
+
+.home-orbit__interaction {
+  padding: 0;
+  border: 0;
+  border-radius: 14px;
+  background: transparent;
+  cursor: grab;
+  touch-action: pan-y;
+  -webkit-tap-highlight-color: transparent;
+}
+
+.home-orbit__interaction:active { cursor: grabbing; }
+.home-orbit__interaction:disabled { cursor: default; }
+
+.home-orbit__interaction:focus-visible,
+.home-orbit__toggle:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: 2px;
+}
+
+.home-orbit__footer {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  height: 32px;
+  margin-top: -6px;
+}
+
+.home-orbit__hint {
+  color: var(--text-dim);
+  font-size: 10px;
+  letter-spacing: 0.04em;
+}
+
+.home-orbit__toggle {
+  display: inline-grid;
+  place-items: center;
+  width: 32px;
+  height: 32px;
+  padding: 0;
+  border: 1px solid transparent;
+  border-radius: 50%;
+  color: var(--text-dim);
+  background: transparent;
+  cursor: pointer;
+}
+
+.home-orbit__toggle:hover {
+  border-color: var(--border);
+  color: var(--accent);
+  background: var(--accent-soft);
+}
+
+@media (max-width: 760px) {
+  .home-orbit { flex-basis: 240px; width: 240px; }
+  .home-orbit__stage { height: 170px; }
+}
+
+@media (max-width: 560px) {
+  .home-orbit { flex-basis: 150px; width: 150px; max-width: 48%; }
+  .home-orbit__stage { height: 140px; }
+  .home-orbit__hint { font-size: 9px; letter-spacing: 0; }
+  .home-orbit__footer { gap: 0; margin-top: -12px; height: 44px; }
+  .home-orbit__toggle { width: 30px; height: 44px; flex-shrink: 0; }
+  .home-orbit__globe { width: 76px; height: 76px; }
+  .home-orbit__ring { width: 128px; height: 50px; }
+  .home-orbit__satellite { margin: -33px 0 0 114px; }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .home-orbit__canvas { transition: none; }
+}

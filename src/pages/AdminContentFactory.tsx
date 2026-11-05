@@ -1,4 +1,6 @@
-import { useEffect, useMemo, useState } from 'react'
+import { useEffect, useMemo, useRef, useState, type ReactNode } from 'react'
+import DOMPurify from 'dompurify'
+import { Link } from 'react-router-dom'
 import {
   Alert,
   App as AntApp,
@@ -28,6 +30,7 @@ import {
 } from 'antd'
 import {
   CheckCircleOutlined,
+  ClockCircleOutlined,
   CloudUploadOutlined,
   CopyOutlined,
   DeleteOutlined,
@@ -39,6 +42,9 @@ import {
   RocketOutlined,
   SaveOutlined,
   SendOutlined,
+  SettingOutlined,
+  SyncOutlined,
+  WarningOutlined,
 } from '@ant-design/icons'
 import {
   adminCreateWechatDraft,
@@ -46,6 +52,7 @@ import {
   adminGenerateContentArticleAsync,
   adminGetContentAgentJob,
   adminGetContentAutomation,
+  adminGetContentAutopilot,
   adminGetContentArticle,
   adminGetContentStatus,
   adminGetHotTopics,
@@ -54,13 +61,14 @@ import {
   adminRefreshContentArticleVisuals,
   adminRetryContentAutomationJob,
   adminReviseContentArticle,
+  adminRunContentAutopilot,
   adminRunContentAgent,
+  adminUpdateContentAutopilot,
   adminUpdateContentArticle,
 } from '../api/admin'
 import type {
   ContentAgentRunJob,
-  ContentAutomationJob,
-  ContentAutomationLog,
+  ContentAutopilotSettings,
   ContentAutomationStage,
   ContentAutomationStatus,
   ContentAutomationView,
@@ -86,8 +94,6 @@ type GenerateValues = {
   imageMode: ContentArticleImageMode
   researchEnabled: boolean
   researchDepth: ContentArticleResearchDepth
-  autoWechatDraft: boolean
-  autoPublish: boolean
   length: ContentArticleLength
   generateCover: boolean
   coverStyle?: string
@@ -101,6 +107,9 @@ type ArticleFormValues = {
   contentMarkdown?: string | null
   coverImageUrl?: string | null
 }
+
+type AutopilotValues = Pick<ContentAutopilotSettings,
+  'enabled' | 'times' | 'categories' | 'autoPublish' | 'generateCover'>
 
 type StrategyPreset = {
   key: string
@@ -116,7 +125,16 @@ type NormalizedAutomation = ContentAutomationView & {
 const statusMeta: Record<ContentArticleStatus, { label: string; color: string }> = {
   DRAFT: { label: '草稿', color: 'default' },
   WECHAT_DRAFT: { label: '微信草稿', color: 'processing' },
+  PUBLISH_SUBMITTED: { label: '待微信确认', color: 'processing' },
+  PUBLISH_FAILED: { label: '微信发布失败', color: 'error' },
   PUBLISHED: { label: '已发布', color: 'success' },
+}
+
+function getArticleStatusMeta(article: ContentArticle) {
+  if (article.wechatMediaId?.startsWith('local-')) {
+    return { label: '本站草稿', color: 'default' }
+  }
+  return statusMeta[article.status] ?? { label: article.status, color: 'default' }
 }
 
 const categoryMeta: Record<
@@ -216,19 +234,15 @@ const strategyPresets: StrategyPreset[] = [
       length: 'standard',
       layoutTheme: 'warm',
       imageMode: 'generate',
-      autoWechatDraft: true,
-      autoPublish: false,
     },
   },
 ]
 
 const pipelineSteps = [
-  { title: '选题', description: '热榜 / 自定义话题' },
-  { title: '检索', description: '资料与证据链' },
-  { title: '生成', description: '正文 / 摘要 / 封面' },
-  { title: '审稿', description: '标题、事实、风险' },
-  { title: '入草稿', description: '素材上传与草稿箱' },
-  { title: '发布', description: '后台人工发布' },
+  { title: '生成草稿', description: '选题、检索与写作' },
+  { title: '质量门', description: '事实、结构与素材' },
+  { title: '微信草稿', description: '上传封面与正文' },
+  { title: '正式发布', description: '接口或后台确认' },
 ]
 
 const stageMeta: Record<ContentAutomationStage, { label: string; tone: string }> = {
@@ -260,19 +274,13 @@ const automationStatusMeta: Record<ContentAutomationStatus, { label: string; bad
   SKIPPED: { label: '跳过', badge: 'warning' },
 }
 
-const accountProfile = {
-  name: '早一步信息差',
-  positioning: '爆款热点拆解 · 涨阅读涨关注',
-  appId: 'wx235122c49e42e7c3',
-  freePublishEnabled: false,
-}
+const ACTIVE_JOB_STORAGE_KEY = 'content-factory.active-job'
 
-const wechatGuardrails = [
-  '封面建议使用 2.35:1 比例，避免重要文字贴边。',
-  '外链、二维码、诱导分享等内容在发布前需要人工复核。',
-  '当前订阅号无 freepublish 权限，建议只创建微信草稿，进入公众号后台人工发布。',
-  '微信接口受 IP 白名单、access_token、素材 media_id 等配置影响，失败后优先保留本站草稿。',
-]
+type StoredContentJob = {
+  jobId: string
+  mode: 'generate' | 'agent' | 'autopilot'
+  createdAt: string
+}
 
 const defaultGenerateValues: GenerateValues = {
   category: defaultCategoryKey,
@@ -282,8 +290,6 @@ const defaultGenerateValues: GenerateValues = {
   imageMode: 'generate',
   researchEnabled: true,
   researchDepth: 'standard',
-  autoWechatDraft: false,
-  autoPublish: false,
   length: 'standard',
   generateCover: true,
   coverStyle: categoryMeta[defaultCategoryKey].coverStyle,
@@ -309,10 +315,11 @@ function readQualityGate(article: ContentArticle | null): ContentQualityGate | n
   return gate as ContentQualityGate
 }
 
-function getArticleQuality(article: ContentArticle | null) {
+function getArticleQuality(article: ContentArticle | null, gateOverride?: ContentQualityGate | null) {
   if (!article) {
     return {
-      score: 0,
+      backendScore: null as number | null,
+      localScore: 0,
       words: 0,
       decision: null as string | null,
       reason: null as string | null,
@@ -326,16 +333,11 @@ function getArticleQuality(article: ContentArticle | null) {
   const inlineImages = article.inlineImages || []
   const readyInlineImages = inlineImages.filter(isReadyInlineImage)
   const failedInlineImages = inlineImages.filter((image) => image.status === 'FAILED')
-  const gate = readQualityGate(article)
+  const gate = gateOverride ?? readQualityGate(article)
   const metrics = (gate?.metrics || {}) as Record<string, unknown>
   const readyFromGate =
     typeof metrics.readyInlineImageCount === 'number' ? metrics.readyInlineImageCount : readyInlineImages.length
   const checks = [
-    {
-      label: '发布门禁',
-      passed: gate?.publishable === true || gate?.decision === 'pass',
-      hint: gate?.reason || article.errorMessage || '后端发布契约未通过前不能同步微信。',
-    },
     {
       label: '内联图就绪',
       passed: readyFromGate >= 2 && failedInlineImages.length === 0,
@@ -353,14 +355,14 @@ function getArticleQuality(article: ContentArticle | null) {
     },
     { label: '风险较低', passed: article.riskTips.length === 0, hint: '存在风险提示时建议人工审稿。' },
   ]
-  const heuristicScore = Math.round((checks.filter((item) => item.passed).length / checks.length) * 100)
-  const backendScore =
-    typeof article.qualityScore === 'number'
+  const localScore = Math.round((checks.filter((item) => item.passed).length / checks.length) * 100)
+  const backendScore = gate
+    ? typeof article.qualityScore === 'number'
       ? article.qualityScore
-      : typeof gate?.score === 'number'
+      : typeof gate.score === 'number'
         ? gate.score
         : null
-  const score = backendScore == null ? heuristicScore : Math.min(backendScore, heuristicScore)
+    : null
   const issues = Array.isArray(gate?.issues)
     ? gate.issues.filter((item): item is string => typeof item === 'string')
     : article.errorMessage
@@ -368,7 +370,8 @@ function getArticleQuality(article: ContentArticle | null) {
       : []
 
   return {
-    score,
+    backendScore,
+    localScore,
     words,
     decision: gate?.decision || null,
     reason: gate?.reason || article.errorMessage || null,
@@ -381,10 +384,6 @@ function isAutomationView(value: unknown): value is ContentAutomationView {
   if (!value || typeof value !== 'object') return false
   const candidate = value as Partial<ContentAutomationView>
   return Array.isArray(candidate.logs) || Array.isArray(candidate.jobs) || Array.isArray(candidate.publishRecords)
-}
-
-function nowIso() {
-  return new Date().toISOString()
 }
 
 function deriveAutomation(article: ContentArticle | null): NormalizedAutomation {
@@ -403,84 +402,31 @@ function deriveAutomation(article: ContentArticle | null): NormalizedAutomation 
     }
   }
 
-  const createdAt = article.createdAt || nowIso()
-  const updatedAt = article.updatedAt || createdAt
-  const logs: ContentAutomationLog[] = [
-    {
-      id: `${article.id}-topic`,
-      stage: 'topic',
-      status: 'SUCCESS',
-      message: article.topics.length ? `已关联 ${article.topics.length} 个选题来源` : '使用自定义话题生成',
-      createdAt,
-    },
-    {
-      id: `${article.id}-generate`,
-      stage: 'generate',
-      status: article.errorMessage ? 'FAILED' : 'SUCCESS',
-      message: article.errorMessage || '正文、摘要和封面信息已生成',
-      createdAt: updatedAt,
-    },
-  ]
-
-  if (article.status === 'WECHAT_DRAFT' || article.status === 'PUBLISHED') {
-    logs.push({
-      id: `${article.id}-draft`,
-      stage: 'wechat_draft',
-      status: 'SUCCESS',
-      message: article.wechatMediaId ? `微信草稿已创建：${article.wechatMediaId}` : '微信草稿已创建',
-      createdAt: updatedAt,
-    })
-  }
-
-  if (article.status === 'PUBLISHED') {
-    logs.push({
-      id: `${article.id}-publish`,
-      stage: 'publish',
-      status: 'SUCCESS',
-      message: article.wechatUrl ? '微信发布已完成' : '微信发布已提交',
-      createdAt: updatedAt,
-    })
-  }
-
-  const jobs: ContentAutomationJob[] = [
-    {
-      id: `${article.id}-review`,
-      stage: 'review',
-      status: article.riskTips.length ? 'PENDING' : 'SUCCESS',
-      attempts: 1,
-      maxAttempts: 1,
-      errorMessage: article.riskTips.length ? article.riskTips.join('；') : null,
-      createdAt,
-      updatedAt,
-    },
-  ]
-
-  const publishRecords = article.wechatMediaId || article.wechatPublishId || article.wechatUrl
-    ? [
-        {
-          id: `${article.id}-wechat`,
-          action: article.status === 'PUBLISHED' ? 'publish' as const : 'draft' as const,
-          status: article.errorMessage ? 'FAILED' as const : 'SUCCESS' as const,
-          mediaId: article.wechatMediaId || null,
-          publishId: article.wechatPublishId || null,
-          url: article.wechatUrl || null,
-          errorMessage: article.errorMessage || null,
-          createdAt: updatedAt,
-        },
-      ]
-    : []
-
   return {
     source: 'derived',
     currentStage: inferStage(article),
-    logs,
-    jobs,
-    publishRecords,
+    logs: [],
+    jobs: [],
+    publishRecords: [],
   }
 }
 
-function sleep(ms: number) {
-  return new Promise((resolve) => window.setTimeout(resolve, ms))
+function waitForPoll(ms: number, signal: AbortSignal) {
+  return new Promise<void>((resolve, reject) => {
+    if (signal.aborted) {
+      reject(new DOMException('Aborted', 'AbortError'))
+      return
+    }
+    const timer = window.setTimeout(() => {
+      signal.removeEventListener('abort', onAbort)
+      resolve()
+    }, ms)
+    const onAbort = () => {
+      window.clearTimeout(timer)
+      reject(new DOMException('Aborted', 'AbortError'))
+    }
+    signal.addEventListener('abort', onAbort, { once: true })
+  })
 }
 
 function isAgentJobFinished(job: ContentAgentRunJob) {
@@ -488,10 +434,39 @@ function isAgentJobFinished(job: ContentAgentRunJob) {
 }
 
 function inferStage(article: ContentArticle): ContentAutomationStage {
-  if (article.status === 'PUBLISHED') return 'publish'
-  if (article.status === 'WECHAT_DRAFT') return 'wechat_draft'
+  if (article.status === 'PUBLISHED' || article.status === 'PUBLISH_SUBMITTED' || article.status === 'PUBLISH_FAILED') return 'publish'
+  if (article.status === 'WECHAT_DRAFT' && !article.wechatMediaId?.startsWith('local-')) return 'wechat_draft'
   if (article.riskTips.length) return 'review'
   return 'generate'
+}
+
+function isCancelledRequest(error: unknown) {
+  if (error instanceof DOMException && error.name === 'AbortError') return true
+  return (error as { code?: number; name?: string } | null)?.code === -2
+    || (error as { name?: string } | null)?.name === 'AbortError'
+}
+
+function readStoredJob(): StoredContentJob | null {
+  try {
+    const value = JSON.parse(window.localStorage.getItem(ACTIVE_JOB_STORAGE_KEY) || 'null') as Partial<StoredContentJob> | null
+    if (!value?.jobId || !['generate', 'agent', 'autopilot'].includes(value.mode || '')) return null
+    return {
+      jobId: value.jobId,
+      mode: value.mode as StoredContentJob['mode'],
+      createdAt: value.createdAt || new Date().toISOString(),
+    }
+  } catch {
+    window.localStorage.removeItem(ACTIVE_JOB_STORAGE_KEY)
+    return null
+  }
+}
+
+function storeActiveJob(job: StoredContentJob | null) {
+  if (job) {
+    window.localStorage.setItem(ACTIVE_JOB_STORAGE_KEY, JSON.stringify(job))
+  } else {
+    window.localStorage.removeItem(ACTIVE_JOB_STORAGE_KEY)
+  }
 }
 
 function formatDateTime(value?: string | null) {
@@ -506,11 +481,23 @@ function formatDateTime(value?: string | null) {
   })
 }
 
+function formatAutopilotBlocker(value: string) {
+  const reasons: Record<string, string> = {
+    'Configure AI model endpoint and key': '文章模型地址或密钥未配置',
+    'Configure image generation endpoint and key': '图片模型地址或密钥未配置',
+    'Configure WeChat AppID and AppSecret': '公众号 AppID 或 AppSecret 未配置',
+    'The official account has no freepublish permission': '当前公众号没有接口发布权限，请关闭自动群发',
+  }
+  return reasons[value] || value
+}
+
 export default function AdminContentFactory() {
   const { message, modal } = AntApp.useApp()
   const [generateForm] = Form.useForm<GenerateValues>()
   const [articleForm] = Form.useForm<ArticleFormValues>()
+  const [autopilotForm] = Form.useForm<AutopilotValues>()
   const [status, setStatus] = useState<ContentFactoryStatus | null>(null)
+  const [autopilot, setAutopilot] = useState<ContentAutopilotSettings | null>(null)
   const [hotTopics, setHotTopics] = useState<ContentHotTopic[]>([])
   const [articles, setArticles] = useState<ContentArticle[]>([])
   const [selectedTopicIds, setSelectedTopicIds] = useState<string[]>([])
@@ -518,6 +505,11 @@ export default function AdminContentFactory() {
   const [activeArticle, setActiveArticle] = useState<ContentArticle | null>(null)
   const [drawerOpen, setDrawerOpen] = useState(false)
   const [statusLoading, setStatusLoading] = useState(false)
+  const [statusError, setStatusError] = useState<string | null>(null)
+  const [autopilotError, setAutopilotError] = useState<string | null>(null)
+  const [autopilotLoading, setAutopilotLoading] = useState(false)
+  const [autopilotSaving, setAutopilotSaving] = useState(false)
+  const [autopilotRunning, setAutopilotRunning] = useState(false)
   const [hotLoading, setHotLoading] = useState(false)
   const [articlesLoading, setArticlesLoading] = useState(false)
   const [articleDetailLoading, setArticleDetailLoading] = useState(false)
@@ -532,6 +524,14 @@ export default function AdminContentFactory() {
   const [refreshingVisuals, setRefreshingVisuals] = useState(false)
   const [activePresetKey, setActivePresetKey] = useState(strategyPresets[0].key)
   const [automation, setAutomation] = useState<NormalizedAutomation | null>(null)
+  const [automationArticleId, setAutomationArticleId] = useState<number | null>(null)
+  const [pendingJob, setPendingJob] = useState<StoredContentJob | null>(() => readStoredJob())
+  const [retryingJobId, setRetryingJobId] = useState<string | null>(null)
+  const mountedRef = useRef(true)
+  const pollControllerRef = useRef<AbortController | null>(null)
+  const activePollIdRef = useRef(0)
+  const generationRunIdRef = useRef(0)
+  const automationRequestIdRef = useRef(0)
 
   const watchedHtml = Form.useWatch('contentHtml', articleForm)
   const watchedCoverImage = Form.useWatch('coverImageUrl', articleForm)
@@ -560,48 +560,167 @@ export default function AdminContentFactory() {
     return Array.from(values.values())
   }, [articles])
 
-  const quality = useMemo(() => getArticleQuality(activeArticle), [activeArticle])
-  const qualityGate = useMemo(() => readQualityGate(activeArticle), [activeArticle])
+  const qualityGate = useMemo(
+    () => (automationArticleId === activeArticle?.id ? automation?.qualityGate : null) ?? readQualityGate(activeArticle),
+    [activeArticle, automation?.qualityGate, automationArticleId],
+  )
+  const quality = useMemo(() => getArticleQuality(activeArticle, qualityGate), [activeArticle, qualityGate])
   const inlineImages = activeArticle?.inlineImages ?? []
   const readyInlineImages = inlineImages.filter(isReadyInlineImage)
   const failedInlineImages = inlineImages.filter((image) => image.status === 'FAILED')
   const inlineImagesReady = readyInlineImages.length >= 2 && failedInlineImages.length === 0
-  const hasDefaultWechatCover = Boolean(status?.configs.find((item) => item.key === 'wechat.coverMediaId')?.ready)
+  const getConfigReady = (key: string) => status?.configs.find((item) => item.key === key)?.ready
+  const hasDefaultWechatCover = getConfigReady('wechat.coverMediaId') === true
+  const freePublishEnabled = getConfigReady('wechat.freePublishEnabled') === true
+  const autopilotEnabled = getConfigReady('content.autopilot.enabled') === true
+  const autopilotAutoPublish = getConfigReady('content.autopilot.autoPublish') === true
   const backendPublishable = qualityGate?.publishable === true || qualityGate?.decision === 'pass'
+  const hasRealWechatDraft = Boolean(
+    activeArticle
+      && ['WECHAT_DRAFT', 'PUBLISH_SUBMITTED', 'PUBLISH_FAILED', 'PUBLISHED'].includes(activeArticle.status)
+      && activeArticle.wechatMediaId
+      && !activeArticle.wechatMediaId.startsWith('local-'),
+  )
   const activeArticleAssetsReady = Boolean(
     activeArticle
       && (activeArticle.coverImageUrl || hasDefaultWechatCover)
       && inlineImagesReady
-      && (qualityGate == null || backendPublishable || !activeArticle.errorMessage),
+      && backendPublishable
+      && !activeArticle.errorMessage,
   )
-  const progressPercent = activeArticle
-    ? activeArticle.status === 'PUBLISHED'
-      ? 100
-      : activeArticle.status === 'WECHAT_DRAFT'
-        ? 80
-        : qualityGate?.decision === 'pass'
-          ? 68
-          : 56
-    : 18
+  const workflowStep = activeArticle?.status === 'PUBLISHED'
+    ? 3
+    : activeArticle?.status === 'PUBLISH_SUBMITTED' || activeArticle?.status === 'PUBLISH_FAILED'
+      ? 3
+    : hasRealWechatDraft
+      ? 2
+      : backendPublishable
+        ? 2
+        : activeArticle
+          ? 1
+          : 0
+  const workflowHasError = Boolean(activeArticle?.errorMessage || qualityGate?.decision === 'block' || activeArticle?.status === 'PUBLISH_FAILED')
+  const nextAction = !activeArticle
+    ? '先生成一篇本站草稿'
+    : !qualityGate
+      ? '运行定向改写，生成后端质量门结果'
+      : !backendPublishable
+        ? '根据质量门问题改稿后重新检查'
+        : !hasRealWechatDraft
+          ? status?.wechatReady
+            ? '将已通过质检的文章存入微信草稿箱'
+            : '在系统配置中补齐微信公众号凭据'
+          : activeArticle.status === 'PUBLISH_SUBMITTED'
+            ? '微信正在确认发布结果，稍后刷新文章状态'
+            : activeArticle.status === 'PUBLISH_FAILED'
+              ? '查看失败原因，处理后再提交'
+              : activeArticle.status !== 'PUBLISHED'
+            ? freePublishEnabled
+              ? '复核后提交正式发布'
+              : '到微信公众平台人工确认发布'
+            : '本篇文章已完成发布'
   const riskCount = activeArticle?.riskTips.length ?? 0
   const publishBlocked =
     !status?.wechatReady
-    || !accountProfile.freePublishEnabled
+    || !freePublishEnabled
     || !activeArticleAssetsReady
-    || (qualityGate != null && !backendPublishable)
     || Boolean(activeArticle?.errorMessage)
+    || activeArticle?.status === 'PUBLISH_SUBMITTED'
+    || activeArticle?.status === 'PUBLISHED'
     || generating
     || saving
     || Boolean(wechatAction)
+  const sanitizedPreviewHtml = useMemo(
+    () => DOMPurify.sanitize(watchedHtml || activeArticle?.contentHtml || '', {
+      FORBID_TAGS: ['script', 'iframe', 'object', 'embed', 'form', 'input', 'button', 'textarea'],
+      FORBID_ATTR: ['srcdoc'],
+    }),
+    [activeArticle?.contentHtml, watchedHtml],
+  )
 
   const loadStatus = async () => {
     setStatusLoading(true)
+    setStatusError(null)
     try {
-      setStatus(await adminGetContentStatus())
+      const data = await adminGetContentStatus()
+      if (mountedRef.current) setStatus(data)
+    } catch (error) {
+      if (!mountedRef.current) return
+      const errorMessage = (error as Error).message
+      setStatusError(errorMessage)
+      message.error(errorMessage)
+    } finally {
+      if (mountedRef.current) setStatusLoading(false)
+    }
+  }
+
+  const loadAutopilot = async () => {
+    setAutopilotLoading(true)
+    setAutopilotError(null)
+    try {
+      const data = await adminGetContentAutopilot()
+      if (!mountedRef.current) return
+      setAutopilot(data)
+      autopilotForm.setFieldsValue({
+        enabled: data.enabled,
+        times: data.times,
+        categories: data.categories,
+        autoPublish: data.autoPublish,
+        generateCover: data.generateCover,
+      })
+    } catch (error) {
+      if (mountedRef.current) setAutopilotError((error as Error).message)
+    } finally {
+      if (mountedRef.current) setAutopilotLoading(false)
+    }
+  }
+
+  const saveAutopilot = async () => {
+    const values = await autopilotForm.validateFields()
+    const times = Array.from(new Set(values.times.map((item) => item.trim()).filter(Boolean))).sort()
+    const categories = values.categories.map((item) => item.trim()).filter(Boolean)
+    if (times.some((item) => !/^([01]\d|2[0-3]):[0-5]\d$/.test(item))) {
+      message.warning('运行时间需使用 HH:mm 格式，例如 08:30')
+      return
+    }
+    setAutopilotSaving(true)
+    try {
+      const data = await adminUpdateContentAutopilot({ ...values, times, categories })
+      setAutopilot(data)
+      autopilotForm.setFieldsValue(data)
+      message.success(data.enabled ? '自动驾驶计划已保存并启用' : '自动驾驶计划已保存，当前暂停')
+      await loadStatus()
     } catch (error) {
       message.error((error as Error).message)
     } finally {
-      setStatusLoading(false)
+      setAutopilotSaving(false)
+    }
+  }
+
+  const runAutopilotNow = async () => {
+    const runId = ++generationRunIdRef.current
+    setAutopilotRunning(true)
+    setGeneratePhase('自动驾驶任务正在启动…')
+    try {
+      const started = await adminRunContentAutopilot()
+      const storedJob = { jobId: started.jobId, mode: 'autopilot' as const, createdAt: new Date().toISOString() }
+      storeActiveJob(storedJob)
+      if (mountedRef.current) setPendingJob(storedJob)
+      const job = await pollJobUntilDone(started.jobId, (current) => {
+        if (current.automation) {
+          setAutomation({ ...current.automation, source: 'backend' })
+          setAutomationArticleId(current.article?.id ?? null)
+        }
+        setGeneratePhase(jobPhaseLabel(current))
+      })
+      await finishGenerateJob(job, '自动驾驶任务已完成，请检查文章和微信草稿状态')
+    } catch (error) {
+      if (!isCancelledRequest(error)) message.error((error as Error).message)
+    } finally {
+      if (mountedRef.current && generationRunIdRef.current === runId) {
+        setAutopilotRunning(false)
+        setGeneratePhase(null)
+      }
     }
   }
 
@@ -633,33 +752,55 @@ export default function AdminContentFactory() {
   }
 
   const loadAutomation = async (articleId?: number) => {
+    const requestId = ++automationRequestIdRef.current
     setAutomationLoading(true)
     try {
       const data = await adminGetContentAutomation(articleId)
+      if (!mountedRef.current || requestId !== automationRequestIdRef.current) return
       setAutomation(data ? { ...data, source: 'backend' } : null)
+      setAutomationArticleId(articleId ?? null)
     } catch {
-      setAutomation(activeArticle ? deriveAutomation(activeArticle) : null)
+      if (!mountedRef.current || requestId !== automationRequestIdRef.current) return
+      setAutomation(articleId && activeArticle?.id === articleId ? deriveAutomation(activeArticle) : null)
+      setAutomationArticleId(articleId ?? null)
     } finally {
-      setAutomationLoading(false)
+      if (mountedRef.current && requestId === automationRequestIdRef.current) setAutomationLoading(false)
     }
   }
 
   const retryJob = async (jobId: string) => {
+    setRetryingJobId(jobId)
     try {
       const data = await adminRetryContentAutomationJob(jobId)
       setAutomation({ ...data, source: 'backend' })
-      message.success('已重新进入队列')
+      setAutomationArticleId(activeArticle?.id ?? null)
+      const retriedJob = data.jobs.find((item) => item.id === jobId)
+      if (retriedJob?.status === 'FAILED') {
+        message.error(retriedJob.errorMessage || '重试仍然失败，请查看任务日志')
+      } else {
+        message.success('重试已执行，任务状态已更新')
+      }
+      await loadArticles()
+      if (activeArticle) {
+        const detail = await adminGetContentArticle(activeArticle.id)
+        setActiveArticle((current) => current?.id === detail.id ? detail : current)
+      }
     } catch (error) {
       message.error((error as Error).message)
+    } finally {
+      setRetryingJobId(null)
     }
   }
 
   useEffect(() => {
-    generateForm.setFieldsValue(defaultGenerateValues)
-    void loadStatus()
-    void loadHotTopics(defaultGenerateValues.category)
-    void loadArticles()
-    void loadAutomation()
+    mountedRef.current = true
+    return () => {
+      mountedRef.current = false
+      activePollIdRef.current += 1
+      automationRequestIdRef.current += 1
+      pollControllerRef.current?.abort()
+      pollControllerRef.current = null
+    }
   }, [])
 
   useEffect(() => {
@@ -675,17 +816,14 @@ export default function AdminContentFactory() {
   }, [activeArticle, articleForm])
 
   useEffect(() => {
-    if (!activeArticle) {
-      setAutomation(null)
-      return
-    }
-    void loadAutomation(activeArticle.id)
+    void loadAutomation(activeArticle?.id)
   }, [activeArticle?.id])
 
   const upsertArticle = (article: ContentArticle) => {
     setArticles((previous) => [article, ...previous.filter((item) => item.id !== article.id)])
     setActiveArticle(article)
     setAutomation(deriveAutomation(article))
+    setAutomationArticleId(article.id)
   }
 
   const toggleTopic = (topicId: string, checked: boolean) => {
@@ -740,22 +878,36 @@ export default function AdminContentFactory() {
     generateForm.setFieldsValue({
       ...preset.values,
       category: activeCategory,
-      autoPublish: false,
     })
-    if (preset.values.autoWechatDraft) {
-      generateForm.setFieldValue('autoPublish', false)
-    }
   }
 
   const pollJobUntilDone = async (jobId: string, onTick?: (job: ContentAgentRunJob) => void) => {
-    let job = await adminGetContentAgentJob(jobId)
-    onTick?.(job)
-    for (let attempt = 0; attempt < 200 && !isAgentJobFinished(job); attempt += 1) {
-      await sleep(attempt < 8 ? 1200 : attempt < 30 ? 2000 : 3000)
-      job = await adminGetContentAgentJob(jobId)
+    pollControllerRef.current?.abort()
+    const controller = new AbortController()
+    const pollId = activePollIdRef.current + 1
+    activePollIdRef.current = pollId
+    pollControllerRef.current = controller
+
+    try {
+      let job = await adminGetContentAgentJob(jobId, controller.signal)
+      if (!mountedRef.current || activePollIdRef.current !== pollId) {
+        throw new DOMException('Aborted', 'AbortError')
+      }
       onTick?.(job)
+      for (let attempt = 0; attempt < 200 && !isAgentJobFinished(job); attempt += 1) {
+        await waitForPoll(attempt < 8 ? 1200 : attempt < 30 ? 2000 : 3000, controller.signal)
+        job = await adminGetContentAgentJob(jobId, controller.signal)
+        if (!mountedRef.current || activePollIdRef.current !== pollId) {
+          throw new DOMException('Aborted', 'AbortError')
+        }
+        onTick?.(job)
+      }
+      return job
+    } finally {
+      if (pollControllerRef.current === controller) {
+        pollControllerRef.current = null
+      }
     }
-    return job
   }
 
   const finishGenerateJob = async (job: ContentAgentRunJob, successFallback: string) => {
@@ -764,8 +916,12 @@ export default function AdminContentFactory() {
       await loadArticles()
       return
     }
+    storeActiveJob(null)
+    setPendingJob(null)
     if (job.status === 'FAILED') {
       message.error(job.errorMessage || '生成失败')
+      if (job.automation) setAutomation({ ...job.automation, source: 'backend' })
+      await loadArticles()
       return
     }
     if (!job.article) {
@@ -776,6 +932,7 @@ export default function AdminContentFactory() {
     upsertArticle(job.article)
     if (job.automation) {
       setAutomation({ ...job.automation, source: 'backend' })
+      setAutomationArticleId(job.article.id)
     }
     setDrawerOpen(true)
     await loadArticles()
@@ -789,6 +946,7 @@ export default function AdminContentFactory() {
   }
 
   const generateArticle = async () => {
+    const runId = ++generationRunIdRef.current
     const values = await generateForm.validateFields()
     const topic = values.topic?.trim()
     if (!topic && selectedTopics.length === 0) {
@@ -811,20 +969,26 @@ export default function AdminContentFactory() {
     setGeneratePhase('已提交生成任务…')
     try {
       const started = await adminGenerateContentArticleAsync(payload)
+      const storedJob = { jobId: started.jobId, mode: 'generate' as const, createdAt: new Date().toISOString() }
+      storeActiveJob(storedJob)
+      if (mountedRef.current) setPendingJob(storedJob)
       message.info(`生成任务已启动：${started.jobId}`)
       const job = await pollJobUntilDone(started.jobId, (current) => {
         setGeneratePhase(jobPhaseLabel(current))
       })
       await finishGenerateJob(job, '文章草稿已生成，可在右侧检查质量后推微信')
     } catch (error) {
-      message.error((error as Error).message)
+      if (!isCancelledRequest(error)) message.error((error as Error).message)
     } finally {
-      setGenerating(false)
-      setGeneratePhase(null)
+      if (mountedRef.current && generationRunIdRef.current === runId) {
+        setGenerating(false)
+        setGeneratePhase(null)
+      }
     }
   }
 
   const runContentAgent = async () => {
+    const runId = ++generationRunIdRef.current
     const values = generateForm.getFieldsValue()
     const topic = values.topic?.trim()
     setAgentRunning(true)
@@ -840,21 +1004,71 @@ export default function AdminContentFactory() {
         autoWechatDraft: false,
         autoPublish: false,
       })
+      const storedJob = { jobId: started.jobId, mode: 'agent' as const, createdAt: new Date().toISOString() }
+      storeActiveJob(storedJob)
+      if (mountedRef.current) setPendingJob(storedJob)
       message.info(`Agent 任务已启动：${started.jobId}`)
       const job = await pollJobUntilDone(started.jobId, (current) => {
         if (current.automation) {
           setAutomation({ ...current.automation, source: 'backend' })
+          setAutomationArticleId(current.article?.id ?? null)
         }
         setGeneratePhase(jobPhaseLabel(current))
       })
       await finishGenerateJob(job, 'Agent 已完成：草稿可检查后推微信')
     } catch (error) {
-      message.error((error as Error).message)
+      if (!isCancelledRequest(error)) message.error((error as Error).message)
     } finally {
-      setAgentRunning(false)
-      setGeneratePhase(null)
+      if (mountedRef.current && generationRunIdRef.current === runId) {
+        setAgentRunning(false)
+        setGeneratePhase(null)
+      }
     }
   }
+
+  const resumePendingJob = async (storedJob: StoredContentJob) => {
+    const runId = ++generationRunIdRef.current
+    if (storedJob.mode === 'autopilot') setAutopilotRunning(true)
+    else if (storedJob.mode === 'agent') setAgentRunning(true)
+    else setGenerating(true)
+    setGeneratePhase(`正在恢复任务 ${storedJob.jobId}…`)
+    try {
+      const job = await pollJobUntilDone(storedJob.jobId, (current) => {
+        if (current.automation) {
+          setAutomation({ ...current.automation, source: 'backend' })
+          setAutomationArticleId(current.article?.id ?? null)
+        }
+        setGeneratePhase(jobPhaseLabel(current))
+      })
+      await finishGenerateJob(job, '后台任务已完成，草稿可检查后推微信')
+    } catch (error) {
+      if (!isCancelledRequest(error)) {
+        storeActiveJob(null)
+        setPendingJob(null)
+        message.error(`无法恢复生成任务：${(error as Error).message}`)
+      }
+    } finally {
+      if (mountedRef.current && generationRunIdRef.current === runId) {
+        setGenerating(false)
+        setAgentRunning(false)
+        setAutopilotRunning(false)
+        setGeneratePhase(null)
+      }
+    }
+  }
+
+  useEffect(() => {
+    generateForm.setFieldsValue(defaultGenerateValues)
+    void loadStatus()
+    void loadAutopilot()
+    void loadHotTopics(defaultGenerateValues.category)
+    void loadArticles()
+    const storedJob = readStoredJob()
+    if (storedJob) {
+      setPendingJob(storedJob)
+      void resumePendingJob(storedJob)
+    }
+  }, [])
 
   const openArticle = async (article: ContentArticle) => {
     setActiveArticle(article)
@@ -933,6 +1147,14 @@ export default function AdminContentFactory() {
 
   const createWechatDraft = async () => {
     if (!activeArticle) return
+    if (!qualityGate) {
+      message.warning('这篇文章还没有后端质量门结果，请先定向改写并重新检查')
+      return
+    }
+    if (!backendPublishable) {
+      message.warning(qualityGate.reason || '后端质量门未通过，不能创建微信草稿')
+      return
+    }
     if (!activeArticleAssetsReady) {
       message.warning('缺少封面或 2 张可用内联图，不能创建微信草稿')
       return
@@ -966,9 +1188,7 @@ export default function AdminContentFactory() {
     }
     modal.confirm({
       title: '发布到微信公众号',
-      content: accountProfile.freePublishEnabled
-        ? '确认后会创建微信草稿并提交发布，请先确认标题、封面和正文已经复核。'
-        : '当前订阅号无 freepublish 权限，请先创建微信草稿，再到公众号后台人工发布。',
+      content: '确认后会创建或更新微信草稿并提交发布。请先核对标题、封面、事实引用和正文预览。',
       okText: '确认发布',
       cancelText: '取消',
       okButtonProps: { icon: <SendOutlined /> },
@@ -979,7 +1199,13 @@ export default function AdminContentFactory() {
           upsertArticle(result.article)
           await loadAutomation(result.article.id)
           const publishId = typeof result.publish.publishId === 'string' ? result.publish.publishId : ''
-          message.success(publishId ? `已提交微信发布：${publishId}` : '已提交微信发布')
+          if (result.article.status === 'PUBLISHED') {
+            message.success('微信已确认发布')
+          } else if (result.article.status === 'PUBLISH_FAILED') {
+            message.error(result.article.errorMessage || '微信发布失败，请查看任务记录')
+          } else {
+            message.info(publishId ? `微信已接收发布请求：${publishId}，等待确认` : '微信已接收发布请求，等待确认')
+          }
         } catch (error) {
           message.error((error as Error).message)
           if (activeArticle) {
@@ -991,6 +1217,21 @@ export default function AdminContentFactory() {
         }
       },
     })
+  }
+
+  const refreshActiveArticle = async () => {
+    if (!activeArticle) return
+    setArticleDetailLoading(true)
+    try {
+      const detail = await adminGetContentArticle(activeArticle.id)
+      setActiveArticle((current) => current?.id === detail.id ? detail : current)
+      setArticles((previous) => previous.map((item) => item.id === detail.id ? detail : item))
+      await loadAutomation(detail.id)
+    } catch (error) {
+      message.error((error as Error).message)
+    } finally {
+      setArticleDetailLoading(false)
+    }
   }
 
   const deleteArticle = (article: ContentArticle, event?: { stopPropagation: () => void }) => {
@@ -1023,7 +1264,7 @@ export default function AdminContentFactory() {
   }
 
   const allSelected = hotTopics.length > 0 && selectedTopicIds.length === hotTopics.length
-  const articleStatus = activeArticle ? statusMeta[activeArticle.status] : null
+  const articleStatus = activeArticle ? getArticleStatusMeta(activeArticle) : null
   const activeArticleCategory = activeArticle?.category ? getCategoryMeta(activeArticle.category) : null
   const activeCategoryMeta = getCategoryMeta(activeCategory)
   const missingWechatCover = Boolean(activeArticle && !activeArticle.coverImageUrl && !hasDefaultWechatCover)
@@ -1043,13 +1284,13 @@ export default function AdminContentFactory() {
     <div className="content-factory">
       <section className="content-factory__header">
         <div>
+          <span className="content-factory__eyebrow">公众号生产台</span>
           <Typography.Title level={3}>内容工厂</Typography.Title>
           <Typography.Paragraph type="secondary">
-            {accountProfile.name} · {accountProfile.positioning}。推荐路径：填话题或勾选热点 → 生成草稿 → 看门禁分与问题 → 改稿或推微信草稿。
-            生成在后台异步执行，避免页面超时。
+            从热点和自定义话题生成本站草稿，经后端质量门确认后进入微信草稿箱。发布权限与自动驾驶状态均以当前服务配置为准。
           </Typography.Paragraph>
           {generatePhase ? (
-            <Alert type="info" showIcon message={generatePhase} style={{ marginTop: 8 }} />
+            <Alert className="content-factory__running-alert" type="info" showIcon message={generatePhase} />
           ) : null}
         </div>
         <Space wrap>
@@ -1063,32 +1304,94 @@ export default function AdminContentFactory() {
       </section>
 
       <section className="content-factory__pipeline" aria-label="内容工厂流程">
+        <div className="content-factory__pipeline-heading">
+          <div>
+            <Typography.Text strong>当前交付链路</Typography.Text>
+            <Typography.Text type="secondary">下一步：{nextAction}</Typography.Text>
+          </div>
+          <Tag color={workflowHasError ? 'error' : activeArticle?.status === 'PUBLISHED' ? 'success' : 'processing'}>
+            {activeArticle ? (articleStatus?.label || '处理中') : '等待新草稿'}
+          </Tag>
+        </div>
         <div className="content-factory__pipeline-main">
           <Steps
-            current={activeArticle ? Math.min(5, activeArticle.status === 'PUBLISHED' ? 5 : activeArticle.status === 'WECHAT_DRAFT' ? 4 : 3) : 0}
+            current={workflowStep}
             items={pipelineSteps}
             size="small"
+            status={workflowHasError ? 'error' : 'process'}
           />
-        </div>
-        <div className="content-factory__pipeline-score">
-          <Typography.Text type="secondary">自动化进度</Typography.Text>
-          <Progress percent={progressPercent} size="small" />
         </div>
       </section>
 
-      <section className="content-factory__status" aria-label="内容工厂能力状态">
+      <section className="content-factory__capabilities" aria-label="内容工厂能力状态">
+        <div className="content-factory__section-heading">
+          <div>
+            <Typography.Text strong>生产能力</Typography.Text>
+            <Typography.Text type="secondary">状态来自后端实时配置，不展示密钥内容</Typography.Text>
+          </div>
+          <Link to="/admin/configs" className="content-factory__config-link">
+            <SettingOutlined /> 系统配置
+          </Link>
+        </div>
         {statusLoading && !status ? (
-          <Skeleton active paragraph={{ rows: 1 }} />
+          <Skeleton active paragraph={{ rows: 2 }} />
+        ) : statusError && !status ? (
+          <Alert
+            type="error"
+            showIcon
+            message="无法读取生产能力"
+            description={statusError}
+            action={<Button size="small" icon={<ReloadOutlined />} onClick={() => void loadStatus()}>重试</Button>}
+          />
         ) : (
           <>
-            <StatusPill ready={Boolean(status?.aiReady)} label="文章模型" />
-            <StatusPill ready={Boolean(status?.imageReady)} label="封面模型" />
-            <StatusPill ready={Boolean(status?.wechatReady)} label="微信公众号" />
-            {status?.configs.map((item) => (
-              <Tag key={item.key} color={item.ready ? 'success' : 'warning'} className="content-factory__config-tag">
-                {item.label}
-              </Tag>
-            ))}
+            <div className="content-factory__capability-grid">
+              <CapabilityItem
+                icon={<EditOutlined />}
+                title="文章生成"
+                ready={status?.aiReady}
+                readyText="模型可用"
+                blockedText="缺少模型配置"
+              />
+              <CapabilityItem
+                icon={<PictureOutlined />}
+                title="图片素材"
+                ready={status?.imageReady}
+                readyText="模型可用"
+                blockedText="缺少图片配置"
+              />
+              <CapabilityItem
+                icon={<CloudUploadOutlined />}
+                title="微信草稿"
+                ready={status?.wechatReady}
+                readyText="凭据已填写"
+                blockedText="缺少公众号凭据"
+              />
+              <CapabilityItem
+                icon={<ClockCircleOutlined />}
+                title="自动驾驶"
+                ready={status ? autopilotEnabled : undefined}
+                readyText="定时运行中"
+                blockedText="当前未启用"
+                neutralWhenBlocked
+              />
+              <CapabilityItem
+                icon={<SendOutlined />}
+                title="接口发布"
+                ready={status ? freePublishEnabled : undefined}
+                readyText="管理员开关已开"
+                blockedText="管理员开关未开"
+                neutralWhenBlocked
+              />
+            </div>
+            <div className="content-factory__config-matrix">
+              {status?.configs.map((item) => (
+                <span key={item.key} className="content-factory__config-state" title={item.key}>
+                  <Badge status={item.ready ? 'success' : 'default'} />
+                  {item.label}
+                </span>
+              ))}
+            </div>
           </>
         )}
       </section>
@@ -1098,16 +1401,142 @@ export default function AdminContentFactory() {
           type="warning"
           showIcon
           message="微信公众号未配置"
-          description="在系统配置中补齐 wechat.appId、wechat.appSecret；没有封面时可先配置 wechat.coverMediaId。自动发布会被锁定，但本站草稿仍可继续生成。"
+          description={<>在<Link to="/admin/configs">系统配置</Link>中补齐公众号 AppID 和 AppSecret。本站草稿仍可生成，微信相关操作会保持锁定。</>}
         />
       ) : null}
 
-      {!accountProfile.freePublishEnabled ? (
+      {status?.wechatReady && !freePublishEnabled ? (
         <Alert
           type="info"
           showIcon
-          message={`${accountProfile.name} 是订阅号，当前不启用一键发布`}
-          description={`AppID：${accountProfile.appId}。订阅号无 freepublish 权限，内容工厂只负责生成正文和创建微信草稿，最终发布请在公众号后台人工确认。`}
+          message="微信草稿能力可用，接口发布未启用"
+          description="系统可以创建真实微信草稿；完成最终复核后，请在微信公众平台手动发布。"
+        />
+      ) : null}
+
+      {status && autopilotAutoPublish && !freePublishEnabled ? (
+        <Alert
+          type="warning"
+          showIcon
+          message="自动群发配置与发布权限不一致"
+          description="自动驾驶已请求自动群发，但微信一键发布权限未启用。任务会停在草稿阶段，请在系统配置中修正。"
+        />
+      ) : null}
+
+      <section className="content-factory__autopilot" aria-label="自动驾驶计划">
+        <div className="content-factory__section-heading">
+          <div>
+            <Typography.Text strong>自动驾驶计划</Typography.Text>
+            <Typography.Text type="secondary">
+              {autopilot?.enabled
+                ? `运行中 · 下次执行 ${formatDateTime(autopilot.nextRunAt)}`
+                : '当前暂停'}
+            </Typography.Text>
+          </div>
+          <Space size={8} wrap>
+            <Tag color={autopilot?.enabled ? 'success' : 'default'}>
+              {autopilot?.enabled ? '定时运行中' : '未启用'}
+            </Tag>
+            <Button size="small" icon={<ReloadOutlined />} loading={autopilotLoading} onClick={() => void loadAutopilot()}>
+              刷新计划
+            </Button>
+          </Space>
+        </div>
+        {autopilotError && !autopilot ? (
+          <Alert type="error" showIcon message="无法读取自动驾驶计划" description={autopilotError} />
+        ) : autopilotLoading && !autopilot ? (
+          <Skeleton active paragraph={{ rows: 2 }} />
+        ) : autopilot ? (
+          <>
+            {autopilot.blockers.length ? (
+              <Alert
+                type="warning"
+                showIcon
+                message="启用条件尚未满足"
+                description={
+                  <Space direction="vertical" size={0}>
+                    {autopilot.blockers.map((blocker) => (
+                      <span key={blocker}>{formatAutopilotBlocker(blocker)}</span>
+                    ))}
+                    <Link to="/admin/configs">打开系统配置</Link>
+                  </Space>
+                }
+              />
+            ) : null}
+            <Form form={autopilotForm} layout="vertical" className="content-factory__autopilot-form">
+              <Form.Item name="enabled" label="定时运行" valuePropName="checked">
+                <Switch
+                  checkedChildren="开启"
+                  unCheckedChildren="暂停"
+                  disabled={!autopilot.enabled && autopilot.blockers.length > 0}
+                />
+              </Form.Item>
+              <Form.Item
+                name="times"
+                label="每日运行时间"
+                rules={[{ required: true, type: 'array', min: 1, max: 12, message: '设置 1-12 个时间' }]}
+              >
+                <Select
+                  mode="tags"
+                  tokenSeparators={[',', '，']}
+                  placeholder="输入 08:00 后回车"
+                  maxTagCount="responsive"
+                />
+              </Form.Item>
+              <Form.Item
+                name="categories"
+                label="轮换栏目"
+                rules={[{ required: true, type: 'array', min: 1, max: 12, message: '设置 1-12 个栏目' }]}
+              >
+                <Select
+                  mode="tags"
+                  tokenSeparators={[',', '，']}
+                  options={categoryOptions}
+                  placeholder="输入栏目后回车"
+                  maxTagCount="responsive"
+                />
+              </Form.Item>
+              <Form.Item name="generateCover" label="生成封面" valuePropName="checked">
+                <Switch checkedChildren="开启" unCheckedChildren="关闭" />
+              </Form.Item>
+              <Form.Item name="autoPublish" label="自动群发" valuePropName="checked">
+                <Switch checkedChildren="开启" unCheckedChildren="草稿" />
+              </Form.Item>
+              <div className="content-factory__autopilot-actions">
+                <Button
+                  type="primary"
+                  icon={<SaveOutlined />}
+                  loading={autopilotSaving}
+                  onClick={() => void saveAutopilot()}
+                >
+                  保存计划
+                </Button>
+                <Tooltip title={autopilot.blockers.length ? '请先处理上方启用条件' : '按当前已保存的计划执行一次'}>
+                  <Button
+                    icon={<RocketOutlined />}
+                    loading={autopilotRunning}
+                    disabled={autopilot.blockers.length > 0 || generating || agentRunning || Boolean(pendingJob)}
+                    onClick={() => void runAutopilotNow()}
+                  >
+                    立即运行
+                  </Button>
+                </Tooltip>
+              </div>
+            </Form>
+          </>
+        ) : null}
+      </section>
+
+      {pendingJob && !generating && !agentRunning && !autopilotRunning ? (
+        <Alert
+          type="info"
+          showIcon
+          message={`任务 ${pendingJob.jobId} 仍在后台执行`}
+          action={
+            <Button size="small" icon={<ReloadOutlined />} onClick={() => void resumePendingJob(pendingJob)}>
+              继续跟踪
+            </Button>
+          }
         />
       ) : null}
 
@@ -1188,7 +1617,7 @@ export default function AdminContentFactory() {
               <Space size={8} wrap>
                 <Tag color={activeCategoryMeta.color}>{activeCategoryMeta.label}</Tag>
                 <Tag color={selectedTopicIds.length ? 'processing' : 'default'}>
-                  已选 {selectedTopicIds.length || Math.min(5, hotTopics.length)}
+                  {selectedTopicIds.length ? `已选 ${selectedTopicIds.length}` : `默认参考 ${Math.min(5, hotTopics.length)}`}
                 </Tag>
               </Space>
             </div>
@@ -1249,7 +1678,7 @@ export default function AdminContentFactory() {
                 <Segmented block options={imageModeOptions} />
               </Form.Item>
             </div>
-            <div className="content-factory__form-grid content-factory__form-grid--three">
+            <div className="content-factory__form-grid content-factory__form-grid--compact">
               <Form.Item name="length" label="篇幅">
                 <Select
                   options={[
@@ -1259,32 +1688,19 @@ export default function AdminContentFactory() {
                   ]}
                 />
               </Form.Item>
-              <Form.Item name="autoWechatDraft" label="生成后存草稿" valuePropName="checked">
-                <Switch
-                  checkedChildren="开启"
-                  unCheckedChildren="关闭"
-                  disabled={!status?.wechatReady}
-                />
-              </Form.Item>
-              <Form.Item name="autoPublish" label="生成后发布（订阅号不可用）" valuePropName="checked">
-                <Switch
-                  checkedChildren="开启"
-                  unCheckedChildren="关闭"
-                  disabled
-                />
+              <Form.Item name="coverStyle" label="封面风格">
+                <Input placeholder="例如：数据感、干净、适合公众号头图" />
               </Form.Item>
             </div>
-            <Form.Item name="coverStyle" label="封面风格">
-              <Input placeholder="例如：数据感、干净、适合公众号头图" />
-            </Form.Item>
 
-            <div className="content-factory__guardrail">
-              <Typography.Text strong>发布前守护</Typography.Text>
-              <ul className="content-factory__guardrail-list">
-                {wechatGuardrails.map((item) => (
-                  <li key={item}>{item}</li>
-                ))}
-              </ul>
+            <div className="content-factory__delivery-policy">
+              <CheckCircleOutlined />
+              <div>
+                <Typography.Text strong>生成任务先保存为本站草稿</Typography.Text>
+                <Typography.Text type="secondary">
+                  质量门通过后才开放微信草稿操作；正式发布方式由后端权限决定。
+                </Typography.Text>
+              </div>
             </div>
 
             <div className="content-factory__action-row">
@@ -1294,7 +1710,7 @@ export default function AdminContentFactory() {
                 icon={<EditOutlined />}
                 onClick={() => void generateArticle()}
                 loading={generating}
-                disabled={agentRunning || hotLoading || (!watchedTopic?.trim() && hotTopics.length === 0)}
+                disabled={!status?.aiReady || agentRunning || autopilotRunning || Boolean(pendingJob) || hotLoading || (!watchedTopic?.trim() && hotTopics.length === 0)}
               >
                 生成文章草稿
               </Button>
@@ -1303,62 +1719,86 @@ export default function AdminContentFactory() {
                 icon={<RocketOutlined />}
                 onClick={() => void runContentAgent()}
                 loading={agentRunning}
-                disabled={generating}
+                disabled={!status?.aiReady || generating || autopilotRunning || Boolean(pendingJob)}
               >
                 自动选题并生成
               </Button>
             </div>
             <Typography.Paragraph type="secondary" style={{ marginTop: 8, marginBottom: 0 }}>
-              主按钮按当前话题/热点写稿；副按钮让 Agent 先选题再写。两者都先落本站草稿，过门禁后再推微信。
+              主按钮按当前话题或热点写稿；自动选题会先筛选候选话题，再运行同一套检索、写作和质检流程。
             </Typography.Paragraph>
           </Form>
         </Card>
 
         <Card className="content-factory__panel" title="最近生成">
           <div className="content-factory__quality">
-            <div className="content-factory__quality-summary">
-              <Typography.Text type="secondary">发布契约评分</Typography.Text>
-              <Typography.Title level={4}>{quality.score}</Typography.Title>
-              <Typography.Text type="secondary">
-                {quality.words} 字
-                {quality.decision ? ` · ${quality.decision}` : ''}
-                {typeof activeArticle?.qualityScore === 'number' ? ` · 后端 ${activeArticle.qualityScore}` : ''}
-              </Typography.Text>
-            </div>
-            <Progress
-              percent={quality.score}
-              showInfo={false}
-              status={quality.decision === 'pass' ? 'success' : quality.decision === 'block' ? 'exception' : 'active'}
-            />
-            {quality.reason ? (
-              <Alert
-                className="content-factory__gate-alert"
-                type={quality.decision === 'pass' ? 'success' : quality.decision === 'block' ? 'error' : 'warning'}
-                showIcon
-                message={
-                  quality.decision === 'pass'
-                    ? '可进入微信草稿流程'
-                    : '草稿已保存，但还不能推微信（先改稿或重生成）'
-                }
-                description={quality.reason}
-              />
-            ) : null}
-            {quality.issues.length > 1 ? (
-              <ul className="content-factory__gate-issues">
-                {quality.issues.slice(0, 5).map((issue) => (
-                  <li key={issue}>{issue}</li>
-                ))}
-              </ul>
-            ) : null}
-            <div className="content-factory__quality-checks">
-              {quality.checks.map((check) => (
-                <Badge
-                  key={check.label}
-                  status={check.passed ? 'success' : 'warning'}
-                  text={check.passed ? check.label : `${check.label} · ${check.hint}`}
-                />
-              ))}
-            </div>
+            {activeArticle ? (
+              <>
+                <div className="content-factory__quality-summary">
+                  <div>
+                    <Typography.Text type="secondary">后端质量门</Typography.Text>
+                    <Typography.Title level={4}>
+                      {quality.backendScore == null ? '--' : quality.backendScore}
+                    </Typography.Title>
+                  </div>
+                  <div className="content-factory__quality-result">
+                    <Tag color={!qualityGate ? 'default' : backendPublishable ? 'success' : 'error'}>
+                      {!qualityGate ? '尚未执行' : backendPublishable ? '通过' : '阻断'}
+                    </Tag>
+                    <Typography.Text type="secondary">{quality.words} 字</Typography.Text>
+                  </div>
+                </div>
+                {quality.backendScore != null ? (
+                  <Progress
+                    percent={quality.backendScore}
+                    showInfo={false}
+                    status={backendPublishable ? 'success' : 'exception'}
+                  />
+                ) : null}
+                {!qualityGate ? (
+                  <Alert
+                    className="content-factory__gate-alert"
+                    type="warning"
+                    showIcon
+                    message="没有可验证的质量门结果"
+                    description="当前不会开放微信草稿操作。打开文章后运行定向改写，可重新生成审稿和质量门记录。"
+                  />
+                ) : quality.reason ? (
+                  <Alert
+                    className="content-factory__gate-alert"
+                    type={backendPublishable ? 'success' : 'error'}
+                    showIcon
+                    message={backendPublishable ? '后端确认可进入微信草稿流程' : '后端阻止同步微信'}
+                    description={quality.reason}
+                  />
+                ) : null}
+                {quality.issues.length ? (
+                  <ul className="content-factory__gate-issues">
+                    {quality.issues.slice(0, 5).map((issue) => (
+                      <li key={issue}>{issue}</li>
+                    ))}
+                  </ul>
+                ) : null}
+                <div className="content-factory__local-checks-heading">
+                  <Typography.Text strong>编辑建议</Typography.Text>
+                  <Typography.Text type="secondary">
+                    {quality.checks.filter((item) => item.passed).length}/{quality.checks.length} 项 · 非后端门禁
+                  </Typography.Text>
+                </div>
+                <Progress percent={quality.localScore} showInfo={false} strokeColor="var(--accent)" />
+                <div className="content-factory__quality-checks">
+                  {quality.checks.map((check) => (
+                    <Badge
+                      key={check.label}
+                      status={check.passed ? 'success' : 'warning'}
+                      text={check.passed ? check.label : `${check.label} · ${check.hint}`}
+                    />
+                  ))}
+                </div>
+              </>
+            ) : (
+              <Empty image={Empty.PRESENTED_IMAGE_SIMPLE} description="选择文章后查看质量门结果" />
+            )}
           </div>
 
           <Divider className="content-factory__divider" />
@@ -1370,7 +1810,7 @@ export default function AdminContentFactory() {
               className="content-factory__article-list"
               dataSource={articles}
               renderItem={(article) => {
-                const meta = statusMeta[article.status]
+                const meta = getArticleStatusMeta(article)
                 const category = article.category ? getCategoryMeta(article.category) : null
                 return (
                   <List.Item
@@ -1430,19 +1870,31 @@ export default function AdminContentFactory() {
           )}
         </Card>
 
-        <Card className="content-factory__panel" title="任务流与发布记录">
+        <Card
+          className="content-factory__panel content-factory__panel--automation"
+          title={activeArticle ? '本篇任务与微信记录' : '全局任务与微信记录'}
+        >
           {automationLoading && !automation ? (
             <Skeleton active paragraph={{ rows: 6 }} />
           ) : automation ? (
             <Space direction="vertical" size={12} className="content-factory__automation">
               <Space wrap>
                 <Tag color={automation.source === 'backend' ? 'success' : 'default'}>
-                  {automation.source === 'backend' ? '后端同步' : '前端推导'}
+                  {automation.source === 'backend' ? '后端实时记录' : '仅文章状态'}
                 </Tag>
                 <Tag color={getStageMeta(automation.currentStage).tone}>
                   {getStageMeta(automation.currentStage).label}
                 </Tag>
               </Space>
+
+              {automation.source === 'derived' ? (
+                <Alert
+                  type="warning"
+                  showIcon
+                  message="实时任务记录暂不可用"
+                  description="下方不会伪造执行日志或重试结果。可以继续编辑本站草稿，恢复连接后刷新任务流。"
+                />
+              ) : null}
 
               <div className="content-factory__automation-block">
                 <Typography.Text strong>执行日志</Typography.Text>
@@ -1459,6 +1911,7 @@ export default function AdminContentFactory() {
                             {getStageMeta(item.stage).label} · {item.message}
                           </div>
                           <div className="content-factory__automation-meta">{formatDateTime(item.createdAt)}</div>
+                          {item.detail ? <div className="content-factory__automation-detail">{item.detail}</div> : null}
                         </div>
                       </List.Item>
                     )
@@ -1485,7 +1938,13 @@ export default function AdminContentFactory() {
                             {job.errorMessage || job.nextRunAt ? [job.errorMessage, job.nextRunAt && `下次重试 ${formatDateTime(job.nextRunAt)}`].filter(Boolean).join(' · ') : '无待执行任务'}
                           </div>
                           {job.status === 'FAILED' ? (
-                            <Button size="small" onClick={() => void retryJob(job.id)}>
+                            <Button
+                              size="small"
+                              icon={<SyncOutlined />}
+                              loading={retryingJobId === job.id}
+                              disabled={Boolean(retryingJobId && retryingJobId !== job.id)}
+                              onClick={() => void retryJob(job.id)}
+                            >
                               重试
                             </Button>
                           ) : null}
@@ -1576,79 +2035,129 @@ export default function AdminContentFactory() {
         open={drawerOpen}
         onClose={() => setDrawerOpen(false)}
         width={820}
+        rootClassName="content-factory-drawer-root"
         className="content-factory__drawer"
         extra={
-          <Space wrap>
-            <Tag color={publishBlocked ? 'warning' : 'success'}>
-              {publishBlocked ? '发布待检查' : '发布就绪'}
-            </Tag>
-            <Button
-              icon={<SaveOutlined />}
-              onClick={() => void saveArticle()}
-              loading={saving}
-              disabled={!activeArticle || articleDetailLoading || revising || refreshingVisuals}
-            >
-              保存
-            </Button>
-            <Tooltip title="按审稿意见定向改写正文，不重选题">
-              <Button
-                icon={<EditOutlined />}
-                onClick={() => void reviseArticle()}
-                loading={revising}
-                disabled={!activeArticle || articleDetailLoading || saving || refreshingVisuals || generating}
-              >
-                定向改写
-              </Button>
-            </Tooltip>
-            <Tooltip title="只重生成封面与内联图，并重新检查交付就绪">
-              <Button
-                icon={<PictureOutlined />}
-                onClick={() => void refreshVisuals()}
-                loading={refreshingVisuals}
-                disabled={!activeArticle || articleDetailLoading || saving || revising || generating}
-              >
-                重配图
-              </Button>
-            </Tooltip>
-            <Button
-              danger
-              icon={<DeleteOutlined />}
-              onClick={(event) => activeArticle && deleteArticle(activeArticle, event)}
-              loading={activeArticle ? deletingArticleId === activeArticle.id : false}
-              disabled={!activeArticle}
-            >
-              删除
-            </Button>
-            <Tooltip title={!status?.wechatReady ? '请先配置微信公众号 AppID 和 AppSecret' : activeArticleAssetsReady ? '' : '缺少封面或 2 张可用内联图，不能创建微信草稿'}>
-              <Button
-                icon={<CloudUploadOutlined />}
-                onClick={() => void createWechatDraft()}
-                loading={wechatAction === 'draft'}
-                disabled={!activeArticle || articleDetailLoading || !status?.wechatReady || !activeArticleAssetsReady || revising || refreshingVisuals}
-              >
-                存为微信草稿
-              </Button>
-            </Tooltip>
-            <Tooltip title={accountProfile.freePublishEnabled ? (status?.wechatReady ? '' : '请先配置微信公众号 AppID 和 AppSecret') : '订阅号无 freepublish 权限，请在微信公众平台草稿箱人工发布'}>
-              <Button
-                type="primary"
-                icon={<SendOutlined />}
-                onClick={publishWechat}
-                loading={wechatAction === 'publish'}
-                disabled={!activeArticle || articleDetailLoading || publishBlocked}
-              >
-                一键发布已关闭
-              </Button>
-            </Tooltip>
-          </Space>
+          <Tag color={activeArticle?.status === 'PUBLISHED' ? 'success' : activeArticleAssetsReady ? 'processing' : 'warning'}>
+            {activeArticle?.status === 'PUBLISHED' ? '已发布' : activeArticleAssetsReady ? '可同步微信' : '待完成质检'}
+          </Tag>
         }
       >
         {activeArticle ? (
           <Form form={articleForm} layout="vertical" className="content-factory__article-form">
             {articleDetailLoading ? <Skeleton active paragraph={{ rows: 3 }} /> : null}
 
+            <div className="content-factory__article-actions" aria-label="文章操作">
+              <div className="content-factory__article-actions-group">
+                {activeArticle.status === 'PUBLISH_SUBMITTED' ? (
+                  <Button
+                    icon={<ReloadOutlined />}
+                    onClick={() => void refreshActiveArticle()}
+                    loading={articleDetailLoading}
+                  >
+                    刷新发布状态
+                  </Button>
+                ) : null}
+                <Button
+                  icon={<SaveOutlined />}
+                  onClick={() => void saveArticle()}
+                  loading={saving}
+                  disabled={articleDetailLoading || revising || refreshingVisuals}
+                >
+                  保存修改
+                </Button>
+                <Tooltip title="按审稿意见定向改写正文，不重新选题">
+                  <Button
+                    icon={<EditOutlined />}
+                    onClick={() => void reviseArticle()}
+                    loading={revising}
+                    disabled={articleDetailLoading || saving || refreshingVisuals || generating}
+                  >
+                    定向改写
+                  </Button>
+                </Tooltip>
+                <Tooltip title="只重新生成封面与内联图片，并再次检查交付条件">
+                  <Button
+                    icon={<PictureOutlined />}
+                    onClick={() => void refreshVisuals()}
+                    loading={refreshingVisuals}
+                    disabled={articleDetailLoading || saving || revising || generating}
+                  >
+                    重新配图
+                  </Button>
+                </Tooltip>
+                <Button
+                  danger
+                  icon={<DeleteOutlined />}
+                  onClick={(event) => deleteArticle(activeArticle, event)}
+                  loading={deletingArticleId === activeArticle.id}
+                >
+                  删除
+                </Button>
+              </div>
+              <div className="content-factory__article-actions-group content-factory__article-actions-group--delivery">
+                <Tooltip
+                  title={
+                    !status?.wechatReady
+                      ? '请先配置微信公众号 AppID 和 AppSecret'
+                      : !qualityGate
+                        ? '缺少后端质量门结果'
+                        : !backendPublishable
+                          ? qualityGate.reason || '后端质量门未通过'
+                          : !activeArticleAssetsReady
+                            ? '缺少封面或 2 张可用内联图'
+                            : ''
+                  }
+                >
+                  <Button
+                    icon={<CloudUploadOutlined />}
+                    onClick={() => void createWechatDraft()}
+                    loading={wechatAction === 'draft'}
+                    disabled={articleDetailLoading || !status?.wechatReady || !activeArticleAssetsReady || revising || refreshingVisuals}
+                  >
+                    {hasRealWechatDraft ? '更新微信草稿' : '同步微信草稿'}
+                  </Button>
+                </Tooltip>
+                <Tooltip
+                  title={
+                    freePublishEnabled
+                      ? status?.wechatReady
+                        ? ''
+                        : '请先配置微信公众号 AppID 和 AppSecret'
+                      : '当前后端未启用微信一键发布，请在微信公众平台人工发布'
+                  }
+                >
+                  <Button
+                    type="primary"
+                    icon={<SendOutlined />}
+                    onClick={publishWechat}
+                    loading={wechatAction === 'publish'}
+                    disabled={articleDetailLoading || publishBlocked}
+                  >
+                    {activeArticle.status === 'PUBLISH_SUBMITTED' ? '等待微信确认' : freePublishEnabled ? '提交正式发布' : '需后台发布'}
+                  </Button>
+                </Tooltip>
+              </div>
+            </div>
+
             {activeArticle.errorMessage ? (
               <Alert type="warning" showIcon message={activeArticle.errorMessage} />
+            ) : null}
+
+            {!qualityGate ? (
+              <Alert
+                type="warning"
+                showIcon
+                message="后端质量门尚未执行"
+                description="文章可以继续编辑，但同步微信操作会保持锁定。运行定向改写可重新审稿并生成门禁结果。"
+              />
+            ) : !backendPublishable ? (
+              <Alert
+                type="error"
+                showIcon
+                message="后端质量门未通过"
+                description={qualityGate.reason || '请处理审稿问题后重新运行定向改写。'}
+              />
             ) : null}
 
             {isLocalWechatDraft ? (
@@ -1690,7 +2199,7 @@ export default function AdminContentFactory() {
             <div className="content-factory__automation-summary">
               <Space wrap>
                 <Tag color={automation?.source === 'backend' ? 'success' : 'default'}>
-                  {automation?.source === 'backend' ? '任务流已接入' : '本地推导'}
+                  {automation?.source === 'backend' ? '后端实时记录' : '仅文章状态'}
                 </Tag>
                 <Tag color={getStageMeta(automation?.currentStage).tone}>
                   {getStageMeta(automation?.currentStage).label}
@@ -1803,7 +2312,7 @@ export default function AdminContentFactory() {
                           : 'content-factory__preview--clean',
                       ].join(' ')}
                       data-layout={activeArticle.layoutTheme || 'clean'}
-                      dangerouslySetInnerHTML={{ __html: watchedHtml || activeArticle.contentHtml }}
+                      dangerouslySetInnerHTML={{ __html: sanitizedPreviewHtml }}
                     />
                   ),
                 },
@@ -1849,11 +2358,34 @@ export default function AdminContentFactory() {
   )
 }
 
-function StatusPill({ ready, label }: { ready: boolean; label: string }) {
+function CapabilityItem({
+  icon,
+  title,
+  ready,
+  readyText,
+  blockedText,
+  neutralWhenBlocked = false,
+}: {
+  icon: ReactNode
+  title: string
+  ready?: boolean
+  readyText: string
+  blockedText: string
+  neutralWhenBlocked?: boolean
+}) {
+  const state = ready == null ? 'unknown' : ready ? 'ready' : neutralWhenBlocked ? 'neutral' : 'blocked'
   return (
-    <span className={`content-factory__status-pill ${ready ? 'is-ready' : 'is-missing'}`}>
-      {ready ? <CheckCircleOutlined /> : <ReloadOutlined />}
-      {label}
-    </span>
+    <div className={`content-factory__capability is-${state}`}>
+      <span className="content-factory__capability-icon">{icon}</span>
+      <div>
+        <strong>{title}</strong>
+        <span>
+          {ready == null ? '状态未知' : ready ? readyText : blockedText}
+        </span>
+      </div>
+      <span className="content-factory__capability-mark" aria-hidden="true">
+        {ready == null ? <ReloadOutlined /> : ready ? <CheckCircleOutlined /> : neutralWhenBlocked ? <ClockCircleOutlined /> : <WarningOutlined />}
+      </span>
+    </div>
   )
 }

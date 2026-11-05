@@ -5,8 +5,10 @@ import { EDITOR_TEXT } from './texts'
 export interface SlashCommandItem {
   title: string
   description?: string
+  hint?: string
   keywords?: string[]
   icon?: React.ReactNode
+  group?: string
   command: (props: { editor: Editor; range: Range }) => void
 }
 
@@ -19,6 +21,25 @@ export interface SlashCommandListHandle {
   onKeyDown: (props: { event: KeyboardEvent }) => boolean
 }
 
+interface SlashGroup {
+  name: string
+  items: SlashCommandItem[]
+}
+
+function groupItems(items: SlashCommandItem[]): SlashGroup[] {
+  const groups: SlashGroup[] = []
+  items.forEach((item) => {
+    const name = item.group ?? ''
+    const last = groups[groups.length - 1]
+    if (last && last.name === name) {
+      last.items.push(item)
+    } else {
+      groups.push({ name, items: [item] })
+    }
+  })
+  return groups
+}
+
 export const SlashCommandList = forwardRef<SlashCommandListHandle, SlashCommandListProps>(
   function SlashCommandList({ items, command }, ref) {
     const [activeIndex, setActiveIndex] = useState(0)
@@ -26,6 +47,8 @@ export const SlashCommandList = forwardRef<SlashCommandListHandle, SlashCommandL
     useEffect(() => {
       setActiveIndex(0)
     }, [items])
+
+    const groups = useMemo(() => groupItems(items), [items])
 
     const selectItem = (index: number) => {
       const item = items[index]
@@ -73,26 +96,38 @@ export const SlashCommandList = forwardRef<SlashCommandListHandle, SlashCommandL
       return <div className="editor-slash-empty">{EDITOR_TEXT.slashSearchEmpty}</div>
     }
 
+    let flatIndex = -1
+
     return (
       <div className="editor-slash-command-list">
-        {items.map((item, index) => (
-          <button
-            key={item.title}
-            type="button"
-            className={`editor-slash-item${index === activeIndex ? ' is-active' : ''}`}
-            onMouseEnter={() => setActiveIndex(index)}
-            onClick={() => selectItem(index)}
-          >
-            <span className="editor-slash-item__icon" aria-hidden>
-              {item.icon}
-            </span>
-            <span className="editor-slash-item__body">
-              <span className="editor-slash-item__title">{item.title}</span>
-              {item.description && (
-                <span className="editor-slash-item__desc">{item.description}</span>
-              )}
-            </span>
-          </button>
+        {groups.map((group) => (
+          <div className="editor-slash-group" key={group.name || 'ungrouped'}>
+            {group.name ? <div className="editor-slash-group__title">{group.name}</div> : null}
+            {group.items.map((item) => {
+              flatIndex += 1
+              const index = flatIndex
+              return (
+                <button
+                  key={item.title}
+                  type="button"
+                  className={`editor-slash-item${index === activeIndex ? ' is-active' : ''}`}
+                  onMouseEnter={() => setActiveIndex(index)}
+                  onClick={() => selectItem(index)}
+                >
+                  <span className="editor-slash-item__icon" aria-hidden>
+                    {item.icon}
+                  </span>
+                  <span className="editor-slash-item__body">
+                    <span className="editor-slash-item__title">{item.title}</span>
+                    {item.description && (
+                      <span className="editor-slash-item__desc">{item.description}</span>
+                    )}
+                  </span>
+                  {item.hint ? <span className="editor-slash-item__hint">{item.hint}</span> : null}
+                </button>
+              )
+            })}
+          </div>
         ))}
       </div>
     )

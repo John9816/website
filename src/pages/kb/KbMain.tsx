@@ -248,7 +248,7 @@ const KbMain: React.FC = () => {
     selectedDoc,
     selectedDocLoading,
     inlineEditingDocId,
-    exitInlineEdit,
+    requestExitInlineEdit,
     setPropertyDrawerOpen,
     handleDeleteDoc,
     handleSaveInlineDoc,
@@ -481,8 +481,7 @@ const KbMain: React.FC = () => {
                   <a
                     onClick={(event) => {
                       event.preventDefault()
-                      exitInlineEdit()
-                      setSelectedParentId(null)
+                      requestExitInlineEdit(null)
                     }}
                   >
                     个人知识库
@@ -514,7 +513,7 @@ const KbMain: React.FC = () => {
           {selectedDoc ? (
             <>
               {isEditing ? (
-                <Button size="small" onClick={exitInlineEdit}>
+                <Button size="small" onClick={() => requestExitInlineEdit()}>
                   预览
                 </Button>
               ) : (
@@ -641,6 +640,7 @@ const KbMain: React.FC = () => {
                             minHeight={560}
                             maxHeight="none"
                             toolbarContainer={toolbarContainer}
+                            showWritingStarter
                           />
                         </Suspense>
                       </ErrorBoundary>
@@ -669,24 +669,22 @@ const KbMain: React.FC = () => {
                         aria-label={'\u6587\u6863\u5c5e\u6027'}
                       />
                     </Tooltip>
-                    {isDirty ? (
-                      <Popconfirm title={'\u6709\u672a\u4fdd\u5b58\u4fee\u6539\uff0c\u786e\u5b9a\u9000\u51fa\u7f16\u8f91\u5417\uff1f'} onConfirm={exitInlineEdit}>
-                        <Button type="text" icon={<CloseOutlined />}>
-                          {'\u9000\u51fa'}
-                        </Button>
-                      </Popconfirm>
-                    ) : (
-                      <Button type="text" icon={<CloseOutlined />} onClick={exitInlineEdit}>
-                        {'\u9000\u51fa'}
-                      </Button>
-                    )}
+                    <Tooltip title="退出编辑" mouseEnterDelay={0.45}>
+                      <Button
+                        type="text"
+                        icon={<CloseOutlined />}
+                        onClick={() => requestExitInlineEdit()}
+                        disabled={inlineDocSaving}
+                        aria-label="退出编辑"
+                      />
+                    </Tooltip>
                     <Button
                       type="primary"
                       icon={<SaveOutlined />}
                       onClick={() => void handleSaveInlineDoc()}
                       loading={inlineDocSaving}
                     >
-                      {'\u4fdd\u5b58'}
+                      保存并预览
                     </Button>
                   </div>
                 </aside>

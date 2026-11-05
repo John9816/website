@@ -10,6 +10,7 @@ const distDir = resolve(process.env.DIST_DIR || join(rootDir, 'dist'))
 const host = process.env.HOST || '127.0.0.1'
 const port = Number(process.env.PORT || 3000)
 const backendUrl = normalizeBackendUrl(process.env.BACKEND_URL)
+const apiProxyTimeoutMs = positiveInteger(process.env.API_PROXY_TIMEOUT_MS, 30000)
 
 const hopByHopHeaders = new Set([
   'connection',
@@ -286,10 +287,38 @@ async function handleApiProxy(req, res, incomingUrl) {
   upstreamUrl.search = incomingUrl.search
 
   const headers = buildApiHeaders(req)
+  const controller = new AbortController()
+  let abortCause = null
+  let timeoutId = null
+
+  const abortUpstream = (cause) => {
+    if (controller.signal.aborted) return
+    abortCause = cause
+    controller.abort(
+      new Error(
+        cause === 'timeout'
+          ? `API proxy upstream timed out after ${apiProxyTimeoutMs}ms`
+          : 'API proxy client disconnected',
+      ),
+    )
+  }
+  const onRequestAborted = () => abortUpstream('client')
+  const onResponseClose = () => {
+    if (!res.writableEnded) abortUpstream('client')
+  }
+
+  req.once('aborted', onRequestAborted)
+  res.once('close', onResponseClose)
+  timeoutId = setTimeout(() => abortUpstream('timeout'), apiProxyTimeoutMs)
+  timeoutId.unref?.()
+
+  if (req.aborted || res.destroyed) abortUpstream('client')
+
   const init = {
     method: req.method,
     headers,
     redirect: 'manual',
+    signal: controller.signal,
   }
 
   if (!['GET', 'HEAD'].includes(req.method || 'GET')) {
@@ -297,16 +326,30 @@ async function handleApiProxy(req, res, incomingUrl) {
     init.duplex = 'half'
   }
 
-  let upstream
   try {
-    upstream = await fetch(upstreamUrl, init)
+    const upstream = await fetch(upstreamUrl, init)
+    clearTimeout(timeoutId)
+    timeoutId = null
+    await sendFetchResponse(res, upstream, { copyHeaders: 'all' })
   } catch (error) {
-    console.error('API proxy failed:', error)
-    sendJson(res, 502, { message: 'Failed to fetch upstream API.' })
-    return
+    if (abortCause !== 'client') {
+      console.error('API proxy failed:', error)
+      if (!res.headersSent && !res.destroyed && !res.writableEnded) {
+        sendJson(res, 502, { message: 'Failed to fetch upstream API.' })
+      } else if (!res.destroyed && !res.writableEnded) {
+        res.destroy()
+      }
+    }
+  } finally {
+    if (timeoutId) clearTimeout(timeoutId)
+    req.off('aborted', onRequestAborted)
+    res.off('close', onResponseClose)
   }
+}
 
-  sendFetchResponse(res, upstream, { copyHeaders: 'all' })
+function positiveInteger(value, fallback) {
+  const parsed = Number(value)
+  return Number.isSafeInteger(parsed) && parsed > 0 ? parsed : fallback
 }
 
 function buildApiHeaders(req) {
