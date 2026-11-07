@@ -15,6 +15,7 @@ const DEFAULT_DESCRIPTION =
 
 const metaMap: Record<string, PageMeta> = {
   '/': { title: '首页', description: DEFAULT_DESCRIPTION },
+  '/editor': { title: '学城文档' },
   '/ai-chat': { title: 'AI 对话' },
   '/ai-image': { title: 'AI 生图' },
   '/music': {

@@ -76,6 +76,11 @@ export default function AdminLayout() {
       title: '知识库',
     },
     {
+      key: '/editor/',
+      icon: <BookOutlined />,
+      title: '学城文档',
+    },
+    {
       key: '/admin/password',
       icon: <KeyOutlined />,
       title: '修改密码',

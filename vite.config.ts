@@ -85,6 +85,8 @@ export default defineConfig(({ mode }) => {
       port: 5173,
       host: true,
       proxy: {
+        '/editor/api': { target: env.VITE_EDITOR_PROXY_TARGET || 'http://127.0.0.1:3000', changeOrigin: true },
+        '/editor/files': { target: env.VITE_EDITOR_PROXY_TARGET || 'http://127.0.0.1:3000', changeOrigin: true },
         '/api': {
           target,
           changeOrigin: true,

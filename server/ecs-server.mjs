@@ -3,6 +3,7 @@ import { extname, join, normalize, resolve, sep } from 'node:path'
 import { fileURLToPath } from 'node:url'
 import http from 'node:http'
 import https from 'node:https'
+import { createXuechengHandler } from './xuecheng/index.mjs'
 
 const __dirname = fileURLToPath(new URL('.', import.meta.url))
 const rootDir = resolve(__dirname, '..')
@@ -10,6 +11,7 @@ const distDir = resolve(process.env.DIST_DIR || join(rootDir, 'dist'))
 const host = process.env.HOST || '127.0.0.1'
 const port = Number(process.env.PORT || 3000)
 const backendUrl = normalizeBackendUrl(process.env.BACKEND_URL)
+const xuecheng = createXuechengHandler({ backendUrl, dataDir: process.env.EDITOR_DATA_DIR || join(rootDir, 'data', 'xuecheng') })
 const apiProxyTimeoutMs = positiveInteger(process.env.API_PROXY_TIMEOUT_MS, 30000)
 
 const hopByHopHeaders = new Set([
@@ -202,6 +204,8 @@ function replaceMeta(html, attr, key, value) {
 const server = http.createServer(async (req, res) => {
   try {
     const requestUrl = new URL(req.url || '/', `http://${req.headers.host || 'localhost'}`)
+
+    if (await xuecheng.handle(req, res, requestUrl)) return
 
     if (requestUrl.pathname === '/healthz') {
       sendJson(res, 200, { ok: 'true' })
@@ -724,4 +728,11 @@ function sendJson(res, status, body) {
     'Content-Type': 'application/json; charset=utf-8',
   })
   res.end(payload)
+}
+
+for (const signal of ['SIGTERM', 'SIGINT']) {
+  process.once(signal, () => {
+    const timeout = setTimeout(() => process.exit(0), 5000); timeout.unref()
+    xuecheng.close().finally(() => server.close(() => process.exit(0)))
+  })
 }

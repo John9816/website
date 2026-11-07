@@ -15,6 +15,7 @@ import {
   type AdminPermission,
 } from './utils/permissions'
 
+const XuechengPage = lazy(() => import('./pages/XuechengPage'))
 const HomePage = lazy(() => import('./pages/HomePage'))
 const GlobalMusicDock = lazy(() => import('./components/GlobalMusicDock'))
 const LoginPage = lazy(() => import('./pages/LoginPage'))
@@ -177,6 +178,7 @@ function GlobalBeianFooterGate() {
 
   if (
     location.pathname === '/'
+    || location.pathname.startsWith('/editor')
     || location.pathname.startsWith('/admin')
     || (location.pathname === '/ai-image' && !!auth.token)
   ) {
@@ -241,6 +243,7 @@ export default function App() {
                 <Suspense fallback={<RouteFallback />}>
                   <Routes>
                     <Route path="/" element={<HomePage />} />
+                    <Route path="/editor/*" element={<XuechengPage />} />
                     <Route path="/ai-chat" element={<AiChatPage />} />
                     <Route path="/ai-image" element={<AiImagePage />} />
                     <Route path="/kb/share/:token" element={<KbSharePage />} />

@@ -1,4 +1,4 @@
-import { Compass, Image, MessageSquare, Music2 } from 'lucide-react'
+import { BookOpen, Compass, Image, MessageSquare, Music2 } from 'lucide-react'
 import { NavLink } from 'react-router-dom'
 
 const NAV_ITEMS = [
@@ -6,6 +6,7 @@ const NAV_ITEMS = [
   { to: '/music', label: '音乐', Icon: Music2 },
   { to: '/ai-chat', label: 'AI 对话', Icon: MessageSquare },
   { to: '/ai-image', label: 'AI 生图', Icon: Image },
+  { to: '/editor/', label: '学城文档', Icon: BookOpen },
 ]
 
 const preloaders: Record<string, () => Promise<unknown>> = {
