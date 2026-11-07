@@ -29,6 +29,6 @@ Existing knowledge base and Java backend remain separate. No production data in 
 ## Task 3: Release
 
 - [x] Add deployment/runbook with persistent storage, MCP UID/GID, source provenance, commands and rollback.
-- [ ] Upload a versioned frontend release, reuse current backend, back up metadata/config, configure persistent storage and switch only after local checks.
-- [ ] Check API health, anonymous denial, editor entry/assets and existing home/music/knowledge-base routes. Exercise production identity-backed CRUD with temporary test fixtures and remove only those fixtures.
-- [ ] Record active version, verification, and rollback path; report the user-visible entry.
+- [x] Upload a versioned frontend release, reuse current backend, back up metadata/config, configure persistent storage and switch only after local checks.
+- [x] Check API health, anonymous denial, editor entry/assets and existing home/music/knowledge-base routes. Exercise production identity-backed CRUD with temporary test fixtures and remove only those fixtures.
+- [x] Record active version, verification, and rollback path; report the user-visible entry.
