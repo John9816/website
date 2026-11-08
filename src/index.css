@@ -57,8 +57,7 @@
   --skeleton: linear-gradient(90deg, #edf1ee 25%, #f7f9f7 37%, #edf1ee 63%);
 }
 
-[data-theme='dark'],
-[data-theme='image'] {
+[data-theme='dark'] {
   color-scheme: dark;
   --bg: #171d1a;
   --bg-grad: none;
@@ -88,13 +87,6 @@
   --body-overlay: transparent;
   --body-blur: 0px;
   --skeleton: linear-gradient(90deg, #272f2b 25%, #34413a 37%, #272f2b 63%);
-}
-
-[data-theme='image'] {
-  --bg-grad: url('https://i.ibb.co/BHR4qnXj/image.webp');
-  --panel: rgb(27 37 32 / 96%);
-  --panel-glass: rgb(27 37 32 / 96%);
-  --body-overlay: rgb(15 24 19 / 36%);
 }
 
 @supports (height: 100dvh) {
@@ -166,7 +158,7 @@ a:hover {
   justify-content: center;
   gap: 2px;
   width: auto;
-  min-width: 110px;
+  min-width: 76px;
   height: 40px;
   padding: 3px;
   border: 1px solid var(--border);

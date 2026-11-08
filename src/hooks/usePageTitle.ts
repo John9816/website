@@ -11,7 +11,7 @@ interface PageMeta {
 }
 
 const DEFAULT_DESCRIPTION =
-  '个人导航与工作台：常用网站导航、AI 对话、AI 生图、在线音乐与知识库，一站直达。'
+  '个人导航与工作台：常用网站导航、AI 对话、AI 生图、在线音乐与学城文档，一站直达。'
 
 const metaMap: Record<string, PageMeta> = {
   '/': { title: '首页', description: DEFAULT_DESCRIPTION },
@@ -30,7 +30,6 @@ const metaMap: Record<string, PageMeta> = {
   '/music/share': { title: '音乐分享' },
   '/music/toplist': { title: '榜单详情' },
   '/music/playlist': { title: '歌单详情' },
-  '/kb/share': { title: '知识库分享' },
   '/login': { title: '登录' },
   '/register': { title: '注册' },
   '/admin/login': { title: '管理员登录' },
@@ -39,7 +38,6 @@ const metaMap: Record<string, PageMeta> = {
   '/admin/links': { title: '链接管理' },
   '/admin/configs': { title: '站点配置' },
   '/admin/content': { title: '内容工厂' },
-  '/admin/kb': { title: '知识库管理' },
   '/admin/password': { title: '密码管理' },
 }
 

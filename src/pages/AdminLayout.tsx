@@ -26,7 +26,6 @@ import {
   getAdminPermissionForPath,
   getFirstAccessibleAdminPath,
 } from '../utils/permissions'
-import { AdminEditorFocusContext } from './AdminEditorFocusContext'
 import '../styles/admin-shell.css'
 
 const { Header, Sider, Content } = Layout
@@ -38,7 +37,6 @@ type AdminNavItem = {
 }
 
 export default function AdminLayout() {
-  const [editorFocused, setEditorFocused] = useState(false)
   const auth = useAuth()
   const location = useLocation()
   const navigate = useNavigate()
@@ -69,11 +67,6 @@ export default function AdminLayout() {
       key: '/admin/links',
       icon: <LinkOutlined />,
       title: '链接',
-    },
-    {
-      key: '/admin/kb',
-      icon: <BookOutlined />,
-      title: '知识库',
     },
     {
       key: '/editor/',
@@ -141,7 +134,7 @@ export default function AdminLayout() {
       theme={{
         algorithm: isLight ? antdTheme.defaultAlgorithm : antdTheme.darkAlgorithm,
         token: {
-          colorPrimary: isLight ? '#167d70' : '#6cbba9',
+          colorPrimary: isLight ? '#167d70' : '#79c5b1',
           colorBgContainer: isLight ? '#ffffff' : '#202724',
           colorBgLayout: isLight ? '#f5f7f6' : '#171d1a',
           colorBorder: isLight ? '#e2e8e4' : '#34413a',
@@ -168,8 +161,6 @@ export default function AdminLayout() {
         menuItems={menuItems}
         auth={auth}
         doLogout={doLogout}
-        editorFocused={editorFocused}
-        setEditorFocused={setEditorFocused}
       />
     </ConfigProvider>
   )
@@ -182,8 +173,6 @@ function LayoutContent({
   menuItems,
   auth,
   doLogout,
-  editorFocused,
-  setEditorFocused,
 }: {
   mode: ThemeMode
   selectedKey: string
@@ -191,21 +180,13 @@ function LayoutContent({
   menuItems: MenuProps['items']
   auth: ReturnType<typeof useAuth>
   doLogout: () => void
-  editorFocused: boolean
-  setEditorFocused: (focused: boolean) => void
 }) {
   const [navigationOpen, setNavigationOpen] = useState(false)
   const screens = Grid.useBreakpoint()
-  const isKnowledgeWorkspace = selectedKey === '/admin/kb'
 
   useEffect(() => {
     setNavigationOpen(false)
   }, [selectedKey])
-
-  useEffect(() => {
-    if (editorFocused) setNavigationOpen(false)
-    if (!isKnowledgeWorkspace) setEditorFocused(false)
-  }, [editorFocused, isKnowledgeWorkspace, setEditorFocused])
 
   useEffect(() => {
     if (screens.lg) setNavigationOpen(false)
@@ -234,7 +215,7 @@ function LayoutContent({
   )
 
   return (
-    <Layout hasSider className={`admin-shell${isKnowledgeWorkspace ? ' admin-shell--knowledge' : ''}${editorFocused ? ' admin-shell--editor-focused' : ''}`}>
+    <Layout hasSider className="admin-shell">
       <Sider
         theme={mode === 'light' ? 'light' : 'dark'}
         width={228}
@@ -294,9 +275,7 @@ function LayoutContent({
           </div>
         </Header>
         <Content className="admin-shell__content" role="main" aria-labelledby="admin-page-title">
-          <AdminEditorFocusContext.Provider value={setEditorFocused}>
-            <Outlet />
-          </AdminEditorFocusContext.Provider>
+          <Outlet />
         </Content>
       </Layout>
     </Layout>

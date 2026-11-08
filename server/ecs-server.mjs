@@ -130,7 +130,7 @@ const contentTypes = new Map([
 const SITE_ORIGIN = process.env.SITE_ORIGIN || 'https://hi.751152.xyz'
 const SITE_NAME = '个人导航'
 const DEFAULT_DESCRIPTION =
-  '个人导航与工作台：常用网站导航、AI 对话、AI 生图、在线音乐与知识库，一站直达。'
+  '个人导航与工作台：常用网站导航、AI 对话、AI 生图、在线音乐与学城文档，一站直达。'
 
 // 服务端逐路由 meta，与前端 src/hooks/usePageTitle.ts 保持一致。
 // 爬虫无需执行 JS 即可读到正确的 title/description/canonical。
@@ -151,7 +151,7 @@ function metaForPath(pathname) {
   for (const m of routeMeta) {
     if (m.exact ? clean === m.prefix : clean === m.prefix || clean.startsWith(m.prefix + '/')) {
       // 分享等动态子路径含私有内容，即便命中前缀也不收录
-      const isDynamicShare = clean.startsWith('/music/share') || clean.startsWith('/kb/share')
+      const isDynamicShare = clean.startsWith('/music/share')
       return { ...m, index: m.index && !isDynamicShare, path: clean }
     }
   }
@@ -206,6 +206,12 @@ const server = http.createServer(async (req, res) => {
     const requestUrl = new URL(req.url || '/', `http://${req.headers.host || 'localhost'}`)
 
     if (await xuecheng.handle(req, res, requestUrl)) return
+
+    if (/^\/kb(?:\/|$)/.test(requestUrl.pathname)) {
+      res.writeHead(410, { 'Content-Type': 'text/html; charset=utf-8', 'Cache-Control': 'no-store' })
+      res.end(renderIndexHtml(requestUrl.pathname))
+      return
+    }
 
     if (requestUrl.pathname === '/healthz') {
       sendJson(res, 200, { ok: 'true' })

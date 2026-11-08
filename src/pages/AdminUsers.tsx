@@ -520,7 +520,6 @@ export default function AdminUsers() {
             <div className="admin-users__detail-stats">
               <Statistic title="生成图片" value={detail.imageCount} />
               <Statistic title="文章" value={detail.articleCount} />
-              <Statistic title="知识库文档" value={detail.kbDocCount} />
               <Statistic title="AI 会话" value={detail.conversationCount} />
               <Statistic title="音乐收藏" value={detail.musicFavoriteCount} />
               <Statistic title="歌单" value={detail.playlistCount} />

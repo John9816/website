@@ -1,8 +1,8 @@
-import { createContext, useContext, useEffect, useState, type ReactNode } from 'react'
+import { createContext, useContext, useEffect, useLayoutEffect, useState, type ReactNode } from 'react'
 
-export type ThemeMode = 'image' | 'light' | 'dark'
+export type ThemeMode = 'light' | 'dark'
 
-export const THEME_MODES: ThemeMode[] = ['light', 'dark', 'image']
+export const THEME_MODES: ThemeMode[] = ['light', 'dark']
 
 interface ThemeState {
   mode: ThemeMode
@@ -15,7 +15,7 @@ const KEY = 'nav.theme'
 const DEFAULT_MODE: ThemeMode = 'light'
 
 function isThemeMode(value: string | null): value is ThemeMode {
-  return value === 'image' || value === 'light' || value === 'dark'
+  return value === 'light' || value === 'dark'
 }
 
 function getInitial(): ThemeMode {
@@ -30,7 +30,7 @@ function getInitial(): ThemeMode {
 export function ThemeProvider({ children }: { children: ReactNode }) {
   const [mode, setModeState] = useState<ThemeMode>(getInitial)
 
-  useEffect(() => {
+  useLayoutEffect(() => {
     document.documentElement.setAttribute('data-theme', mode)
     try {
       localStorage.setItem(KEY, mode)
@@ -38,6 +38,14 @@ export function ThemeProvider({ children }: { children: ReactNode }) {
       // The selected theme still works when browser storage is unavailable.
     }
   }, [mode])
+
+  useEffect(() => {
+    const sync = (event: StorageEvent) => {
+      if (event.key === KEY || event.key === null) setModeState(getInitial())
+    }
+    window.addEventListener('storage', sync)
+    return () => window.removeEventListener('storage', sync)
+  }, [])
 
   const value: ThemeState = {
     mode,

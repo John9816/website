@@ -32,7 +32,7 @@ const TOOLS = [
   { to: '/music', name: '在线音乐', detail: '音乐', Icon: Music2, tone: 'music' },
   { to: '/ai-chat', name: 'AI 对话', detail: '对话', Icon: MessageSquare, tone: 'chat' },
   { to: '/ai-image', name: 'AI 生图', detail: '创作', Icon: Image, tone: 'image' },
-  { to: '/admin/kb', name: '知识库', detail: '笔记', Icon: BookOpen, tone: 'knowledge' },
+  { to: '/editor/', name: '学城文档', detail: '写作', Icon: BookOpen, tone: 'knowledge' },
 ]
 
 const QR_IMAGES = {

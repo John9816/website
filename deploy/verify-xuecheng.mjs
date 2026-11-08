@@ -22,10 +22,23 @@ const probe = http.createServer(), port = await listen(probe)
 await new Promise(r => probe.close(r))
 const child = spawn(process.execPath, ['server/ecs-server.mjs'], { env: { ...process.env, PORT: String(port), HOST: '127.0.0.1', BACKEND_URL: `http://127.0.0.1:${authPort}`, EDITOR_DATA_DIR: dir }, stdio: ['ignore', 'pipe', 'pipe'] })
 let logs = ''; child.stdout.on('data', b => logs += b); child.stderr.on('data', b => logs += b)
-const base = `http://127.0.0.1:${port}`
+const apiBase = `http://127.0.0.1:${port}`
+const base = process.env.SMOKE_FRONTEND_ORIGIN || apiBase
 let browser
+async function newContext(options) {
+  const context = await browser.newContext({ ...options, serviceWorkers: 'block' })
+  // Live assets can be verified against isolated local data. Never write test docs to production.
+  if (base !== apiBase) {
+    await context.route('**/api/**', async route => {
+      const url = new URL(route.request().url())
+      const response = await route.fetch({ url: apiBase + url.pathname + url.search })
+      await route.fulfill({ response })
+    })
+  }
+  return context
+}
 async function api(path, method = 'GET', body) {
-  const res = await fetch(base + '/editor/api' + path, { method, headers: { Authorization: 'Bearer isolated-editor-ui', 'Content-Type': 'application/json' }, body: body === undefined ? undefined : JSON.stringify(body) })
+  const res = await fetch(apiBase + '/editor/api' + path, { method, headers: { Authorization: 'Bearer isolated-editor-ui', 'Content-Type': 'application/json' }, body: body === undefined ? undefined : JSON.stringify(body) })
   const result = await res.json(); assert.equal(result.code, 0, result.message); return result.data
 }
 const docContent = text => ({ type: 'doc', content: [{ type: 'paragraph', content: [{ type: 'text', text }] }] })
@@ -34,11 +47,11 @@ async function waitFor(check, message) {
   throw new Error(message)
 }
 try {
-  await waitFor(() => fetch(base + '/healthz').then(r => r.ok).catch(() => false), 'Server failed to start: ' + logs)
+  await waitFor(() => fetch(apiBase + '/healthz').then(r => r.ok).catch(() => false), 'Server failed to start: ' + logs)
   const a = await api('/docs', 'POST', { title: 'UI Alpha', content: docContent('Alpha original') })
   const b = await api('/docs', 'POST', { title: 'UI Beta', content: docContent('Beta original') })
   browser = await chromium.launch({ headless: true })
-  const context = await browser.newContext({ viewport: { width: 1440, height: 1000 } })
+  const context = await newContext({ viewport: { width: 1440, height: 1000 } })
   await context.addInitScript(() => localStorage.setItem('nav.auth.session', JSON.stringify({ token: 'isolated-editor-ui', tokenType: 'Bearer', username: 'qa-editor', refreshToken: null, sessionId: 'qa-editor' })))
   const page = await context.newPage(), errors = []
   page.on('pageerror', e => errors.push(e.message))
@@ -47,6 +60,81 @@ try {
   const pm = page.locator('.ProseMirror[contenteditable="true"]')
   await pm.waitFor()
   assert.equal(await pm.innerText(), 'Alpha original')
+  const themeToggle = page.getByRole('group', { name: '选择显示模式' })
+  assert.equal(await themeToggle.getByRole('button').count(), 2, 'Only day and night modes should be offered inside Xuecheng')
+  const assertTheme = async (target, mode, surface) => {
+    await target.waitForFunction(mode => document.documentElement.dataset.theme === mode, mode)
+    await target.getByRole('button', { name: mode === 'dark' ? '切换到黑夜模式' : '切换到白天模式', pressed: true }).waitFor()
+    const colors = await target.locator(surface).evaluate(el => {
+      const root = getComputedStyle(document.documentElement), style = getComputedStyle(el)
+      const sample = document.createElement('span'); sample.style.color = root.getPropertyValue('--panel'); document.body.append(sample)
+      const panel = getComputedStyle(sample).color; sample.remove()
+      return { background: style.backgroundColor, panel, scheme: style.colorScheme }
+    })
+    assert.equal(colors.background, colors.panel, `${surface} does not follow ${mode} theme`)
+    assert.equal(colors.scheme, mode)
+  }
+  await themeToggle.getByRole('button', { name: '切换到黑夜模式' }).click()
+  await assertTheme(page, 'dark', '.editor-page')
+  await pm.click({ button: 'right', position: { x: 45, y: 12 } })
+  await assertTheme(page, 'dark', '.xc-context-menu')
+  await page.keyboard.press('Escape')
+  await page.screenshot({ path: join(outputDir, 'theme-dark.png'), fullPage: true, animations: 'disabled' })
+  await page.getByRole('button', { name: '分享', exact: true }).click()
+  await assertTheme(page, 'dark', '.share-modal')
+  await page.keyboard.press('Escape')
+  await page.locator('.top-ai').click()
+  await assertTheme(page, 'dark', '.ai-panel')
+  await page.screenshot({ path: join(outputDir, 'ai-dark.png'), fullPage: true, animations: 'disabled' })
+  await page.locator('.ai-x').click()
+  await page.locator('.side-nav-item', { hasText: '模板市场' }).click()
+  await page.locator('.tpl-card').first().click()
+  await assertTheme(page, 'dark', '.tplv')
+  await page.screenshot({ path: join(outputDir, 'template-dark.png'), fullPage: true, animations: 'disabled' })
+  await page.keyboard.press('Escape')
+  await page.locator('.tree-row', { hasText: 'UI Alpha' }).click()
+  await page.reload(); await pm.waitFor()
+  await assertTheme(page, 'dark', '.editor-page')
+  const peer = await context.newPage()
+  await peer.goto(`${base}/editor/#/doc/${b.id}`)
+  await peer.locator('.ProseMirror').waitFor()
+  await peer.getByRole('button', { name: '切换到白天模式' }).click()
+  await assertTheme(page, 'light', '.editor-page')
+  await assertTheme(peer, 'light', '.editor-page')
+  await page.screenshot({ path: join(outputDir, 'theme-light.png'), fullPage: true })
+  await peer.close()
+  const legacy = await newContext()
+  await legacy.addInitScript(() => localStorage.setItem('nav.theme', 'image'))
+  const legacyPage = await legacy.newPage(); await legacyPage.goto(`${base}/login`)
+  await legacyPage.getByRole('group', { name: '选择显示模式' }).waitFor()
+  assert.equal(await legacyPage.evaluate(() => localStorage.getItem('nav.theme')), 'light')
+  assert.equal(await legacyPage.locator('.theme-toggle button').count(), 2)
+  await legacy.close()
+  const startup = await newContext()
+  await startup.addInitScript(() => localStorage.setItem('nav.theme', 'dark'))
+  const bootPage = await startup.newPage()
+  await bootPage.route('**/*.js', route => route.abort())
+  await bootPage.goto(base + '/login')
+  assert.equal(await bootPage.evaluate(() => document.documentElement.dataset.theme), 'dark')
+  assert.equal(await bootPage.locator('.boot-fallback').evaluate(el => getComputedStyle(el).backgroundColor), 'rgb(23, 29, 26)')
+  await startup.close()
+  const blockedStorage = await newContext()
+  await blockedStorage.addInitScript(() => {
+    // Exercise theme persistence failures independently of other modules' storage behavior.
+    for (const name of ['getItem', 'setItem']) {
+      const original = Storage.prototype[name]
+      Storage.prototype[name] = function (key, ...args) {
+        if (key === 'nav.theme') throw new DOMException('Blocked', 'SecurityError')
+        return original.call(this, key, ...args)
+      }
+    }
+  })
+  const privatePage = await blockedStorage.newPage()
+  await privatePage.goto(base + '/login')
+  await privatePage.getByRole('button', { name: '切换到黑夜模式' }).click()
+  await privatePage.waitForFunction(() => document.documentElement.dataset.theme === 'dark')
+  await blockedStorage.close()
+  console.log('PASS two themes, editor/menu colors, reload persistence, cross-tab sync and legacy theme migration')
   // Right-click must preserve the selected text and run real editor commands.
   await pm.press('ControlOrMeta+A')
   await pm.click({ button: 'right', position: { x: 45, y: 12 } })
@@ -116,7 +204,7 @@ try {
   const heldSave = new Promise(resolve => releaseSave = resolve);
   await page.route(`**/editor/api/docs/${b.id}`, async route => {
     if (route.request().method() === 'PUT') await heldSave;
-    await route.continue();
+    await route.fallback();
   });
   await pm.fill('Unsaved text survives token refresh');
   await page.evaluate(() => {
@@ -137,7 +225,7 @@ try {
   const openStarted = new Promise(resolve => signalOpen = resolve);
   await page.route(`**/editor/api/docs/${a.id}`, async route => {
     if (route.request().method() === 'GET') { signalOpen(); await heldOpen; }
-    await route.continue();
+    await route.fallback();
   });
   await page.locator('.tree-row', { hasText: 'UI Alpha Edited' }).first().click();
   await openStarted;
@@ -214,10 +302,13 @@ try {
   await page.getByRole('button', { name: /创建分享链接/ }).click()
   const link = await page.locator('.share-modal input').inputValue()
   assert.ok(link.startsWith(base + '/editor/#/s/'))
-  const anonymous = await browser.newContext()
+  const anonymous = await newContext()
   const shared = await anonymous.newPage()
   await shared.goto(link)
   await shared.locator('.share-paper').waitFor()
+  await shared.getByRole('button', { name: '切换到黑夜模式' }).click()
+  await assertTheme(shared, 'dark', '.share-paper')
+  await shared.screenshot({ path: join(outputDir, 'share-dark.png'), fullPage: true, animations: 'disabled' })
   assert.equal(await shared.locator('[contenteditable="true"]').count(), 0)
   await page.getByRole('button', { name: /关闭分享/ }).click()
   await shared.reload()
@@ -240,12 +331,33 @@ try {
   const savedBounds = await page.locator('.save-state').boundingBox()
   assert.ok(savedBounds.x + savedBounds.width <= 390, 'Save state is clipped on mobile')
   await page.screenshot({ path: join(outputDir, 'mobile.png'), fullPage: true })
+  await page.getByRole('button', { name: '切换到黑夜模式' }).click()
+  await assertTheme(page, 'dark', '.editor-page')
+  await page.screenshot({ path: join(outputDir, 'mobile-dark.png'), fullPage: true, animations: 'disabled' })
   console.log('PASS mobile document navigation and layout')
   assert.deepEqual(errors, [])
-  const kb = spawn(process.execPath, ['deploy/verify-ui.mjs'], { env: { ...process.env, SMOKE_BASE_URL: base }, stdio: 'inherit' })
-  const [code] = await once(kb, 'exit')
-  assert.equal(code, 0, 'Existing knowledge-base regression failed')
-  console.log('PASS existing knowledge-base regression')
+  await page.goto(base + '/admin/kb')
+  await page.waitForURL('**/editor/**')
+  assert.equal(await page.locator('.admin-kb-page').count(), 0)
+  await page.goto(base + '/kb/share/retired')
+  await page.getByText('旧知识库已下线', { exact: true }).waitFor()
+  assert.equal((await fetch(base + '/kb/share/retired')).status, 410)
+  await page.setViewportSize({ width: 1440, height: 1000 })
+  await page.goto(base + '/')
+  await page.getByRole('link', { name: '学城文档', exact: true }).waitFor()
+  assert.equal(await page.getByRole('link', { name: '知识库', exact: true }).count(), 0)
+  await page.getByRole('link', { name: '学城文档', exact: true }).click()
+  await page.locator('.xuecheng-workspace .app').waitFor()
+  await assertTheme(page, 'dark', '.xuecheng-workspace .topbar')
+  await page.getByRole('button', { name: '返回工作台' }).click()
+  await page.locator('.admin-shell').waitFor()
+  assert.equal(await page.getByRole('link', { name: '知识库', exact: true }).count(), 0)
+  await page.getByRole('button', { name: '切换到白天模式' }).click()
+  await page.getByRole('link', { name: '学城文档', exact: true }).click()
+  await page.locator('.xuecheng-workspace .app').waitFor()
+  await assertTheme(page, 'light', '.xuecheng-workspace .topbar')
+  assert.deepEqual(errors, [])
+  console.log('PASS old knowledge-base routes retired')
 } finally {
   await browser?.close()
   child.kill(); if (child.exitCode === null) await once(child, 'exit')

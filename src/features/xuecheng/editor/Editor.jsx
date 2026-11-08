@@ -166,7 +166,7 @@ export default function Editor({ initialDoc, onChange, onSelectionInfo, title, o
         buildInputRules(),
         ...buildKeymap(),
         history(),
-        dropCursor({ color: "#1668dc", width: 2 }),
+        dropCursor({ color: "var(--accent)", width: 2 }),
         gapCursor(),
         columnResizing({ handleWidth: 6, cellMinWidth: 40 }),
         tableEditing(),

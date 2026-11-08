@@ -19,6 +19,7 @@ import AiPanel from "./AiPanel.jsx";
 import { docToPlainText } from "./skills.js";
 import { useHashRoute, docHash } from "./router.js";
 import SharePage, { ShareDialog } from "./ShareView.jsx";
+import ThemeToggle from "../../components/ThemeToggle";
 import ContextMenu, { contextMenuAt } from './ContextMenu.jsx';
 
 const SAVE_DEBOUNCE = 800;
@@ -908,6 +909,7 @@ export default function App({ canUseMcp = false, onBack }) {
               <span className="crumb-name">{VIEW_NAME[view] || "学城"}</span>
             </div>
           )}
+          <ThemeToggle bare />
         </header>
 
         {error && <div className="banner-error" onClick={() => setError("")}>{error}（点击关闭）</div>}

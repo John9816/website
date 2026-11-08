@@ -41,8 +41,7 @@ const AdminContentFactory = lazy(() => import('./pages/AdminContentFactory'))
 const AdminPassword = lazy(() => import('./pages/AdminPassword'))
 const AdminUsers = lazy(() => import('./pages/AdminUsers'))
 const AdminRedeemCodes = lazy(() => import('./pages/AdminRedeemCodes'))
-const AdminKnowledgeBase = lazy(() => import('./pages/AdminKnowledgeBase'))
-const KbSharePage = lazy(() => import('./pages/KbSharePage'))
+const RetiredKnowledgePage = lazy(() => import('./pages/RetiredKnowledgePage'))
 const DevEditorPreview = lazy(() => import('./pages/DevEditorPreview'))
 
 function RouteFallback() {
@@ -246,7 +245,8 @@ export default function App() {
                     <Route path="/editor/*" element={<XuechengPage />} />
                     <Route path="/ai-chat" element={<AiChatPage />} />
                     <Route path="/ai-image" element={<AiImagePage />} />
-                    <Route path="/kb/share/:token" element={<KbSharePage />} />
+                    <Route path="/kb/*" element={<RetiredKnowledgePage />} />
+                    <Route path="/admin/kb/*" element={<Navigate to="/editor/" replace />} />
                     <Route path="/music" element={<MusicLayout />}>
                       <Route index element={<MusicPage />} />
                       <Route path="app" element={<MusicPromoPage />} />
@@ -299,7 +299,6 @@ export default function App() {
                           </RequireAdminPermission>
                         }
                       />
-                      <Route path="kb" element={<AdminKnowledgeBase />} />
                       <Route
                         path="redeem-codes"
                         element={MEMBERSHIP_ENABLED ? (

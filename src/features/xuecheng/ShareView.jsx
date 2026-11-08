@@ -11,6 +11,7 @@ import { schema } from "./schema.js";
 import { api } from "./api.js";
 import { docToPlainText } from "./skills.js";
 import { shareHash } from "./router.js";
+import ThemeToggle from "../../components/ThemeToggle";
 
 /* ---------------- 小工具 ---------------- */
 
@@ -121,6 +122,7 @@ export default function SharePage({ token, onHome }) {
           <span className="brand-name">学城</span>
         </button>
         <div className="share-top-right">
+          <ThemeToggle bare />
           <span className="share-badge">
             <i className="share-dot" />
             只读分享
