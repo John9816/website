@@ -1,3 +1,4 @@
+import { sourceLabel } from '../features/music/sources'
 import { useCallback, useEffect, useMemo, useState, type CSSProperties } from 'react'
 import { App as AntApp, Button, Result, Spin, Typography } from 'antd'
 import { ChevronLeft, Copy, Play, RefreshCcw } from 'lucide-react'
@@ -5,22 +6,12 @@ import { Link, useParams } from 'react-router-dom'
 import { getPublicMusicShare } from '../api/music'
 import MusicCover from '../components/MusicCover'
 import { useMusicPlayer } from '../context/MusicPlayerContext'
-import type { MusicPublicShareView, MusicSourceId, SongSearchItem } from '../types'
+import type { MusicPublicShareView, SongSearchItem } from '../types'
 import { formatDuration, normalizeCoverUrl } from '../utils/musicPlayer'
 import { copyText, formatDateTime } from '../utils/share'
 
 const ALL_QUALITIES = ['128k', '320k', 'flac', 'flac24bit'] as const
 
-function sourceLabel(source: MusicSourceId) {
-  switch (source) {
-    case 'qq':
-      return 'QQ 音乐'
-    case 'netease':
-      return '网易云'
-    case 'kuwo':
-      return '酷我'
-  }
-}
 
 function toSongSearchItem(data: MusicPublicShareView): SongSearchItem {
   return {

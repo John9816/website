@@ -1,3 +1,4 @@
+import { sourceLabel, isMusicSourceId } from '../features/music/sources'
 import { useCallback, useEffect, useMemo, useRef, useState, type CSSProperties } from 'react'
 import { App as AntApp, Button } from 'antd'
 import { Link, useLocation, useNavigate, useParams } from 'react-router-dom'
@@ -16,20 +17,7 @@ type MusicCollectionRouteState = {
   coverUrl?: string
 }
 
-function isMusicSourceId(value: string | undefined): value is MusicSourceId {
-  return value === 'qq' || value === 'netease' || value === 'kuwo'
-}
 
-function sourceLabel(source: MusicSourceId) {
-  switch (source) {
-    case 'qq':
-      return 'QQ Music'
-    case 'netease':
-      return 'NetEase Music'
-    case 'kuwo':
-      return 'Kuwo Music'
-  }
-}
 
 export default function MusicAlbumDetailPage() {
   const { message } = AntApp.useApp()

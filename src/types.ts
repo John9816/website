@@ -467,10 +467,24 @@ export interface AiConversationReplyView {
   assistantMessage: AiChatMessageView
 }
 
-export type MusicSourceId = 'qq' | 'netease' | 'kuwo'
+export type MusicSourceId = 'qq' | 'netease' | 'kuwo' | 'qishui'
 export type MusicPlaylistSourceId = Extract<MusicSourceId, 'netease' | 'kuwo'>
 export type MusicQuality = '128k' | '320k' | 'flac' | 'flac24bit'
 export type MusicSearchType = 'song' | 'album' | 'artist' | 'playlist'
+
+export interface QishuiAccountView {
+  bound: boolean
+  status: 'unbound' | 'bound' | 'new' | 'scanned' | 'confirmed' | 'refused' | 'expired' | 'failed'
+  sessionId?: string | null
+  qrcode?: string | null
+  qrcodeUrl?: string | null
+  expiresAt?: string | null
+  sessionExpiresAt?: string | null
+  nickname?: string | null
+  avatarUrl?: string | null
+  vip?: boolean | null
+  pollIntervalSeconds?: number | null
+}
 
 export interface SongSearchItem {
   id: string

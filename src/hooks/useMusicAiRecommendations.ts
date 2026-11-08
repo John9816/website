@@ -1,3 +1,4 @@
+import { sourceLabel, isMusicSourceId } from '../features/music/sources'
 import { useCallback, useEffect, useRef, useState } from 'react'
 import { App as AntApp } from 'antd'
 import { createAiConversation, sendAiMessage } from '../api/ai'
@@ -41,20 +42,7 @@ interface RankingResponse {
   }>
 }
 
-function isMusicSourceId(value: unknown): value is MusicSourceId {
-  return value === 'qq' || value === 'netease' || value === 'kuwo'
-}
 
-function sourceLabel(source: MusicSourceId) {
-  switch (source) {
-    case 'qq':
-      return 'QQ 音乐'
-    case 'netease':
-      return '网易云'
-    case 'kuwo':
-      return '酷我'
-  }
-}
 
 function songKey(song: Pick<SongSearchItem, 'source' | 'id'>) {
   return `${song.source}:${song.id}`

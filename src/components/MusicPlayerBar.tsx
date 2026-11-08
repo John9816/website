@@ -1,3 +1,4 @@
+import { sourceLabel } from '../features/music/sources'
 import {
   useCallback,
   useEffect,
@@ -62,16 +63,6 @@ function getPlayModeMeta(mode: PlayMode) {
   }
 }
 
-function sourceLabel(source: 'qq' | 'netease' | 'kuwo') {
-  switch (source) {
-    case 'qq':
-      return 'QQ 音乐'
-    case 'netease':
-      return '网易云'
-    case 'kuwo':
-      return '酷我'
-  }
-}
 
 export default function MusicPlayerBar() {
   const [seeking, setSeeking] = useState(false)

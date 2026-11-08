@@ -1,3 +1,4 @@
+import { musicPlaybackError } from '../features/music/sources'
 import {
   createContext,
   useCallback,
@@ -371,7 +372,7 @@ export function MusicPlayerProvider({ children }: { children: ReactNode }) {
         applied = true
       } catch (error) {
         if (generation === playGenerationRef.current && !isCanceledRequest(error)) {
-          message.error((error as Error).message)
+          message.error(musicPlaybackError(row.source, error))
         }
       } finally {
         if (generation === playGenerationRef.current) {

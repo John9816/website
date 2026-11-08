@@ -1,0 +1,7 @@
+.qishui-account { display: flex; flex-direction: column; gap: 16px; padding-top: 8px; }
+.qishui-account p { margin: 0; color: #667085; line-height: 1.7; }
+.qishui-account__profile { display: flex; flex-wrap: wrap; align-items: center; gap: 8px; }
+.qishui-account__profile small { flex-basis: 100%; color: #667085; }
+.qishui-account__qr { display: block; width: 224px; height: 224px; max-width: 100%; object-fit: contain; align-self: center; border-radius: 12px; background: white; padding: 12px; }
+.music-qishui-account-row { display: flex; flex-wrap: wrap; align-items: center; gap: 12px; margin-top: 16px; }
+.music-qishui-account-row span { color: #667085; font-size: 13px; }

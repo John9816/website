@@ -1,3 +1,5 @@
+import { MUSIC_SOURCE_OPTIONS as SOURCE_OPTIONS, STANDARD_CATALOG_SOURCE_OPTIONS, isMusicSourceId, sourceLabel, normalizeSearchType, supportedSearchTypes } from '../features/music/sources'
+import QishuiAccountControl from '../features/music/QishuiAccountControl'
 import { useCallback, useEffect, useMemo, useRef, useState, Fragment } from 'react'
 import { App as AntApp, Button, Input, Modal, Pagination, Segmented } from 'antd'
 import {
@@ -106,11 +108,6 @@ const VIEW_OPTIONS: MusicViewOption[] = [
   },
 ]
 
-const SOURCE_OPTIONS = [
-  { label: 'QQ 音乐', value: 'qq' },
-  { label: '网易云', value: 'netease' },
-  { label: '酷我', value: 'kuwo' },
-]
 
 const PLAYLIST_SOURCE_OPTIONS = [
   { label: '网易云', value: 'netease' },
@@ -151,9 +148,6 @@ const ALL_QUALITIES: MusicQuality[] = ['128k', '320k', 'flac', 'flac24bit']
 const SEARCH_PAGE_SIZE_OPTIONS = [10, 20, 30]
 const PLAYLIST_PAGE_SIZE_OPTIONS = [10, 20, 50]
 
-function sourceLabel(source: MusicSourceId) {
-  return SOURCE_OPTIONS.find((item) => item.value === source)?.label ?? source
-}
 
 function formatPlayCount(value?: number) {
   if (!value || value <= 0) return '0'
@@ -180,9 +174,6 @@ function isMusicView(value: string | null): value is MusicView {
   )
 }
 
-function isMusicSourceId(value: string | null): value is MusicSourceId {
-  return value === 'qq' || value === 'netease' || value === 'kuwo'
-}
 
 function isMusicSearchType(value: string | null): value is MusicSearchType {
   return (
@@ -441,6 +432,7 @@ export default function MusicExplorer() {
       nextType = searchType,
     ) => {
       if (!auth.token) return
+      nextType = normalizeSearchType(nextSource, nextType)
 
       const trimmed = nextKeyword.trim()
       if (!trimmed) {
@@ -496,7 +488,7 @@ export default function MusicExplorer() {
     const nextSourceParam = searchParams.get('source')
     const nextTypeParam = searchParams.get('type')
     const nextSource = isMusicSourceId(nextSourceParam) ? nextSourceParam : searchSource
-    const nextType = isMusicSearchType(nextTypeParam) ? nextTypeParam : 'song'
+    const nextType = normalizeSearchType(nextSource, isMusicSearchType(nextTypeParam) ? nextTypeParam : 'song')
     const nextKey = `${nextSource}:${nextType}:${nextKeyword}`
 
     if (urlSearchRef.current === nextKey) return
@@ -510,6 +502,7 @@ export default function MusicExplorer() {
 
   const searchByMeta = useCallback(
     (nextKeyword: string, nextSource: MusicSourceId, nextType: MusicSearchType = 'song') => {
+      nextType = normalizeSearchType(nextSource, nextType)
       const trimmed = nextKeyword.trim()
       if (!trimmed) return
       const nextParams = new URLSearchParams(searchParams)
@@ -990,12 +983,13 @@ export default function MusicExplorer() {
                     value={searchSource}
                     onChange={(value) => {
                       setSearchSource(value as MusicSourceId)
+                      setSearchType(type => normalizeSearchType(value as MusicSourceId, type))
                       setSearchPage(1)
                     }}
                   />
                   <Segmented
                     className="music-search-type-switch"
-                    options={SEARCH_TYPE_OPTIONS.map((item) => ({
+                    options={SEARCH_TYPE_OPTIONS.filter(item => supportedSearchTypes(searchSource).includes(item.value)).map((item) => ({
                       label: item.label,
                       value: item.value,
                     }))}
@@ -1018,6 +1012,10 @@ export default function MusicExplorer() {
                     allowClear
                   />
                 </div>
+                {searchSource === 'qishui' && <div className="music-qishui-account-row">
+                  <QishuiAccountControl />
+                  <span>支持歌曲、歌单搜索与收藏；个人账号可独立扫码绑定。</span>
+                </div>}
               </section>
 
               {hasSearchResults && (
@@ -1121,7 +1119,7 @@ export default function MusicExplorer() {
             <>
               <div className="music-view-controls music-view-controls--compact">
                 <Segmented
-                  options={SOURCE_OPTIONS}
+                  options={STANDARD_CATALOG_SOURCE_OPTIONS}
                   value={toplistSource}
                   onChange={(value) => setToplistSource(value as MusicSourceId)}
                 />
@@ -1262,7 +1260,7 @@ export default function MusicExplorer() {
             <>
               <div className="music-view-controls music-view-controls--compact">
                 <Segmented
-                  options={SOURCE_OPTIONS}
+                  options={STANDARD_CATALOG_SOURCE_OPTIONS}
                   value={newSource}
                   onChange={(value) => {
                     setNewSource(value as MusicSourceId)

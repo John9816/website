@@ -1,3 +1,4 @@
+import { sourceLabel } from '../features/music/sources'
 import { Empty, Pagination, Space, Table, Typography } from 'antd'
 import { useCallback, useMemo, type ReactNode } from 'react'
 import { Loader2, Pause, Play } from 'lucide-react'
@@ -22,16 +23,6 @@ type Props = {
   onSearchAlbum?: (album: string, source: SongSearchItem['source']) => void
 }
 
-function sourceLabel(source: SongSearchItem['source']) {
-  switch (source) {
-    case 'qq':
-      return 'QQ 音乐'
-    case 'netease':
-      return '网易云'
-    case 'kuwo':
-      return '酷我'
-  }
-}
 
 function pageTotal(
   page: number,

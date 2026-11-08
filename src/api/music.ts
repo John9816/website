@@ -22,8 +22,24 @@ import type {
   ImportPlaylistRequest,
   UpdatePlaylistRequest,
   MusicSearchType,
+  QishuiAccountView,
 } from '../types'
 import { DEFAULT_PAGE_SIZE } from '../constants/pagination'
+
+export const getQishuiAccount = (signal?: AbortSignal) =>
+  request<QishuiAccountView>('/api/v1/music/qishui/account', { auth: true, signal })
+
+export const createQishuiQr = (signal?: AbortSignal) =>
+  request<QishuiAccountView>('/api/v1/music/qishui/auth/qr', { method: 'POST', auth: true, signal })
+
+export const pollQishuiQr = (sessionId: string, signal?: AbortSignal) =>
+  request<QishuiAccountView>(`/api/v1/music/qishui/auth/qr/${encodeURIComponent(sessionId)}`, { auth: true, signal })
+
+export const refreshQishuiAccount = (signal?: AbortSignal) =>
+  request<QishuiAccountView>('/api/v1/music/qishui/account/refresh', { method: 'POST', auth: true, signal })
+
+export const deleteQishuiAccount = (signal?: AbortSignal) =>
+  request<void>('/api/v1/music/qishui/account', { method: 'DELETE', auth: true, signal })
 
 export const musicSearch = (
   source: MusicSourceId,

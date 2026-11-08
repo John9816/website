@@ -1,3 +1,4 @@
+import { sourceLabel } from '../features/music/sources'
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { Link as RouterLink, useLocation } from 'react-router-dom'
 import {
@@ -54,16 +55,6 @@ function clampDockPosition(
   }
 }
 
-function sourceLabel(source: 'qq' | 'netease' | 'kuwo') {
-  switch (source) {
-    case 'qq':
-      return 'QQ'
-    case 'netease':
-      return '网易云'
-    case 'kuwo':
-      return '酷我'
-  }
-}
 
 export default function GlobalMusicDock() {
   const location = useLocation()

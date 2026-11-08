@@ -1,3 +1,4 @@
+import { sourceLabel } from '../features/music/sources'
 import { useCallback, useEffect, useMemo, useRef, useState, type CSSProperties } from 'react'
 import { App as AntApp, Button, Input, Modal, Popconfirm, Tag, Tooltip } from 'antd'
 import { Link, useNavigate, useParams } from 'react-router-dom'
@@ -16,18 +17,6 @@ import { normalizeCoverUrl } from '../utils/musicPlayer'
 const ALL_QUALITIES: MusicQuality[] = ['128k', '320k', 'flac', 'flac24bit']
 const FULL_PLAY_FETCH_SIZE = 100
 
-function sourceLabel(source: MusicSourceId) {
-  switch (source) {
-    case 'qq':
-      return 'QQ 音乐'
-    case 'netease':
-      return '网易云'
-    case 'kuwo':
-      return '酷我'
-    default:
-      return source
-  }
-}
 
 function toSongSearchItem(item: ImportedPlaylistItem): SongSearchItem {
   return {
