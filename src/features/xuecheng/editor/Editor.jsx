@@ -14,6 +14,8 @@ import { buildKeymap, history } from "../plugins/keymap.js";
 import { undo, redo } from "prosemirror-history";
 import * as cmd from "./commands.js";
 import { api } from "../api.js";
+import ContextMenu, { contextMenuAt } from '../ContextMenu.jsx';
+import { editorContextItems, selectContextTarget } from './contextMenu.js';
 
 /* ---------- 空文档占位提示 ---------- */
 const placeholderPlugin = new Plugin({
@@ -126,7 +128,8 @@ function computeOutline(doc) {
   return items;
 }
 
-export default function Editor({ initialDoc, onChange, onSelectionInfo, title, onTitleChange, words, onViewReady }) {
+export default function Editor({ initialDoc, onChange, onSelectionInfo, title, onTitleChange, words, onViewReady, onError }) {
+  const [contextMenu, setContextMenu] = useState(null);
   const hostRef = useRef(null);
   const viewRef = useRef(null);
   const onChangeRef = useRef(onChange);
@@ -201,6 +204,12 @@ export default function Editor({ initialDoc, onChange, onSelectionInfo, title, o
       handleDOMEvents: {
         // 任务项勾选：点复选框直接翻转 attrs，不进入文本选区逻辑
         mousedown(v, e) {
+          if (e.button === 2) {
+            e.preventDefault();
+            selectContextTarget(v, e);
+            return true;
+          }
+          if (e.button !== 0) return false;
           const cb = e.target.closest?.(".task-checkbox");
           if (!cb) return false;
           const li = cb.closest("li[data-task]");
@@ -380,9 +389,19 @@ export default function Editor({ initialDoc, onChange, onSelectionInfo, title, o
   };
 
   const btn = (active, extra = "") => "tb-btn" + (active ? " active" : "") + (extra ? " " + extra : "");
+  const openContextMenu = event => {
+    const view = viewRef.current;
+    if (!view) return;
+    if (event.clientX || event.clientY) selectContextTarget(view, event);
+    setSlash(null);
+    setHandleMenu(false);
+    handleMenuRef.current = false;
+    setContextMenu(contextMenuAt(event, '编辑操作', editorContextItems(view), () => view.focus()));
+  };
 
   return (
     <div className="editor-wrap">
+      <ContextMenu menu={contextMenu} onClose={() => setContextMenu(null)} onError={onError} />
       {/* 工具栏：按下按钮时阻止抢焦点，否则会丢失编辑器选区 */}
       <div
         className="toolbar"
@@ -709,7 +728,9 @@ export default function Editor({ initialDoc, onChange, onSelectionInfo, title, o
                 <button className="meta-more" type="button">全部<span className="dd-caret">▾</span></button>
               </div>
             </div>
-            <div ref={hostRef} className="pm-host" />
+            <div ref={hostRef} className="pm-host" onContextMenu={openContextMenu} onKeyDown={event => {
+              if (event.key === 'ContextMenu' || (event.shiftKey && event.key === 'F10')) openContextMenu(event);
+            }} />
           </div>
           {!showOutline && (
             <button

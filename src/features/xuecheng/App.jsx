@@ -19,6 +19,7 @@ import AiPanel from "./AiPanel.jsx";
 import { docToPlainText } from "./skills.js";
 import { useHashRoute, docHash } from "./router.js";
 import SharePage, { ShareDialog } from "./ShareView.jsx";
+import ContextMenu, { contextMenuAt } from './ContextMenu.jsx';
 
 const SAVE_DEBOUNCE = 800;
 
@@ -129,6 +130,7 @@ export default function App({ canUseMcp = false, onBack }) {
   const openingId = useRef(null);
   useEffect(() => () => { openGeneration.current += 1; }, []);
   const [error, setError] = useState("");
+  const [contextMenu, setContextMenu] = useState(null);
 
   // 侧栏：宽度 / 折叠 / 树节点折叠
   const [sidebarWidth, setSidebarWidth] = useState(() => {
@@ -565,6 +567,16 @@ export default function App({ canUseMcp = false, onBack }) {
       parentTitle: docsRef.current.find((d) => d.id === parentId)?.title || "",
     });
 
+  const renameDoc = async (id) => {
+    const current = docsRef.current.find(d => d.id === id);
+    const title = window.prompt('文档名称', current?.title || '未命名文档');
+    if (title === null || !title.trim()) return;
+    if (!(await saver.flushAll())) return;
+    const updated = await api.updateDoc(id, { title: title.trim() });
+    setDoc(d => d?.id === id ? { ...d, title: updated.title } : d);
+    await refresh();
+  };
+
   const removeDoc = async (id) => {
     const n = countDescendants(docs, id);
     const msg =
@@ -667,10 +679,24 @@ export default function App({ canUseMcp = false, onBack }) {
 
   return (
     <div className={"app" + (mobileSidebar ? " mobile-sidebar-open" : "")}>
+      <ContextMenu menu={contextMenu} onClose={() => setContextMenu(null)} onError={setError} />
       {mobileSidebar && <button className="mobile-sidebar-backdrop" aria-label="关闭文档导航" onClick={() => setMobileSidebar(false)} />}
       <aside
         className={"sidebar" + (sidebarCollapsed ? " collapsed" : "")}
         style={{ width: sidebarCollapsed ? 52 : sidebarWidth }}
+        onContextMenu={event => {
+          const row = event.target.closest('[data-doc-id]');
+          const target = docsRef.current.find(d => d.id === row?.dataset.docId);
+          const items = target ? [
+            { label: '打开文档', run: () => openDoc(target.id) },
+            { label: '重命名', run: () => renameDoc(target.id) },
+            { label: '新建子文档', run: () => addChildDoc(target.id) },
+            { label: target.favorite ? '取消收藏' : '收藏文档', run: () => toggleFavorite(target.id) },
+            ...(target.parentId ? [{ label: '移到根目录', run: () => moveDoc(target.id, null) }] : []),
+            null, { label: '删除文档', danger: true, run: () => removeDoc(target.id) },
+          ] : [{ label: '新建文档', run: createDoc }];
+          setContextMenu(contextMenuAt(event, '文档操作', items, () => row?.focus({ preventScroll: true })));
+        }}
       >
         <div className="brand">
           <button className="brand-back" title="返回工作台" aria-label="返回工作台" onClick={async () => { if (await saver.flushAll()) onBack?.(); }}>←</button>
@@ -738,7 +764,7 @@ export default function App({ canUseMcp = false, onBack }) {
               {recents.length ? (
                 <div className="side-list">
                   {recents.map((d) => (
-                    <button key={d.id} className="side-doc-item" onClick={() => openDoc(d.id)} title={d.title || "未命名文档"}>
+                    <button key={d.id} data-doc-id={d.id} className="side-doc-item" onClick={() => openDoc(d.id)} title={d.title || "未命名文档"}>
                       <span className="side-doc-ico">▤</span>
                       <span className="side-doc-name">{d.title || "未命名文档"}</span>
                     </button>
@@ -756,7 +782,7 @@ export default function App({ canUseMcp = false, onBack }) {
               {favorites.length ? (
                 <div className="side-list">
                   {favorites.map((d) => (
-                    <button key={d.id} className="side-doc-item" onClick={() => openDoc(d.id)} title={d.title || "未命名文档"}>
+                    <button key={d.id} data-doc-id={d.id} className="side-doc-item" onClick={() => openDoc(d.id)} title={d.title || "未命名文档"}>
                       <span className="side-doc-ico">★</span>
                       <span className="side-doc-name">{d.title || "未命名文档"}</span>
                     </button>
@@ -775,7 +801,7 @@ export default function App({ canUseMcp = false, onBack }) {
               {favorites.length ? (
                 <div className="side-list">
                   {favorites.slice(0, 5).map((d) => (
-                    <button key={d.id} className="side-doc-item" onClick={() => openDoc(d.id)} title={d.title || "未命名文档"}>
+                    <button key={d.id} data-doc-id={d.id} className="side-doc-item" onClick={() => openDoc(d.id)} title={d.title || "未命名文档"}>
                       <span className="side-doc-ico">▤</span>
                       <span className="side-doc-name">{d.title || "未命名文档"}</span>
                     </button>
@@ -896,6 +922,7 @@ export default function App({ canUseMcp = false, onBack }) {
               onTitleChange={onTitleChange}
               words={words}
               onViewReady={handleViewReady}
+              onError={setError}
             />
           ) : (
             <div className="loading-page">正在打开文档…</div>

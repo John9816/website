@@ -64,6 +64,8 @@ function TreeNode({ node, depth, currentId, collapsed, onToggle, onOpen, onAdd, 
   return (
     <div className="tree-node">
       <div
+        data-doc-id={doc.id}
+        tabIndex={0}
         className={
           "tree-row" +
           (currentId === doc.id ? " active" : "") +
@@ -72,6 +74,12 @@ function TreeNode({ node, depth, currentId, collapsed, onToggle, onOpen, onAdd, 
         }
         style={{ paddingLeft: 8 + depth * 14 }}
         onClick={() => onOpen(doc.id)}
+        onKeyDown={event => {
+          if (event.target === event.currentTarget && ['Enter', ' '].includes(event.key)) {
+            event.preventDefault();
+            onOpen(doc.id);
+          }
+        }}
         draggable
         onDragStart={(e) => onDragStart(e, doc.id)}
         onDragEnd={onDragEnd}
