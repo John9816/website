@@ -1,4 +1,5 @@
 import { request } from './client'
+import { musicRead } from './musicRead'
 import type {
   LyricView,
   MusicFavoriteItem,
@@ -49,9 +50,10 @@ export const musicSearch = (
   page = 1,
   pageSize = DEFAULT_PAGE_SIZE,
   type: MusicSearchType = 'song',
+  signal?: AbortSignal,
 ) =>
-  request<SearchResultView>('/api/v1/music/search', {
-    auth: true,
+  musicRead<SearchResultView>('/api/v1/music/search', {
+    auth: true, signal,
     query: {
       source,
       keyword,
@@ -74,10 +76,10 @@ export const musicPlay = (
   })
 
 export const musicLyric = (source: MusicSourceId, id: string, signal?: AbortSignal) =>
-  request<LyricView>('/api/v1/music/lyric', { auth: true, query: { source, id }, signal })
+  musicRead<LyricView>('/api/v1/music/lyric', { auth: true, query: { source, id }, signal })
 
 export const musicToplist = (source: MusicSourceId) =>
-  request<ToplistListView>('/api/v1/music/toplist', {
+  musicRead<ToplistListView>('/api/v1/music/toplist', {
     auth: true,
     query: { source },
   })
@@ -88,7 +90,7 @@ export const musicToplistDetail = (
   page = 1,
   pageSize = DEFAULT_PAGE_SIZE,
 ) =>
-  request<ToplistDetailView>('/api/v1/music/toplist/detail', {
+  musicRead<ToplistDetailView>('/api/v1/music/toplist/detail', {
     auth: true,
     query: { source, id, page, pageSize },
   })
@@ -100,7 +102,7 @@ export const musicPlaylist = (
   category?: string,
   order?: string,
 ) =>
-  request<PlaylistListView>('/api/v1/music/playlist', {
+  musicRead<PlaylistListView>('/api/v1/music/playlist', {
     auth: true,
     query: { source, page, pageSize, category, order },
   })
@@ -111,7 +113,7 @@ export const musicPlaylistDetail = (
   page = 1,
   pageSize = DEFAULT_PAGE_SIZE,
 ) =>
-  request<PlaylistDetailView>('/api/v1/music/playlist/detail', {
+  musicRead<PlaylistDetailView>('/api/v1/music/playlist/detail', {
     auth: true,
     query: { source, id, page, pageSize },
   })
@@ -122,14 +124,14 @@ export const musicAlbumDetail = (
   page = 1,
   pageSize = DEFAULT_PAGE_SIZE,
 ) =>
-  request<AlbumDetailView>('/api/v1/music/album/detail', {
+  musicRead<AlbumDetailView>('/api/v1/music/album/detail', {
     auth: true,
     query: { source, id, page, pageSize },
   })
 
 /** 歌手简要资料；后端 @RequestParam List<String> ids 接受重复 query 键。 */
 export const musicArtistDetail = (source: MusicSourceId, ids: string[]) =>
-  request<ArtistDetailView[]>('/api/v1/music/artist', {
+  musicRead<ArtistDetailView[]>('/api/v1/music/artist', {
     auth: true,
     query: { source, ids },
   })
@@ -142,7 +144,7 @@ export const musicArtistWorks = (
   page = 1,
   pageSize = DEFAULT_PAGE_SIZE,
 ) =>
-  request<ArtistWorksView>('/api/v1/music/artist/works', {
+  musicRead<ArtistWorksView>('/api/v1/music/artist/works', {
     auth: true,
     query: { source, id, type, page, pageSize },
   })
@@ -152,7 +154,7 @@ export const musicNewSongs = (
   page = 1,
   pageSize = DEFAULT_PAGE_SIZE,
 ) =>
-  request<ToplistDetailView>('/api/v1/music/new', {
+  musicRead<ToplistDetailView>('/api/v1/music/new', {
     auth: true,
     query: { source, page, pageSize },
   })
@@ -275,15 +277,15 @@ export const removePlaylistItem = (playlistId: number, itemId: number) =>
   })
 
 export const qishuiSearchSuggestions = (keyword: string, signal?: AbortSignal) =>
-  request<string[]>('/api/v1/music/qishui/search/suggestions', { auth: true, query: { keyword }, signal })
+  musicRead<string[]>('/api/v1/music/qishui/search/suggestions', { auth: true, query: { keyword }, signal })
 
 export const musicTtml = (source: MusicSourceId, id: string, signal?: AbortSignal) =>
-  request<{available: boolean; content: string | null; provider: string | null}>('/api/v1/music/lyrics/ttml', { auth: true, query: { source, id }, signal })
+  musicRead<{available: boolean; content: string | null; provider: string | null}>('/api/v1/music/lyrics/ttml', { auth: true, query: { source, id }, signal })
 
 export const qishuiSongInfo = (id: string, signal?: AbortSignal) =>
-  request<import('../types').SongSearchItem>('/api/v1/music/qishui/song', { auth:true, query:{id}, signal })
-export const qishuiDiscovery = (signal?: AbortSignal) =>
-  request<{source:MusicSourceId;list:import('../types').SongSearchItem[]}>('/api/v1/music/qishui/discovery', {auth:true,signal})
+  musicRead<import('../types').SongSearchItem>('/api/v1/music/qishui/song', { auth:true, query:{id}, signal })
+export const qishuiDiscovery = (signal?: AbortSignal, refresh = false) =>
+  musicRead<{source:MusicSourceId;list:import('../types').SongSearchItem[]}>('/api/v1/music/qishui/discovery', {auth:true,signal}, 45_000, refresh)
 export const qishuiRoamingModes = (signal?: AbortSignal) =>
   request<import('../types').QishuiFeedMode[]>('/api/v1/music/qishui/roaming/modes',{auth:true,signal})
 export const startQishuiRoaming = (modeId?: string, signal?: AbortSignal) =>

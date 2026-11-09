@@ -1,11 +1,12 @@
 import { useNavigate } from 'react-router-dom'
 import { sourceLabel } from '../features/music/sources'
-import { Empty, Pagination, Space, Table, Typography } from 'antd'
-import { useCallback, useMemo, type ReactNode } from 'react'
-import { Loader2, Pause, Play } from 'lucide-react'
+import { Empty, Pagination, Popover, Space, Table, Typography } from 'antd'
+import type { TableColumnsType } from 'antd'
+import { memo, useCallback, useEffect, useMemo, useState, type ReactNode } from 'react'
+import { Loader2, MoreHorizontal, Pause, Play } from 'lucide-react'
 import { PAGE_SIZE_OPTIONS } from '../constants/pagination'
 import MusicCover from './MusicCover'
-import { useMusicPlayer } from '../context/MusicPlayerContext'
+import { useMusicBrowse } from '../context/MusicPlayerContext'
 import type { SongSearchItem } from '../types'
 import { formatDuration } from '../utils/musicPlayer'
 
@@ -45,7 +46,7 @@ function splitArtistNames(artist: string) {
   return names.length > 0 ? names : [artist]
 }
 
-export default function MusicSongTable({
+function MusicSongTable({
   songs,
   loading,
   emptyText,
@@ -59,6 +60,13 @@ export default function MusicSongTable({
   onSearchAlbum,
 }: Props) {
   const navigate = useNavigate()
+  const [compact, setCompact] = useState(() => window.matchMedia('(max-width: 700px)').matches)
+  useEffect(() => {
+    const query = window.matchMedia('(max-width: 700px)')
+    const update = () => setCompact(query.matches)
+    query.addEventListener('change', update)
+    return () => query.removeEventListener('change', update)
+  }, [])
   const {
     openArtist, playPlaylist, playFromQueue, roamingSession,
     current,
@@ -68,7 +76,7 @@ export default function MusicSongTable({
     preferredQuality,
     unsupportedFormat,
     togglePlay,
-  } = useMusicPlayer()
+  } = useMusicBrowse()
 
   const isPlayingRow = useCallback(
     (row: SongSearchItem) => current?.id === row.id && current?.source === row.source,
@@ -134,16 +142,7 @@ export default function MusicSongTable({
     style: { cursor: 'pointer' },
   }), [handleRowActivate])
 
-  return (
-    <>
-      <Table<SongSearchItem>
-        rowKey={(row) => `${row.source}:${row.id}`}
-        dataSource={songs}
-        loading={loading}
-        pagination={false}
-        size="middle"
-        className="music-song-table"
-        columns={useMemo(() => [
+  const columns = useMemo<TableColumnsType<SongSearchItem>>(() => [
           {
             title: '#',
             width: 52,
@@ -287,12 +286,33 @@ export default function MusicSongTable({
           pageSize,
           renderActions,
           togglePlay,
-        ])}
+        ])
+
+  return (
+    <>
+      {compact ? <div className="music-song-list-mobile" aria-busy={loading}>
+        {!songs.length ? <Empty description={loading?'正在加载…':emptyText}/> : songs.map((row,index) => <div className={`music-song-row${isPlayingRow(row)?' is-active':''}`} key={`${row.source}:${row.id}`} onClick={()=>handleRowActivate(row)}>
+          <MusicCover src={row.coverUrl} size={46} rounded={10}/>
+          <div className="music-song-row__copy"><button type="button" className="music-song-row__title" onClick={e=>{e.stopPropagation();handleRowActivate(row)}}>{row.name}</button><button type="button" className="music-song-row__artist" onClick={e=>{e.stopPropagation();openArtist(row.source,row.artistId,row.artist || '')}}>{row.artist || '未知歌手'}<span> · {sourceLabel(row.source).replace('（黑源）','')}</span></button></div>
+          <button type="button" className="music-studio-icon" aria-label={isPlayingRow(row)&&isPlaying?'暂停':'播放'} disabled={isLoadingRow(row)} onClick={e=>{e.stopPropagation();handleRowActivate(row)}}>{isLoadingRow(row)?<Loader2 size={19} className="ctrl-btn__spinner"/>:isPlayingRow(row)&&isPlaying?<Pause size={19}/>:<Play size={19}/>}</button>
+          {renderActions && <div onClick={e=>e.stopPropagation()}><Popover trigger="click" placement="topRight" content={<div className="music-song-actions-popover" aria-label={`${row.name}操作`}>{renderActions(row)}</div>}><button type="button" className="music-studio-icon" aria-label={`更多操作：${row.name}`}><MoreHorizontal size={20}/></button></Popover></div>}
+          <span className="music-song-row__number">{(page-1)*pageSize+index+1}</span>
+        </div>)}
+      </div> : <Table<SongSearchItem>
+        rowKey={(row) => `${row.source}:${row.id}`}
+        dataSource={songs}
+        loading={loading}
+        pagination={false}
+        size="middle"
+        className="music-song-table"
+        columns={columns}
         rowClassName={rowClassName}
         onRow={handleTableRow}
         locale={tableLocale}
-      />
+      />}
       {paginationNode}
     </>
   )
 }
+
+export default memo(MusicSongTable)

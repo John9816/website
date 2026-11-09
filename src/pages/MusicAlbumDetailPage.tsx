@@ -8,7 +8,7 @@ import MusicCover from '../components/MusicCover'
 import MusicShareAction from '../components/MusicShareAction'
 import MusicSongTable from '../components/MusicSongTable'
 import { DEFAULT_PAGE_SIZE } from '../constants/pagination'
-import { useMusicPlayer } from '../context/MusicPlayerContext'
+import { useMusicBrowse } from '../context/MusicPlayerContext'
 import { useMusicFavorites } from '../hooks/useMusicFavorites'
 import type { AlbumDetailView, MusicSourceId } from '../types'
 import { hydrateCollectionCovers, normalizeCoverUrl } from '../utils/musicPlayer'
@@ -24,7 +24,7 @@ export default function MusicAlbumDetailPage() {
   const location = useLocation()
   const navigate = useNavigate()
   const { source, id } = useParams()
-  const { playPlaylist, setPlaylist, setAutoNextHandler } = useMusicPlayer()
+  const { playlist: playbackQueue, playPlaylist, setAutoNextHandler } = useMusicBrowse()
   const [page, setPage] = useState(1)
   const [pageSize, setPageSize] = useState(DEFAULT_PAGE_SIZE)
   const [loading, setLoading] = useState(false)
@@ -53,8 +53,6 @@ export default function MusicAlbumDetailPage() {
         setDetail(nextDetail)
         if (options?.autoplay && nextDetail.list.length) {
           void playPlaylist(nextDetail.list)
-        } else {
-          setPlaylist(nextDetail.list)
         }
       } catch (error) {
         if (requestId !== requestIdRef.current) return
@@ -63,7 +61,7 @@ export default function MusicAlbumDetailPage() {
         if (requestId === requestIdRef.current) setLoading(false)
       }
     },
-    [id, message, pageSize, playPlaylist, routeCoverUrl, setPlaylist, validSource],
+    [id, message, pageSize, playPlaylist, routeCoverUrl, validSource],
   )
 
   useEffect(() => {
@@ -75,7 +73,7 @@ export default function MusicAlbumDetailPage() {
 
   useEffect(() => {
     const total = detail?.total
-    if (!validSource || !id || typeof total !== 'number') {
+    if (playbackQueue !== detail?.list || !validSource || !id || typeof total !== 'number') {
       setAutoNextHandler(null)
       return
     }
@@ -89,12 +87,12 @@ export default function MusicAlbumDetailPage() {
       setPage((current) => current + 1)
     })
     return () => setAutoNextHandler(null)
-  }, [detail?.total, id, page, pageSize, setAutoNextHandler, validSource])
+  }, [detail?.list, detail?.total, playbackQueue, id, page, pageSize, setAutoNextHandler, validSource])
 
   const metaText = useMemo(() => {
     if (!validSource) return ''
     const artist = detail?.artist || sourceLabel(validSource)
-    return `${artist} · ${detail?.list.length ?? 0} tracks`
+    return `${artist} · ${detail?.list.length ?? 0} 首`
   }, [detail?.artist, detail?.list.length, validSource])
 
   const heroCoverUrl = normalizeCoverUrl(detail?.coverUrl)
@@ -115,8 +113,8 @@ export default function MusicAlbumDetailPage() {
             event.stopPropagation()
             void favoriteState.toggleFavorite(song)
           }}
-          aria-label={favoriteState.isFavorite(song) ? 'Cancel favorite' : 'Add favorite'}
-          title={favoriteState.isFavorite(song) ? 'Cancel favorite' : 'Add favorite'}
+          aria-label={favoriteState.isFavorite(song) ? '取消喜欢' : '加入喜欢'}
+          title={favoriteState.isFavorite(song) ? '取消喜欢' : '加入喜欢'}
         >
           <Heart
             size={16}
@@ -153,14 +151,14 @@ export default function MusicAlbumDetailPage() {
         className={`music-detail-hero${heroCoverUrl ? ' music-detail-hero--with-cover' : ''}`}
         style={heroStyle}
       >
-        <Link to="/music?view=search&type=album" className="music-hero-back" title="Back">
+        <Link to="/music?view=search&type=album" className="music-hero-back" title="返回搜索">
           <ChevronLeft size={20} />
         </Link>
 
         <MusicCover src={detail?.coverUrl} size={148} rounded={32} loading="eager" />
         <div className="music-detail-hero__copy">
-          <span className="music-stage-kicker">Album detail</span>
-          <h2>{detail?.name || 'Loading...'}</h2>
+          <span className="music-stage-kicker">专辑</span>
+          <h2>{detail?.name || '正在加载…'}</h2>
           <p>{detail?.description || metaText}</p>
           <div className="music-detail-meta">
             <span>{metaText}</span>
@@ -179,18 +177,18 @@ export default function MusicAlbumDetailPage() {
               }}
               className="music-hero-play-btn"
             >
-              Play all
+              播放全部
             </Button>
             <Button
               ghost
               size="large"
               icon={<RefreshCcw size={16} />}
               onClick={() => {
-                setPage(1)
+                void loadPage(page)
               }}
               className="music-hero-refresh-btn"
             >
-              Refresh
+              刷新
             </Button>
           </div>
         </div>
@@ -198,15 +196,15 @@ export default function MusicAlbumDetailPage() {
 
       <div className="music-detail-list-head">
         <div className="music-detail-list-copy">
-          <h3>Tracks</h3>
-          <p>{detail?.total ? `${detail.total} tracks total` : metaText}</p>
+          <h3>专辑歌曲</h3>
+          <p>{detail?.total ? `共 ${detail.total} 首` : metaText}</p>
         </div>
       </div>
 
       <MusicSongTable
         songs={detail?.list ?? []}
         loading={loading}
-        emptyText="No album tracks"
+        emptyText="专辑暂时没有歌曲"
         page={page}
         pageSize={pageSize}
         total={detail?.total}

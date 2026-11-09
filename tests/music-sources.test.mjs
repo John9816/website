@@ -10,7 +10,7 @@ test('Qishui is searchable while existing catalog sources remain unchanged', () 
   assert.deepEqual(STANDARD_CATALOG_SOURCE_OPTIONS.map(s => s.value), ['qq', 'netease', 'kuwo'])
   assert.equal(isMusicSourceId('qishui'), true)
   assert.equal(isMusicSourceId('invalid'), false)
-  assert.equal(sourceLabel('qishui'), '汽水音乐（黑源）')
+  assert.equal(sourceLabel('qishui'), '汽水音乐')
 })
 
 test('Qishui supports all verified search types', () => {

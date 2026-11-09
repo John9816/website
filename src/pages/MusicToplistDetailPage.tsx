@@ -8,7 +8,7 @@ import MusicCover from '../components/MusicCover'
 import MusicShareAction from '../components/MusicShareAction'
 import MusicSongTable from '../components/MusicSongTable'
 import { DEFAULT_PAGE_SIZE } from '../constants/pagination'
-import { useMusicPlayer } from '../context/MusicPlayerContext'
+import { useMusicBrowse } from '../context/MusicPlayerContext'
 import { useMusicFavorites } from '../hooks/useMusicFavorites'
 import type { MusicSourceId, ToplistDetailView } from '../types'
 import { hydrateCollectionCovers, normalizeCoverUrl } from '../utils/musicPlayer'
@@ -24,7 +24,7 @@ export default function MusicToplistDetailPage() {
   const location = useLocation()
   const navigate = useNavigate()
   const { source, id } = useParams()
-  const { playPlaylist, setPlaylist, setAutoNextHandler } = useMusicPlayer()
+  const { playlist: playbackQueue, playPlaylist, setAutoNextHandler } = useMusicBrowse()
   const [page, setPage] = useState(1)
   const [pageSize, setPageSize] = useState(DEFAULT_PAGE_SIZE)
   const [loading, setLoading] = useState(false)
@@ -53,8 +53,6 @@ export default function MusicToplistDetailPage() {
         setDetail(nextDetail)
         if (options?.autoplay && nextDetail.list.length) {
           void playPlaylist(nextDetail.list)
-        } else {
-          setPlaylist(nextDetail.list)
         }
       } catch (error) {
         if (requestId !== requestIdRef.current) return
@@ -63,7 +61,7 @@ export default function MusicToplistDetailPage() {
         if (requestId === requestIdRef.current) setLoading(false)
       }
     },
-    [id, message, pageSize, playPlaylist, routeCoverUrl, setPlaylist, validSource],
+    [id, message, pageSize, playPlaylist, routeCoverUrl, validSource],
   )
 
   useEffect(() => {
@@ -75,7 +73,7 @@ export default function MusicToplistDetailPage() {
 
   useEffect(() => {
     const total = detail?.total
-    if (!validSource || !id || typeof total !== 'number') {
+    if (playbackQueue !== detail?.list || !validSource || !id || typeof total !== 'number') {
       setAutoNextHandler(null)
       return
     }
@@ -89,7 +87,7 @@ export default function MusicToplistDetailPage() {
       setPage((current) => current + 1)
     })
     return () => setAutoNextHandler(null)
-  }, [detail?.total, id, page, pageSize, setAutoNextHandler, validSource])
+  }, [detail?.list, detail?.total, playbackQueue, id, page, pageSize, setAutoNextHandler, validSource])
 
   const metaText = useMemo(() => {
     if (!validSource) return ''
@@ -185,7 +183,7 @@ export default function MusicToplistDetailPage() {
               size="large"
               icon={<RefreshCcw size={16} />}
               onClick={() => {
-                setPage(1)
+                void loadPage(page)
               }}
               className="music-hero-refresh-btn"
             >

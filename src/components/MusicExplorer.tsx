@@ -1,23 +1,14 @@
+import { MUSIC_VIEWS as VIEW_OPTIONS, isMusicView } from '../features/music/navigation'
 import QishuiMusicHome from '../features/music/QishuiMusicHome'
-import MusicSearchInput from './MusicSearchInput'
 import { MUSIC_SOURCE_OPTIONS as SOURCE_OPTIONS, isMusicSourceId, sourceLabel, normalizeSearchType, supportedSearchTypes, QISHUI_CAPABILITY_HINT, QISHUI_DISCOVERY_NOTE } from '../features/music/sources'
-import QishuiAccountControl from '../features/music/QishuiAccountControl'
 import { useCallback, useEffect, useMemo, useRef, useState, Fragment } from 'react'
 import { App as AntApp, Button, Input, Modal, Pagination, Segmented } from 'antd'
 import {
-  Compass, Radio,
-  ChevronLeft,
-  ChevronRight,
   Heart,
-  History,
-  ListMusic,
   Play,
   Search,
-  Sparkles,
   Trash2,
-  Trophy,
   Upload,
-  type LucideIcon,
 } from 'lucide-react'
 import { Link, useLocation, useNavigate, useSearchParams } from 'react-router-dom'
 import {
@@ -34,7 +25,7 @@ import {
 import { DEFAULT_PAGE_SIZE, PAGE_SIZE_OPTIONS } from '../constants/pagination'
 import { useAuth } from '../context/AuthContext'
 import { siteImages } from '../utils/siteImages'
-import { useMusicPlayer } from '../context/MusicPlayerContext'
+import { useMusicBrowse } from '../context/MusicPlayerContext'
 import { useMusicFavorites } from '../hooks/useMusicFavorites'
 import type {
   MusicFavoriteItem,
@@ -55,69 +46,10 @@ import MusicCover from './MusicCover'
 import MusicShareAction from './MusicShareAction'
 import MusicSongTable from './MusicSongTable'
 
-type MusicView = 'discover' | 'roaming' | 'toplist' | 'playlist' | 'new' | 'history' | 'favorites' | 'search' | 'my-playlists'
-
-type MusicViewOption = {
-  label: string
-  value: MusicView
-  icon: LucideIcon
-  searchMode?: boolean
-  authRequired?: boolean
-}
-
-const VIEW_OPTIONS: MusicViewOption[] = [
-  {label:'发现音乐',value:'discover',icon:Compass,authRequired:true},
-  {label:'音乐漫游',value:'roaming',icon:Radio,authRequired:true},
-  {
-    label: '榜单',
-    value: 'toplist',
-    icon: Trophy,
-    authRequired: true,
-  },
-  {
-    label: '歌单',
-    value: 'playlist',
-    icon: ListMusic,
-    authRequired: true,
-  },
-  {
-    label: '我的歌单',
-    value: 'my-playlists',
-    icon: ListMusic,
-    authRequired: true,
-  },
-  {
-    label: '新歌',
-    value: 'new',
-    icon: Sparkles,
-    authRequired: true,
-  },
-  {
-    label: '历史',
-    value: 'history',
-    icon: History,
-    authRequired: true,
-  },
-  {
-    label: '喜欢',
-    value: 'favorites',
-    icon: Heart,
-    authRequired: true,
-  },
-  {
-    label: '搜索',
-    value: 'search',
-    icon: Search,
-    searchMode: true,
-    authRequired: true,
-  },
-]
-
-
 const PLAYLIST_SOURCE_OPTIONS: Array<{ label: string; value: MusicSourceId }> = [
   { label: '网易云', value: 'netease' },
   { label: '酷我', value: 'kuwo' },
-  { label: '汽水音乐（黑源）', value: 'qishui' },
+  { label: '汽水音乐', value: 'qishui' },
 ]
 
 const NETEASE_PLAYLIST_CATEGORIES = [
@@ -167,20 +99,6 @@ function pageTotal(page: number, pageSize: number, count: number, total?: number
   const seen = (page - 1) * pageSize + count
   return count >= pageSize ? seen + 1 : seen
 }
-
-function isMusicView(value: string | null): value is MusicView {
-  return (
-    value === 'discover' || value === 'roaming' ||
-    value === 'toplist' ||
-    value === 'playlist' ||
-    value === 'new' ||
-    value === 'history' ||
-    value === 'favorites' ||
-    value === 'search' ||
-    value === 'my-playlists'
-  )
-}
-
 
 function isMusicSearchType(value: string | null): value is MusicSearchType {
   return (
@@ -318,7 +236,7 @@ export default function MusicExplorer() {
   const location = useLocation()
   const navigate = useNavigate()
   const [searchParams, setSearchParams] = useSearchParams()
-  const { playPlaylist, setPlaylist, openArtist } = useMusicPlayer()
+  const { playPlaylist, openArtist } = useMusicBrowse()
 
   const [searchSource, setSearchSource] = useState<MusicSourceId>(() => isMusicSourceId(searchParams.get('source')) ? searchParams.get('source') as MusicSourceId : 'qishui')
   const [searchType, setSearchType] = useState<MusicSearchType>('song')
@@ -338,6 +256,7 @@ export default function MusicExplorer() {
   const [lastSearchType, setLastSearchType] = useState<MusicSearchType>('song')
   const contentRef = useRef<HTMLDivElement>(null)
   const searchRequestIdRef = useRef(0)
+  const searchAbortRef = useRef<AbortController | null>(null)
 
   const [toplistSource, setToplistSource] = useState<MusicSourceId>('qq')
   const [toplists, setToplists] = useState<ToplistItem[]>([])
@@ -380,16 +299,19 @@ export default function MusicExplorer() {
   const [importing, setImporting] = useState(false)
 
   const playlistRequestIdRef = useRef(0)
+  const toplistRequestIdRef = useRef(0)
   const newSongsRequestIdRef = useRef(0)
   const historyRequestIdRef = useRef(0)
   const favoriteRequestIdRef = useRef(0)
   const myPlaylistsRequestIdRef = useRef(0)
   const urlSearchRef = useRef('')
 
+  useEffect(() => () => { searchRequestIdRef.current++; searchAbortRef.current?.abort(); urlSearchRef.current = '' }, [auth.token])
+
   const view = isMusicView(searchParams.get('view')) ? searchParams.get('view') : 'discover'
   useEffect(() => { contentRef.current?.scrollTo(0,0) }, [view])
   const currentViewOption = VIEW_OPTIONS.find((item) => item.value === view)
-  const currentViewRequiresAuth = currentViewOption?.authRequired === true
+  const currentViewRequiresAuth = true
   const showAuthPrompt = currentViewRequiresAuth && !auth.token
   const returnPath = `${location.pathname}${location.search}${location.hash}`
 
@@ -413,25 +335,6 @@ export default function MusicExplorer() {
 
   const favoriteState = useMusicFavorites(activeSongs)
 
-  const setView = useCallback(
-    (nextView: MusicView) => {
-      const nextParams = new URLSearchParams(searchParams)
-      nextParams.set('view', nextView)
-      setSearchParams(nextParams, { replace: true })
-    },
-    [searchParams, setSearchParams],
-  )
-
-  const handleViewSelect = useCallback(
-    (item: MusicViewOption) => {
-      if (item.authRequired && !auth.token) {
-        message.info(`登录后可使用${item.label}`)
-      }
-      setView(item.value)
-    },
-    [auth.token, message, setView],
-  )
-
   const searchSongs = useCallback(
     async (
       nextKeyword: string,
@@ -450,10 +353,13 @@ export default function MusicExplorer() {
       }
 
       const requestId = ++searchRequestIdRef.current
+      searchAbortRef.current?.abort()
+      const controller = new AbortController()
+      searchAbortRef.current = controller
       setSearching(true)
       try {
-        const data = await musicSearch(nextSource, trimmed, nextPage, nextPageSize, nextType)
-        if (requestId !== searchRequestIdRef.current) return
+        const data = await musicSearch(nextSource, trimmed, nextPage, nextPageSize, nextType, controller.signal)
+        if (requestId !== searchRequestIdRef.current || controller.signal.aborted) return
 
         const nextCollections: SearchCollections = {
           artist: [],
@@ -476,16 +382,15 @@ export default function MusicExplorer() {
         setLastKeyword(trimmed)
         setLastSearchSource(nextSource)
         setLastSearchType(nextType)
-        if (nextType === 'song') setPlaylist(data.list)
       } catch (error) {
-        if (requestId !== searchRequestIdRef.current) return
+        if (requestId !== searchRequestIdRef.current || controller.signal.aborted) return
         message.error((error as Error).message)
       } finally {
-        if (requestId !== searchRequestIdRef.current) return
+        if (requestId !== searchRequestIdRef.current || controller.signal.aborted) return
         setSearching(false)
       }
     },
-    [auth.token, message, searchPageSize, searchSource, searchType, setPlaylist],
+    [auth.token, message, searchPageSize, searchSource, searchType],
   )
 
   useEffect(() => {
@@ -534,14 +439,17 @@ export default function MusicExplorer() {
 
   const loadToplists = useCallback(async () => {
     if (!auth.token) return
+    const requestId = ++toplistRequestIdRef.current
     setToplistLoading(true)
     try {
       const data = await musicToplist(toplistSource)
+      if (requestId !== toplistRequestIdRef.current) return
       setToplists(data.list)
     } catch (error) {
+      if (requestId !== toplistRequestIdRef.current) return
       message.error((error as Error).message)
     } finally {
-      setToplistLoading(false)
+      if (requestId === toplistRequestIdRef.current) setToplistLoading(false)
     }
   }, [auth.token, message, toplistSource])
 
@@ -583,7 +491,6 @@ export default function MusicExplorer() {
         list: hydrated.list,
       }
       setNewSongsDetail(nextDetail)
-      setPlaylist(nextDetail.list)
     } catch (error) {
       if (requestId !== newSongsRequestIdRef.current) return
       message.error((error as Error).message)
@@ -591,7 +498,7 @@ export default function MusicExplorer() {
       if (requestId !== newSongsRequestIdRef.current) return
       setNewSongsLoading(false)
     }
-  }, [auth.token, message, newSongsPage, newSongsPageSize, newSource, setPlaylist])
+  }, [auth.token, message, newSongsPage, newSongsPageSize, newSource])
 
   const loadHistory = useCallback(async () => {
     if (!auth.token) return
@@ -602,7 +509,6 @@ export default function MusicExplorer() {
       if (requestId !== historyRequestIdRef.current) return
       setHistoryItems(data.items)
       setHistoryTotal(data.total)
-      setPlaylist(data.items.map(toSongSearchItem))
     } catch (error) {
       if (requestId !== historyRequestIdRef.current) return
       message.error((error as Error).message)
@@ -610,7 +516,7 @@ export default function MusicExplorer() {
       if (requestId !== historyRequestIdRef.current) return
       setHistoryLoading(false)
     }
-  }, [auth.token, historyPage, historyPageSize, message, setPlaylist])
+  }, [auth.token, historyPage, historyPageSize, message])
 
   const loadFavorites = useCallback(async () => {
     if (!auth.token) return
@@ -621,7 +527,6 @@ export default function MusicExplorer() {
       if (requestId !== favoriteRequestIdRef.current) return
       setFavoriteItems(data.items)
       setFavoriteTotal(data.total)
-      setPlaylist(data.items.map(toSongSearchItem))
     } catch (error) {
       if (requestId !== favoriteRequestIdRef.current) return
       message.error((error as Error).message)
@@ -629,7 +534,7 @@ export default function MusicExplorer() {
       if (requestId !== favoriteRequestIdRef.current) return
       setFavoriteLoading(false)
     }
-  }, [auth.token, favoritePage, favoritePageSize, message, setPlaylist])
+  }, [auth.token, favoritePage, favoritePageSize, message])
 
   const loadMyPlaylists = useCallback(async () => {
     if (!auth.token) return
@@ -694,13 +599,20 @@ export default function MusicExplorer() {
   }, [auth.token, loadFavorites, view])
 
   useEffect(() => {
-    if (auth.token) return
     setHistoryItems([])
     setHistoryTotal(0)
     setFavoriteItems([])
     setFavoriteTotal(0)
     setMyPlaylists([])
     setMyPlaylistsTotal(0)
+    return () => {
+      historyRequestIdRef.current++
+      favoriteRequestIdRef.current++
+      myPlaylistsRequestIdRef.current++
+      toplistRequestIdRef.current++
+      playlistRequestIdRef.current++
+      newSongsRequestIdRef.current++
+    }
   }, [auth.token])
 
   const stageTitle = useMemo(() => {
@@ -724,8 +636,6 @@ export default function MusicExplorer() {
     }
   }, [lastKeyword, newSongsDetail?.name, view])
 
-  const activeSearchTypeOption =
-    SEARCH_TYPE_OPTIONS.find((item) => item.value === searchType) ?? SEARCH_TYPE_OPTIONS[0]
   const lastSearchTypeOption =
     SEARCH_TYPE_OPTIONS.find((item) => item.value === lastSearchType) ?? SEARCH_TYPE_OPTIONS[0]
   const activeSearchCollectionItems =
@@ -774,13 +684,6 @@ export default function MusicExplorer() {
 
   const hasSearchResults =
     searching || lastKeyword.length > 0 || searchResults.length > 0 || activeSearchCollectionItems.length > 0
-
-  const handleQuickSearch = useCallback((value: string) => {
-    setView('search')
-    const trimmed = value.trim()
-    if (!trimmed) return
-    void searchSongs(trimmed, 1, searchPageSize, searchSource, searchType)
-  }, [keyword, searchPageSize, searchSongs, searchSource, searchType, setView])
 
   const handleToggleFavorite = async (song: SongSearchItem) => {
     const nextLiked = await favoriteState.toggleFavorite(song)
@@ -921,75 +824,9 @@ export default function MusicExplorer() {
 
   return (
     <Fragment>
-      <main className="music-browser" aria-label="音乐工作台">
-        <div
-          className={`music-browser__layout${
-            view === 'search' ? ' music-browser__layout--search' : ''
-          }`}
-        >
-          <aside className="music-browser__sidebar">
-            <Link to="/music" className="music-browser__identity">
-              <img src={siteImages.musicIcon.url} alt="" width={36} height={36} />
-              <span><strong>DuckMusic</strong><small>我的音乐空间</small></span>
-            </Link>
-            <nav className="music-browser__side-nav" aria-label="音乐功能导航">
-              {VIEW_OPTIONS.map((item) => {
-                const Icon = item.icon
-                const isActive = item.value === view
-
-                return (
-                  <button
-                    key={item.value}
-                    type="button"
-                    className={`music-browser__side-item${isActive ? ' is-active' : ''}${
-                      item.searchMode ? ' music-browser__side-item--search' : ''
-                    }`}
-                    aria-pressed={isActive}
-                    onClick={() => handleViewSelect(item)}
-                  >
-                    <span className="music-browser__side-item-icon">
-                      <Icon size={18} strokeWidth={isActive ? 2.5 : 2} />
-                    </span>
-                    <span className="music-browser__side-item-name">{item.label}</span>
-                  </button>
-                )
-              })}
-            </nav>
-          </aside>
-
-          <div className="music-browser__main">
-            <div className="music-browser__topline">
-              <div className="music-browser__history-controls" aria-label="页面导航">
-                <button type="button" onClick={() => navigate(-1)} aria-label="后退" title="后退">
-                  <ChevronLeft size={18} />
-                </button>
-                <button type="button" onClick={() => navigate(1)} aria-label="前进" title="前进">
-                  <ChevronRight size={18} />
-                </button>
-              </div>
-
-              <div className="music-browser__topline-copy">
-                <h1>{stageTitle}</h1>
-                <p>{stageMeta}</p>
-              </div>
-
-              <MusicSearchInput
-                source={searchSource}
-                className="music-browser__quick-search"
-                placeholder="搜索歌曲、歌手、专辑或歌单"
-                value={keyword}
-                onChange={setKeyword}
-                onSearch={handleQuickSearch}
-                enterButton={<Search size={16} />}
-                loading={searching}
-              />
-              {/* 黑源授权入口常驻：不再要求用户先切到「汽水音乐」搜索源才能找到 */}
-              <div className="music-browser__qishui-entry">
-                <QishuiAccountControl />
-              </div>
-            </div>
-
+      <section className="music-browser" aria-label="音乐工作台">
             <div ref={contentRef} className="music-browser__content">
+          {!showAuthPrompt && view!=='discover' && view!=='roaming' && <div className="music-page-heading"><span>{stageMeta}</span><h1>{stageTitle}</h1></div>}
           {showAuthPrompt ? (
             <MusicAuthPrompt
               returnPath={returnPath}
@@ -1005,9 +842,9 @@ export default function MusicExplorer() {
                     options={SOURCE_OPTIONS}
                     value={searchSource}
                     onChange={(value) => {
-                      setSearchSource(value as MusicSourceId)
-                      setSearchType(type => normalizeSearchType(value as MusicSourceId, type))
-                      setSearchPage(1)
+                      const next = value as MusicSourceId
+                      if (keyword) searchByMeta(keyword, next, searchType)
+                      else { setSearchSource(next); setSearchParams({view:'search',source:next,type:normalizeSearchType(next,searchType)}) }
                     }}
                   />
                   <Segmented
@@ -1018,28 +855,18 @@ export default function MusicExplorer() {
                     }))}
                     value={searchType}
                     onChange={(value) => {
-                      setSearchType(value as MusicSearchType)
-                      setSearchPage(1)
+                      const next = value as MusicSearchType
+                      if (keyword) searchByMeta(keyword, searchSource, next)
+                      else { setSearchType(next); setSearchParams({view:'search',source:searchSource,type:next}) }
                     }}
                   />
-                  <MusicSearchInput
-                source={searchSource}
-                    className="music-search-box"
-                    placeholder={activeSearchTypeOption.placeholder}
-                    value={keyword}
-                    onChange={setKeyword}
-                    onSearch={(value) => {
-                      void searchSongs(value, 1, searchPageSize, searchSource, searchType)
-                    }}
-                    enterButton="搜索"
-                    loading={searching}
-                      />
                 </div>
                 {searchSource === 'qishui' && <div className="music-qishui-account-row">
                   <span>{QISHUI_CAPABILITY_HINT}</span>
                 </div>}
               </section>
 
+              {!hasSearchResults && <div className="music-search-starters"><h2>从喜欢的名字开始</h2><p>搜一首歌、一位歌手，或一张陪伴你的专辑。</p><div>{['周杰伦','陈奕迅','轻音乐','独立音乐'].map(value=><button type="button" key={value} onClick={()=>searchByMeta(value,searchSource)}><Search size={15}/>{value}</button>)}</div></div>}
               {hasSearchResults && (
                 <section className="music-search-results">
                   <div className="music-search-results__head">
@@ -1506,9 +1333,7 @@ export default function MusicExplorer() {
             </>
           )}
           </div>
-        </div>
-      </div>
-    </main>
+    </section>
 
     <Modal
       title="导入歌单"

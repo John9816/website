@@ -4,7 +4,7 @@ export const MUSIC_SOURCE_OPTIONS: Array<{ label: string; value: MusicSourceId }
   { label: 'QQ 音乐', value: 'qq' },
   { label: '网易云', value: 'netease' },
   { label: '酷我', value: 'kuwo' },
-  { label: '汽水音乐（黑源）', value: 'qishui' },
+  { label: '汽水音乐', value: 'qishui' },
 ]
 
 export const STANDARD_CATALOG_SOURCE_OPTIONS = MUSIC_SOURCE_OPTIONS.filter(s => s.value !== 'qishui')
@@ -51,10 +51,7 @@ export const QISHUI_CAPABILITIES = {
 
 /** 榜单 / 推荐 / 新歌视图的显式标注，避免把搜索结果误认为官方榜单。 */
 export const QISHUI_DISCOVERY_NOTE =
-  '此处为基于真实搜索的「搜索发现」。官方歌曲推荐和个人音乐漫游可在黑源入口使用。'
+  '此处为基于真实搜索的「搜索发现」。官方歌曲推荐和个人音乐漫游可在发现页使用。'
 
 /** 搜索页展示的能力摘要。 */
-export const QISHUI_CAPABILITY_HINT =
-  `可用：${QISHUI_CAPABILITIES.supported.join('、')}；` +
-  `${QISHUI_CAPABILITIES.discovery.join('；')}。` +
-  `播放需单独配置解析凭据；曲库搜索无需扫码授权。`
+export const QISHUI_CAPABILITY_HINT = '搜索无需扫码；个性推荐请前往音乐漫游。'

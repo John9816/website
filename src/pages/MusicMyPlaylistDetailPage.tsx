@@ -5,7 +5,7 @@ import { Link, useNavigate, useParams } from 'react-router-dom'
 import { ArrowLeft, Edit2, Heart, Play, RefreshCcw, Trash2 } from 'lucide-react'
 import { DEFAULT_PAGE_SIZE } from '../constants/pagination'
 import { useAuth } from '../context/AuthContext'
-import { useMusicPlayer } from '../context/MusicPlayerContext'
+import { useMusicBrowse } from '../context/MusicPlayerContext'
 import { useMusicFavorites } from '../hooks/useMusicFavorites'
 import type { ImportedPlaylist, ImportedPlaylistItem, MusicQuality, MusicSourceId, SongSearchItem } from '../types'
 import { getImportedPlaylistDetail, removePlaylistItem, updateImportedPlaylist, deleteImportedPlaylist } from '../api/music'
@@ -65,7 +65,7 @@ export default function MusicMyPlaylistDetailPage() {
   const auth = useAuth()
   const navigate = useNavigate()
   const params = useParams()
-  const { setPlaylist, playPlaylist, setAutoNextHandler } = useMusicPlayer()
+  const { playlist: playbackQueue, playPlaylist, setAutoNextHandler } = useMusicBrowse()
 
   const [loading, setLoading] = useState(false)
   const [page, setPage] = useState(1)
@@ -141,8 +141,6 @@ export default function MusicMyPlaylistDetailPage() {
       setTotal(totalCount)
       if (options?.autoplay && songList.length) {
         void playPlaylist(songList)
-      } else {
-        setPlaylist(songList)
       }
     } catch (error) {
       if (requestId !== requestIdRef.current) return
@@ -152,7 +150,7 @@ export default function MusicMyPlaylistDetailPage() {
         setLoading(false)
       }
     }
-  }, [playlistId, page, pageSize, playPlaylist, setPlaylist, message])
+  }, [playlistId, page, pageSize, playPlaylist, message])
 
   const handlePlayEntirePlaylist = useCallback(async () => {
     if (!playlistId || Number.isNaN(playlistId)) return
@@ -274,7 +272,7 @@ export default function MusicMyPlaylistDetailPage() {
       setAutoNextHandler(null)
       return
     }
-    const hasNextPage = page * pageSize < total
+    const hasNextPage = songs.length > 0 && playbackQueue.length === songs.length && playbackQueue.every((song, index) => song.id === songs[index].id && song.source === songs[index].source) && page * pageSize < total
     if (!hasNextPage) {
       setAutoNextHandler(null)
       return
@@ -284,7 +282,7 @@ export default function MusicMyPlaylistDetailPage() {
       setPage((current) => current + 1)
     })
     return () => setAutoNextHandler(null)
-  }, [auth.token, page, pageSize, playlistId, setAutoNextHandler, total])
+  }, [auth.token, page, pageSize, playlistId, setAutoNextHandler, total, songs, playbackQueue])
 
   const searchByMeta = useCallback(
     (nextKeyword: string, nextSource: MusicSourceId, nextType: 'artist' | 'album' = 'artist') => {

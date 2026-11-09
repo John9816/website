@@ -5,7 +5,7 @@ import { ChevronLeft, Copy, Play, RefreshCcw } from 'lucide-react'
 import { Link, useParams } from 'react-router-dom'
 import { getPublicMusicShare } from '../api/music'
 import MusicCover from '../components/MusicCover'
-import { useMusicPlayer } from '../context/MusicPlayerContext'
+import { useMusicBrowse } from '../context/MusicPlayerContext'
 import type { MusicPublicShareView, SongSearchItem } from '../types'
 import { formatDuration, normalizeCoverUrl } from '../utils/musicPlayer'
 import { copyText, formatDateTime } from '../utils/share'
@@ -29,7 +29,7 @@ function toSongSearchItem(data: MusicPublicShareView): SongSearchItem {
 export default function MusicSharePage() {
   const { message } = AntApp.useApp()
   const { token } = useParams<{ token: string }>()
-  const { playPlaylist, playResolvedSong } = useMusicPlayer()
+  const { playPlaylist, playResolvedSong } = useMusicBrowse()
   const [loading, setLoading] = useState(true)
   const [share, setShare] = useState<MusicPublicShareView | null>(null)
   const [error, setError] = useState<string | null>(null)

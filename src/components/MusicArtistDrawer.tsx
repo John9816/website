@@ -2,14 +2,14 @@ import { useEffect, useState } from 'react'
 import { Alert, Button, Drawer, Empty, Pagination, Segmented, Spin } from 'antd'
 import { useNavigate } from 'react-router-dom'
 import { musicArtistDetail, musicArtistWorks, musicSearch } from '../api/music'
-import { useMusicPlayer } from '../context/MusicPlayerContext'
+import { useMusicBrowse } from '../context/MusicPlayerContext'
 import { useAuth } from '../context/AuthContext'
 import type { ArtistDetailView, ArtistWorksView } from '../types'
 import MusicCover from './MusicCover'
 import MusicSongTable from './MusicSongTable'
 import { sourceLabel } from '../features/music/sources'
 export default function MusicArtistDrawer() {
-  const {artistTarget:target, closeArtist, playPlaylist} = useMusicPlayer()
+  const {artistTarget:target, closeArtist, playPlaylist} = useMusicBrowse()
   const {token} = useAuth();const navigate=useNavigate()
   const [tab,setTab]=useState<'song'|'album'>('song'), [page,setPage]=useState(1), [retry,setRetry]=useState(0)
   const [detail,setDetail]=useState<ArtistDetailView|null>(null), [works,setWorks]=useState<ArtistWorksView|null>(null)
@@ -26,7 +26,7 @@ export default function MusicArtistDrawer() {
     if(target.id) void musicArtistDetail(target.source,[target.id]).then(v=>{if(!cancelled)setDetail(v[0] || null)}).catch(()=>{})
     return()=>{cancelled=true}
   },[target,tab,page,retry,token])
-  return <Drawer open={!!target} onClose={closeArtist} width="min(900px, 100vw)" title="歌手作品" destroyOnClose>
+  return <Drawer open={!!target} onClose={closeArtist} width="min(900px, 100vw)" title="歌手作品" className="music-studio-overlay" destroyOnHidden>
     {target && <div className="music-artist-profile">
       <MusicCover src={detail?.coverUrl} size={88} rounded={44}/><div><small>{sourceLabel(target.source)}</small><h2>{detail?.name || target.name || '歌手'}</h2><p>{detail?.songCount != null ? `${detail.songCount} 首歌曲` : '探索歌曲与专辑'}{detail?.albumCount != null ? ` · ${detail.albumCount} 张专辑` : ''}</p></div>
     </div>}

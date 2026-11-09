@@ -179,6 +179,7 @@ function GlobalBeianFooterGate() {
   if (
     location.pathname === '/'
     || location.pathname.startsWith('/editor')
+    || location.pathname.startsWith('/music')
     || location.pathname.startsWith('/admin')
     || (location.pathname === '/ai-image' && !!auth.token)
   ) {

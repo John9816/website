@@ -1,13 +1,22 @@
-import { useEffect, useMemo, useRef, useState } from 'react'
+import { useEffect, useMemo, useSyncExternalStore } from 'react'
 import { App as AntApp } from 'antd'
 import {
   deleteMusicFavorite,
   getMusicFavoriteStatuses,
   saveMusicFavorite,
 } from '../api/music'
+import { AUTH_CHANGE_EVENT, getAuthSessionId } from '../api/client'
 import { useAuth } from '../context/AuthContext'
+import { MusicFavoriteStore } from '../utils/musicFavoriteStore'
 import type { SongSearchItem } from '../types'
 
+const store = new MusicFavoriteStore()
+const syncScope = () => store.setScope(getAuthSessionId())
+if (typeof window !== 'undefined') {
+  syncScope()
+  window.addEventListener(AUTH_CHANGE_EVENT, syncScope)
+  window.addEventListener('storage', syncScope)
+}
 function favoriteKey(song: Pick<SongSearchItem, 'source' | 'id'>) {
   return `${song.source}:${song.id}`
 }
@@ -15,109 +24,79 @@ function favoriteKey(song: Pick<SongSearchItem, 'source' | 'id'>) {
 export function useMusicFavorites(songs: SongSearchItem[]) {
   const { message } = AntApp.useApp()
   const auth = useAuth()
-  const [favoriteMap, setFavoriteMap] = useState<Record<string, boolean>>({})
-  const [loadingKey, setLoadingKey] = useState<string | null>(null)
-  const requestIdRef = useRef(0)
-
-  const songKeys = useMemo(() => songs.map((song) => favoriteKey(song)), [songs])
-  const songKeysJoined = songKeys.join(',')
-
+  const state = useSyncExternalStore(store.subscribe, store.getSnapshot)
+  const keys = useMemo(() => songs.map(favoriteKey).join(','), [songs])
   useEffect(() => {
-    if (!auth.token || !songs.length) {
-      setFavoriteMap({})
-      return
-    }
-
-    const requestId = ++requestIdRef.current
-    const songsBySource = songs.reduce<Record<string, SongSearchItem[]>>((groups, song) => {
-      if (!groups[song.source]) groups[song.source] = []
-      groups[song.source].push(song)
-      return groups
-    }, {})
-
-    Promise.all(
-      Object.entries(songsBySource).map(async ([source, sourceSongs]) => {
-        const uniqueSongIds = Array.from(new Set(sourceSongs.map((song) => song.id)))
-        try {
-          return await getMusicFavoriteStatuses(sourceSongs[0].source, uniqueSongIds)
-        } catch (e) {
-          return uniqueSongIds.map((songId) => ({
-            source,
-            songId,
-            liked: false,
-            favoriteId: null,
-          }))
-        }
-      }),
+    syncScope()
+    const scope = getAuthSessionId()
+    if (!auth.token || !scope || !songs.length) return
+    let active = true
+    const groups = songs.reduce<Record<string, SongSearchItem[]>>(
+      (result, song) => {
+        ;(result[song.source] ||= []).push(song)
+        return result
+      },
+      {},
     )
-      .then((groups) => {
-        if (requestId !== requestIdRef.current) return
-        const nextEntries = groups
-          .flat()
-          .map((status) => [`${status.source}:${status.songId}`, status.liked] as const)
-        setFavoriteMap(Object.fromEntries(nextEntries))
-      })
-      .catch(() => {
-        if (requestId !== requestIdRef.current) return
-        setFavoriteMap({})
-      })
-  }, [auth.token, songKeysJoined]) // 使用拼接后的字符串作为依赖，避免引用变化导致的重复请求
-
-  useEffect(() => {
-    setFavoriteMap((previous) => {
-      const next: Record<string, boolean> = {}
-      songKeys.forEach((key) => {
-        if (previous[key] !== undefined) next[key] = previous[key]
-      })
-      return next
-    })
-  }, [songKeys])
+    for (const rows of Object.values(groups)) {
+      const ids = [...new Set(rows.map((row) => row.id))].filter(
+        (id) => !(`${rows[0].source}:${id}` in store.getSnapshot().liked),
+      )
+      if (!ids.length) continue
+      void getMusicFavoriteStatuses(rows[0].source, ids)
+        .then((statuses) => {
+          if (active)
+            store.hydrate(
+              scope,
+              statuses.map((status) => ({
+                key: `${status.source}:${status.songId}`,
+                liked: status.liked,
+              })),
+            )
+        })
+        .catch(() => {})
+    }
+    return () => {
+      active = false
+    }
+  }, [auth.token, keys])
 
   const toggleFavorite = async (song: SongSearchItem) => {
-    if (!auth.token) {
+    const scope = getAuthSessionId()
+    if (!auth.token || !scope) {
       message.info('登录后可使用收藏功能')
       return false
     }
-
-    const key = favoriteKey(song)
-    const liked = !!favoriteMap[key]
-    setLoadingKey(key)
+    syncScope()
+    const key = favoriteKey(song),
+      previous = !!store.getSnapshot().liked[key]
     try {
-      if (liked) {
-        await deleteMusicFavorite(song.source, song.id)
-        setFavoriteMap((previous) => ({ ...previous, [key]: false }))
-        return false
-      }
-
-      await saveMusicFavorite({
-        source: song.source,
-        songId: song.id,
-        name: song.name,
-        artist: song.artist,
-        album: song.album,
-        coverUrl: song.coverUrl,
-        durationSec: song.durationSec,
-      })
-      setFavoriteMap((previous) => ({ ...previous, [key]: true }))
-      return true
+      return await store.toggle(scope, key, (liked) =>
+        liked
+          ? saveMusicFavorite({
+              source: song.source,
+              songId: song.id,
+              name: song.name,
+              artist: song.artist,
+              album: song.album,
+              coverUrl: song.coverUrl,
+              durationSec: song.durationSec,
+            })
+          : deleteMusicFavorite(song.source, song.id),
+      )
     } catch (error) {
-      message.error((error as Error).message)
-      return liked
-    } finally {
-      setLoadingKey(null)
+      if (getAuthSessionId() === scope) message.error((error as Error).message)
+      return previous
     }
   }
-
   return {
     canFavorite: !!auth.token,
-    favoriteMap,
-    favoriteLoadingKey: loadingKey,
-    isFavorite(song: Pick<SongSearchItem, 'source' | 'id'>) {
-      return !!favoriteMap[favoriteKey(song)]
-    },
-    isFavoriteLoading(song: Pick<SongSearchItem, 'source' | 'id'>) {
-      return loadingKey === favoriteKey(song)
-    },
+    favoriteMap: state.liked,
+    favoriteLoadingKey: Object.keys(state.pending)[0] || null,
+    isFavorite: (song: Pick<SongSearchItem, 'source' | 'id'>) =>
+      !!state.liked[favoriteKey(song)],
+    isFavoriteLoading: (song: Pick<SongSearchItem, 'source' | 'id'>) =>
+      !!state.pending[favoriteKey(song)],
     toggleFavorite,
   }
 }

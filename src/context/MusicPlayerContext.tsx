@@ -14,6 +14,7 @@ import {
 import type { ReactNode } from 'react'
 import { App as AntApp } from 'antd'
 import { musicPlay, qishuiSongInfo } from '../api/music'
+import { getAuthSessionId } from '../api/client'
 import { useAuth } from './AuthContext'
 import type { MusicSourceId, MusicQuality, PlayInfo, SongSearchItem } from '../types'
 import {
@@ -154,11 +155,15 @@ type MusicPlayerContextValue = ReturnType<typeof usePlayerLyrics> & ReturnType<t
   setAutoNextHandler: (handler: AutoNextHandler | null) => void
 }
 
+type MusicBrowseValue = Pick<MusicPlayerContextValue, 'artistTarget' | 'openArtist' | 'closeArtist' | 'current' | 'playlist' | 'currentIndex' | 'isPlaying' | 'playLoading' | 'pendingTrackKey' | 'unsupportedFormat' | 'preferredQuality' | 'playMode' | 'canPrev' | 'canNext' | 'setPlaylist' | 'playPlaylist' | 'playFromQueue' | 'setPreferredQuality' | 'playSong' | 'playResolvedSong' | 'togglePlay' | 'playPrev' | 'playNext' | 'setAutoNextHandler' | 'roamingSession' | 'roamingBusy' | 'roamingError' | 'startRoaming' | 'nextRoaming' | 'stopRoaming'>
+const MusicBrowseContext = createContext<MusicBrowseValue | null>(null)
+
 const MusicPlayerContext = createContext<MusicPlayerContextValue | null>(null)
 
 export function MusicPlayerProvider({ children }: { children: ReactNode }) {
   const { message } = AntApp.useApp()
   const { token: authToken } = useAuth()
+  const authSessionId = getAuthSessionId()
   const audioRef = useRef<HTMLAudioElement | null>(null)
   const autoNextHandlerRef = useRef<AutoNextHandler | null>(null)
   const playGenerationRef = useRef(0)
@@ -169,7 +174,7 @@ export function MusicPlayerProvider({ children }: { children: ReactNode }) {
   const playInfoCacheRef = useRef<Map<string, PlayInfoCacheEntry>>(new Map())
   const playInfoInFlightRef = useRef<Map<string, PlayInfoInFlight>>(new Map())
   const playRecordRequestsRef = useRef<Map<string, AbortController>>(new Map())
-  const previousAuthTokenRef = useRef(authToken)
+  const previousAuthSessionRef = useRef(authSessionId)
   const radioKeys = useRef(new Set<string>())
   const radioNext = useRef<(()=>void)|null>(null)
   const radioStop = useRef<(()=>void)|null>(null)
@@ -598,6 +603,8 @@ export function MusicPlayerProvider({ children }: { children: ReactNode }) {
   }, [current?.id, current?.source, current?.playUrl, message, unsupportedFormat])
 
   useEffect(() => {
+    const connection = (navigator as Navigator & { connection?: { saveData?: boolean; effectiveType?: string } }).connection
+    if (connection?.saveData || ['slow-2g', '2g'].includes(connection?.effectiveType || '')) return
     if (playMode !== 'sequence' || !current || currentIndex < 0) return
     const nextSong = playlist[currentIndex + 1]
     if (!nextSong) return
@@ -607,8 +614,8 @@ export function MusicPlayerProvider({ children }: { children: ReactNode }) {
   }, [current, currentIndex, playMode, playlist, preferredQuality, resolvePlayInfo])
 
   useEffect(() => {
-    if (previousAuthTokenRef.current === authToken) return
-    previousAuthTokenRef.current = authToken
+    if (previousAuthSessionRef.current === authSessionId) return
+    previousAuthSessionRef.current = authSessionId
     playGenerationRef.current += 1
     activePlayRequestRef.current?.controller?.abort()
     activePlayRequestRef.current = null
@@ -620,7 +627,7 @@ export function MusicPlayerProvider({ children }: { children: ReactNode }) {
     setPendingTrackKey(null)
     setPlayLoading(false)
     setCurrent(null); setPlaylistState([]); setCurrentTime(0); setArtistTarget(null); audioRef.current?.pause()
-  }, [authToken])
+  }, [authSessionId])
 
   useEffect(
     () => () => {
@@ -652,7 +659,7 @@ export function MusicPlayerProvider({ children }: { children: ReactNode }) {
     }).catch(()=>{})
     return () => controller.abort()
   }, [current?.id, current?.source, authToken])
-  const radio = useQishuiRoaming(authToken, playQueue, radioKeys, radioNext, setRadioAvailable)
+  const radio = useQishuiRoaming(authSessionId, playQueue, radioKeys, radioNext, setRadioAvailable)
   radioStop.current = radio.stopRoaming
   const lyrics = usePlayerLyrics(current, currentTime, authToken)
   const mediaPlay = useCallback(() => { if (audioRef.current?.paused) togglePlay() }, [togglePlay])
@@ -735,9 +742,14 @@ export function MusicPlayerProvider({ children }: { children: ReactNode }) {
     ],
   )
 
+  const browse = useMemo<MusicBrowseValue>(() => ({
+    artistTarget, openArtist, closeArtist, current, playlist, currentIndex, isPlaying, playLoading, pendingTrackKey, unsupportedFormat, preferredQuality, playMode, canPrev, canNext, setPlaylist, playPlaylist, playFromQueue, setPreferredQuality, playSong, playResolvedSong, togglePlay, playPrev, playNext, setAutoNextHandler,
+    roamingSession: radio.roamingSession, roamingBusy: radio.roamingBusy, roamingError: radio.roamingError, startRoaming: radio.startRoaming, nextRoaming: radio.nextRoaming, stopRoaming: radio.stopRoaming
+  }), [artistTarget, openArtist, closeArtist, current, playlist, currentIndex, isPlaying, playLoading, pendingTrackKey, unsupportedFormat, preferredQuality, playMode, canPrev, canNext, setPlaylist, playPlaylist, playFromQueue, setPreferredQuality, playSong, playResolvedSong, togglePlay, playPrev, playNext, setAutoNextHandler, radio.roamingSession, radio.roamingBusy, radio.roamingError, radio.startRoaming, radio.nextRoaming, radio.stopRoaming])
+
   return (
     <MusicPlayerContext.Provider value={value}>
-      {children}
+      <MusicBrowseContext.Provider value={browse}>{children}</MusicBrowseContext.Provider>
       <audio
         ref={audioRef}
         src={current ? normalizeMediaUrl(current.playUrl) : undefined}
@@ -786,4 +798,11 @@ export function useMusicPlayer() {
     throw new Error('useMusicPlayer must be used within MusicPlayerProvider')
   }
   return context
+}
+
+/** Lists and navigation do not subscribe to the audio clock. */
+export function useMusicBrowse() {
+  const value = useContext(MusicBrowseContext)
+  if (!value) throw new Error('useMusicBrowse must be used within MusicPlayerProvider')
+  return value
 }

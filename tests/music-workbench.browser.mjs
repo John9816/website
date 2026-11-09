@@ -7,8 +7,8 @@ const wav=Buffer.alloc(44+8000*60*2);wav.write('RIFF');wav.writeUInt32LE(wav.len
 function song(id,name='夜色里的风'){return {id:String(id),source:'qishui',name,artist:'陈默',artistId:'800',artistIds:['800'],album:'夜行',albumId:'900',coverUrl:base+'/fixture-cover.svg',durationSec:60,availableQualities:[]}}
 const songs=[song(101),song(102,'路过人间'),song(103,'晴天之后'),song(104,'慢慢喜欢你')]
 try {
- for(const [width,theme] of [[1440,'light'],[1440,'dark'],[390,'light'],[390,'dark']]){
-  const page=await browser.newPage({viewport:{width,height:width===390?844:1000}});const errors=[];const nextSequences=[];let playCount=0;let failNext=true
+ for(const [width,theme] of [[1440,'light'],[1440,'dark'],[1024,'light'],[1024,'dark'],[390,'light'],[390,'dark'],[320,'light'],[320,'dark']]){
+  const page=await browser.newPage({viewport:{width,height:width<=390?844:width===1024?800:1000}});const errors=[];const nextSequences=[];let playCount=0;let failNext=true;let searchCount=0;let favoriteWrites=0
   page.on('console',m=>{if(m.type()==='error')console.log('console',m.text().slice(0,180))});page.on('pageerror',e=>{errors.push(e.message);console.log('PAGE ERROR',e.message)})
   await page.addInitScript(theme=>{localStorage.setItem('nav.token','test-token');localStorage.setItem('nav.username','tester');localStorage.setItem('nav.theme',theme)},theme)
   await page.route('**/fixture-cover.svg',r=>r.fulfill({contentType:'image/svg+xml',body:'<svg xmlns="http://www.w3.org/2000/svg" width="400" height="400"><rect width="400" height="400" fill="#355a62"/><circle cx="205" cy="230" r="120" fill="#71918b"/><path d="M0 300L400 120V400H0Z" fill="#193841"/><text x="40" y="80" font-size="34" fill="white">NIGHT WALK</text></svg>'}))
@@ -31,23 +31,28 @@ try {
     else if(p.endsWith('/music/artist'))data=[{id:'800',source:'qishui',name:'陈默',songCount:35,albumCount:2,description:'测试歌手资料'}]
     else if(p.endsWith('/artist/works'))data={artistId:'800',source:'qishui',type:u.searchParams.get('type'),page:1,pageSize:30,total:2,songs:[song(801,'歌手作品一'),song(802,'歌手作品二')],albums:[{id:'900',source:'qishui',name:'夜行',coverUrl:base+'/fixture-cover.svg'}]}
     else if(p.endsWith('/status'))data=[]
-    else if(p.endsWith('/music/search'))data={source:'qishui',type:'song',list:[song(999,'搜索结果')],total:1}
+    else if(p.endsWith('/favorites') && r.request().method()==='POST'){favoriteWrites++;await new Promise(resolve=>setTimeout(resolve,350));data={}}
+    else if(p.endsWith('/music/search')){searchCount++;data={source:'qishui',type:'song',list:[song(999,'搜索结果')],total:1}}
     else if(p.endsWith('/suggestions'))data=['周杰伦']
     else if(p.includes('/music/'))data={items:[],list:[],total:0}
     else if(p==='/api/public/nav')data=[]
     await r.fulfill({contentType:'application/json; charset=utf-8',body:JSON.stringify({code:0,message:'ok',data})})
   })
-  await page.goto(base+'/music');console.log('opened',width,theme);await page.getByRole('heading',{name:'发现音乐，从这一首开始。'}).waitFor()
+  await page.goto(base+'/music');console.log('opened',width,theme);await page.getByRole('heading',{name:/让好音乐，\s*接着发生。/}).waitFor(); const navigation=page.getByRole('navigation',{name:width<=800?'移动音乐导航':'音乐功能导航',exact:true}); await fs.mkdir('/tmp/music-studio-qa',{recursive:true});await page.screenshot({path:`/tmp/music-studio-qa/${width}-${theme}-discover.png`,fullPage:true})
   console.log('home loaded');await page.getByRole('button',{name:'开始收听',exact:true}).click();console.log('play clicked')
   await page.getByRole('heading',{name:'补齐后的歌名',exact:true}).waitFor()
-  await page.locator('.music-home__lyric').filter({hasText:'汽水歌词已加载'}).waitFor()
+  await page.locator('.music-home__lyric').filter({hasText:'汽水歌词已加载'}).waitFor({state:'attached'})
   const audioLoads=await page.evaluate(()=>document.querySelector('audio').currentTime)
   await page.waitForTimeout(300);assert.ok(await page.evaluate(()=>document.querySelector('audio').currentTime)>=audioLoads)
-  await page.locator('.music-home__listening').getByRole('button',{name:'陈默',exact:true}).click()
+  await page.evaluate(async()=>{const {setAuthSession}=await import('/src/api/client.ts');setAuthSession('renewed-token','Bearer','tester')});await page.waitForTimeout(150);assert.ok(await page.evaluate(()=>!!document.querySelector('audio').getAttribute('src')),'token renewal must keep current playback');
+  await page.keyboard.press('Control+k');await page.getByPlaceholder('搜索你想听的音乐').fill('测试');await page.locator('.music-studio-search .ant-input-search-button').click();await page.getByText('搜索结果',{exact:true}).last().waitFor();await page.getByRole('button',{name:'打开全屏播放器',exact:true}).click();await page.getByRole('button',{name:'播放列表，共 4 首',exact:true}).waitFor();await page.getByRole('button',{name:'喜欢当前歌曲',exact:true}).last().click();await page.getByRole('button',{name:'取消喜欢当前歌曲',exact:true}).last().waitFor();assert.equal(favoriteWrites,1);await page.keyboard.press('Escape');await page.screenshot({path:`/tmp/music-studio-qa/${width}-${theme}-search.png`,fullPage:true});
+  if(width<=800){const bar=await page.locator('.music-player-bar').boundingBox(), nav=await navigation.boundingBox();assert.ok(bar.y+bar.height<=nav.y,'player must not overlap navigation');await page.locator('.music-player-bar').getByRole('button',{name:'暂停',exact:true}).click();await page.waitForFunction(()=>document.querySelector('audio').paused);await page.locator('.music-player-bar').getByRole('button',{name:'播放',exact:true}).click()}
+  await navigation.getByRole('button',{name:'发现音乐',exact:true}).click();await page.getByRole('heading',{name:/让好音乐/}).waitFor();const beforeSearch=searchCount;await page.keyboard.press('Control+k');await page.getByPlaceholder('搜索你想听的音乐').fill('测试');await page.locator('.music-studio-search .ant-input-search-button').click();await page.getByText('搜索结果',{exact:true}).last().waitFor();assert.equal(searchCount,beforeSearch,'revisit should use cached results');await navigation.getByRole('button',{name:'发现音乐',exact:true}).click();
+  await page.locator('.music-stage-track').getByRole('button',{name:'陈默',exact:true}).click()
   await page.getByRole('dialog').getByText('歌手作品一',{exact:true}).waitFor()
   await page.getByRole('dialog').getByText('专辑',{exact:true}).click();await page.getByRole('dialog').getByText('夜行',{exact:true}).waitFor()
   await page.locator('.ant-drawer-close').click()
-  await page.getByRole('button',{name:'音乐漫游',exact:true}).click()
+  await navigation.getByRole('button',{name:'音乐漫游',exact:true}).click()
   await page.getByLabel('漫游场景',{exact:true}).selectOption('drive')
   await page.getByRole('button',{name:'开始漫游',exact:true}).click()
   await page.getByRole('heading',{name:'当前漫游队列',exact:true}).waitFor()
@@ -58,11 +63,11 @@ try {
   await page.getByText('漫游歌曲 1',{exact:true}).waitFor()
   assert.deepEqual(nextSequences,[1,1])
   await page.getByText('漫游歌曲 1',{exact:true}).waitFor()
-  await page.getByRole('button',{name:'搜索',exact:true}).first().click()
-  await page.getByRole('button',{name:'音乐漫游',exact:true}).click()
+  await navigation.getByRole('button',{name:'搜索',exact:true}).click()
+  await navigation.getByRole('button',{name:'音乐漫游',exact:true}).click()
   await page.getByText('漫游歌曲 1',{exact:true}).waitFor()
   await page.waitForFunction(()=>!document.querySelector('[aria-label="漫游场景"]')?.disabled)
-  if(width===390)assert.ok((await page.locator('.music-player-bar').boundingBox()).height<145,'mobile player should stay compact')
+  if(width<=390)assert.ok((await page.locator('.music-player-bar').boundingBox()).height<145,'mobile player should stay compact')
   await fs.mkdir('/tmp/music-workbench-qa',{recursive:true})
   await page.screenshot({path:`/tmp/music-workbench-qa/${width}-${theme}.png`,fullPage:true})
   assert.equal(await page.evaluate(()=>document.documentElement.scrollWidth>innerWidth+1),false)
@@ -73,6 +78,8 @@ try {
   assert.deepEqual(nextSequences,[1,1,2])
   await page.getByRole('button',{name:'换一批',exact:true}).click()
   await page.getByRole('button',{name:'结束',exact:true}).click();await page.waitForTimeout(350);await page.getByRole('heading',{name:'当前漫游队列',exact:true}).waitFor({state:'hidden'})
+  await page.getByRole('button',{name:theme==='dark'?'切换到白天模式':'切换到黑夜模式',exact:true}).click();assert.equal(await page.locator('html').getAttribute('data-theme'),theme==='dark'?'light':'dark');
+  if(width<=800){await page.getByRole('button',{name:'打开音乐菜单',exact:true}).click();await page.getByRole('dialog').getByRole('button',{name:'喜欢',exact:true}).click();await page.getByRole('heading',{name:'我喜欢的音乐',exact:true}).waitFor();}
   assert.deepEqual(errors,[]);console.log('PASS',width,theme,'official lyrics/metadata, artist songs/albums, roaming duplicate prevention/retry/auto-next/navigation/cancellation; play requests',playCount)
   await page.close()
  }

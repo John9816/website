@@ -107,8 +107,8 @@ function AccountControl() {
     ? `data:image/png;base64,${session.qrcode}` : null
 
   return <>
-    <Button icon={<QrCode size={16} />} onClick={() => setOpen(true)}>黑源授权</Button>
-    <Modal title="汽水音乐（黑源）授权" open={open} onCancel={close} footer={null} destroyOnClose width={440}>
+    <Button icon={<QrCode size={16} />} onClick={() => setOpen(true)}>汽水账号</Button>
+    <Modal title="连接汽水账号" open={open} onCancel={close} footer={null} destroyOnHidden width={440}>
       <div className="qishui-account">
         <p>每个网站账号独立扫码绑定。个人授权用于音乐漫游；搜索、公开推荐与普通播放无需扫码绑定。</p>
         {error && <Alert type="warning" showIcon message={error} />}
