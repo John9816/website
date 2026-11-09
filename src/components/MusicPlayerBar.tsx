@@ -30,7 +30,8 @@ import { FastAverageColor } from 'fast-average-color'
 import type { MusicQuality, SongSearchItem } from '../types'
 import MusicCover from './MusicCover'
 import { useMusicPlayer, type PlayMode } from '../context/MusicPlayerContext'
-import { useActiveLyric } from '../hooks/useActiveLyric'
+import MusicLyricText from './MusicLyricText'
+import MusicLyricsSettings from './MusicLyricsSettings'
 import { useMusicFavorites } from '../hooks/useMusicFavorites'
 import { formatDuration, normalizeCoverUrl } from '../utils/musicPlayer'
 
@@ -85,6 +86,9 @@ export default function MusicPlayerBar() {
 
   const {
     current,
+    lyricLines: lrcLines,
+    lyricPlainText, lyricLoading, lyricError, retryLyrics, openArtist,
+    activeLyricIndex: activeLrcIndex,
     playlist,
     currentIndex,
     isPlaying,
@@ -144,10 +148,6 @@ export default function MusicPlayerBar() {
     [getVolumeRatio, setVolume],
   )
 
-  const { lines: lrcLines, activeIndex: activeLrcIndex } = useActiveLyric(
-    current?.lyric?.lineLyrics,
-    currentTime,
-  )
 
   const activeLyricText = useMemo(() => {
     if (activeLrcIndex >= 0) {
@@ -711,7 +711,7 @@ export default function MusicPlayerBar() {
                 </span>
               </div>
               <div className="music-player-bar__artist" title={current.artist}>
-                {current.artist || '未知歌手'}
+                <button type="button" className="music-inline-link" onClick={() => openArtist(current.source,current.artistId,current.artist || '')}>{current.artist || '未知歌手'}</button>
                 {current.album ? ` · ${current.album}` : ''}
               </div>
               <div className="music-player-bar__badges">
@@ -974,7 +974,7 @@ export default function MusicPlayerBar() {
                         {current.name || '未知歌曲'}
                       </div>
                       <div className="music-player-fullscreen__artist" title={current.artist}>
-                        {current.artist || '未知歌手'}
+                        <button type="button" className="music-inline-link" onClick={() => openArtist(current.source,current.artistId,current.artist || '')}>{current.artist || '未知歌手'}</button>
                         {current.album ? ` · ${current.album}` : ''}
                       </div>
                       <div className="music-player-fullscreen__badges">
@@ -989,6 +989,7 @@ export default function MusicPlayerBar() {
                 </div>
 
                 <div className="music-player-fullscreen__lyrics-head">
+                  <MusicLyricsSettings />
                   <div className="music-player-fullscreen__panel-tabs">
                     <span className="music-player-fullscreen__panel-tab is-active">
                       歌词
@@ -999,13 +1000,14 @@ export default function MusicPlayerBar() {
                 <div className="music-player-fullscreen__lyrics-shell">
                   <div ref={lyricScrollRef} className="music-player-fullscreen__lyrics">
                     {lrcLines.length === 0 ? (
-                      current.lyric?.lineLyrics ? (
+                      lyricPlainText ? (
                         <pre className="music-player-fullscreen__lyrics-plain">
-                          {current.lyric.lineLyrics}
+                          {lyricPlainText}
                         </pre>
                       ) : (
                         <div className="music-player-fullscreen__lyrics-empty">
-                          暂无歌词
+                          {lyricLoading ? '正在加载歌词…' : lyricError || '暂无歌词'}
+                          {!lyricLoading && <button type="button" className="music-inline-link" onClick={retryLyrics}>重新加载</button>}
                         </div>
                       )
                     ) : (
@@ -1037,7 +1039,7 @@ export default function MusicPlayerBar() {
                             }}
                           >
                             <span className="music-player-fullscreen__lyrics-text">
-                              {line.text || '\u00A0'}
+                              <MusicLyricText line={line} time={currentTime} active={index === activeLrcIndex} />
                             </span>
                             <span
                               className="music-player-fullscreen__lyrics-action"

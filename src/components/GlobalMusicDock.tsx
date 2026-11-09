@@ -15,7 +15,8 @@ import {
 import { FastAverageColor } from 'fast-average-color'
 import MusicCover from './MusicCover'
 import { useMusicPlayer } from '../context/MusicPlayerContext'
-import { useActiveLyric } from '../hooks/useActiveLyric'
+import MusicLyricText from './MusicLyricText'
+import MusicLyricsSettings from './MusicLyricsSettings'
 import { formatDuration, normalizeCoverUrl } from '../utils/musicPlayer'
 import '../styles/music-dock.css'
 
@@ -73,6 +74,9 @@ export default function GlobalMusicDock() {
 
   const {
     current,
+    lyricLines: lrcLines,
+    lyricPlainText, lyricLoading, lyricError, retryLyrics,
+    activeLyricIndex: activeLrcIndex,
     playlist,
     currentIndex,
     isPlaying,
@@ -91,10 +95,6 @@ export default function GlobalMusicDock() {
     playFromQueue,
   } = useMusicPlayer()
 
-  const { lines: lrcLines, activeIndex: activeLrcIndex } = useActiveLyric(
-    current?.lyric?.lineLyrics,
-    currentTime,
-  )
 
   const currentLrcText = useMemo(() => {
     if (activeLrcIndex >= 0) {
@@ -535,11 +535,12 @@ export default function GlobalMusicDock() {
 
           {panel === 'lyrics' ? (
             <div ref={lyricScrollRef} className="music-dock__panel-body music-dock__lyrics">
+              <MusicLyricsSettings />
               {lrcLines.length === 0 ? (
-                current.lyric?.lineLyrics ? (
-                  <pre className="music-dock__lyrics-plain">{current.lyric.lineLyrics}</pre>
+                lyricPlainText ? (
+                  <pre className="music-dock__lyrics-plain">{lyricPlainText}</pre>
                 ) : (
-                  <div className="music-dock__empty">暂无歌词</div>
+                  <div className="music-dock__empty">{lyricLoading ? '正在加载歌词…' : lyricError || '暂无歌词'}{!lyricLoading && <button type="button" onClick={retryLyrics}>重试</button>}</div>
                 )
               ) : (
                 lrcLines.map((line, index) => (
@@ -558,7 +559,7 @@ export default function GlobalMusicDock() {
                       }
                     }}
                   >
-                    {line.text || '\u00A0'}
+                    <MusicLyricText line={line} time={currentTime} active={index === activeLrcIndex} />
                   </div>
                 ))
               )}

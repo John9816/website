@@ -536,6 +536,11 @@ export interface LyricInfo {
 }
 
 export interface PlayInfo {
+  actualId?: string
+  lyricMatch?: string
+  artistId?: string
+  artistIds?: string[]
+  albumId?: string
   id: string
   source: MusicSourceId
   actualSource?: MusicSourceId
@@ -809,3 +814,6 @@ export interface RedeemCodeBatchView {
   quantity: number
   codes: string[]
 }
+
+export interface QishuiFeedMode { id:string; name:string; group?:string; iconUrl?:string; toast?:string }
+export interface QishuiRoamingPage { sessionId:string; source:MusicSourceId; modeId:string; sequence:number; nextSequence:number; hasMore:boolean; expiresAt:string; list:SongSearchItem[] }

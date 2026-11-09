@@ -1,3 +1,4 @@
+import MusicArtistDrawer from './components/MusicArtistDrawer'
 import { Suspense, lazy, useEffect, type ReactNode } from 'react'
 import { BrowserRouter, Navigate, Route, Routes, useLocation } from 'react-router-dom'
 import { App as AntApp, ConfigProvider, Spin, theme as antdTheme } from 'antd'
@@ -326,6 +327,7 @@ export default function App() {
               </RouteErrorBoundary>
               <GlobalBeianFooterGate />
               <GlobalMusicDockGate />
+              <MusicArtistDrawer />
             </BrowserRouter>
           </MusicPlayerProvider>
         </AuthProvider>

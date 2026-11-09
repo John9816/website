@@ -57,7 +57,10 @@ function AccountControl() {
     setError('')
     try {
       const value = await operation(request.signal)
-      if (current === version.current && !request.signal.aborted) apply(value)
+      if (current === version.current && !request.signal.aborted) {
+        apply(value)
+        if (['bound','unbound','confirmed'].includes(value.status)) window.dispatchEvent(new Event('qishui-account-changed'))
+      }
     } catch (cause) {
       if (current === version.current && !request.signal.aborted) setError(accountError(cause))
     } finally {
@@ -107,7 +110,7 @@ function AccountControl() {
     <Button icon={<QrCode size={16} />} onClick={() => setOpen(true)}>黑源授权</Button>
     <Modal title="汽水音乐（黑源）授权" open={open} onCancel={close} footer={null} destroyOnClose width={440}>
       <div className="qishui-account">
-        <p>每个网站账号独立扫码绑定。个人授权用于账号功能，歌曲搜索无需扫码。</p>
+        <p>每个网站账号独立扫码绑定。个人授权用于音乐漫游；搜索、公开推荐与普通播放无需扫码绑定。</p>
         {error && <Alert type="warning" showIcon message={error} />}
         {busy && !account && !session && <Spin aria-label="正在查询授权" />}
         {account?.bound && <div className="qishui-account__profile">

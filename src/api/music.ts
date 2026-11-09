@@ -73,8 +73,8 @@ export const musicPlay = (
     signal: options.signal,
   })
 
-export const musicLyric = (source: MusicSourceId, id: string) =>
-  request<LyricView>('/api/v1/music/lyric', { auth: true, query: { source, id } })
+export const musicLyric = (source: MusicSourceId, id: string, signal?: AbortSignal) =>
+  request<LyricView>('/api/v1/music/lyric', { auth: true, query: { source, id }, signal })
 
 export const musicToplist = (source: MusicSourceId) =>
   request<ToplistListView>('/api/v1/music/toplist', {
@@ -273,3 +273,22 @@ export const removePlaylistItem = (playlistId: number, itemId: number) =>
     method: 'DELETE',
     auth: true,
   })
+
+export const qishuiSearchSuggestions = (keyword: string, signal?: AbortSignal) =>
+  request<string[]>('/api/v1/music/qishui/search/suggestions', { auth: true, query: { keyword }, signal })
+
+export const musicTtml = (source: MusicSourceId, id: string, signal?: AbortSignal) =>
+  request<{available: boolean; content: string | null; provider: string | null}>('/api/v1/music/lyrics/ttml', { auth: true, query: { source, id }, signal })
+
+export const qishuiSongInfo = (id: string, signal?: AbortSignal) =>
+  request<import('../types').SongSearchItem>('/api/v1/music/qishui/song', { auth:true, query:{id}, signal })
+export const qishuiDiscovery = (signal?: AbortSignal) =>
+  request<{source:MusicSourceId;list:import('../types').SongSearchItem[]}>('/api/v1/music/qishui/discovery', {auth:true,signal})
+export const qishuiRoamingModes = (signal?: AbortSignal) =>
+  request<import('../types').QishuiFeedMode[]>('/api/v1/music/qishui/roaming/modes',{auth:true,signal})
+export const startQishuiRoaming = (modeId?: string, signal?: AbortSignal) =>
+  request<import('../types').QishuiRoamingPage>('/api/v1/music/qishui/roaming/sessions',{method:'POST',auth:true,query:{modeId},signal})
+export const nextQishuiRoaming = (sessionId:string,sequence:number,signal?:AbortSignal) =>
+  request<import('../types').QishuiRoamingPage>(`/api/v1/music/qishui/roaming/sessions/${encodeURIComponent(sessionId)}/next`,{method:'POST',auth:true,query:{sequence},signal})
+export const closeQishuiRoaming = (sessionId:string) =>
+  request<void>(`/api/v1/music/qishui/roaming/sessions/${encodeURIComponent(sessionId)}`,{method:'DELETE',auth:true})

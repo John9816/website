@@ -1,3 +1,4 @@
+import { useNavigate } from 'react-router-dom'
 import { sourceLabel } from '../features/music/sources'
 import { Empty, Pagination, Space, Table, Typography } from 'antd'
 import { useCallback, useMemo, type ReactNode } from 'react'
@@ -55,17 +56,17 @@ export default function MusicSongTable({
   onPageChange,
   renderActions,
   actionColumnWidth = 76,
-  onSearchArtist,
   onSearchAlbum,
 }: Props) {
+  const navigate = useNavigate()
   const {
+    openArtist, playPlaylist, playFromQueue, roamingSession,
     current,
     isPlaying,
     playLoading,
     pendingTrackKey,
     preferredQuality,
     unsupportedFormat,
-    playSong,
     togglePlay,
   } = useMusicPlayer()
 
@@ -90,8 +91,10 @@ export default function MusicSongTable({
       return
     }
 
-    void playSong(row, preferredQuality)
-  }, [isLoadingRow, isPlayingRow, playSong, preferredQuality, togglePlay, unsupportedFormat])
+    const index = songs.findIndex(s => s.source === row.source && s.id === row.id)
+    if (roamingSession?.list === songs) void playFromQueue(Math.max(0,index),preferredQuality)
+    else void playPlaylist(songs, Math.max(0,index), preferredQuality)
+  }, [isLoadingRow, isPlayingRow, playPlaylist, playFromQueue, roamingSession, songs, preferredQuality, togglePlay, unsupportedFormat])
 
   const paginationNode = useMemo(() => (
     onPageChange && (songs.length > 0 || page > 1) ? (
@@ -182,10 +185,10 @@ export default function MusicSongTable({
                               className="music-inline-link"
                               onClick={(event) => {
                                 event.stopPropagation()
-                                onSearchArtist?.(
-                                  artist,
+                                openArtist(
                                   row.source,
                                   row.artistIds?.[index] ?? (index === 0 ? row.artistId : undefined),
+                                  artist,
                                 )
                               }}
                             >
@@ -202,7 +205,8 @@ export default function MusicSongTable({
                           className="music-inline-link"
                           onClick={(event) => {
                             event.stopPropagation()
-                            onSearchAlbum?.(row.album || '', row.source)
+                            if (row.albumId) navigate(`/music/album/${row.source}/${encodeURIComponent(row.albumId)}`)
+                            else onSearchAlbum?.(row.album || '', row.source)
                           }}
                         >
                           {row.album}
@@ -277,7 +281,8 @@ export default function MusicSongTable({
           isPlayingRow,
           isLoadingRow,
           onSearchAlbum,
-          onSearchArtist,
+          openArtist,
+          navigate,
           page,
           pageSize,
           renderActions,

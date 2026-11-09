@@ -1,3 +1,6 @@
+import { useQishuiRoaming } from '../hooks/useQishuiRoaming'
+import { usePlayerLyrics } from '../hooks/usePlayerLyrics'
+import { useMusicMediaSession } from '../hooks/useMusicMediaSession'
 import { musicPlaybackError } from '../features/music/sources'
 import {
   createContext,
@@ -10,9 +13,9 @@ import {
 } from 'react'
 import type { ReactNode } from 'react'
 import { App as AntApp } from 'antd'
-import { musicPlay } from '../api/music'
+import { musicPlay, qishuiSongInfo } from '../api/music'
 import { useAuth } from './AuthContext'
-import type { MusicQuality, PlayInfo, SongSearchItem } from '../types'
+import type { MusicSourceId, MusicQuality, PlayInfo, SongSearchItem } from '../types'
 import {
   describeMediaError,
   detectUnsupportedFormat,
@@ -106,7 +109,11 @@ function getRandomQueueIndex(length: number, currentIndex: number) {
   return nextIndex
 }
 
-type MusicPlayerContextValue = {
+type MusicPlayerContextValue = ReturnType<typeof usePlayerLyrics> & ReturnType<typeof useQishuiRoaming> & {
+  artistTarget: {source:MusicSourceId; id?:string; name:string} | null
+  openArtist: (source:MusicSourceId, id:string|undefined, name:string)=>void
+  closeArtist: ()=>void
+  mediaSessionSupported: boolean
   current: PlayInfo | null
   playlist: SongSearchItem[]
   currentIndex: number
@@ -163,6 +170,13 @@ export function MusicPlayerProvider({ children }: { children: ReactNode }) {
   const playInfoInFlightRef = useRef<Map<string, PlayInfoInFlight>>(new Map())
   const playRecordRequestsRef = useRef<Map<string, AbortController>>(new Map())
   const previousAuthTokenRef = useRef(authToken)
+  const radioKeys = useRef(new Set<string>())
+  const radioNext = useRef<(()=>void)|null>(null)
+  const radioStop = useRef<(()=>void)|null>(null)
+  const [radioAvailable, setRadioAvailable] = useState(false)
+  const [artistTarget,setArtistTarget] = useState<MusicPlayerContextValue['artistTarget']>(null)
+  const openArtist = useCallback((source:MusicSourceId,id:string|undefined,name:string)=>setArtistTarget({source,id,name}),[])
+  const closeArtist = useCallback(()=>setArtistTarget(null),[])
   const [hasAutoNextHandler, setHasAutoNextHandler] = useState(false)
 
   const [current, setCurrent] = useState<PlayInfo | null>(null)
@@ -194,11 +208,11 @@ export function MusicPlayerProvider({ children }: { children: ReactNode }) {
   const hasQueueNext = currentIndex >= 0 && currentIndex < playlist.length - 1
   const canNext =
     playMode === 'shuffle'
-      ? playlist.length > 1 || hasAutoNextHandler
-      : hasQueueNext || hasAutoNextHandler
+      ? playlist.length > 1 || radioAvailable || hasAutoNextHandler
+      : hasQueueNext || radioAvailable || hasAutoNextHandler
 
   const setPlaylist = useCallback((items: SongSearchItem[]) => {
-    setPlaylistState(items)
+    if (!radioKeys.current.size) setPlaylistState(items)
   }, [])
 
   const cachePlayInfo = useCallback(
@@ -324,6 +338,11 @@ export function MusicPlayerProvider({ children }: { children: ReactNode }) {
       setPreferredQualityState(quality)
       setCurrent({
         ...info,
+        name: info.name || row.name,
+        artist: info.artist || row.artist,
+        artistId: row.artistId, artistIds: row.artistIds, albumId: row.albumId,
+        album: info.album || row.album,
+        durationSec: info.durationSec || row.durationSec,
         requestedQuality: quality,
         coverUrl: resolveCoverUrl(info.coverUrl, row.coverUrl),
       })
@@ -351,6 +370,7 @@ export function MusicPlayerProvider({ children }: { children: ReactNode }) {
 
   const playSong = useCallback(
     async (row: SongSearchItem, quality = preferredQuality) => {
+      if (radioKeys.current.size && !radioKeys.current.has(`${row.source}:${row.id}`)) radioStop.current?.()
       const key = playInfoKey(row, quality)
       const previousRequest = activePlayRequestRef.current
       if (previousRequest && previousRequest.key !== key) {
@@ -387,6 +407,7 @@ export function MusicPlayerProvider({ children }: { children: ReactNode }) {
 
   const playResolvedSong = useCallback(
     async (row: SongSearchItem, info: PlayInfo, quality = info.requestedQuality) => {
+      radioStop.current?.()
       activePlayRequestRef.current?.controller?.abort()
       activePlayRequestRef.current = null
       playGenerationRef.current += 1
@@ -402,7 +423,7 @@ export function MusicPlayerProvider({ children }: { children: ReactNode }) {
     [applyPlayInfo, cachePlayInfo, preferredQuality],
   )
 
-  const playPlaylist = useCallback(
+  const playQueue = useCallback(
     async (
       items: SongSearchItem[],
       startIndex = 0,
@@ -415,6 +436,11 @@ export function MusicPlayerProvider({ children }: { children: ReactNode }) {
     },
     [playSong, preferredQuality],
   )
+
+  const playPlaylist = useCallback(async (items:SongSearchItem[], startIndex=0, quality=preferredQuality) => {
+    radioStop.current?.()
+    await playQueue(items,startIndex,quality)
+  }, [playQueue,preferredQuality])
 
   const playFromQueue = useCallback(
     async (index: number, quality = preferredQuality) => {
@@ -446,6 +472,7 @@ export function MusicPlayerProvider({ children }: { children: ReactNode }) {
       return
     }
     if (!hasQueueNext) {
+      if (radioNext.current) { radioNext.current(); return }
       if (autoNextHandlerRef.current) {
         void autoNextHandlerRef.current()
       }
@@ -529,6 +556,7 @@ export function MusicPlayerProvider({ children }: { children: ReactNode }) {
       void playSong(playlist[currentIndex + 1], preferredQuality)
       return true
     }
+    if (radioNext.current) { radioNext.current(); return true }
     if (autoNextHandlerRef.current) {
       void autoNextHandlerRef.current()
       return true
@@ -552,7 +580,7 @@ export function MusicPlayerProvider({ children }: { children: ReactNode }) {
     message.error(
       `当前返回的是 ${unsupportedFormat} 格式，浏览器无法直接播放。请切换音质或音源后重试。`,
     )
-  }, [current, message, unsupportedFormat])
+  }, [current?.id, current?.source, current?.playUrl, message, unsupportedFormat])
 
   useEffect(() => {
     if (unsupportedFormat) return
@@ -567,7 +595,7 @@ export function MusicPlayerProvider({ children }: { children: ReactNode }) {
         message.warning('浏览器阻止了自动播放，请手动点一下播放按钮。')
       }
     })
-  }, [current, message, unsupportedFormat])
+  }, [current?.id, current?.source, current?.playUrl, message, unsupportedFormat])
 
   useEffect(() => {
     if (playMode !== 'sequence' || !current || currentIndex < 0) return
@@ -591,6 +619,7 @@ export function MusicPlayerProvider({ children }: { children: ReactNode }) {
     playInfoCacheRef.current.clear()
     setPendingTrackKey(null)
     setPlayLoading(false)
+    setCurrent(null); setPlaylistState([]); setCurrentTime(0); setArtistTarget(null); audioRef.current?.pause()
   }, [authToken])
 
   useEffect(
@@ -610,8 +639,34 @@ export function MusicPlayerProvider({ children }: { children: ReactNode }) {
     el.muted = muted
   }, [muted, volume])
 
+  useEffect(() => {
+    if (current?.source !== 'qishui' || !authToken) return
+    const id = current.id, controller = new AbortController()
+    void qishuiSongInfo(id, controller.signal).then(meta => {
+      if (controller.signal.aborted) return
+      setCurrent(previous => previous?.source === 'qishui' && previous.id === id ? {
+        ...previous, name:meta.name || previous.name, artist:meta.artist || previous.artist,
+        artistId:meta.artistId, artistIds:meta.artistIds, albumId:meta.albumId,
+        album:meta.album || previous.album, coverUrl:resolveCoverUrl(meta.coverUrl,previous.coverUrl), durationSec:meta.durationSec || previous.durationSec,
+      } : previous)
+    }).catch(()=>{})
+    return () => controller.abort()
+  }, [current?.id, current?.source, authToken])
+  const radio = useQishuiRoaming(authToken, playQueue, radioKeys, radioNext, setRadioAvailable)
+  radioStop.current = radio.stopRoaming
+  const lyrics = usePlayerLyrics(current, currentTime, authToken)
+  const mediaPlay = useCallback(() => { if (audioRef.current?.paused) togglePlay() }, [togglePlay])
+  const mediaPause = useCallback(() => audioRef.current?.pause(), [])
+  const mediaSessionSupported = useMusicMediaSession(current, lyrics.lyricLines[lyrics.activeLyricIndex]?.text,
+    lyrics.bluetoothLyrics, isPlaying, currentTime, duration, mediaPlay, mediaPause,
+    canPrev ? playPrev : null, canNext ? playNext : null, seekToTime)
+
   const value = useMemo<MusicPlayerContextValue>(
     () => ({
+      ...lyrics,
+      ...radio,
+      artistTarget, openArtist, closeArtist,
+      mediaSessionSupported,
       current,
       playlist,
       currentIndex,
@@ -644,6 +699,9 @@ export function MusicPlayerProvider({ children }: { children: ReactNode }) {
       setAutoNextHandler,
     }),
     [
+      lyrics,
+      radio, artistTarget, openArtist, closeArtist,
+      mediaSessionSupported,
       canNext,
       canPrev,
       cyclePlayMode,

@@ -36,27 +36,22 @@ export function musicPlaybackError(source: MusicSourceId, error: unknown): strin
   return detail?.message || '播放失败，请稍后重试'
 }
 
-/**
- * 黑源能力：专辑详情 /album/detail/、歌手专辑 /artist/albums/、
- * 歌手搜索 search_type=artist 均经上游真实请求验证；专辑搜索由真实歌曲结果聚合。
- * 车机版上游没有官方榜单 / 推荐 / 新歌端点（100+ 路径组合实测未命中），
- * 这三项改为基于真实 /search/ 的「搜索发现」，并明确标注，不伪装成官方榜单。
- */
+/** 已验证的黑源能力；个人音乐漫游需要扫码绑定。 */
 export const QISHUI_CAPABILITIES = {
   supported: [
     '歌曲 / 歌单 / 歌手 / 专辑搜索',
     '歌词（LRC + YRC）',
-    '歌单详情与按 ID 导入',
+    '搜索建议、歌单详情与分享链接导入',
     '专辑详情、歌手歌曲与歌手专辑',
   ],
-  conditional: ['播放解析：需配置 QISHUI_PARSE_ACCESS_TOKEN 且为本站会员，加密音频不支持'],
+  conditional: ['播放需要本站会员及服务端解析配置；个人音乐漫游需要扫码绑定'],
   discovery: ['榜单 / 推荐歌单 / 新歌：提供基于真实搜索的「搜索发现」'],
   unsupported: [],
 } as const
 
 /** 榜单 / 推荐 / 新歌视图的显式标注，避免把搜索结果误认为官方榜单。 */
 export const QISHUI_DISCOVERY_NOTE =
-  '提示：汽水音乐车机版上游没有官方榜单 / 推荐 / 新歌接口，此处为基于真实搜索的「搜索发现」，不是官方榜单。'
+  '此处为基于真实搜索的「搜索发现」。官方歌曲推荐和个人音乐漫游可在黑源入口使用。'
 
 /** 搜索页展示的能力摘要。 */
 export const QISHUI_CAPABILITY_HINT =
