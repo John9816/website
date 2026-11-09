@@ -831,7 +831,7 @@ export default function MusicPlayerBar() {
             >
               <button
                 type="button"
-                className={`ctrl-btn music-player-bar__icon-btn${
+                className={`ctrl-btn music-player-bar__icon-btn music-player-bar__queue-btn${
                   queuePopoverOpen && !expanded ? ' is-active' : ''
                 }`}
                 aria-label={`当前播放列表，共 ${queueItems.length} 首`}

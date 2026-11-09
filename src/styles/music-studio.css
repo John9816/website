@@ -1331,3 +1331,17 @@ html[data-theme='dark'] .music-listening-stage {
 .music-studio .ant-pagination-item-active a {
   color: var(--accent);
 }
+.music-studio .music-player-bar .music-player-bar__queue-btn {
+  width: auto;
+  min-width: 48px;
+  gap: 5px;
+  padding-inline: 7px;
+  white-space: nowrap;
+}
+.music-studio .music-player-bar__queue-btn > span {
+  flex-shrink: 0;
+  font-variant-numeric: tabular-nums;
+}
+.music-studio .music-studio-search .ant-input-search-button span {
+  color: inherit;
+}
