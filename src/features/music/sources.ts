@@ -29,8 +29,9 @@ export function normalizeSearchType(source: MusicSourceId, type: MusicSearchType
 export function musicPlaybackError(source: MusicSourceId, error: unknown): string {
   const detail = error as { code?: number; message?: string }
   if (source === 'qishui') {
-    if (detail?.code === 1012) return '这首歌曲使用加密音频，网页暂不支持播放。'
-    if (detail?.code === 1003) return '黑源播放服务暂未就绪，搜索和收藏仍可使用。'
+    // 黑源播放已改为服务端解密 + 本站音频流；这两个码现在只在服务异常时出现。
+    if (detail?.code === 1012) return '黑源音频解码失败，请稍后重试。'
+    if (detail?.code === 1003) return '黑源解析服务登录失败，请确认 TuneFree 账号配置后重试。'
   }
   return detail?.message || '播放失败，请稍后重试'
 }
