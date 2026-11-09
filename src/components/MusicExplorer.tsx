@@ -1,4 +1,4 @@
-import { MUSIC_SOURCE_OPTIONS as SOURCE_OPTIONS, STANDARD_CATALOG_SOURCE_OPTIONS, isMusicSourceId, sourceLabel, normalizeSearchType, supportedSearchTypes } from '../features/music/sources'
+import { MUSIC_SOURCE_OPTIONS as SOURCE_OPTIONS, isMusicSourceId, sourceLabel, normalizeSearchType, supportedSearchTypes, QISHUI_CAPABILITY_HINT, QISHUI_DISCOVERY_NOTE } from '../features/music/sources'
 import QishuiAccountControl from '../features/music/QishuiAccountControl'
 import { useCallback, useEffect, useMemo, useRef, useState, Fragment } from 'react'
 import { App as AntApp, Button, Input, Modal, Pagination, Segmented } from 'antd'
@@ -21,6 +21,8 @@ import {
   deleteMusicHistory,
   getMusicFavorites,
   getMusicHistory,
+  musicArtistDetail,
+  musicArtistWorks,
   musicNewSongs,
   musicPlaylist,
   musicSearch,
@@ -34,6 +36,8 @@ import { siteImages } from '../utils/siteImages'
 import { useMusicPlayer } from '../context/MusicPlayerContext'
 import { useMusicFavorites } from '../hooks/useMusicFavorites'
 import type {
+  AlbumSummaryItem,
+  ArtistDetailView,
   MusicFavoriteItem,
   MusicHistoryItem,
   MusicPlaylistSourceId,
@@ -109,9 +113,10 @@ const VIEW_OPTIONS: MusicViewOption[] = [
 ]
 
 
-const PLAYLIST_SOURCE_OPTIONS = [
+const PLAYLIST_SOURCE_OPTIONS: Array<{ label: string; value: MusicSourceId }> = [
   { label: '网易云', value: 'netease' },
   { label: '酷我', value: 'kuwo' },
+  { label: '汽水音乐（黑源）', value: 'qishui' },
 ]
 
 const NETEASE_PLAYLIST_CATEGORIES = [
@@ -328,6 +333,13 @@ export default function MusicExplorer() {
   const [searchTotal, setSearchTotal] = useState<number | null>(null)
   const [lastKeyword, setLastKeyword] = useState('')
   const [lastSearchSource, setLastSearchSource] = useState<MusicSourceId>('qq')
+  const [qishuiArtistPanel, setQishuiArtistPanel] = useState<{
+    name: string
+    detail?: ArtistDetailView
+    songs: SongSearchItem[]
+    albums: AlbumSummaryItem[]
+  } | null>(null)
+  const [qishuiArtistLoading, setQishuiArtistLoading] = useState(false)
   const [lastSearchType, setLastSearchType] = useState<MusicSearchType>('song')
   const searchRequestIdRef = useRef(0)
 
@@ -520,6 +532,34 @@ export default function MusicExplorer() {
     },
     [searchPageSize, searchParams, searchSongs, setSearchParams],
   )
+
+  /** 黑源点击歌手名：调用 /artist 与 /artist/works；无 artistId 时回退到关键词搜索。 */
+  const openQishuiArtist = async (name: string, artistId?: string) => {
+    if (!artistId) {
+      searchByMeta(name, 'qishui', 'song')
+      return
+    }
+    setQishuiArtistLoading(true)
+    setQishuiArtistPanel(null)
+    try {
+      const [works, albumWorks, details] = await Promise.all([
+        musicArtistWorks('qishui', artistId, 'song', 1, 30),
+        musicArtistWorks('qishui', artistId, 'album', 1, 30).catch(() => null),
+        musicArtistDetail('qishui', [artistId]).catch(() => [] as ArtistDetailView[]),
+      ])
+      setQishuiArtistPanel({
+        name,
+        detail: details?.[0],
+        songs: works.songs ?? [],
+        albums: albumWorks?.albums ?? [],
+      })
+    } catch (error) {
+      message.error((error as Error).message)
+      searchByMeta(name, 'qishui', 'song')
+    } finally {
+      setQishuiArtistLoading(false)
+    }
+  }
 
   const loadToplists = useCallback(async () => {
     if (!auth.token) return
@@ -872,6 +912,10 @@ export default function MusicExplorer() {
                   })
                   return
                 }
+                if (type === 'artist' && item.source === 'qishui' && item.artistId) {
+                  void openQishuiArtist(item.name, item.artistId)
+                  return
+                }
                 searchByMeta(item.name, item.source, 'song')
               }}
             >
@@ -964,6 +1008,10 @@ export default function MusicExplorer() {
                 loading={searching}
                 allowClear
               />
+              {/* 黑源授权入口常驻：不再要求用户先切到「汽水音乐」搜索源才能找到 */}
+              <div className="music-browser__qishui-entry">
+                <QishuiAccountControl />
+              </div>
             </div>
 
             <div className="music-browser__content">
@@ -985,6 +1033,7 @@ export default function MusicExplorer() {
                       setSearchSource(value as MusicSourceId)
                       setSearchType(type => normalizeSearchType(value as MusicSourceId, type))
                       setSearchPage(1)
+                      setQishuiArtistPanel(null)
                     }}
                   />
                   <Segmented
@@ -1013,10 +1062,54 @@ export default function MusicExplorer() {
                   />
                 </div>
                 {searchSource === 'qishui' && <div className="music-qishui-account-row">
-                  <QishuiAccountControl />
-                  <span>支持歌曲、歌单搜索与收藏；个人账号可独立扫码绑定。</span>
+                  <span>{QISHUI_CAPABILITY_HINT}</span>
                 </div>}
               </section>
+
+              {qishuiArtistPanel && searchSource === 'qishui' && (
+                <section className="music-qishui-artist" aria-label="黑源歌手歌曲">
+                  <div className="music-qishui-artist__head">
+                    <strong>{qishuiArtistPanel.detail?.name || qishuiArtistPanel.name} · 歌手歌曲</strong>
+                    {qishuiArtistPanel.detail?.songCount != null && (
+                      <span>约 {qishuiArtistPanel.detail.songCount} 首</span>
+                    )}
+                    <Button size="small" type="text" onClick={() => setQishuiArtistPanel(null)}>收起</Button>
+                  </div>
+                  <MusicSongTable
+                    songs={qishuiArtistPanel.songs}
+                    loading={qishuiArtistLoading}
+                    emptyText="该歌手暂无可展示的歌曲"
+                    page={1}
+                    pageSize={30}
+                    total={qishuiArtistPanel.songs.length}
+                    onSearchArtist={(artist, source, artistId) => {
+                      if (source === 'qishui' && artistId) void openQishuiArtist(artist, artistId)
+                      else searchByMeta(artist, source, 'song')
+                    }}
+                  />
+                  {qishuiArtistPanel.albums.length > 0 && (
+                    <div className="music-qishui-artist__albums">
+                      <strong>专辑 · {qishuiArtistPanel.albums.length} 张</strong>
+                      <div className="music-qishui-artist__album-grid">
+                        {qishuiArtistPanel.albums.map((album) => (
+                          <button
+                            key={album.id}
+                            type="button"
+                            className="music-qishui-artist__album"
+                            onClick={() => navigate(`/music/album/qishui/${encodeURIComponent(album.id)}`, {
+                              state: { coverUrl: album.coverUrl },
+                            })}
+                          >
+                            <MusicCover src={album.coverUrl} size={56} rounded={10} />
+                            <span>{album.name}</span>
+                            {album.publishTime && <small>{album.publishTime}</small>}
+                          </button>
+                        ))}
+                      </div>
+                    </div>
+                  )}
+                </section>
+              )}
 
               {hasSearchResults && (
                 <section className="music-search-results">
@@ -1067,7 +1160,10 @@ export default function MusicExplorer() {
                       }}
                       renderActions={renderSongActions}
                       actionColumnWidth={auth.token ? 176 : 132}
-                      onSearchArtist={(artist, source) => searchByMeta(artist, source, 'song')}
+                      onSearchArtist={(artist, source, artistId) => {
+                        if (source === 'qishui' && artistId) void openQishuiArtist(artist, artistId)
+                        else searchByMeta(artist, source, 'song')
+                      }}
                       onSearchAlbum={(album, source) => searchByMeta(album, source, 'album')}
                     />
                   ) : (
@@ -1119,10 +1215,13 @@ export default function MusicExplorer() {
             <>
               <div className="music-view-controls music-view-controls--compact">
                 <Segmented
-                  options={STANDARD_CATALOG_SOURCE_OPTIONS}
+                  options={SOURCE_OPTIONS}
                   value={toplistSource}
                   onChange={(value) => setToplistSource(value as MusicSourceId)}
                 />
+                {toplistSource === 'qishui' && (
+                  <div className="music-qishui-discovery-note">{QISHUI_DISCOVERY_NOTE}</div>
+                )}
               </div>
 
               {toplists.length > 0 ? (
@@ -1167,6 +1266,9 @@ export default function MusicExplorer() {
                     setPlaylistPage(1)
                   }}
                 />
+                {playlistSource === 'qishui' && (
+                  <div className="music-qishui-discovery-note">{QISHUI_DISCOVERY_NOTE}</div>
+                )}
                 {playlistSource === 'netease' && (
                   <div className="music-playlist-controls">
                     <div className="music-playlist-categories" aria-label="网易云歌单分类">
@@ -1260,13 +1362,16 @@ export default function MusicExplorer() {
             <>
               <div className="music-view-controls music-view-controls--compact">
                 <Segmented
-                  options={STANDARD_CATALOG_SOURCE_OPTIONS}
+                  options={SOURCE_OPTIONS}
                   value={newSource}
                   onChange={(value) => {
                     setNewSource(value as MusicSourceId)
                     setNewSongsPage(1)
                   }}
                 />
+                {newSource === 'qishui' && (
+                  <div className="music-qishui-discovery-note">{QISHUI_DISCOVERY_NOTE}</div>
+                )}
               </div>
 
               <div className="music-library-toolbar">

@@ -151,7 +151,9 @@ export function describeMediaError(err: MediaError | null): string {
     case 3:
       return '音频解码失败，格式可能不兼容'
     case 4:
-      return '播放地址不可用，可能已过期'
+      // MEDIA_ERR_SRC_NOT_SUPPORTED: the browser rejected the resource before or during load.
+      // It is often a blocked cross-origin request or an unsupported codec, NOT an expired URL.
+      return '音频地址无法加载，可能是格式不支持或被网络拦截'
     default:
       return err.message || '播放失败'
   }
