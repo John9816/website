@@ -199,3 +199,13 @@ test('deleting a just-inserted image is separately undoable', () => {
   undo(view.state, view.dispatch)
   assert.equal(view.state.selection.node?.type.name, 'image')
 })
+
+test('Markdown emphasis preserves a repeated leading character outside the delimiters', () => {
+  const view = viewFor([p('x*x')], 'x*x')
+  view.dispatch(view.state.tr.setSelection(TextSelection.create(view.state.doc, 4)))
+  const rules = view.state.plugins.find(plugin => plugin.spec.isInputRules)
+  assert.ok(rules.props.handleTextInput(view, 4, 4, '*'))
+  assert.equal(view.state.doc.textContent, 'xx')
+  assert.equal(view.state.doc.firstChild.firstChild.marks.length, 0)
+  assert.ok(schema.marks.em.isInSet(view.state.doc.firstChild.lastChild.marks))
+})

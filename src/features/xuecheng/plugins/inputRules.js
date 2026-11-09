@@ -20,7 +20,7 @@ function markInputRule(regexp, markType, getAttrs) {
     const content = match[1];
     if (!content) return null;
     const attrs = getAttrs ? getAttrs(match) : null;
-    const offset = match[0].indexOf(content);
+    const offset = match[0].lastIndexOf(content);
     if (offset < 0) return null;
     const delimiterLength = match[0].length - offset - content.length;
     const from = start + Math.max(0, offset - delimiterLength);
