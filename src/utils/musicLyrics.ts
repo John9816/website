@@ -18,6 +18,11 @@ export function activeLyricIndex(lines: TimedLyricLine[], time: number): number 
   while (lo <= hi) { const mid = (lo + hi) >> 1; if (lines[mid].time <= time) { result = mid; lo = mid + 1 } else hi = mid - 1 }
   return result >= 0 && lines[result].end != null && time >= lines[result].end! ? -1 : result
 }
+export function lyricPreviewText(lines: TimedLyricLine[], time: number): string {
+  if (!lines.length) return ''
+  const active = activeLyricIndex(lines, time)
+  return active >= 0 ? lines[active].text : time < lines[0].time ? '前奏 · 歌词已就绪' : '间奏 · 歌词已就绪'
+}
 export function lyricMediaTitle(song: string, lyric: string | undefined, enabled: boolean) {
   return enabled && lyric?.trim() ? `${lyric.trim().slice(0, 200)} · ${song}` : song
 }

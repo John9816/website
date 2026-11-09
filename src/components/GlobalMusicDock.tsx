@@ -1,5 +1,5 @@
 import { sourceLabel } from '../features/music/sources'
-import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
+import { useCallback, useEffect, useRef, useState } from 'react'
 import { Link as RouterLink, useLocation } from 'react-router-dom'
 import {
   ChevronDown,
@@ -75,6 +75,7 @@ export default function GlobalMusicDock() {
   const {
     current,
     lyricLines: lrcLines,
+    lyricPreview: currentLrcText,
     lyricPlainText, lyricLoading, lyricError, retryLyrics,
     activeLyricIndex: activeLrcIndex,
     playlist,
@@ -95,22 +96,6 @@ export default function GlobalMusicDock() {
     playFromQueue,
   } = useMusicPlayer()
 
-
-  const currentLrcText = useMemo(() => {
-    if (activeLrcIndex >= 0) {
-      return lrcLines[activeLrcIndex]?.text || '...'
-    }
-
-    if (current?.lyric?.lineLyrics) {
-      const firstLine = current.lyric.lineLyrics
-        .split(/\r?\n/)
-        .map((line) => line.trim())
-        .find(Boolean)
-      return firstLine || '暂无歌词'
-    }
-
-    return '暂无歌词'
-  }, [activeLrcIndex, current?.lyric?.lineLyrics, lrcLines])
 
   useEffect(() => {
     if (!dragging && !seeking) return

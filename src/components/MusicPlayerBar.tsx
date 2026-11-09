@@ -87,6 +87,7 @@ export default function MusicPlayerBar() {
   const {
     current,
     lyricLines: lrcLines,
+    lyricPreview: activeLyricText,
     lyricPlainText, lyricLoading, lyricError, retryLyrics, openArtist,
     activeLyricIndex: activeLrcIndex,
     playlist,
@@ -148,13 +149,6 @@ export default function MusicPlayerBar() {
     [getVolumeRatio, setVolume],
   )
 
-
-  const activeLyricText = useMemo(() => {
-    if (activeLrcIndex >= 0) {
-      return lrcLines[activeLrcIndex]?.text || ''
-    }
-    return ''
-  }, [activeLrcIndex, lrcLines])
 
   const normalizedCoverUrl = useMemo(
     () => normalizeCoverUrl(current?.coverUrl),
@@ -1013,7 +1007,7 @@ export default function MusicPlayerBar() {
                     ) : (
                       lrcLines.map((line, index) => {
                         const distance =
-                          activeLrcIndex >= 0 ? Math.abs(index - activeLrcIndex) : Infinity
+                          activeLrcIndex >= 0 ? Math.abs(index - activeLrcIndex) : 0
 
                         return (
                           <div

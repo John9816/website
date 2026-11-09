@@ -1,6 +1,6 @@
 import assert from 'node:assert/strict'
 import test from 'node:test'
-import { parseTtmlTime, parseYrc, activeLyricIndex, lyricMediaTitle } from '../src/utils/musicLyrics.ts'
+import { parseTtmlTime, parseYrc, activeLyricIndex, lyricPreviewText, lyricMediaTitle } from '../src/utils/musicLyrics.ts'
 test('TTML clock and offset times reject malformed and excessive values', () => {
   assert.equal(parseTtmlTime('01:02.500'), 62.5)
   assert.equal(parseTtmlTime('01:02:03.25'), 3723.25)
@@ -23,4 +23,13 @@ test('seeking and lyric gaps restore track metadata', () => {
   assert.equal(activeLyricIndex(lines,1),0)
   assert.equal(lyricMediaTitle('Song','Hello',true),'Hello · Song')
   assert.equal(lyricMediaTitle('Song','Hello',false),'Song')
+})
+
+test('loaded lyrics remain available during the intro and instrumental gaps', () => {
+  const lines = [{time:10,end:20,text:'第一句'}, {time:30,end:40,text:'第二句'}]
+  assert.equal(lyricPreviewText(lines,0),'前奏 · 歌词已就绪')
+  assert.equal(lyricPreviewText(lines,12),'第一句')
+  assert.equal(lyricPreviewText(lines,25),'间奏 · 歌词已就绪')
+  assert.equal(lyricPreviewText(lines,35),'第二句')
+  assert.equal(lyricPreviewText([],0),'')
 })

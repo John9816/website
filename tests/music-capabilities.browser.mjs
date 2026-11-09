@@ -4,7 +4,7 @@ import fs from 'node:fs/promises'
 const {chromium} = await import(process.env.PLAYWRIGHT_MODULE || 'playwright')
 const base = process.env.MUSIC_TEST_URL || 'http://127.0.0.1:5173'
 const browser = await chromium.launch({headless:true,args:['--disable-features=LocalNetworkAccessChecks']})
-const ttml = `<tt xmlns="http://www.w3.org/ns/ttml" xmlns:ttm="http://www.w3.org/ns/ttml#metadata"><body><div><p begin="0s" end="10s"><span begin="0s" end="4s">你</span><span begin="4s" end="10s">好</span><span ttm:role="x-translation">Hello</span><span ttm:role="x-roman">Ni hao</span></p></div></body></tt>`
+const ttml = `<tt xmlns="http://www.w3.org/ns/ttml" xmlns:ttm="http://www.w3.org/ns/ttml#metadata"><body><div><p begin="2s" end="10s"><span begin="2s" end="4s">你</span><span begin="4s" end="10s">好</span><span ttm:role="x-translation">Hello</span><span ttm:role="x-roman">Ni hao</span></p></div></body></tt>`
 const html = `<!doctype html><html><head><meta charset="UTF-8"><meta name="viewport" content="width=device-width, initial-scale=1"></head><body><div id="root"></div><script type="module">
 import RefreshRuntime from '/@react-refresh'; RefreshRuntime.injectIntoGlobalHook(window); window.$RefreshReg$=()=>{}; window.$RefreshSig$=()=>type=>type; window.__vite_plugin_react_preamble_installed__=true;
 await import('/src/index.css'); await import('/src/styles/music.css');
@@ -38,6 +38,7 @@ try {
   assert.deepEqual(await page.evaluate(()=>window.searchCalls),['新建议'])
   await page.getByText('Track A',{exact:true}).click();await page.waitForFunction(()=>window.testPlayer.lyricFormat==='TTML')
   assert.equal(await page.evaluate(()=>window.testPlayer.lyricLines[0].text),'你好')
+  assert.equal(await page.evaluate(()=>window.testPlayer.lyricPreview),'前奏 · 歌词已就绪')
   await page.getByRole('button',{name:'歌词设置',exact:true}).first().click()
   await page.getByRole('switch',{name:'蓝牙歌词 / 系统歌词',exact:true}).click()
   await page.waitForFunction(()=>navigator.mediaSession.metadata?.title.includes('你好'))

@@ -2,7 +2,7 @@ import { useCallback, useEffect, useMemo, useState } from 'react'
 import { musicLyric, musicTtml } from '../api/music'
 import type { PlayInfo, LyricView } from '../types'
 import { parseLrc } from '../utils/musicPlayer'
-import { parseTtml, parseYrc, activeLyricIndex, type TimedLyricLine } from '../utils/musicLyrics'
+import { parseTtml, parseYrc, activeLyricIndex, lyricPreviewText, type TimedLyricLine } from '../utils/musicLyrics'
 function preference(key: string, fallback: boolean) { try { const v = localStorage.getItem(key); return v == null ? fallback : v === 'true' } catch { return fallback } }
 export function usePlayerLyrics(current: PlayInfo | null, currentTime: number, authToken: string | null) {
   const [preferTtml, setPreferTtml] = useState(() => preference('music-prefer-ttml', true))
@@ -65,6 +65,7 @@ export function usePlayerLyrics(current: PlayInfo | null, currentTime: number, a
   const onlineMatch = preferTtml && online?.key === key && online.token === authToken ? online : null
   const lyricLines: TimedLyricLine[] = localMatch?.lines ?? onlineMatch?.lines ?? original
   const lyricFormat = localMatch ? '本地歌词' : onlineMatch ? 'TTML' : original.some(l => l.words?.length) ? '逐字歌词' : '原歌词'
-  return { lyricLoading, lyricError, retryLyrics, lyricPlainText:effectiveLyric?.lineLyrics, lyricLines, activeLyricIndex: activeLyricIndex(lyricLines, currentTime), lyricFormat, ttmlLoading: loadingKey === key && !!key,
+  const lyricPreview = lyricPreviewText(lyricLines, currentTime) || effectiveLyric?.lineLyrics?.trim().split(/\r?\n/)[0] || (lyricLoading ? '正在加载歌词…' : lyricError || '暂无歌词')
+  return { lyricPreview, lyricLoading, lyricError, retryLyrics, lyricPlainText:effectiveLyric?.lineLyrics, lyricLines, activeLyricIndex: activeLyricIndex(lyricLines, currentTime), lyricFormat, ttmlLoading: loadingKey === key && !!key,
     preferTtml, setPreferTtml, bluetoothLyrics, setBluetoothLyrics, setLocalLyrics, clearLocalLyrics, hasLocalLyrics: !!localMatch }
 }
