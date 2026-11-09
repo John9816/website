@@ -268,6 +268,8 @@ export default function App({ canUseMcp = false, onBack }) {
   // ⌘J / Ctrl+J 开关面板
   useEffect(() => {
     const onKey = (e) => {
+      if (e.defaultPrevented || e.isComposing || e.keyCode === 229 || !editorViewRef.current || document.querySelector('.xuecheng-workspace dialog[open]')) return;
+      if (e.target.closest?.('input, textarea, [contenteditable="true"]') && !e.target.closest('.pm-host, .doc-head')) return;
       if ((e.metaKey || e.ctrlKey) && !e.shiftKey && !e.altKey && e.key.toLowerCase() === "j") {
         e.preventDefault();
         setAiOpen((v) => !v);
@@ -647,7 +649,8 @@ export default function App({ canUseMcp = false, onBack }) {
   /* ---------- 键盘：⌘S 立即保存 ---------- */
   useEffect(() => {
     const onKey = (e) => {
-      if ((e.metaKey || e.ctrlKey) && e.key.toLowerCase() === "s") {
+      if (e.defaultPrevented || e.isComposing || e.keyCode === 229 || !editorViewRef.current || document.querySelector('.xuecheng-workspace dialog[open]')) return;
+      if ((e.metaKey || e.ctrlKey) && !e.shiftKey && !e.altKey && e.key.toLowerCase() === "s") {
         e.preventDefault();
 
         flush({});

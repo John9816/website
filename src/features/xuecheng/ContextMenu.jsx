@@ -24,7 +24,10 @@ export default function ContextMenu({ menu, onClose, onError }) {
     el.style.top = `${Math.max(8, Math.min(menu.y, innerHeight - rect.height - 8))}px`;
     el.querySelector('button:not(:disabled)')?.focus({ preventScroll: true });
     const outside = event => {
-      if (!(event.target instanceof Node) || !el.contains(event.target)) callbacks.current.onClose();
+      if (!(event.target instanceof Node) || !el.contains(event.target)) {
+        callbacks.current.onClose();
+        if (event.type === 'scroll') menu.restoreFocus?.();
+      }
     };
     const close = () => callbacks.current.onClose();
     window.addEventListener('pointerdown', outside, true);
@@ -55,11 +58,13 @@ export default function ContextMenu({ menu, onClose, onError }) {
           const next = event.key === 'Home' ? 0 : event.key === 'End' ? buttons.length - 1
             : (index + (event.key === 'ArrowDown' ? 1 : -1) + buttons.length) % buttons.length;
           buttons[next]?.focus({ preventScroll: true });
+          buttons[next]?.scrollIntoView({ block: 'nearest' });
         }
       }}
     >
       {menu.items.map((item, i) => item ? (
-        <button key={item.label} type="button" role="menuitem" disabled={item.disabled}
+        <button key={item.label} type="button" role={item.checked === undefined ? 'menuitem' : 'menuitemcheckbox'}
+          aria-label={item.label} aria-checked={item.checked} disabled={item.disabled}
           className={item.danger ? 'danger' : undefined}
           onClick={() => {
             dismiss();
@@ -67,7 +72,7 @@ export default function ContextMenu({ menu, onClose, onError }) {
               Promise.resolve(item.run()).catch(error => callbacks.current.onError?.(error.message));
             } catch (error) { callbacks.current.onError?.(error.message); }
           }}
-        >{item.label}</button>
+        ><span className="xc-menu-check" aria-hidden="true">{item.checked ? '✓' : ''}</span><span>{item.label}</span>{item.shortcut && <kbd>{item.shortcut}</kbd>}</button>
       ) : <div key={i} role="separator" className="xc-context-separator" />)}
     </div>
   );

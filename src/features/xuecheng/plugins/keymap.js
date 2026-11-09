@@ -5,18 +5,18 @@
 import { keymap } from "prosemirror-keymap";
 import {
   baseKeymap,
-  toggleMark,
-  setBlockType,
   chainCommands,
   exitCode,
   newlineInCode,
-  splitBlock,
+
 } from "prosemirror-commands";
-import { undo, redo, history } from "prosemirror-history";
-import { splitListItem, liftListItem, sinkListItem } from "prosemirror-schema-list";
-import { goToNextCell, addRowAfter, addColumnAfter } from "prosemirror-tables";
-import { TextSelection } from "prosemirror-state";
+import { redo, history } from "prosemirror-history";
+import { splitListItemKeepMarks, liftListItem, sinkListItem } from "prosemirror-schema-list";
+import { goToNextCell, addRowAfter, addColumnAfter, isInTable } from "prosemirror-tables";
+import { AllSelection, EditorState, Selection, TextSelection } from "prosemirror-state";
 import { schema } from "../schema.js";
+import { actions } from "../editor/actions.js";
+import { undoInputRule } from 'prosemirror-inputrules';
 
 /** 切换任务项勾选状态 */
 export const toggleTaskChecked = (state, dispatch) => {
@@ -41,6 +41,7 @@ export const insertParagraphAfter = (state, dispatch) => {
   const { $from } = state.selection;
   // 找到最外层块
   let depth = $from.depth;
+  if (!depth) return false;
   while (depth > 0 && $from.node(depth).isBlock && depth > 1) depth--;
   const after = $from.after(depth);
   if (dispatch) {
@@ -50,41 +51,59 @@ export const insertParagraphAfter = (state, dispatch) => {
   return true;
 };
 
-export function buildKeymap() {
-  const keys = {
-    "Mod-z": undo,
-    "Mod-y": redo,
-    "Mod-Shift-z": redo,
-
-    "Mod-b": toggleMark(schema.marks.strong),
-    "Mod-i": toggleMark(schema.marks.em),
-    "Mod-u": toggleMark(schema.marks.underline),
-    "Mod-Shift-x": toggleMark(schema.marks.strikethrough),
-    "Mod-e": toggleMark(schema.marks.code),
-    "Mod-Shift-h": toggleMark(schema.marks.highlight),
-
-    "Mod-Alt-0": setBlockType(schema.nodes.paragraph),
-    "Mod-Alt-1": setBlockType(schema.nodes.heading, { level: 1 }),
-    "Mod-Alt-2": setBlockType(schema.nodes.heading, { level: 2 }),
-    "Mod-Alt-3": setBlockType(schema.nodes.heading, { level: 3 }),
-
-    Enter: splitListItem(schema.nodes.list_item),
-    "Shift-Tab": liftListItem(schema.nodes.list_item),
-    Tab: chainCommands(
-      sinkListItem(schema.nodes.list_item),
-      sinkListItem(schema.nodes.task_item),
-      goToNextCell(1)
-    ),
-    "Mod-Enter": chainCommands(exitCode, newlineInCode),
-    "Mod-Shift-Enter": toggleTaskChecked,
-
-    "Mod-Alt-r": addRowAfter,
-    "Mod-Alt-c": addColumnAfter,
-
-    // 代码块内换行：Shift-Enter 插入软换行，Mod-Enter 跳出代码块
-    "Shift-Enter": chainCommands(newlineInCode, splitBlock),
-  };
+// At the final table cell, Tab appends one row as a single undoable transaction.
+const nextCell = (state, dispatch) => {
+  if (!isInTable(state)) return false;
+  if (goToNextCell(1)(state, dispatch)) return true;
+  let tr;
+  if (!addRowAfter(state, value => { tr = value; })) return false;
+  // Table plugins can append column-width fixes. Derive the cursor from this
+  // exact transaction doc, then let the real dispatch apply those fixes once.
+  const nextState = EditorState.create({ doc: tr.doc, selection: tr.selection });
+  goToNextCell(1)(nextState, next => tr.setSelection(next.selection));
+  if (dispatch) dispatch(tr.scrollIntoView());
+  return true;
+};
+const softBreak = (state, dispatch) => {
+  if (!state.selection.$from.parent.inlineContent) return false;
+  if (dispatch) dispatch(state.tr.replaceSelectionWith(schema.nodes.hard_break.create()).scrollIntoView());
+  return true;
+};
+const splitTask = (state, dispatch) => splitListItemKeepMarks(schema.nodes.task_item, { checked: false })(state, dispatch && (tr => {
+  const { $from } = tr.selection;
+  for (let d = $from.depth; d > 0; d--) if ($from.node(d).type === schema.nodes.task_item) {
+    tr.setNodeMarkup($from.before(d), null, { checked: false }); break;
+  }
+  dispatch(tr);
+}));
+export function buildKeymap(handlers = {}) {
+  const keys = Object.fromEntries(Object.values(actions).map(action => [action.shortcut, action.command]));
+  Object.assign(keys, {
+    ArrowLeft: collapseAll(-1),
+    ArrowRight: collapseAll(1),
+    Backspace: undoInputRule,
+    'Mod-y': redo,
+    'Mod-k': () => { handlers.link?.(); return !!handlers.link; },
+    Enter: chainCommands(splitTask, splitListItemKeepMarks(schema.nodes.list_item)),
+    'Shift-Tab': chainCommands(goToNextCell(-1), liftListItem(schema.nodes.task_item), liftListItem(schema.nodes.list_item)),
+    Tab: chainCommands(nextCell, sinkListItem(schema.nodes.task_item), sinkListItem(schema.nodes.list_item)),
+    'Mod-Enter': chainCommands(exitCode, insertParagraphAfter),
+    'Mod-Shift-Enter': toggleTaskChecked,
+    'Mod-Alt-r': addRowAfter,
+    'Mod-Alt-c': addColumnAfter,
+    'Shift-Enter': chainCommands(newlineInCode, softBreak),
+  });
   return [keymap(keys), keymap(baseKeymap)];
+}
+
+// Avoid relying on the browser's selectionchange timing immediately after a
+// dialog/toolbar returns focus with a whole-document selection.
+function collapseAll(direction) {
+  return (state, dispatch) => {
+    if (!(state.selection instanceof AllSelection)) return false;
+    if (dispatch) dispatch(state.tr.setSelection(direction < 0 ? Selection.atStart(state.doc) : Selection.atEnd(state.doc)).scrollIntoView());
+    return true;
+  };
 }
 
 export { history };

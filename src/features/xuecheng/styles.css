@@ -4080,7 +4080,7 @@
 .xuecheng-workspace .xc-context-menu {
   position: fixed;
   z-index: 1500;
-  width: 210px;
+  width: 280px;
   max-width: calc(100vw - 16px);
   max-height: calc(100dvh - 16px);
   overflow-y: auto;
@@ -4091,7 +4091,9 @@
   box-shadow: var(--shadow-lg);
 }
 .xuecheng-workspace .xc-context-menu button {
-  display: block;
+  display: flex;
+  align-items: center;
+  gap: 8px;
   width: 100%;
   padding: 7px 12px;
   border: 0;
@@ -4103,6 +4105,33 @@
   text-align: left;
   cursor: pointer;
 }
+.xuecheng-workspace .xc-menu-check { flex: 0 0 14px; color: var(--brand); }
+.xuecheng-workspace .xc-context-menu kbd { margin-left: auto; color: var(--text-3); font: 11px var(--mono); }
+.xuecheng-workspace .tb-btn:disabled { opacity: .4; cursor: not-allowed; }
+.xuecheng-workspace .tb-btn:focus-visible { outline: 2px solid var(--brand); outline-offset: -2px; }
+.xuecheng-workspace .dd-panel { position: fixed; z-index: 1600; max-width: calc(100vw - 16px); max-height: calc(100dvh - 24px); overflow-y: auto; }
+.xuecheng-workspace .dd-panel button:focus-visible { background: var(--brand-soft); outline: 2px solid var(--brand); outline-offset: -2px; }
+.xuecheng-workspace .dd-trigger.open::before, .xuecheng-workspace .dd-trigger.open::after { display: none; }
+.xuecheng-workspace .xc-shortcut-trigger { margin-left: auto; font-size: 18px; }
+.xuecheng-workspace .xc-editor-dialog {
+  width: min(520px, calc(100vw - 32px)); max-height: calc(100dvh - 48px); overflow: auto;
+  padding: 24px; border: 1px solid var(--line); border-radius: 12px;
+  background: var(--panel); color: var(--text); box-shadow: var(--shadow-lg);
+}
+.xuecheng-workspace .xc-editor-dialog::backdrop { background: rgb(0 0 0 / 42%); }
+.xuecheng-workspace .xc-dialog-heading { display: flex; align-items: center; justify-content: space-between; gap: 16px; margin-bottom: 16px; }
+.xuecheng-workspace .xc-dialog-heading h2 { margin: 0; font-size: 18px; }
+.xuecheng-workspace .xc-editor-dialog p { font-size: 13px; color: var(--text-2); }
+.xuecheng-workspace .xc-editor-dialog input { width: 100%; padding: 10px 12px; margin-top: 8px; border: 1px solid var(--line); border-radius: 6px; background: var(--panel-soft); color: var(--text); }
+.xuecheng-workspace .xc-editor-dialog button { padding: 7px 12px; border: 1px solid var(--line); border-radius: 6px; background: var(--panel); color: var(--text); cursor: pointer; }
+.xuecheng-workspace .xc-editor-dialog button.primary { background: var(--brand); color: var(--on-accent); border-color: var(--brand); }
+.xuecheng-workspace .xc-editor-dialog .xc-dialog-error { color: var(--danger); }
+.xuecheng-workspace .xc-dialog-actions { display: flex; justify-content: flex-end; gap: 8px; margin-top: 24px; }
+.xuecheng-workspace .xc-shortcut-list > div { display: flex; justify-content: space-between; gap: 20px; padding: 7px 0; border-bottom: 1px solid var(--line-soft); font-size: 13px; }
+.xuecheng-workspace .xc-shortcut-list kbd { white-space: nowrap; color: var(--text-2); font-family: var(--mono); }
+.xuecheng-workspace .xc-editor-dialog:has(.xc-shortcut-list) { width: min(780px, calc(100vw - 32px)); }
+.xuecheng-workspace .xc-shortcut-list { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); column-gap: 32px; }
+@media (max-width: 680px) { .xuecheng-workspace .xc-shortcut-list { grid-template-columns: 1fr; } }
 .xuecheng-workspace .xc-context-menu button:hover:not(:disabled),
 .xuecheng-workspace .xc-context-menu button:focus-visible {
   background: var(--brand-soft);

@@ -1,8 +1,8 @@
 import { NodeSelection, Selection } from 'prosemirror-state';
 import { selectAll, deleteSelection } from 'prosemirror-commands';
-import { undo, redo } from 'prosemirror-history';
-import { addRowBefore, addRowAfter, addColumnBefore, addColumnAfter, deleteRow, deleteColumn, deleteTable } from 'prosemirror-tables';
+import { addRowBefore, addRowAfter, addColumnBefore, addColumnAfter, deleteRow, deleteColumn, deleteTable, CellSelection, mergeCells, splitCell, toggleHeaderRow, toggleHeaderColumn } from 'prosemirror-tables';
 import * as cmd from './commands.js';
+import { actions, actionState, runAction, shortcutLabel } from './actions.js';
 
 // Keep a right-click inside the selection from collapsing it. Otherwise target
 // the clicked text/image/cell, so commands never modify an unrelated block.
@@ -11,7 +11,12 @@ export function selectContextTarget(view, event) {
   if (!hit) return;
   const { state } = view;
   const { from, to, empty } = state.selection;
-  if (!empty && hit.pos >= from && hit.pos <= to) return;
+  if (!empty) {
+    let inside = false;
+    if (state.selection instanceof CellSelection) state.selection.forEachCell((node, pos) => { if (hit.pos >= pos && hit.pos < pos + node.nodeSize) inside = true; });
+    else inside = hit.pos >= from && hit.pos <= to;
+    if (inside) return;
+  }
   const image = event.target.closest?.('img');
   const at = image ? view.posAtDOM(image, 0) : hit.pos;
   const node = state.doc.nodeAt(at);
@@ -39,7 +44,7 @@ async function copySelection(view, cut) {
   }
 }
 
-async function paste(view) {
+async function paste(view, plainOnly = false) {
   const snapshot = view.state;
   let html, text;
   try {
@@ -47,7 +52,7 @@ async function paste(view) {
       const items = await navigator.clipboard.read();
       const rich = items.find(item => item.types.includes('text/html'));
       const plain = items.find(item => item.types.includes('text/plain'));
-      if (rich) html = await (await rich.getType('text/html')).text();
+      if (rich && !plainOnly) html = await (await rich.getType('text/html')).text();
       else if (plain) text = await (await plain.getType('text/plain')).text();
     } else text = await navigator.clipboard.readText();
   } catch { throw new Error('浏览器未允许读取剪贴板，请在正文中按 Ctrl+V 或 ⌘V 粘贴'); }
@@ -60,23 +65,45 @@ async function paste(view) {
   else throw new Error('剪贴板中没有可粘贴的文字；图片请使用键盘快捷键粘贴');
 }
 
-export function editorContextItems(view) {
-  const command = (label, run, danger = false) => ({ label, danger, disabled: !run(view.state), run: () => run(view.state, view.dispatch, view) });
+export function editorContextItems(view, handlers = {}) {
+  const snapshot = view.state;
+  const guard = run => () => {
+    if (view.isDestroyed) return;
+    if (view.state.doc !== snapshot.doc || !view.state.selection.eq(snapshot.selection)) throw new Error('编辑位置已改变，请重新打开菜单');
+    return run();
+  };
+  const command = (label, run, danger = false) => ({ label, danger, disabled: !run(view.state), run: guard(() => run(view.state, view.dispatch, view)) });
+  const action = id => {
+    const a = actions[id], state = actionState(view.state, id);
+    return { label: a.label, shortcut: shortcutLabel(a.shortcut), checked: a.mark || a.node ? state.active : undefined,
+      disabled: !state.enabled, run: guard(() => runAction(view, id)) };
+  };
   const selected = !view.state.selection.empty;
+  const table = cmd.inTable(view.state);
+  const image = view.state.selection.node?.type.name === 'image';
   return [
-    command('撤销', undo), command('重做', redo), null,
-    { label: '剪切', disabled: !selected, run: () => copySelection(view, true) },
-    { label: '复制', disabled: !selected, run: () => copySelection(view, false) },
-    { label: '粘贴', run: () => paste(view) },
+    action('undo'), action('redo'), null,
+    { label: '剪切', shortcut: shortcutLabel('Mod-x'), disabled: !selected, run: guard(() => copySelection(view, true)) },
+    { label: '复制', shortcut: shortcutLabel('Mod-c'), disabled: !selected, run: guard(() => copySelection(view, false)) },
+    { label: '粘贴', shortcut: shortcutLabel('Mod-v'), run: guard(() => paste(view)) },
+    { label: '粘贴为纯文本', shortcut: shortcutLabel('Mod-Shift-v'), run: guard(() => paste(view, true)) },
     command('全选', selectAll), null,
-    { label: '加粗', run: () => cmd.toggleBold(view) },
-    { label: '斜体', run: () => cmd.toggleItalic(view) },
-    { label: '清除格式', run: () => cmd.clearFormat(view) },
-    ...(cmd.inTable(view.state) ? [null,
+    ...(image ? [
+      { label: '替换图片', run: guard(() => handlers.image?.(true)) },
+      { label: '删除图片', danger: true, run: guard(() => cmd.deleteSelectionNode(view)) },
+    ] : [action('bold'), action('italic'), action('underline'), action('strike'), action('clear'), null,
+      { label: cmd.linkRange(view.state) ? '编辑链接' : '插入链接', shortcut: shortcutLabel('Mod-k'), disabled: !cmd.canSetLink(view.state), run: guard(() => handlers.link?.()) },
+      ...(cmd.linkRange(view.state) ? [{ label: '移除链接', run: guard(() => cmd.setLink(view, '')) }] : []),
+      ...(!table ? [action('bullet'), action('ordered'), action('task'), action('indent'), action('outdent')] : []),
+    ]),
+    ...(table ? [null,
       command('上方插入行', addRowBefore), command('下方插入行', addRowAfter),
       command('左侧插入列', addColumnBefore), command('右侧插入列', addColumnAfter),
+      command('合并单元格', mergeCells), command('拆分单元格', splitCell),
+      command('切换表头行', toggleHeaderRow), command('切换表头列', toggleHeaderColumn),
       command('删除当前行', deleteRow, true), command('删除当前列', deleteColumn, true),
       command('删除表格', deleteTable, true),
     ] : []),
+    null, { label: '快捷键速查', run: () => handlers.help?.() },
   ];
 }

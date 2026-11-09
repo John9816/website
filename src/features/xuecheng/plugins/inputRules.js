@@ -9,6 +9,7 @@ import {
   InputRule,
 } from "prosemirror-inputrules";
 import { schema } from "../schema.js";
+import { safeUrl } from '../editor/commands.js';
 
 /**
  * 行内 mark 的输入规则（ProseMirror 官方未提供，Tiptap 的同名 API 不能直接用）
@@ -21,14 +22,14 @@ function markInputRule(regexp, markType, getAttrs) {
     const attrs = getAttrs ? getAttrs(match) : null;
     const offset = match[0].indexOf(content);
     if (offset < 0) return null;
-    const from = start + offset;
-    const to = from + content.length;
+    const delimiterLength = match[0].length - offset - content.length;
+    const from = start + Math.max(0, offset - delimiterLength);
     const tr = state.tr;
-    // 只删两侧包裹符号，避免误删规则里的前导字符（如 *a* 前的一个空格）
-    tr.delete(to, end);
-    tr.delete(start, from);
-    tr.insertText(content, start);
-    tr.addMark(start, start + content.length, markType.create(attrs));
+    // The final typed delimiter is not in the document yet. Remove only the
+    // existing delimiters, retaining the text and its other marks exactly once.
+    tr.delete(start + offset + content.length, end);
+    tr.delete(from, start + offset);
+    tr.addMark(from, from + content.length, markType.create(attrs));
     tr.removeStoredMark(markType);
     return tr;
   });
@@ -38,7 +39,7 @@ export function buildInputRules() {
   const rules = [];
 
   /* 标题：# / ## / ### */
-  const headingRule = textblockTypeInputRule(/^(#{1,3})\s$/, schema.nodes.heading, (match) => ({
+  const headingRule = textblockTypeInputRule(/^(#{1,6})\s$/, schema.nodes.heading, (match) => ({
     level: match[1].length,
   }));
   rules.push(headingRule);
@@ -86,6 +87,7 @@ export function buildInputRules() {
   /* 链接：[文字](url) */
   rules.push(
     new InputRule(/\[([^\]]+)\]\(([^)]+)\)$/, (state, match, start, end) => {
+      if (!safeUrl(match[2])) return null;
       const { tr } = state;
       tr.delete(start, end);
       tr.insertText(match[1], start);

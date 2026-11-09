@@ -2,8 +2,10 @@
  * 编辑器命令集合 —— 工具栏与斜杠菜单共用
  * 统一走 view.dispatch，避免各处重复计算块位置
  */
-import { TextSelection } from "prosemirror-state";
-import { setBlockType, toggleMark, wrapIn, lift, chainCommands } from "prosemirror-commands";
+import { TextSelection, Selection, NodeSelection } from "prosemirror-state";
+import { setBlockType, toggleMark, wrapIn } from "prosemirror-commands";
+import { liftTarget } from "prosemirror-transform";
+import { closeHistory } from 'prosemirror-history';
 import { wrapInList, liftListItem } from "prosemirror-schema-list";
 import {
   addRowBefore,
@@ -17,14 +19,17 @@ import {
   splitCell,
   toggleHeaderRow,
   toggleHeaderColumn,
-  selectedRect,
 } from "prosemirror-tables";
 import { schema } from "../schema.js";
 
 /** 光标所在的「最外层块」范围（doc 的直接子节点） */
-export function currentBlock(state) {
+export function currentBlock(state, targetPos) {
+  if (Number.isInteger(targetPos)) {
+    const $pos = state.doc.resolve(targetPos);
+    return $pos.depth === 0 && $pos.nodeAfter ? { node: $pos.nodeAfter, pos: targetPos, index: $pos.index() } : null;
+  }
   const { $from } = state.selection;
-  if ($from.depth < 1) return null;
+  if ($from.depth < 1) return currentBlock(state, $from.pos);
   const index = $from.index(0);
   const node = state.doc.child(index);
   const pos = $from.before(1);
@@ -36,7 +41,9 @@ export function insertBlockAfter(view, node) {
   const { state } = view;
   const b = currentBlock(state);
   if (!b) return false;
-  const tr = state.tr.insert(b.pos + b.node.nodeSize, node);
+  const pos = b.pos + b.node.nodeSize;
+  const tr = state.tr.insert(pos, node);
+  tr.setSelection(node.isAtom ? NodeSelection.create(tr.doc, pos) : Selection.near(tr.doc.resolve(pos + 1)));
   view.dispatch(tr.scrollIntoView());
   return true;
 }
@@ -67,30 +74,74 @@ export const toggleHighlight = (view) => run(view, toggleMark(schema.marks.highl
 
 export function setLink(view, href) {
   const { state } = view;
-  const { from, to, empty } = state.selection;
-  if (empty) return false;
-  if (!href) {
-    view.dispatch(state.tr.removeMark(from, to, schema.marks.link));
+  if (!canSetLink(state)) return false;
+  const range = state.selection.empty ? linkRange(state) : null;
+  const ranges = state.selection.empty ? (range ? [range] : []) : state.selection.ranges.map(({ $from, $to }) => ({ from: $from.pos, to: $to.pos }));
+  if (!ranges.length) {
+    if (!href || !safeUrl(href)) return false;
+    view.dispatch(state.tr.replaceSelectionWith(schema.text(href, [schema.marks.link.create({ href })]), false).scrollIntoView());
     return true;
   }
-  view.dispatch(state.tr.addMark(from, to, schema.marks.link.create({ href })));
+  if (!href) {
+    const tr = state.tr;
+    for (const range of ranges) tr.removeMark(range.from, range.to, schema.marks.link);
+    view.dispatch(tr.removeStoredMark(schema.marks.link));
+    return true;
+  }
+  if (!safeUrl(href)) return false;
+  const tr = state.tr;
+  for (const range of ranges) tr.addMark(range.from, range.to, schema.marks.link.create({ href }));
+  view.dispatch(tr);
   return true;
+}
+
+export const canSetLink = state => selectedTextblocks(state).some(({ node }) => node.type.allowsMarkType(schema.marks.link));
+
+export function safeUrl(value, image = false) {
+  if (!value || /[\u0000-\u0020\u007f]/.test(value)) return false;
+  if (/^https?:\/\//i.test(value)) { try { return !!new URL(value).hostname; } catch { return false; } }
+  return /^\/(?!\/)/.test(value) || (!image && /^(mailto:|tel:|#)/i.test(value));
+}
+
+export function linkRange(state) {
+  const { $from } = state.selection;
+  const mark = schema.marks.link.isInSet($from.marks()) || schema.marks.link.isInSet($from.nodeAfter?.marks || []);
+  if (!mark) return null;
+  let result = null, group = null, offset = $from.start();
+  $from.parent.forEach(node => {
+    if (mark.isInSet(node.marks)) {
+      group = group || { from: offset, to: offset, href: mark.attrs.href };
+      group.to = offset + node.nodeSize;
+      if (group.from <= $from.pos && group.to >= $from.pos) result = group;
+    } else group = null;
+    offset += node.nodeSize;
+  });
+  return result;
+}
+
+export function selectedTextblocks(state) {
+  const found = new Map();
+  for (const { $from, $to } of state.selection.ranges) {
+    if ($from.pos === $to.pos && $from.parent.isTextblock) found.set($from.before(), $from.parent);
+    else state.doc.nodesBetween($from.pos, $to.pos, (node, pos) => { if (node.isTextblock) { found.set(pos, node); return false; } });
+  }
+  return [...found].map(([pos, node]) => ({ pos, node }));
 }
 
 export function clearFormat(view) {
   const { state } = view;
-  const { from, to, empty } = state.selection;
+  const { empty } = state.selection;
   const tr = state.tr;
   if (!empty) {
     // schema.marks 是普通对象，需先取 values 再遍历
-    for (const mark of Object.values(state.schema.marks)) {
-      tr.removeMark(from, to, mark);
+    for (const { $from, $to } of state.selection.ranges) {
+      tr.removeMark($from.pos, $to.pos);
     }
   }
-  const b = currentBlock(state);
-  if (b) {
-    tr.setBlockType(b.pos, b.pos + b.node.nodeSize, schema.nodes.paragraph);
+  for (const { node, pos } of selectedTextblocks(state)) {
+    if (node.type === schema.nodes.heading || node.type === schema.nodes.paragraph) tr.setNodeMarkup(pos, schema.nodes.paragraph, { align: null });
   }
+  tr.setStoredMarks([]);
   view.dispatch(tr.scrollIntoView());
   return true;
 }
@@ -98,42 +149,39 @@ export function clearFormat(view) {
 /* ---------- 块级结构 ---------- */
 export const toggleQuote = (view) => {
   const { state } = view;
-  return run(view, chainCommands(lift, wrapIn(schema.nodes.blockquote)));
+  const { $from, $to } = state.selection;
+  const range = $from.blockRange($to, node => node.type === schema.nodes.blockquote);
+  if (!range) return run(view, wrapIn(schema.nodes.blockquote));
+  const target = liftTarget(range);
+  if (target == null) return false;
+  view.dispatch(state.tr.lift(range, target).scrollIntoView());
+  return true;
 };
 
-export const toggleBulletList = (view) => {
+function toggleList(view, name) {
   const { state } = view;
-  return run(view, chainCommands(liftListItem(schema.nodes.list_item), wrapInList(schema.nodes.bullet_list)));
-};
-
-export const toggleOrderedList = (view) => {
-  const { state } = view;
-  return run(view, chainCommands(liftListItem(schema.nodes.list_item), wrapInList(schema.nodes.ordered_list)));
-};
-
-/** 任务列表：当前是普通列表则整段转换，否则新建一项 */
-export function toggleTaskList(view) {
-  const { state } = view;
-  const b = currentBlock(state);
-  if (!b) return false;
-  if (b.node.type.name === "task_list") {
-    // 转回普通无序列表
-    const list = schema.nodes.bullet_list.create(
-      null,
-      Array.from({ length: b.node.childCount }, (_, i) => {
-        const item = b.node.child(i);
-        const para = schema.nodes.paragraph.create(null, item.content);
-        return schema.nodes.list_item.create(null, para);
-      })
-    );
-    return replaceBlock(view, () => list);
+  const { $from, $to } = state.selection;
+  for (let d = $from.depth; d > 0; d--) {
+    const list = $from.node(d);
+    if (!['bullet_list', 'ordered_list', 'task_list'].includes(list.type.name)) continue;
+    if ($to.pos > $from.end(d)) return false;
+    const itemType = list.firstChild.type;
+    if (list.type.name === name) return run(view, liftListItem(itemType));
+    const nextItem = name === 'task_list' ? schema.nodes.task_item : schema.nodes.list_item;
+    const items = [];
+    list.forEach(item => items.push(nextItem.create(name === 'task_list' ? { checked: !!item.attrs.checked } : null, item.content, item.marks)));
+    const pos = $from.before(d);
+    const tr = state.tr.replaceWith(pos, pos + list.nodeSize, schema.nodes[name].create(null, items));
+    // Conversion preserves node sizes, so keep the exact text or cell selection.
+    tr.setSelection(Selection.fromJSON(tr.doc, state.selection.toJSON()));
+    view.dispatch(tr.scrollIntoView());
+    return true;
   }
-  const text = b.node.textContent;
-  const item = schema.nodes.task_item.create({ checked: false }, [
-    schema.nodes.paragraph.create(null, text ? schema.text(text) : null),
-  ]);
-  return replaceBlock(view, () => schema.nodes.task_list.create(null, item));
+  return run(view, wrapInList(schema.nodes[name]));
 }
+export const toggleBulletList = view => toggleList(view, 'bullet_list');
+export const toggleOrderedList = view => toggleList(view, 'ordered_list');
+export const toggleTaskList = view => toggleList(view, 'task_list');
 
 export function insertCallout(view, type = "info") {
   const node = schema.nodes.callout.create({ type }, [schema.nodes.paragraph.create()]);
@@ -172,13 +220,18 @@ export function insertTable(view, rows = 3, cols = 3) {
 }
 
 export function insertImage(view, src, alt = "") {
-  return insertBlockAfter(view, schema.nodes.image.create({ src, alt, title: alt }));
+  if (!safeUrl(src, true)) return false;
+  const tr = view.state.tr.replaceSelectionWith(schema.nodes.image.create({ src, alt, title: alt }), false);
+  const pos = tr.selection.from - 1;
+  if (tr.doc.nodeAt(pos)?.type === schema.nodes.image) tr.setSelection(NodeSelection.create(tr.doc, pos));
+  view.dispatch(tr.scrollIntoView());
+  return true;
 }
 
 /* ---------- 块操作（手柄菜单） ---------- */
-export function moveBlock(view, dir) {
+export function moveBlock(view, dir, targetPos) {
   const { state } = view;
-  const b = currentBlock(state);
+  const b = currentBlock(state, targetPos);
   if (!b) return false;
   const idx = b.index;
   if (dir < 0 && idx === 0) return false;
@@ -188,22 +241,23 @@ export function moveBlock(view, dir) {
   const to = dir < 0 ? b.pos + b.node.nodeSize : b.pos + b.node.nodeSize + sibling.nodeSize;
   const ordered = dir < 0 ? [b.node, sibling] : [sibling, b.node];
   const tr = state.tr.replaceWith(from, to, ordered);
+  tr.setSelection(Selection.near(tr.doc.resolve(dir < 0 ? from + 1 : from + sibling.nodeSize + 1)));
   view.dispatch(tr.scrollIntoView());
   return true;
 }
 
-export function duplicateBlock(view) {
+export function duplicateBlock(view, targetPos) {
   const { state } = view;
-  const b = currentBlock(state);
+  const b = currentBlock(state, targetPos);
   if (!b) return false;
   const tr = state.tr.insert(b.pos + b.node.nodeSize, b.node.copy(b.node.content));
   view.dispatch(tr.scrollIntoView());
   return true;
 }
 
-export function deleteBlock(view) {
+export function deleteBlock(view, targetPos) {
   const { state } = view;
-  const b = currentBlock(state);
+  const b = currentBlock(state, targetPos);
   if (!b || state.doc.childCount <= 1) return false;
   const tr = state.tr.delete(b.pos, b.pos + b.node.nodeSize);
   view.dispatch(tr.scrollIntoView());
@@ -227,9 +281,9 @@ function run(view, command) {
 
 /* ---------- 状态查询（工具栏高亮） ---------- */
 export function markActive(state, markType) {
-  const { from, $from, to, empty } = state.selection;
+  const { $from, empty, ranges } = state.selection;
   if (empty) return !!markType.isInSet(state.storedMarks || $from.marks());
-  return state.doc.rangeHasMark(from, to, markType);
+  return ranges.some(({ $from, $to }) => state.doc.rangeHasMark($from.pos, $to.pos, markType));
 }
 
 export function blockActive(state, type, attrs = {}) {
@@ -263,117 +317,51 @@ export function ancestor(state, name) {
 /* ================= 段落对齐 ================= */
 export function setAlign(view, align) {
   const { state } = view;
-  const { from, to } = state.selection;
   const tr = state.tr;
   const value = align === "left" ? null : align;
   let changed = false;
-  const rangeTo = to > from ? to : from + 1;
-  state.doc.nodesBetween(from, rangeTo, (node, pos) => {
+  for (const { node, pos } of selectedTextblocks(state)) {
     if (node.type.name === "paragraph" || node.type.name === "heading") {
       tr.setNodeMarkup(pos, null, { ...node.attrs, align: value });
       changed = true;
-      return false;
     }
-    return true;
-  });
+  }
   if (changed) view.dispatch(tr.scrollIntoView());
   view.focus();
   return changed;
 }
 
 export function currentAlign(state) {
-  const b = currentBlock(state);
-  return (b && b.node.attrs.align) || "left";
+  const values = selectedTextblocks(state).map(({ node }) => node.attrs.align || 'left');
+  return values.every(value => value === values[0]) ? values[0] || 'left' : 'mixed';
 }
 
 /* ================= 文字颜色 / 背景色 ================= */
-export function setTextColor(view, color) {
+export function setInlineStyle(view, markType, attrs) {
   const { state } = view;
-  const { from, to, empty } = state.selection;
-  const mark = schema.marks.textColor.create({ color });
+  const { empty, $from } = state.selection;
+  if (empty && !$from.parent.type.allowsMarkType(markType)) return false;
+  const tr = state.tr;
   if (empty) {
-    view.dispatch(state.tr.addStoredMark(mark));
+    if (attrs) tr.addStoredMark(markType.create(attrs));
+    else tr.removeStoredMark(markType);
   } else {
-    view.dispatch(state.tr.addMark(from, to, mark));
-  }
-  view.focus();
-  return true;
-}
-
-export function clearTextColor(view) {
-  const { state } = view;
-  const { from, to, empty } = state.selection;
-  const tr = empty
-    ? state.tr.removeStoredMark(schema.marks.textColor)
-    : state.tr.removeMark(from, to, schema.marks.textColor);
-  view.dispatch(tr);
-  view.focus();
-  return true;
-}
-
-export function setBgColor(view, color) {
-  const { state } = view;
-  const { from, to, empty } = state.selection;
-  const mark = schema.marks.bgColor.create({ color });
-  if (empty) {
-    view.dispatch(state.tr.addStoredMark(mark));
-  } else {
-    view.dispatch(state.tr.addMark(from, to, mark));
-  }
-  view.focus();
-  return true;
-}
-
-export function clearBgColor(view) {
-  const { state } = view;
-  const { from, to, empty } = state.selection;
-  const tr = empty
-    ? state.tr.removeStoredMark(schema.marks.bgColor)
-    : state.tr.removeMark(from, to, schema.marks.bgColor);
-  view.dispatch(tr);
-  view.focus();
-  return true;
-}
-
-/* ================= 字号 ================= */
-export function setFontSize(view, size) {
-  const { state } = view;
-  const { from, to, empty } = state.selection;
-  const mark = schema.marks.fontSize.create({ size: `${size}px` });
-  let tr;
-  if (empty) {
-    // 空选区时作用于整个当前块，符合「选字号即整段生效」的预期
-    const b = currentBlock(state);
-    if (b && b.node.content.size > 0) {
-      tr = state.tr.addMark(b.pos + 1, b.pos + b.node.nodeSize - 1, mark);
-    } else {
-      tr = state.tr.addStoredMark(mark);
+    for (const { $from, $to } of state.selection.ranges) {
+      if (attrs) tr.addMark($from.pos, $to.pos, markType.create(attrs));
+      else tr.removeMark($from.pos, $to.pos, markType);
     }
-  } else {
-    tr = state.tr.addMark(from, to, mark);
+    if (!tr.docChanged) return false;
   }
   view.dispatch(tr);
   view.focus();
   return true;
 }
-
-export function clearFontSize(view) {
-  const { state } = view;
-  const { from, to, empty } = state.selection;
-  let tr;
-  if (empty) {
-    const b = currentBlock(state);
-    tr =
-      b && b.node.content.size > 0
-        ? state.tr.removeMark(b.pos + 1, b.pos + b.node.nodeSize - 1, schema.marks.fontSize)
-        : state.tr.removeStoredMark(schema.marks.fontSize);
-  } else {
-    tr = state.tr.removeMark(from, to, schema.marks.fontSize);
-  }
-  view.dispatch(tr);
-  view.focus();
-  return true;
-}
+export const setTextColor = (view, color) => setInlineStyle(view, schema.marks.textColor, { color });
+export const clearTextColor = view => setInlineStyle(view, schema.marks.textColor, null);
+export const setBgColor = (view, color) => setInlineStyle(view, schema.marks.bgColor, { color });
+export const clearBgColor = view => setInlineStyle(view, schema.marks.bgColor, null);
+export const setFontSize = (view, size) => setInlineStyle(view, schema.marks.fontSize, { size: `${size}px` });
+export const clearFontSize = view => setInlineStyle(view, schema.marks.fontSize, null);
 
 /* ================= 上标 / 下标 ================= */
 export const toggleSup = (view) => run(view, toggleMark(schema.marks.superscript));
@@ -424,14 +412,8 @@ export const tableAddColsAfter = (view, n = 1) => insertCols(view, n, true);
 export const tableAddColsBefore = (view, n = 1) => insertCols(view, n, false);
 
 /** 当前是否多选了多个单元格（决定「合并」是否可用） */
-export function canMerge(state) {
-  try {
-    const r = selectedRect(state);
-    return r.width > 1 || r.height > 1;
-  } catch (_) {
-    return false;
-  }
-}
+export const canMerge = state => mergeCells(state);
+export const canSplit = state => splitCell(state);
 
 /* ================= 块属性切换 ================= */
 /** 修改最近祖先节点的 attrs */
@@ -459,8 +441,9 @@ export const CALLOUT_TYPES = [
 /* ================= 图片 ================= */
 export function replaceImage(view, src) {
   const { state } = view;
-  const { from, to, node } = state.selection;
+  const { from, node } = state.selection;
   if (!node || node.type.name !== "image") return false;
+  if (!safeUrl(src, true)) return false;
   view.dispatch(state.tr.setNodeMarkup(from, null, { ...node.attrs, src }));
   view.focus();
   return true;
@@ -468,7 +451,7 @@ export function replaceImage(view, src) {
 
 export function deleteSelectionNode(view) {
   const { state } = view;
-  view.dispatch(state.tr.deleteSelection());
+  view.dispatch(closeHistory(state.tr.deleteSelection()));
   view.focus();
   return true;
 }

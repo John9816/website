@@ -2,7 +2,7 @@
  * 编辑器主体 —— ProseMirror 的 React 封装
  * 包含：编辑区、悬浮工具栏、斜杠命令、块级手柄、右侧大纲
  */
-import { useEffect, useRef, useState, useCallback } from "react";
+import { useEffect, useRef, useState, useCallback, useLayoutEffect } from "react";
 import { EditorState, Plugin } from "prosemirror-state";
 import { EditorView, Decoration, DecorationSet } from "prosemirror-view";
 import { dropCursor } from "prosemirror-dropcursor";
@@ -11,11 +11,12 @@ import { tableEditing, columnResizing } from "prosemirror-tables";
 import { schema } from "../schema.js";
 import { buildInputRules } from "../plugins/inputRules.js";
 import { buildKeymap, history } from "../plugins/keymap.js";
-import { undo, redo } from "prosemirror-history";
 import * as cmd from "./commands.js";
 import { api } from "../api.js";
 import ContextMenu, { contextMenuAt } from '../ContextMenu.jsx';
 import { editorContextItems, selectContextTarget } from './contextMenu.js';
+import { actions, actionState, runAction, shortcutLabel } from './actions.js';
+import { Dropdown, EditorDialog, toolbarNavigation } from './EditorControls.jsx';
 
 /* ---------- 空文档占位提示 ---------- */
 const placeholderPlugin = new Plugin({
@@ -76,6 +77,10 @@ function headingLevelOf(state) {
   return 0;
 }
 
+function selectedInline(state) {
+  return cmd.selectedTextblocks(state).some(({ node }) => node.type.allowsMarkType(schema.marks.textColor));
+}
+
 function computeUi(state) {
   const m = schema.marks;
   const callout = cmd.ancestor(state, "callout");
@@ -85,7 +90,10 @@ function computeUi(state) {
   const lv = headingLevelOf(state);
   const fs = activeMarkAttr(state, m.fontSize, "size");
   return {
-    fmt: lv ? `标题 ${lv}` : "正文",
+    actions: Object.fromEntries(Object.keys(actions).map(id => [id, actionState(state, id)])),
+    inline: selectedInline(state),
+    canSplit: cmd.canSplit(state),
+    fmt: codeBlock ? "代码块" : lv ? `标题 ${lv}` : "正文",
     fontSize: fs ? parseInt(fs, 10) : null,
     bold: cmd.markActive(state, m.strong),
     italic: cmd.markActive(state, m.em),
@@ -130,6 +138,20 @@ function computeOutline(doc) {
 
 export default function Editor({ initialDoc, onChange, onSelectionInfo, title, onTitleChange, words, onViewReady, onError }) {
   const [contextMenu, setContextMenu] = useState(null);
+  const [dialog, setDialog] = useState(null);
+  const toolbarRef = useRef(null);
+  const errorRef = useRef(onError);
+  errorRef.current = onError;
+  const openDialog = (type, replace = false) => {
+    const view = viewRef.current;
+    if (!view || view.composing) return;
+    if (type === 'link' && !cmd.canSetLink(view.state)) return;
+    setContextMenu(null); setSlash(null);
+    setDialog({ type, replace, doc: view.state.doc, selection: view.state.selection,
+      value: type === 'link' ? cmd.linkRange(view.state)?.href || '' : replace ? view.state.selection.node?.attrs.src || '' : '' });
+  };
+  const dialogHandler = useRef(openDialog);
+  dialogHandler.current = openDialog;
   const hostRef = useRef(null);
   const viewRef = useRef(null);
   const onChangeRef = useRef(onChange);
@@ -164,7 +186,7 @@ export default function Editor({ initialDoc, onChange, onSelectionInfo, title, o
       doc: initialDoc ? schema.nodeFromJSON(initialDoc) : schema.node("doc", null, [schema.node("paragraph")]),
       plugins: [
         buildInputRules(),
-        ...buildKeymap(),
+        ...buildKeymap({ link: () => dialogHandler.current("link") }),
         history(),
         dropCursor({ color: "var(--accent)", width: 2 }),
         gapCursor(),
@@ -179,25 +201,38 @@ export default function Editor({ initialDoc, onChange, onSelectionInfo, title, o
       dispatchTransaction(tr) {
         const next = view.state.apply(tr);
         view.updateState(next);
-        if (tr.docChanged) onChangeRef.current?.(next.doc.toJSON());
+        if (tr.docChanged) {
+          handleMenuRef.current = false; setHandle(null); setHandleMenu(false);
+          onChangeRef.current?.(next.doc.toJSON());
+        }
         schedule();
       },
-      attributes: { class: "pm-doc", spellcheck: "false" },
+      attributes: { class: "pm-doc", spellcheck: "false", role: "textbox", "aria-label": "文档正文", "aria-multiline": "true" },
+      handleKeyDown(view, event) {
+        if (event.isComposing || view.composing || event.keyCode === 229) return false;
+        if (event.altKey && event.key === 'F10') { toolbarRef.current?.querySelector('button:not(:disabled)')?.focus(); return true; }
+        return false;
+      },
       handlePaste(viewInstance, event) {
         const items = Array.from(event.clipboardData?.items || []);
         const file = items.find((i) => i.type.startsWith("image/"))?.getAsFile();
         if (!file) return false;
         event.preventDefault();
+        const snapshot = viewInstance.state;
         const reader = new FileReader();
         reader.onload = async () => {
           try {
             const r = await api.upload(reader.result, file.name);
-            const node = schema.nodes.image.create({ src: r.url, alt: file.name, title: file.name });
-            cmd.insertBlockAfter(viewInstance, node);
+            if (viewInstance.isDestroyed) return;
+            if (viewInstance.state.doc !== snapshot.doc || !viewInstance.state.selection.eq(snapshot.selection)) {
+              errorRef.current?.('图片上传期间编辑位置已改变，请重新粘贴'); return;
+            }
+            cmd.insertImage(viewInstance, r.url, file.name);
           } catch (e) {
-            console.error(e);
+            errorRef.current?.(e.message || "图片上传失败，请重试");
           }
         };
+        reader.onerror = () => errorRef.current?.("读取图片失败，请重试");
         reader.readAsDataURL(file);
         return true;
       },
@@ -238,6 +273,7 @@ export default function Editor({ initialDoc, onChange, onSelectionInfo, title, o
     // 排障钩子：控制台可直接检查文档结构与选区
     if (typeof window !== "undefined") window.__pmView = view;
 
+    let lastDoc = null;
     function schedule() {
       if (rafRef.current) return;
       rafRef.current = requestAnimationFrame(() => {
@@ -245,11 +281,10 @@ export default function Editor({ initialDoc, onChange, onSelectionInfo, title, o
         const st = viewRef.current?.state;
         if (!st) return;
         setUi(computeUi(st));
-        setOutline(computeOutline(st.doc));
+        if (lastDoc !== st.doc) setOutline(computeOutline(st.doc));
         detectSlash(st);
-        onSelectionInfo?.({
-          words: st.doc.textContent.replace(/\s/g, "").length,
-        });
+        if (lastDoc !== st.doc) onSelectionInfo?.({ words: st.doc.textContent.replace(/\s/g, "").length });
+        lastDoc = st.doc;
       });
     }
 
@@ -257,6 +292,7 @@ export default function Editor({ initialDoc, onChange, onSelectionInfo, title, o
       const { $from } = st.selection;
       const text = $from.parent.textContent;
       const ok =
+        !viewRef.current.composing && st.selection.empty &&
         $from.parent.type.name === "paragraph" &&
         /^\/[^\s]{0,12}$/.test(text) &&
         $from.parentOffset === text.length;
@@ -269,8 +305,8 @@ export default function Editor({ initialDoc, onChange, onSelectionInfo, title, o
         query: text.slice(1),
         from: $from.start(),
         to: $from.start() + text.length,
-        top: Math.min(coords.bottom + 6, window.innerHeight - 380),
-        left: Math.min(coords.left, window.innerWidth - 300),
+        top: Math.max(8, Math.min(coords.bottom + 6, window.innerHeight - 380)),
+        left: Math.max(8, Math.min(coords.left, window.innerWidth - 300)),
       });
     }
 
@@ -292,9 +328,10 @@ export default function Editor({ initialDoc, onChange, onSelectionInfo, title, o
     let raf = 0;
 
     const onMove = (e) => {
-      if (raf) return;
+      if (raf || handleMenuRef.current) return;
       raf = requestAnimationFrame(() => {
         raf = 0;
+        if (handleMenuRef.current) return;
         const view = viewRef.current;
         if (!view) return;
         const rect = host.getBoundingClientRect();
@@ -317,7 +354,8 @@ export default function Editor({ initialDoc, onChange, onSelectionInfo, title, o
 
         let pos;
         try {
-          pos = view.posAtDOM(target, 0);
+          const $pos = view.state.doc.resolve(view.posAtDOM(target, 0));
+          pos = $pos.depth ? $pos.before(1) : $pos.pos;
         } catch (_) {
           return setHandle(null);
         }
@@ -334,9 +372,12 @@ export default function Editor({ initialDoc, onChange, onSelectionInfo, title, o
 
     document.addEventListener("mousemove", onMove);
     document.addEventListener("mouseleave", onLeave);
+    const onScroll = () => { handleMenuRef.current = false; setHandle(null); setHandleMenu(false); };
+    window.addEventListener('scroll', onScroll, true);
     return () => {
       document.removeEventListener("mousemove", onMove);
       document.removeEventListener("mouseleave", onLeave);
+      window.removeEventListener('scroll', onScroll, true);
       cancelAnimationFrame(raf);
     };
   }, []);
@@ -347,25 +388,27 @@ export default function Editor({ initialDoc, onChange, onSelectionInfo, title, o
     const items = SLASH_ITEMS.filter((it) => matches(it, slash.query));
     let idx = 0;
     const onKey = (e) => {
+      if (e.isComposing || e.keyCode === 229 || viewRef.current?.composing || !viewRef.current?.dom.contains(e.target)) return;
       if (e.key === "Escape") {
-        e.preventDefault();
+        e.preventDefault(); e.stopPropagation();
         setSlash(null);
-      } else if (e.key === "ArrowDown") {
-        e.preventDefault();
+      } else if (e.key === "ArrowDown" && items.length) {
+        e.preventDefault(); e.stopPropagation();
         idx = (idx + 1) % items.length;
         highlight(items[idx]);
-      } else if (e.key === "ArrowUp") {
-        e.preventDefault();
+      } else if (e.key === "ArrowUp" && items.length) {
+        e.preventDefault(); e.stopPropagation();
         idx = (idx - 1 + items.length) % items.length;
         highlight(items[idx]);
-      } else if (e.key === "Enter") {
-        e.preventDefault();
+      } else if (e.key === "Enter" && items.length) {
+        e.preventDefault(); e.stopPropagation();
         if (items[idx]) pick(items[idx]);
       }
     };
     const highlight = (item) => {
       document.querySelectorAll(".slash-item").forEach((el) => el.classList.remove("active"));
-      document.querySelector(`.slash-item[data-key="${item.key}"]`)?.classList.add("active");
+      const selected = document.querySelector(`.slash-item[data-key="${item.key}"]`);
+      selected?.classList.add("active"); selected?.scrollIntoView({ block: "nearest" });
     };
     window.addEventListener("keydown", onKey, true);
     return () => window.removeEventListener("keydown", onKey, true);
@@ -378,45 +421,69 @@ export default function Editor({ initialDoc, onChange, onSelectionInfo, title, o
     const tr = view.state.tr.delete(from, to);
     view.dispatch(tr);
     setSlash(null);
-    item.run(view);
+    if (item.key === "img") dialogHandler.current("image");
+    else item.run(view);
     view.focus();
   }, []);
 
   const exec = (fn) => () => {
     const view = viewRef.current;
-    if (view) fn(view);
+    if (view && !view.composing) fn(view);
     view?.focus();
   };
 
   const btn = (active, extra = "") => "tb-btn" + (active ? " active" : "") + (extra ? " " + extra : "");
   const openContextMenu = event => {
     const view = viewRef.current;
-    if (!view) return;
+    if (!view || view.composing) return;
     if (event.clientX || event.clientY) selectContextTarget(view, event);
     setSlash(null);
     setHandleMenu(false);
     handleMenuRef.current = false;
-    setContextMenu(contextMenuAt(event, '编辑操作', editorContextItems(view), () => view.focus()));
+    const menu = contextMenuAt(event, '编辑操作', editorContextItems(view, {
+      link: () => openDialog('link'), image: replace => openDialog('image', replace), help: () => openDialog('help'),
+    }), () => { if (!view.isDestroyed) view.focus(); });
+    if (!event.clientX && !event.clientY) { const caret = view.coordsAtPos(view.state.selection.from); menu.x = caret.left; menu.y = caret.bottom + 4; }
+    setContextMenu(menu);
   };
+
+  const actionProps = id => ({
+    'aria-label': actions[id].label,
+    'aria-pressed': actions[id].mark || actions[id].node ? !!ui.actions?.[id]?.active : undefined,
+    'data-tip': `${actions[id].label} ${shortcutLabel(actions[id].shortcut)}`,
+    disabled: !ui.actions?.[id]?.enabled,
+    onClick: () => runAction(viewRef.current, id),
+  });
+  useLayoutEffect(() => {
+    const buttons = [...(toolbarRef.current?.querySelectorAll('button') || [])].filter(button => !button.closest('.dd-panel'));
+    const focused = buttons.find(button => button === document.activeElement && !button.disabled) || buttons.find(button => !button.disabled);
+    for (const button of buttons) button.tabIndex = button === focused ? 0 : -1;
+  }, [ui]);
 
   return (
     <div className="editor-wrap">
+      {dialog && <EditorDialog dialog={dialog} viewRef={viewRef} onClose={() => setDialog(null)} />}
       <ContextMenu menu={contextMenu} onClose={() => setContextMenu(null)} onError={onError} />
       {/* 工具栏：按下按钮时阻止抢焦点，否则会丢失编辑器选区 */}
       <div
-        className="toolbar"
+        className="toolbar" ref={toolbarRef} role="toolbar" aria-label="文档工具栏"
+        onKeyDown={event => toolbarNavigation(event, viewRef.current)}
+        onFocusCapture={event => {
+          if (event.target.closest('.dd-panel')) return;
+          toolbarRef.current.querySelectorAll('button').forEach(button => { if (!button.closest('.dd-panel')) button.tabIndex = button === event.target ? 0 : -1; });
+        }}
         onMouseDown={(e) => {
           if (e.target.closest("button")) e.preventDefault();
         }}
       >
         <div className="tb-group">
-          <button className={btn(false)} data-tip="撤销 ⌘Z" onClick={exec((v) => undo(v.state, v.dispatch))}>
+          <button className={btn(false)} {...actionProps("undo")}>
             <Ico name="undo" />
           </button>
-          <button className={btn(false)} data-tip="重做 ⌘⇧Z" onClick={exec((v) => redo(v.state, v.dispatch))}>
+          <button className={btn(false)} {...actionProps("redo")}>
             <Ico name="redo" />
           </button>
-          <button className={btn(false)} data-tip="格式刷：清除当前选区格式" onClick={exec(cmd.clearFormat)}>
+          <button className={btn(false)} {...actionProps("clear")}>
             <Ico name="eraser" />
           </button>
         </div>
@@ -452,7 +519,7 @@ export default function Editor({ initialDoc, onChange, onSelectionInfo, title, o
           </Dropdown>
 
           <Dropdown
-            title="字号"
+            title="字号" disabled={!ui.inline}
             label={
               <span className="tb-size">
                 {ui.fontSize || 14}
@@ -491,16 +558,16 @@ export default function Editor({ initialDoc, onChange, onSelectionInfo, title, o
         <span className="tb-sep" />
 
         <div className="tb-group">
-          <button className={btn(ui.bold, "tb-b")} data-tip="加粗 ⌘B" onClick={exec(cmd.toggleBold)}>B</button>
-          <button className={btn(ui.italic, "tb-i")} data-tip="斜体 ⌘I" onClick={exec(cmd.toggleItalic)}>I</button>
-          <button className={btn(ui.strike, "tb-s")} data-tip="删除线 ⌘⇧X" onClick={exec(cmd.toggleStrike)}>S</button>
-          <button className={btn(ui.underline, "tb-u")} data-tip="下划线 ⌘U" onClick={exec(cmd.toggleUnderline)}>U</button>
+          <button className={btn(ui.bold, "tb-b")} {...actionProps("bold")} >B</button>
+          <button className={btn(ui.italic, "tb-i")} {...actionProps("italic")} >I</button>
+          <button className={btn(ui.strike, "tb-s")} {...actionProps("strike")} >S</button>
+          <button className={btn(ui.underline, "tb-u")} {...actionProps("underline")} >U</button>
         </div>
         <span className="tb-sep" />
 
         <div className="tb-group">
           <Dropdown
-            title="文字颜色"
+            title="文字颜色" disabled={!ui.inline}
             active={!!ui.color}
             label={<span className="tb-color" style={{ borderBottomColor: ui.color || "currentColor" }}>A</span>}
           >
@@ -511,6 +578,7 @@ export default function Editor({ initialDoc, onChange, onSelectionInfo, title, o
                     key={c}
                     className="color-cell"
                     title={c}
+                    aria-label={`颜色 ${c}`}
                     style={{ background: c }}
                     onClick={() => {
                       cmd.setTextColor(viewRef.current, c);
@@ -532,7 +600,7 @@ export default function Editor({ initialDoc, onChange, onSelectionInfo, title, o
           </Dropdown>
 
           <Dropdown
-            title="背景色"
+            title="背景色" disabled={!ui.inline}
             active={!!ui.bg}
             label={<span className="tb-color tb-bg"><Ico name="marker" /><span className="dd-caret">▾</span></span>}
           >
@@ -543,6 +611,7 @@ export default function Editor({ initialDoc, onChange, onSelectionInfo, title, o
                     key={c}
                     className="color-cell"
                     title={c}
+                    aria-label={`颜色 ${c}`}
                     style={{ background: c }}
                     onClick={() => {
                       cmd.setBgColor(viewRef.current, c);
@@ -564,7 +633,7 @@ export default function Editor({ initialDoc, onChange, onSelectionInfo, title, o
           </Dropdown>
 
           <Dropdown
-            title="上标 / 下标"
+            title="上标 / 下标" disabled={!ui.inline}
             active={ui.sup || ui.sub}
             label={<span className="tb-color tb-supsub">x₂<span className="dd-caret">▾</span></span>}
           >
@@ -609,19 +678,21 @@ export default function Editor({ initialDoc, onChange, onSelectionInfo, title, o
         <span className="tb-sep" />
 
         <div className="tb-group">
-          <button className={btn(ui.bullet)} data-tip="无序列表" onClick={exec(cmd.toggleBulletList)}>
+          <button className={btn(ui.bullet)} {...actionProps("bullet")} >
             <Ico name="bullet" />
           </button>
-          <button className={btn(ui.ordered)} data-tip="有序列表" onClick={exec(cmd.toggleOrderedList)}>
+          <button className={btn(ui.ordered)} {...actionProps("ordered")} >
             <Ico name="ordered" />
           </button>
-          <button className={btn(ui.task)} data-tip="任务列表" onClick={exec(cmd.toggleTaskList)}>
+          <button className={btn(ui.task)} {...actionProps("task")} >
             <Ico name="task" />
           </button>
-          <button className={btn(ui.quote)} data-tip="引用" onClick={exec(cmd.toggleQuote)}>
+          <button className={btn(false)} {...actionProps('outdent')}><span aria-hidden="true">⇤</span></button>
+          <button className={btn(false)} {...actionProps('indent')}><span aria-hidden="true">⇥</span></button>
+          <button className={btn(ui.quote)} {...actionProps("quote")} >
             <Ico name="quote" />
           </button>
-          <button className={btn(ui.code)} data-tip="行内代码 ⌘E" onClick={exec(cmd.toggleCode)}>
+          <button className={btn(ui.code)} {...actionProps("code")} >
             <Ico name="code" />
           </button>
         </div>
@@ -630,24 +701,17 @@ export default function Editor({ initialDoc, onChange, onSelectionInfo, title, o
         <div className="tb-group">
           <button
             className={btn(ui.link)}
-            data-tip="链接"
-            onClick={exec((v) => {
-              const href = window.prompt("输入链接地址（留空则移除链接）", "https://");
-              if (href !== null) cmd.setLink(v, href.trim());
-            })}
+            aria-label="编辑链接" data-tip={`链接 ${shortcutLabel('Mod-k')}`}
+            disabled={!ui.inline} onClick={() => openDialog('link')}
           >
             <Ico name="link" />
           </button>
-          <button className={btn(false)} data-tip="表格 3 × 3" onClick={exec((v) => cmd.insertTable(v, 3, 3))}>
+          <button className={btn(false)} aria-label="插入表格" data-tip="表格 3 × 3" onClick={exec((v) => cmd.insertTable(v, 3, 3))}>
             <Ico name="table" />
           </button>
           <button
             className={btn(false)}
-            data-tip="图片"
-            onClick={exec((v) => {
-              const url = window.prompt("输入图片地址");
-              if (url) cmd.insertImage(v, url.trim());
-            })}
+            aria-label="插入图片" data-tip="图片" disabled={!ui.inline} onClick={() => openDialog('image')}
           >
             <Ico name="image" />
           </button>
@@ -667,8 +731,7 @@ export default function Editor({ initialDoc, onChange, onSelectionInfo, title, o
                 <button
                   className="dd-item"
                   onClick={() => {
-                    const url = window.prompt("输入图片地址");
-                    if (url) cmd.insertImage(viewRef.current, url.trim());
+                    openDialog('image');
                     close();
                   }}
                 >
@@ -698,10 +761,11 @@ export default function Editor({ initialDoc, onChange, onSelectionInfo, title, o
             )}
           </Dropdown>
         </div>
+        <button className="tb-btn xc-shortcut-trigger" aria-label="快捷键速查" data-tip="快捷键速查" onClick={() => openDialog('help')}>⌨</button>
       </div>
 
       {/* 上下文工具条：按光标所在节点切换 */}
-      <ContextBar ui={ui} viewRef={viewRef} exec={exec} />
+      <ContextBar ui={ui} viewRef={viewRef} exec={exec} onImage={() => openDialog("image", true)} />
 
       {/* 编辑区 + 大纲 */}
       <div className="editor-body">
@@ -781,6 +845,7 @@ export default function Editor({ initialDoc, onChange, onSelectionInfo, title, o
       {handle && (
         <div
           className="block-handle"
+          onMouseDown={event => event.preventDefault()}
           style={{ top: handle.top, left: handle.left }}
           onMouseEnter={() => {
             handleMenuRef.current = true;
@@ -797,7 +862,9 @@ export default function Editor({ initialDoc, onChange, onSelectionInfo, title, o
             onClick={() => {
               const view = viewRef.current;
               if (!view) return;
-              const pos = handle.pos + view.state.doc.nodeAt(handle.pos).nodeSize;
+              const block = cmd.currentBlock(view.state, handle.pos);
+              if (!block) return;
+              const pos = block.pos + block.node.nodeSize;
               cmd.insertParagraphAt(view, pos);
               view.focus();
             }}
@@ -807,10 +874,10 @@ export default function Editor({ initialDoc, onChange, onSelectionInfo, title, o
           <button className="bh-btn bh-drag" title="块操作">⠿</button>
           {handleMenu && (
             <div className="bh-menu">
-              <button onClick={() => { cmd.moveBlock(viewRef.current, -1); setHandle(null); }}>上移</button>
-              <button onClick={() => { cmd.moveBlock(viewRef.current, 1); setHandle(null); }}>下移</button>
-              <button onClick={() => { cmd.duplicateBlock(viewRef.current); setHandle(null); }}>复制</button>
-              <button className="danger" onClick={() => { cmd.deleteBlock(viewRef.current); setHandle(null); }}>删除</button>
+              <button onClick={() => { cmd.moveBlock(viewRef.current, -1, handle.pos); setHandle(null); }}>上移</button>
+              <button onClick={() => { cmd.moveBlock(viewRef.current, 1, handle.pos); setHandle(null); }}>下移</button>
+              <button onClick={() => { cmd.duplicateBlock(viewRef.current, handle.pos); setHandle(null); }}>复制</button>
+              <button className="danger" onClick={() => { cmd.deleteBlock(viewRef.current, handle.pos); setHandle(null); }}>删除</button>
             </div>
           )}
         </div>
@@ -1089,39 +1156,9 @@ function AlignIcon({ type, withCaret }) {
   );
 }
 
-/** 点击外部关闭的下拉面板；children 为函数时注入 close */
-function Dropdown({ label, title, active, children }) {
-  const [open, setOpen] = useState(false);
-  const ref = useRef(null);
-
-  useEffect(() => {
-    if (!open) return;
-    const onDown = (e) => {
-      if (ref.current && !ref.current.contains(e.target)) setOpen(false);
-    };
-    document.addEventListener("mousedown", onDown);
-    return () => document.removeEventListener("mousedown", onDown);
-  }, [open]);
-
-  const close = () => setOpen(false);
-
-  return (
-    <div className="dd" ref={ref}>
-      <button
-        className={"tb-btn dd-trigger" + (active ? " active" : "") + (open ? " open" : "")}
-        data-tip={title}
-        onClick={() => setOpen((o) => !o)}
-      >
-        {label}
-      </button>
-      {open && <div className="dd-panel">{typeof children === "function" ? children(close) : children}</div>}
-    </div>
-  );
-}
-
 /** 上下文工具条：光标落在表格/代码块/提示块/折叠块/图片上时出现 */
-function ContextBar({ ui, viewRef, exec }) {
-  const has = ui.image || ui.table || ui.codeBlock || !!ui.calloutType || ui.toggleSummary !== null;
+function ContextBar({ ui, viewRef, exec, onImage }) {
+  const has = ui.image || ui.table || ui.codeBlock || !!ui.calloutType || ui.toggleSummary != null;
   const [addCount, setAddCount] = useState(1);
   if (!has) return null;
 
@@ -1143,10 +1180,7 @@ function ContextBar({ ui, viewRef, exec }) {
           <span className="ctx-sep" />
           <button
             className="ctx-btn"
-            onClick={exec((v) => {
-              const url = window.prompt("新的图片地址", ui.imageSrc);
-              if (url && url.trim()) cmd.replaceImage(v, url.trim());
-            })}
+            onClick={onImage}
           >
             替换
           </button>
@@ -1159,16 +1193,16 @@ function ContextBar({ ui, viewRef, exec }) {
       {ui.table && (
         <>
           <span className="ctx-label">表格</span>
-          <button className="ctx-btn ctx-icon" data-tip="在上方插入行" onClick={exec((v) => cmd.tableAddRowsBefore(v, addCount))}>
+          <button className="ctx-btn ctx-icon" aria-label="在上方插入行" data-tip="在上方插入行" onClick={exec((v) => cmd.tableAddRowsBefore(v, addCount))}>
             <Ico name="rowUp" />
           </button>
-          <button className="ctx-btn ctx-icon" data-tip="在下方插入行" onClick={exec((v) => cmd.tableAddRowsAfter(v, addCount))}>
+          <button className="ctx-btn ctx-icon" aria-label="在下方插入行" data-tip="在下方插入行" onClick={exec((v) => cmd.tableAddRowsAfter(v, addCount))}>
             <Ico name="rowDown" />
           </button>
-          <button className="ctx-btn ctx-icon" data-tip="在左侧插入列" onClick={exec((v) => cmd.tableAddColsBefore(v, addCount))}>
+          <button className="ctx-btn ctx-icon" aria-label="在左侧插入列" data-tip="在左侧插入列" onClick={exec((v) => cmd.tableAddColsBefore(v, addCount))}>
             <Ico name="colLeft" />
           </button>
-          <button className="ctx-btn ctx-icon" data-tip="在右侧插入列" onClick={exec((v) => cmd.tableAddColsAfter(v, addCount))}>
+          <button className="ctx-btn ctx-icon" aria-label="在右侧插入列" data-tip="在右侧插入列" onClick={exec((v) => cmd.tableAddColsAfter(v, addCount))}>
             <Ico name="colRight" />
           </button>
           <select
@@ -1186,29 +1220,29 @@ function ContextBar({ ui, viewRef, exec }) {
           <span className="ctx-sep" />
           <button
             className="ctx-btn ctx-icon"
-            data-tip="合并单元格（需先选中多个单元格）"
+            aria-label="合并单元格（需先选中多个单元格）" data-tip="合并单元格（需先选中多个单元格）"
             disabled={!ui.canMerge}
             onClick={exec(cmd.tableMerge)}
           >
             <Ico name="merge" />
           </button>
-          <button className="ctx-btn ctx-icon" data-tip="拆分单元格" onClick={exec(cmd.tableSplit)}>
+          <button className="ctx-btn ctx-icon" aria-label="拆分单元格" disabled={!ui.canSplit} data-tip="拆分单元格" onClick={exec(cmd.tableSplit)}>
             <Ico name="split" />
           </button>
-          <button className="ctx-btn ctx-icon" data-tip="切换表头行" onClick={exec(cmd.tableToggleHeaderRow)}>
+          <button className="ctx-btn ctx-icon" aria-label="切换表头行" data-tip="切换表头行" onClick={exec(cmd.tableToggleHeaderRow)}>
             <Ico name="headerRow" />
           </button>
-          <button className="ctx-btn ctx-icon" data-tip="切换表头列" onClick={exec(cmd.tableToggleHeaderCol)}>
+          <button className="ctx-btn ctx-icon" aria-label="切换表头列" data-tip="切换表头列" onClick={exec(cmd.tableToggleHeaderCol)}>
             <Ico name="headerCol" />
           </button>
           <span className="ctx-sep" />
-          <button className="ctx-btn ctx-icon danger" data-tip="删除整行" onClick={exec(cmd.tableDeleteRow)}>
+          <button className="ctx-btn ctx-icon danger" aria-label="删除整行" data-tip="删除整行" onClick={exec(cmd.tableDeleteRow)}>
             <Ico name="delRow" />
           </button>
-          <button className="ctx-btn ctx-icon danger" data-tip="删除整列" onClick={exec(cmd.tableDeleteCol)}>
+          <button className="ctx-btn ctx-icon danger" aria-label="删除整列" data-tip="删除整列" onClick={exec(cmd.tableDeleteCol)}>
             <Ico name="delCol" />
           </button>
-          <button className="ctx-btn ctx-icon danger" data-tip="删除整个表格" onClick={exec(cmd.tableDelete)}>
+          <button className="ctx-btn ctx-icon danger" aria-label="删除整个表格" data-tip="删除整个表格" onClick={exec(cmd.tableDelete)}>
             <Ico name="delTable" />
           </button>
         </>
@@ -1248,7 +1282,7 @@ function ContextBar({ ui, viewRef, exec }) {
         </>
       )}
 
-      {ui.toggleSummary !== null && (
+      {ui.toggleSummary != null && (
         <>
           <span className="ctx-label">折叠块</span>
           <button
