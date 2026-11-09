@@ -463,7 +463,7 @@ export function MusicPlayerProvider({ children }: { children: ReactNode }) {
       void el.play().catch(() => {
         setPlayLoading(false)
         invalidatePlayInfo(current, current.requestedQuality)
-        message.warning('播放失败，链接可能已经过期，请重新点一次这首歌。')
+        message.warning('播放失败，请重新点一次这首歌。')
       })
       return
     }
