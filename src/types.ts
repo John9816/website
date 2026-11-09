@@ -468,7 +468,7 @@ export interface AiConversationReplyView {
 }
 
 export type MusicSourceId = 'qq' | 'netease' | 'kuwo' | 'qishui'
-export type MusicPlaylistSourceId = Extract<MusicSourceId, 'netease' | 'kuwo'>
+export type MusicPlaylistSourceId = MusicSourceId
 export type MusicQuality = '128k' | '320k' | 'flac' | 'flac24bit'
 export type MusicSearchType = 'song' | 'album' | 'artist' | 'playlist'
 
@@ -491,6 +491,9 @@ export interface SongSearchItem {
   source: MusicSourceId
   name: string
   artist: string
+  /** 后端 SongSearchItem 实际返回歌手 ID，前端此前遗漏，导致无法调用 /artist/works */
+  artistId?: string
+  artistIds?: string[]
   album?: string
   albumId?: string
   coverUrl?: string
@@ -519,6 +522,8 @@ export interface SearchCollectionItem {
   type: MusicSearchType
   name: string
   artist?: string
+  artistId?: string
+  artistIds?: string[]
   creatorName?: string
   coverUrl?: string
   trackCount?: number
@@ -630,6 +635,40 @@ export interface AlbumDetailView {
   pageSize: number
   total: number | null
   list: SongSearchItem[]
+}
+
+export interface AlbumSummaryItem {
+  id: string
+  source: MusicSourceId
+  name?: string
+  artist?: string
+  artistId?: string
+  artistIds?: string[]
+  coverUrl?: string
+  publishTime?: string
+  trackCount?: number | null
+  description?: string
+}
+
+export interface ArtistDetailView {
+  id: string
+  source: MusicSourceId
+  name?: string
+  coverUrl?: string
+  songCount?: number | null
+  albumCount?: number | null
+  description?: string
+}
+
+export interface ArtistWorksView {
+  artistId: string
+  source: MusicSourceId
+  type: string
+  page: number
+  pageSize: number
+  total?: number | null
+  songs: SongSearchItem[]
+  albums?: AlbumSummaryItem[]
 }
 
 export interface MusicHistoryItem {

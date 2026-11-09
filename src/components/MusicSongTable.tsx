@@ -19,7 +19,7 @@ type Props = {
   onPageChange?: (nextPage: number, nextPageSize: number) => void
   renderActions?: (row: SongSearchItem) => ReactNode
   actionColumnWidth?: number
-  onSearchArtist?: (artist: string, source: SongSearchItem['source']) => void
+  onSearchArtist?: (artist: string, source: SongSearchItem['source'], artistId?: string) => void
   onSearchAlbum?: (album: string, source: SongSearchItem['source']) => void
 }
 
@@ -182,7 +182,11 @@ export default function MusicSongTable({
                               className="music-inline-link"
                               onClick={(event) => {
                                 event.stopPropagation()
-                                onSearchArtist?.(artist, row.source)
+                                onSearchArtist?.(
+                                  artist,
+                                  row.source,
+                                  row.artistIds?.[index] ?? (index === 0 ? row.artistId : undefined),
+                                )
                               }}
                             >
                               {artist}

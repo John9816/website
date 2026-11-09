@@ -23,6 +23,8 @@ import type {
   UpdatePlaylistRequest,
   MusicSearchType,
   QishuiAccountView,
+  ArtistDetailView,
+  ArtistWorksView,
 } from '../types'
 import { DEFAULT_PAGE_SIZE } from '../constants/pagination'
 
@@ -123,6 +125,26 @@ export const musicAlbumDetail = (
   request<AlbumDetailView>('/api/v1/music/album/detail', {
     auth: true,
     query: { source, id, page, pageSize },
+  })
+
+/** 歌手简要资料；后端 @RequestParam List<String> ids 接受重复 query 键。 */
+export const musicArtistDetail = (source: MusicSourceId, ids: string[]) =>
+  request<ArtistDetailView[]>('/api/v1/music/artist', {
+    auth: true,
+    query: { source, ids },
+  })
+
+/** 歌手作品：song 返回歌曲，album 返回专辑（黑源两者均已支持）。 */
+export const musicArtistWorks = (
+  source: MusicSourceId,
+  id: string,
+  type: 'song' | 'album' = 'song',
+  page = 1,
+  pageSize = DEFAULT_PAGE_SIZE,
+) =>
+  request<ArtistWorksView>('/api/v1/music/artist/works', {
+    auth: true,
+    query: { source, id, type, page, pageSize },
   })
 
 export const musicNewSongs = (
