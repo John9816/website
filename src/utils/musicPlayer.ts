@@ -1,4 +1,11 @@
+import type { PlayInfo } from '../types'
+
 export type LrcLine = { time: number; text: string }
+
+export function hasQishuiInlineLyrics(info: PlayInfo | null) {
+  return info?.source === 'qishui' && (!info.actualSource || info.actualSource === 'qishui')
+    && !!(info.lyric?.lineLyrics?.trim() || info.lyric?.karaokeLyrics?.trim())
+}
 
 const KUWO_HOST_SUFFIX = '.kuwo.cn'
 const MEDIA_PROXY_PATH = '/_media'

@@ -75,8 +75,9 @@ export const musicPlay = (
     signal: options.signal,
   })
 
-export const musicLyric = (source: MusicSourceId, id: string, signal?: AbortSignal) =>
-  musicRead<LyricView>('/api/v1/music/lyric', { auth: true, query: { source, id }, signal })
+export const musicLyric = (source: MusicSourceId, id: string, signal?: AbortSignal, refresh = false) =>
+  musicRead<LyricView>('/api/v1/music/lyric', { auth: true, query: { source, id }, signal },
+    source === 'qishui' ? 30 * 60_000 : 60_000, refresh)
 
 export const musicToplist = (source: MusicSourceId) =>
   musicRead<ToplistListView>('/api/v1/music/toplist', {

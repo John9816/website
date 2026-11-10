@@ -13,12 +13,13 @@ import {
 } from 'react'
 import type { ReactNode } from 'react'
 import { App as AntApp } from 'antd'
-import { musicPlay, qishuiSongInfo } from '../api/music'
+import { musicLyric, musicPlay, qishuiSongInfo } from '../api/music'
 import { getAuthSessionId } from '../api/client'
 import { useAuth } from './AuthContext'
 import type { MusicSourceId, MusicQuality, PlayInfo, SongSearchItem } from '../types'
 import {
   describeMediaError,
+  hasQishuiInlineLyrics,
   detectUnsupportedFormat,
   normalizeMediaUrl,
   resolveCoverUrl,
@@ -163,7 +164,7 @@ const MusicPlayerContext = createContext<MusicPlayerContextValue | null>(null)
 export function MusicPlayerProvider({ children }: { children: ReactNode }) {
   const { message } = AntApp.useApp()
   const { token: authToken } = useAuth()
-  const authSessionId = getAuthSessionId()
+  const authSessionId = authToken ? getAuthSessionId() : null
   const audioRef = useRef<HTMLAudioElement | null>(null)
   const autoNextHandlerRef = useRef<AutoNextHandler | null>(null)
   const playGenerationRef = useRef(0)
@@ -610,8 +611,13 @@ export function MusicPlayerProvider({ children }: { children: ReactNode }) {
     if (!nextSong) return
 
     const resolution = resolvePlayInfo(nextSong, preferredQuality, true)
-    void resolution.promise.catch(() => {})
-  }, [current, currentIndex, playMode, playlist, preferredQuality, resolvePlayInfo])
+    const lyricsController = new AbortController()
+    void resolution.promise.then(info => {
+      if (lyricsController.signal.aborted || nextSong.source !== 'qishui' || hasQishuiInlineLyrics(info)) return
+      return musicLyric('qishui', nextSong.id, lyricsController.signal)
+    }).catch(() => {})
+    return () => lyricsController.abort()
+  }, [current?.id, current?.source, currentIndex, playMode, playlist, preferredQuality, resolvePlayInfo])
 
   useEffect(() => {
     if (previousAuthSessionRef.current === authSessionId) return
@@ -647,7 +653,10 @@ export function MusicPlayerProvider({ children }: { children: ReactNode }) {
   }, [muted, volume])
 
   useEffect(() => {
-    if (current?.source !== 'qishui' || !authToken) return
+    if (current?.source !== 'qishui' || !authSessionId) return
+    // Search, collections and feed cards already supply these fields. Only enrich
+    // incomplete entries (for example old favorites or a shared playback ticket).
+    if (current.name && current.artist && current.artistId && current.albumId && current.coverUrl && current.durationSec) return
     const id = current.id, controller = new AbortController()
     void qishuiSongInfo(id, controller.signal).then(meta => {
       if (controller.signal.aborted) return
@@ -658,10 +667,10 @@ export function MusicPlayerProvider({ children }: { children: ReactNode }) {
       } : previous)
     }).catch(()=>{})
     return () => controller.abort()
-  }, [current?.id, current?.source, authToken])
+  }, [current?.id, current?.source, authSessionId])
   const radio = useQishuiRoaming(authSessionId, playQueue, radioKeys, radioNext, setRadioAvailable)
   radioStop.current = radio.stopRoaming
-  const lyrics = usePlayerLyrics(current, currentTime, authToken)
+  const lyrics = usePlayerLyrics(current, currentTime, authSessionId)
   const mediaPlay = useCallback(() => { if (audioRef.current?.paused) togglePlay() }, [togglePlay])
   const mediaPause = useCallback(() => audioRef.current?.pause(), [])
   const mediaSessionSupported = useMusicMediaSession(current, lyrics.lyricLines[lyrics.activeLyricIndex]?.text,
