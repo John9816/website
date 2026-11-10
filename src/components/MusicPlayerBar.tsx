@@ -32,6 +32,7 @@ import MusicCover from './MusicCover'
 import { useMusicPlayer, type PlayMode } from '../context/MusicPlayerContext'
 import MusicLyricText from './MusicLyricText'
 import MusicLyricsSettings from './MusicLyricsSettings'
+import { MUSIC_SKINS, useMusicAppearance } from '../utils/musicAppearance'
 import { useMusicFavorites } from '../hooks/useMusicFavorites'
 import { formatDuration, normalizeCoverUrl } from '../utils/musicPlayer'
 
@@ -83,6 +84,7 @@ export default function MusicPlayerBar() {
   const [dominantColor, setDominantColor] = useState<string | null>(null)
   const [coverBackdrop, setCoverBackdrop] = useState<string | null>(null)
   const [previousCoverBackdrop, setPreviousCoverBackdrop] = useState<string | null>(null)
+  const appearance = useMusicAppearance()
 
   const {
     current,
@@ -873,6 +875,7 @@ export default function MusicPlayerBar() {
           />
           <div
             className="music-player-fullscreen__shell"
+            data-skin={appearance.skin}
             style={dominantColor ? ({ '--dominant-rgb': dominantColor } as CSSProperties) : undefined}
           >
             <div className="music-player-fullscreen__backdrops" aria-hidden="true">
@@ -901,6 +904,26 @@ export default function MusicPlayerBar() {
                 <ChevronLeft size={14} />
                 <span>Now Playing</span>
               </button>
+              <div
+                className="music-player-fullscreen__skins"
+                role="group"
+                aria-label="播放页皮肤"
+              >
+                {MUSIC_SKINS.map((item) => (
+                  <button
+                    key={item.value}
+                    type="button"
+                    className={
+                      appearance.skin === item.value ? 'is-active' : ''
+                    }
+                    onClick={() => appearance.setSkin(item.value)}
+                    aria-pressed={appearance.skin === item.value}
+                    title={item.hint}
+                  >
+                    {item.label}
+                  </button>
+                ))}
+              </div>
               <button
                 type="button"
                 className="music-player-fullscreen__close"
@@ -980,6 +1003,15 @@ export default function MusicPlayerBar() {
                     </div>
                   </div>
 
+                </div>
+
+                <div
+                  className={`music-liquid-wave${isPlaying ? '' : ' is-paused'}`}
+                  aria-hidden="true"
+                >
+                  {Array.from({ length: 26 }, (_, index) => (
+                    <i key={index} style={{ '--i': index } as CSSProperties} />
+                  ))}
                 </div>
 
                 <div className="music-player-fullscreen__lyrics-head">

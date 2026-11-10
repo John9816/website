@@ -30,6 +30,7 @@ import MusicSearchInput from '../../components/MusicSearchInput'
 import TopbarUserMenu from '../../components/TopbarUserMenu'
 import '../../styles/topbar.css'
 import BeianFooter from '../../components/BeianFooter'
+import MusicAppearanceMenu from './MusicAppearanceMenu'
 
 export default function MusicWorkspace({ children }: { children: ReactNode }) {
   const location = useLocation(),
@@ -51,6 +52,28 @@ export default function MusicWorkspace({ children }: { children: ReactNode }) {
     setMenuOpen(false)
     setQuery(params.get('keyword') || params.get('q') || '')
   }, [location.key])
+  // 液态导航：把液滴对齐到当前激活项（侧栏与抽屉各一份，统一更新）
+  useLayoutEffect(() => {
+    const update = () => {
+      document.querySelectorAll<HTMLElement>('.music-studio-nav').forEach((nav) => {
+        const liquid = nav.querySelector<HTMLElement>('.music-liquid-nav')
+        if (!liquid) return
+        const active = nav.querySelector<HTMLElement>('button.is-active')
+        if (!active) {
+          liquid.style.opacity = '0'
+          return
+        }
+        const navRect = nav.getBoundingClientRect()
+        const rect = active.getBoundingClientRect()
+        liquid.style.opacity = '1'
+        liquid.style.setProperty('--liquid-nav-y', `${rect.top - navRect.top}px`)
+        liquid.style.setProperty('--liquid-nav-h', `${rect.height}px`)
+      })
+    }
+    update()
+    window.addEventListener('resize', update)
+    return () => window.removeEventListener('resize', update)
+  }, [view, detail, menuOpen])
   useEffect(() => {
     const onKey = (event: KeyboardEvent) => {
       const editable =
@@ -69,6 +92,13 @@ export default function MusicWorkspace({ children }: { children: ReactNode }) {
     return () => window.removeEventListener('keydown', onKey)
   }, [])
   const go = (target: MusicView) => {
+    // 切换时让液滴轻微形变，强化液态观感
+    document.querySelectorAll<HTMLElement>('.music-studio-nav').forEach((nav) => {
+      nav.classList.remove('is-switching')
+      void nav.offsetWidth
+      nav.classList.add('is-switching')
+      window.setTimeout(() => nav.classList.remove('is-switching'), 560)
+    })
     navigate(`/music?view=${target}`)
     setMenuOpen(false)
   }
@@ -80,6 +110,10 @@ export default function MusicWorkspace({ children }: { children: ReactNode }) {
   }
   const navigation = (
     <nav className="music-studio-nav" aria-label="音乐功能导航">
+      <span className="music-liquid-nav" aria-hidden="true">
+        <span className="music-liquid-nav__blob" />
+        <span className="music-liquid-nav__drop" />
+      </span>
       {['探索', '我的音乐'].map((group) => (
         <div className="music-studio-nav__group" key={group}>
           <small>{group}</small>
@@ -116,6 +150,20 @@ export default function MusicWorkspace({ children }: { children: ReactNode }) {
   )
   return (
     <>
+      <svg className="music-liquid-nav__defs" aria-hidden="true" focusable="false">
+        <defs>
+          <filter id="music-liquid-goo" x="-60%" y="-20%" width="220%" height="140%">
+            <feGaussianBlur in="SourceGraphic" stdDeviation="2.6" result="blur" />
+            <feColorMatrix
+              in="blur"
+              mode="matrix"
+              values="1 0 0 0 0  0 1 0 0 0  0 0 1 0 0  0 0 0 16 -6"
+              result="goo"
+            />
+            <feBlend in="SourceGraphic" in2="goo" />
+          </filter>
+        </defs>
+      </svg>
       <aside className="music-studio-sidebar">
         {brand}
         {navigation}
@@ -177,6 +225,7 @@ export default function MusicWorkspace({ children }: { children: ReactNode }) {
             <kbd>⌘ K</kbd>
           </div>
           <div className="music-studio-tools">
+            <MusicAppearanceMenu />
             <button
               className="music-studio-icon"
               type="button"
