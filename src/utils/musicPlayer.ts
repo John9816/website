@@ -100,8 +100,23 @@ function normalizeRemoteUrl(
   return url
 }
 
+// Qishui/ByteDance image CDN returns the -image.image ORIGINAL template (often
+// 1440px~3000px, several MB per cover) while the UI only renders 44px~240px
+// thumbnails. The same asset served as -image.webp is browser-decodable and
+// ~13x smaller in production measurements. Size-resize query params on this CDN
+// are ignored/400, only the format suffix works, so we rewrite just that suffix.
+const QISHUI_IMAGE_TEMPLATE_MARK = '~tplv-'
+const QISHUI_ORIGINAL_IMAGE_SUFFIX = /-image\.image(?=$|[?#])/
+const QISHUI_WEBP_IMAGE_SUFFIX = '-image.webp'
+
+function compactCoverUrl(url: string): string {
+  if (!url.includes(QISHUI_IMAGE_TEMPLATE_MARK)) return url
+  return url.replace(QISHUI_ORIGINAL_IMAGE_SUFFIX, QISHUI_WEBP_IMAGE_SUFFIX)
+}
+
 export function normalizeCoverUrl(url?: string): string | undefined {
-  return normalizeRemoteUrl(url, { requireUsableAssetPath: true })
+  const normalized = normalizeRemoteUrl(url, { requireUsableAssetPath: true })
+  return normalized ? compactCoverUrl(normalized) : normalized
 }
 
 export function resolveCoverUrl(
