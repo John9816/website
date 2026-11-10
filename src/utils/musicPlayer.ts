@@ -181,7 +181,9 @@ export function describeMediaError(err: MediaError | null): string {
   }
 }
 
-export function detectUnsupportedFormat(url: string): string | null {
+export function detectUnsupportedFormat(url?: string | null): string | null {
+  // 播放响应偶发缺 playUrl 时不能让整页崩掉（此处曾被 undefined 触发白屏）
+  if (!url) return null
   const lower = url.toLowerCase()
   if (/\.(wma)(\?|$)/.test(lower) || /[?&]format\$wma\b/.test(lower)) {
     return 'WMA'
