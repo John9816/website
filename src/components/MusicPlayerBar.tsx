@@ -338,17 +338,36 @@ export default function MusicPlayerBar() {
   useEffect(() => {
     if (!expanded) return
     const container = lyricScrollRef.current
-    if (!container || activeLrcIndex < 0) return
+    if (!container) return
+
+    const centerLine = (line: HTMLElement) => {
+      // 用视口坐标差值计算：offsetTop 相对的是 offsetParent（可能是 body），
+      // 并非滚动容器，直接用会把当前行滚出可视区。
+      const containerRect = container.getBoundingClientRect()
+      const lineRect = line.getBoundingClientRect()
+      const top =
+        container.scrollTop +
+        (lineRect.top - containerRect.top) -
+        container.clientHeight / 2 +
+        line.clientHeight / 2
+      container.scrollTo({ top, behavior: 'smooth' })
+    }
+
+    // 前奏/间奏没有活动行时把首句居中，避免加了上留白后整屏空白
+    if (activeLrcIndex < 0) {
+      const firstLine = container.querySelector<HTMLElement>('[data-lrc-idx="0"]')
+      if (firstLine) centerLine(firstLine)
+      else container.scrollTo({ top: 0, behavior: 'smooth' })
+      return
+    }
 
     const activeLine = container.querySelector<HTMLElement>(
       `[data-lrc-idx="${activeLrcIndex}"]`,
     )
     if (!activeLine) return
-
-    const top =
-      activeLine.offsetTop - container.clientHeight / 2 + activeLine.clientHeight / 2
-    container.scrollTo({ top, behavior: 'smooth' })
-  }, [activeLrcIndex, expanded])
+    centerLine(activeLine)
+    // 皮肤切换会改变歌词容器高度，需重新居中，否则当前行可能落到容器外
+  }, [activeLrcIndex, expanded, appearance.skin])
 
   useEffect(() => {
     if (!expanded || !queuePopoverOpen) return
@@ -1037,45 +1056,60 @@ export default function MusicPlayerBar() {
                         </div>
                       )
                     ) : (
-                      lrcLines.map((line, index) => {
-                        const distance =
-                          activeLrcIndex >= 0 ? Math.abs(index - activeLrcIndex) : 0
+                      <>
+                        {/* 首尾留白：让任意位置的当前行都能滚到视觉中央 */}
+                        <div className="music-player-fullscreen__lyrics-spacer" aria-hidden="true" />
+                        {lrcLines.map((line, index) => {
+                          const noActive = activeLrcIndex < 0
+                          const distance = noActive ? 0 : Math.abs(index - activeLrcIndex)
+                          const lineClass = [
+                            'music-player-fullscreen__lyrics-line',
+                            index === activeLrcIndex ? 'is-active' : '',
+                            noActive && index === 0 ? 'is-upcoming' : '',
+                            distance === 1 ? 'is-near' : '',
+                            distance >= 2 && distance <= 3 ? 'is-mid' : '',
+                            distance >= 4 ? 'is-far' : '',
+                          ]
+                            .filter(Boolean)
+                            .join(' ')
 
-                        return (
-                          <div
-                            key={index}
-                            data-lrc-idx={index}
-                            className={`music-player-fullscreen__lyrics-line ${
-                              index === activeLrcIndex ? 'is-active' : ''
-                            }${distance === 1 ? ' is-near' : ''}${
-                              distance >= 2 && distance <= 3 ? ' is-mid' : ''
-                            }${distance >= 4 ? ' is-far' : ''}`}
-                            onClick={() => {
-                              seekToTime(line.time)
-                            }}
-                            role="button"
-                            tabIndex={0}
-                            aria-label={`跳转到 ${formatDuration(line.time)} ${line.text || '歌词位置'}`}
-                            title={`跳转到 ${formatDuration(line.time)}`}
-                            onKeyDown={(e) => {
-                              if (e.key === 'Enter' || e.key === ' ') {
+                          return (
+                            <div
+                              key={index}
+                              data-lrc-idx={index}
+                              className={lineClass}
+                              onClick={() => {
                                 seekToTime(line.time)
-                                e.preventDefault()
-                              }
-                            }}
-                          >
-                            <span className="music-player-fullscreen__lyrics-text">
-                              <MusicLyricText line={line} time={currentTime} active={index === activeLrcIndex} />
-                            </span>
-                            <span
-                              className="music-player-fullscreen__lyrics-action"
-                              aria-hidden="true"
+                              }}
+                              role="button"
+                              tabIndex={0}
+                              aria-label={`跳转到 ${formatDuration(line.time)} ${line.text || '歌词位置'}`}
+                              title={`跳转到 ${formatDuration(line.time)}`}
+                              onKeyDown={(e) => {
+                                if (e.key === 'Enter' || e.key === ' ') {
+                                  seekToTime(line.time)
+                                  e.preventDefault()
+                                }
+                              }}
                             >
-                              <Play size={12} />
-                            </span>
-                          </div>
-                        )
-                      })
+                              <span className="music-player-fullscreen__lyrics-text">
+                                <MusicLyricText
+                                  line={line}
+                                  time={currentTime}
+                                  active={index === activeLrcIndex}
+                                />
+                              </span>
+                              <span
+                                className="music-player-fullscreen__lyrics-action"
+                                aria-hidden="true"
+                              >
+                                <Play size={12} />
+                              </span>
+                            </div>
+                          )
+                        })}
+                        <div className="music-player-fullscreen__lyrics-spacer" aria-hidden="true" />
+                      </>
                     )}
                   </div>
                 </div>

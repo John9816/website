@@ -725,3 +725,76 @@ html[data-music-motion='off'] .music-liquid-backdrop__blob--a {
     width: 3px;
   }
 }
+
+/* --------------------------------------------------------------------------
+   8. 正在播放的歌词：桌面音乐页常驻显示 + 全屏页当前行可见
+   -------------------------------------------------------------------------- */
+
+/* 桌面播放条补回被 music-studio 移除的 lyric 行，让「当前正在唱的一句」常驻可见。
+   仅作用于音乐页（.music-liquid 作用域），不影响站内其它页面；
+   >800px 才生效，手机端沿用 music-studio 自带的一行歌词条。 */
+@media (min-width: 801px) {
+  .music-page.music-studio.music-liquid .music-player-bar {
+    grid-template-areas:
+      'progress progress progress'
+      'meta center aside'
+      'lyric lyric lyric';
+  }
+  .music-page.music-studio.music-liquid .music-player-bar__lyric-chip {
+    display: flex;
+    justify-content: center;
+    gap: 8px;
+    min-height: 30px;
+    padding: 4px 14px;
+    border: 1px solid var(--border);
+    border-radius: 10px;
+    background: color-mix(in srgb, var(--panel) 55%, transparent);
+    color: var(--text-dim);
+    font-size: 12.5px;
+    transition: color 0.2s, background 0.2s, border-color 0.2s;
+  }
+  .music-page.music-studio.music-liquid .music-player-bar__lyric-chip.has-lyric {
+    color: var(--accent);
+    background: var(--accent-soft);
+    border-color: color-mix(in srgb, var(--accent) 28%, transparent);
+  }
+  .music-page.music-studio.music-liquid .music-player-bar__lyric-chip:hover {
+    border-color: color-mix(in srgb, var(--accent) 45%, transparent);
+  }
+  .music-page.music-studio.music-liquid .music-player-bar__lyric-chip > svg {
+    flex: 0 0 auto;
+    opacity: 0.75;
+  }
+  .music-page.music-studio.music-liquid .music-player-bar__lyric-chip span {
+    min-width: 0;
+    max-width: min(720px, 100%);
+    font-size: 12.5px;
+  }
+}
+
+/* 前奏/间奏（尚无活动行）时，把首句标为「即将播放」，避免整页一片灰暗 */
+.music-player-fullscreen__lyrics-line.is-upcoming {
+  color: rgba(255, 255, 255, 0.82);
+  background: rgba(var(--dominant-rgb, 230, 201, 160), 0.08);
+  box-shadow: inset 2px 0 0 var(--accent, #e6c9a0);
+}
+.music-player-fullscreen__lyrics-line.is-upcoming .music-lyric-word {
+  opacity: 0.72;
+}
+
+/* 手机端全屏页歌词区太矮，给当前行留出足够视野 */
+@media (max-width: 768px) {
+  .music-page.music-studio.music-liquid .music-player-fullscreen__lyrics-shell {
+    min-height: 180px;
+  }
+}
+
+/* 首尾留白：rect 居中算法需要可滚动余量，否则第一行/最后一行
+   永远贴边（scrollTop 不能为负，也不能超过 scrollHeight - clientHeight）。
+   高度取歌词容器的一半，使首句与末句同样能停在视觉中央。 */
+.music-player-fullscreen__lyrics-spacer {
+  height: 50%;
+  min-height: 88px;
+  flex: 0 0 auto;
+  pointer-events: none;
+}

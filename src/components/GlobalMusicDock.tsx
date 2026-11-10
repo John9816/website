@@ -136,15 +136,25 @@ export default function GlobalMusicDock() {
   useEffect(() => {
     if (panel !== 'lyrics') return
     const container = lyricScrollRef.current
-    if (!container || activeLrcIndex < 0) return
+    if (!container) return
+
+    if (activeLrcIndex < 0) {
+      container.scrollTo({ top: 0, behavior: 'smooth' })
+      return
+    }
 
     const activeLine = container.querySelector<HTMLElement>(
       `[data-dock-lrc-idx="${activeLrcIndex}"]`,
     )
     if (!activeLine) return
 
+    const containerRect = container.getBoundingClientRect()
+    const lineRect = activeLine.getBoundingClientRect()
     const top =
-      activeLine.offsetTop - container.clientHeight / 2 + activeLine.clientHeight / 2
+      container.scrollTop +
+      (lineRect.top - containerRect.top) -
+      container.clientHeight / 2 +
+      activeLine.clientHeight / 2
     container.scrollTo({ top, behavior: 'smooth' })
   }, [activeLrcIndex, panel])
 
