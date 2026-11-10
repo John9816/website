@@ -335,6 +335,11 @@ export default function MusicPlayerBar() {
     }
   }, [current])
 
+  // 滚动 effect 不依赖 currentTime（否则每次 timeupdate 都会重启平滑滚动），
+  // 用 ref 读取最新播放时间来判断当前是否处于前奏。
+  const currentTimeRef = useRef(currentTime)
+  currentTimeRef.current = currentTime
+
   useEffect(() => {
     if (!expanded) return
     const container = lyricScrollRef.current
@@ -342,19 +347,26 @@ export default function MusicPlayerBar() {
 
     const centerLine = (line: HTMLElement) => {
       // 用视口坐标差值计算：offsetTop 相对的是 offsetParent（可能是 body），
-      // 并非滚动容器，直接用会把当前行滚出可视区。
+      // 并非滚动容器，直接用会把当前行滚出可视区。已在中央则不重复滚动，
+      // 避免逐字歌词频繁触发时反复重启平滑动画。
       const containerRect = container.getBoundingClientRect()
       const lineRect = line.getBoundingClientRect()
-      const top =
-        container.scrollTop +
-        (lineRect.top - containerRect.top) -
-        container.clientHeight / 2 +
-        line.clientHeight / 2
-      container.scrollTo({ top, behavior: 'smooth' })
+      const delta =
+        lineRect.top + lineRect.height / 2 -
+        (containerRect.top + containerRect.height / 2)
+      if (Math.abs(delta) < 8) return
+      container.scrollTo({ top: container.scrollTop + delta, behavior: 'smooth' })
     }
 
-    // 前奏/间奏没有活动行时把首句居中，避免加了上留白后整屏空白
+    const firstTime = lrcLines[0]?.time ?? 0
+    // 前奏 = 播放时间还没到第一句。逐字歌词(YRC)每行都带 end，
+    // 行间空隙、间奏、尾奏时 activeLyricIndex 都会变成 -1（真实数据里全曲
+    // 有 9 段、约 17.7% 时长）。若此时也去居中首句，歌词就会每句间隙
+    // 都跳回第一行。因此只有前奏才定位首句，其余情况保持当前位置。
+    const isIntro = currentTimeRef.current < firstTime
+
     if (activeLrcIndex < 0) {
+      if (!isIntro) return
       const firstLine = container.querySelector<HTMLElement>('[data-lrc-idx="0"]')
       if (firstLine) centerLine(firstLine)
       else container.scrollTo({ top: 0, behavior: 'smooth' })
@@ -367,7 +379,7 @@ export default function MusicPlayerBar() {
     if (!activeLine) return
     centerLine(activeLine)
     // 皮肤切换会改变歌词容器高度，需重新居中，否则当前行可能落到容器外
-  }, [activeLrcIndex, expanded, appearance.skin])
+  }, [activeLrcIndex, expanded, appearance.skin, lrcLines])
 
   useEffect(() => {
     if (!expanded || !queuePopoverOpen) return
@@ -1061,11 +1073,13 @@ export default function MusicPlayerBar() {
                         <div className="music-player-fullscreen__lyrics-spacer" aria-hidden="true" />
                         {lrcLines.map((line, index) => {
                           const noActive = activeLrcIndex < 0
+                          // 只有前奏才把首句标成「即将播放」；间奏/尾奏不该让第一行常亮
+                          const isIntro = noActive && currentTime < (lrcLines[0]?.time ?? 0)
                           const distance = noActive ? 0 : Math.abs(index - activeLrcIndex)
                           const lineClass = [
                             'music-player-fullscreen__lyrics-line',
                             index === activeLrcIndex ? 'is-active' : '',
-                            noActive && index === 0 ? 'is-upcoming' : '',
+                            isIntro && index === 0 ? 'is-upcoming' : '',
                             distance === 1 ? 'is-near' : '',
                             distance >= 2 && distance <= 3 ? 'is-mid' : '',
                             distance >= 4 ? 'is-far' : '',

@@ -133,13 +133,23 @@ export default function GlobalMusicDock() {
     }
   }, [collapsed, panel, position])
 
+  // 同 MusicPlayerBar：用 ref 读最新播放时间，避免 effect 依赖 currentTime
+  // 而每次 timeupdate 都重启平滑滚动。
+  const currentTimeRef = useRef(currentTime)
+  currentTimeRef.current = currentTime
+
   useEffect(() => {
     if (panel !== 'lyrics') return
     const container = lyricScrollRef.current
     if (!container) return
 
     if (activeLrcIndex < 0) {
-      container.scrollTo({ top: 0, behavior: 'smooth' })
+      // 逐字歌词(YRC)每行带 end，行间空隙/间奏/尾奏索引都会变 -1。
+      // 只有前奏才回顶部，其余保持当前位置，避免每句间隙跳回第一行。
+      const firstTime = lrcLines[0]?.time ?? 0
+      if (currentTimeRef.current < firstTime) {
+        container.scrollTo({ top: 0, behavior: 'smooth' })
+      }
       return
     }
 
@@ -156,7 +166,7 @@ export default function GlobalMusicDock() {
       container.clientHeight / 2 +
       activeLine.clientHeight / 2
     container.scrollTo({ top, behavior: 'smooth' })
-  }, [activeLrcIndex, panel])
+  }, [activeLrcIndex, panel, lrcLines])
 
   useEffect(() => {
     if (panel !== 'queue') return
