@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState } from 'react'
+import { useEffect, useRef, useState, useSyncExternalStore } from 'react'
 import { App as AntApp, Button, Form, Input, Modal, Popover } from 'antd'
 import {
   CalendarCheck,
@@ -71,11 +71,44 @@ function formatMembershipRemaining(membership: MembershipView | null, now: numbe
   return '已过期'
 }
 
-// Several UserAvatar instances render the same URL (trigger, drawer, menu).
-// A missing avatar returns 404 with no-store, so each instance would otherwise
-// issue its own request. Share the failure set so the first 404 suppresses all
-// retries. Keyed by URL, so uploading a new avatar naturally retries.
-const failedAvatarUrls = new Set<string>()
+// Several UserAvatar instances render the same URL in one commit (trigger,
+// popover card, profile modal). A missing avatar returns 404 with no-store,
+// so a per-instance failure flag cannot dedupe them: every instance fires its
+// <img> before the first 404 comes back, and 404s are never cached.
+// Probe each URL exactly once at module scope and broadcast the result, so
+// only one network request is ever made for a given avatar URL.
+type AvatarResult = 'ok' | 'fail'
+const avatarProbes = new Map<string, Promise<AvatarResult>>()
+const avatarResults = new Map<string, AvatarResult>()
+const avatarListeners = new Set<() => void>()
+const subscribeAvatar = (listener: () => void) => {
+  avatarListeners.add(listener)
+  return () => { avatarListeners.delete(listener) }
+}
+const emitAvatar = () => { for (const listener of avatarListeners) listener() }
+const clearAvatarProbe = (url: string) => {
+  avatarProbes.delete(url)
+  avatarResults.delete(url)
+  emitAvatar()
+}
+const probeAvatar = (url: string): Promise<AvatarResult> => {
+  let probe = avatarProbes.get(url)
+  if (!probe) {
+    probe = new Promise<AvatarResult>(resolve => {
+      const image = new Image()
+      image.referrerPolicy = 'no-referrer'
+      image.onload = () => resolve('ok')
+      image.onerror = () => resolve('fail')
+      image.src = url
+    }).then(result => {
+      avatarResults.set(url, result)
+      emitAvatar()
+      return result
+    })
+    avatarProbes.set(url, probe)
+  }
+  return probe
+}
 
 function UserAvatar({
   avatarUrl,
@@ -86,23 +119,22 @@ function UserAvatar({
   username?: string | null
   className: string
 }) {
-  const [failed, setFailed] = useState(false)
-  const showImage = !!avatarUrl && !failed && !failedAvatarUrls.has(avatarUrl)
-  if (showImage) {
-    return (
-      <img
-        className={className}
-        src={avatarUrl}
-        alt=""
-        referrerPolicy="no-referrer"
-        onError={() => {
-          if (avatarUrl) failedAvatarUrls.add(avatarUrl)
-          setFailed(true)
-        }}
-      />
-    )
+  const url = avatarUrl || ''
+  const result = useSyncExternalStore(
+    subscribeAvatar,
+    () => avatarResults.get(url),
+    () => undefined,
+  )
+  useEffect(() => {
+    if (url) void probeAvatar(url)
+  }, [url])
+  // A failed (or not-yet-probed) URL never renders an <img>, so no duplicate
+  // 404 requests. Only a confirmed 200 renders the image; the probe response
+  // is already in the browser cache, so this adds no extra transfer.
+  if (!url || result !== 'ok') {
+    return <span className={className}>{getAvatarText(username)}</span>
   }
-  return <span className={className}>{getAvatarText(username)}</span>
+  return <img className={className} src={url} alt="" referrerPolicy="no-referrer" />
 }
 
 export default function TopbarUserMenu() {
@@ -206,6 +238,7 @@ export default function TopbarUserMenu() {
     setUploadingAvatar(true)
     try {
       const profile = await uploadUserAvatar(file)
+      if (avatarUrl) clearAvatarProbe(avatarUrl)
       auth.updateProfile(profile)
       message.success('头像已更新')
     } catch (error) {
