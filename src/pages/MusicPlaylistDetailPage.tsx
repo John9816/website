@@ -17,7 +17,7 @@ import { useAuth } from '../context/AuthContext'
 import { useMusicBrowse } from '../context/MusicPlayerContext'
 import { useMusicFavorites } from '../hooks/useMusicFavorites'
 import type { MusicSourceId, PlaylistDetailView } from '../types'
-import { hydrateCollectionCovers, normalizeCoverUrl } from '../utils/musicPlayer'
+import { coverUrlForSize, hydrateCollectionCovers } from '../utils/musicPlayer'
 
 type MusicCollectionRouteState = {
   coverUrl?: string
@@ -158,7 +158,7 @@ export default function MusicPlaylistDetailPage() {
     return `${creator} · ${count}${playCount}`
   }, [detail?.creatorName, detail?.list.length, detail?.playCount, validSource])
 
-  const heroCoverUrl = normalizeCoverUrl(detail?.coverUrl)
+  const heroCoverUrl = coverUrlForSize(detail?.coverUrl, 180)
   const heroStyle = heroCoverUrl
     ? ({
         ['--music-detail-cover' as string]: `url(${JSON.stringify(heroCoverUrl)})`,

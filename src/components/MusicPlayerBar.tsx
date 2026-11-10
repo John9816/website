@@ -34,7 +34,7 @@ import MusicLyricText from './MusicLyricText'
 import MusicLyricsSettings from './MusicLyricsSettings'
 import { MUSIC_SKINS, useMusicAppearance } from '../utils/musicAppearance'
 import { useMusicFavorites } from '../hooks/useMusicFavorites'
-import { formatDuration, normalizeCoverUrl } from '../utils/musicPlayer'
+import { coverUrlForSize, formatDuration } from '../utils/musicPlayer'
 
 const fac = new FastAverageColor()
 
@@ -152,8 +152,15 @@ export default function MusicPlayerBar() {
   )
 
 
-  const normalizedCoverUrl = useMemo(
-    () => normalizeCoverUrl(current?.coverUrl),
+  // Colour sampling only needs a few pixels; the fullscreen backdrop is blurred
+  // 42px at 20% opacity, so a 400px CDN thumbnail is visually identical to the
+  // multi-MB original. Both are ~40-100x smaller over the wire.
+  const coverSampleUrl = useMemo(
+    () => coverUrlForSize(current?.coverUrl, 48),
+    [current?.coverUrl],
+  )
+  const coverBackdropUrl = useMemo(
+    () => coverUrlForSize(current?.coverUrl, 180),
     [current?.coverUrl],
   )
 
@@ -397,7 +404,7 @@ export default function MusicPlayerBar() {
   }, [activeQueueIndex, expanded, queuePopoverOpen])
 
   useEffect(() => {
-    const url = normalizedCoverUrl
+    const url = coverSampleUrl
     if (!url) {
       setDominantColor(null)
       return
@@ -418,7 +425,7 @@ export default function MusicPlayerBar() {
     return () => {
       isMounted = false
     }
-  }, [normalizedCoverUrl])
+  }, [coverSampleUrl])
 
   useEffect(() => {
     return () => {
@@ -434,7 +441,7 @@ export default function MusicPlayerBar() {
       coverBackdropTimeoutRef.current = null
     }
 
-    const nextCover = normalizedCoverUrl ?? null
+    const nextCover = coverBackdropUrl ?? null
     const currentCover = coverBackdropRef.current
 
     if (currentCover === nextCover) return
@@ -452,7 +459,7 @@ export default function MusicPlayerBar() {
     }
 
     setPreviousCoverBackdrop(null)
-  }, [normalizedCoverUrl])
+  }, [coverBackdropUrl])
 
   if (!current) return null
 

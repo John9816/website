@@ -23,6 +23,7 @@ import {
   detectUnsupportedFormat,
   normalizeMediaUrl,
   resolveCoverUrl,
+  warmupLocalStream,
 } from '../utils/musicPlayer'
 
 type AutoNextHandler = () => void | Promise<void>
@@ -176,6 +177,10 @@ export function MusicPlayerProvider({ children }: { children: ReactNode }) {
   const playInfoInFlightRef = useRef<Map<string, PlayInfoInFlight>>(new Map())
   const playRecordRequestsRef = useRef<Map<string, AbortController>>(new Map())
   const lyricPrefetchRequestsRef = useRef<Map<string, AbortController>>(new Map())
+  // Tracks already-warmed stream URLs for the current queue position so the
+  // prefetch effect (which re-runs on quality/queue changes) does not re-issue
+  // the 1-byte warmup for the same track.
+  const streamWarmupRef = useRef<Map<string, AbortController>>(new Map())
   const previousAuthSessionRef = useRef(authSessionId)
   const radioKeys = useRef(new Set<string>())
   const radioNext = useRef<(()=>void)|null>(null)
@@ -621,9 +626,39 @@ export function MusicPlayerProvider({ children }: { children: ReactNode }) {
         lyricPrefetchRequestsRef.current.delete(key)
       }
     }
+    // Same lifecycle for the 1-byte stream warmup: drop requests for songs that
+    // are no longer playing or next up. Keys carry the quality so switching
+    // quality re-warms the new variant.
+    const currentWarmupPrefix = currentKey ? `${currentKey}|` : null
+    const nextWarmupPrefix = nextKey ? `${nextKey}|` : null
+    for (const [key, controller] of streamWarmupRef.current) {
+      if (!(currentWarmupPrefix && key.startsWith(currentWarmupPrefix))
+        && !(nextWarmupPrefix && key.startsWith(nextWarmupPrefix))) {
+        controller.abort()
+        streamWarmupRef.current.delete(key)
+      }
+    }
     if (!nextSong) return
 
     const resolution = resolvePlayInfo(nextSong, preferredQuality, true)
+
+    // Warm the next track's backend stream cache as soon as its play URL is
+    // known. The audio bytes never reach the browser here; when the user later
+    // hits "next", the first Range lands on a warm cache (~0.12s vs ~2-4s cold).
+    // Non-Qishui/remote URLs are rejected inside warmupLocalStream.
+    const warmupKey = nextKey ? `${nextKey}|${preferredQuality}` : null
+    if (warmupKey && !streamWarmupRef.current.has(warmupKey)) {
+      const warmupController = new AbortController()
+      streamWarmupRef.current.set(warmupKey, warmupController)
+      void resolution.promise
+        .then(info => {
+          if (!warmupController.signal.aborted) {
+            warmupLocalStream(info.playUrl, warmupController.signal)
+          }
+        })
+        .catch(() => {})
+    }
+
     if (nextSong.source !== 'qishui' || !nextKey || lyricPrefetchRequestsRef.current.has(nextKey)) {
       void resolution.promise.catch(() => {})
       return
@@ -647,9 +682,11 @@ export function MusicPlayerProvider({ children }: { children: ReactNode }) {
     for (const request of playInfoInFlightRef.current.values()) request.controller.abort()
     for (const controller of playRecordRequestsRef.current.values()) controller.abort()
     for (const controller of lyricPrefetchRequestsRef.current.values()) controller.abort()
+    for (const controller of streamWarmupRef.current.values()) controller.abort()
     playInfoInFlightRef.current.clear()
     playRecordRequestsRef.current.clear()
     lyricPrefetchRequestsRef.current.clear()
+    streamWarmupRef.current.clear()
     playInfoCacheRef.current.clear()
     setPendingTrackKey(null)
     setPlayLoading(false)

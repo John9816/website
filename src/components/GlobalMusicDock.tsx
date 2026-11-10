@@ -17,7 +17,7 @@ import MusicCover from './MusicCover'
 import { useMusicPlayer } from '../context/MusicPlayerContext'
 import MusicLyricText from './MusicLyricText'
 import MusicLyricsSettings from './MusicLyricsSettings'
-import { formatDuration, normalizeCoverUrl } from '../utils/musicPlayer'
+import { coverUrlForSize, formatDuration } from '../utils/musicPlayer'
 import '../styles/music-dock.css'
 
 const fac = new FastAverageColor()
@@ -184,7 +184,7 @@ export default function GlobalMusicDock() {
   }, [currentIndex, panel])
 
   useEffect(() => {
-    const url = normalizeCoverUrl(current?.coverUrl)
+    const url = coverUrlForSize(current?.coverUrl, 48)
     if (!url) {
       setDominantColor(null)
       return

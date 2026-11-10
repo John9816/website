@@ -1,7 +1,7 @@
 import { useEffect } from 'react'
 import type { PlayInfo } from '../types'
 import { lyricMediaTitle } from '../utils/musicLyrics'
-import { normalizeCoverUrl } from '../utils/musicPlayer'
+import { coverUrlForSize } from '../utils/musicPlayer'
 export function useMusicMediaSession(current: PlayInfo | null, line: string | undefined, bluetoothLyrics: boolean,
   isPlaying: boolean, position: number, duration: number, play: () => void, pause: () => void,
   previous: (() => void) | null, next: (() => void) | null, seek: (time: number) => void) {
@@ -10,7 +10,7 @@ export function useMusicMediaSession(current: PlayInfo | null, line: string | un
   useEffect(() => {
     if (!supported) return
     try {
-      const cover = normalizeCoverUrl(current?.coverUrl)
+      const cover = coverUrlForSize(current?.coverUrl, 150)
       navigator.mediaSession.metadata = current ? new MediaMetadata({ title, artist: current.artist || '', album: current.album || '', artwork: cover ? [{ src: cover }] : [] }) : null
     } catch { /* Some browsers reject artwork; lyrics must not interrupt playback. */ }
   }, [supported, title, current?.id, current?.source, current?.artist, current?.album, current?.coverUrl])

@@ -7,7 +7,7 @@ import { getPublicMusicShare } from '../api/music'
 import MusicCover from '../components/MusicCover'
 import { useMusicBrowse } from '../context/MusicPlayerContext'
 import type { MusicPublicShareView, SongSearchItem } from '../types'
-import { formatDuration, normalizeCoverUrl } from '../utils/musicPlayer'
+import { coverUrlForSize, formatDuration } from '../utils/musicPlayer'
 import { copyText, formatDateTime } from '../utils/share'
 
 const ALL_QUALITIES = ['128k', '320k', 'flac', 'flac24bit'] as const
@@ -84,7 +84,7 @@ export default function MusicSharePage() {
     await playPlaylist([shareSong], 0, share.requestedQuality)
   }
 
-  const heroCoverUrl = normalizeCoverUrl(share?.playInfo?.coverUrl ?? share?.coverUrl ?? undefined)
+  const heroCoverUrl = coverUrlForSize(share?.playInfo?.coverUrl ?? share?.coverUrl ?? undefined, 180)
   const heroStyle = heroCoverUrl
     ? ({
         ['--music-detail-cover' as string]: `url(${JSON.stringify(heroCoverUrl)})`,

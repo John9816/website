@@ -22,7 +22,7 @@ import { useAuth } from '../../context/AuthContext'
 import { useMusicBrowse } from '../../context/MusicPlayerContext'
 import type { QishuiAccountView, QishuiFeedMode, SongSearchItem } from '../../types'
 import MusicCover from '../../components/MusicCover'
-import { normalizeCoverUrl } from '../../utils/musicPlayer'
+import { coverUrlForSize } from '../../utils/musicPlayer'
 import QishuiAccountControl from './QishuiAccountControl'
 import { formatClock, songKey, useSongActions } from './MusicHomeShared'
 
@@ -113,7 +113,7 @@ export default function MusicRoamingPage() {
   const start = () => void player.startRoaming(mode || undefined)
 
   const sceneCard = (item: QishuiFeedMode) => {
-    const icon = normalizeCoverUrl(item.iconUrl) || item.iconUrl || ''
+    const icon = coverUrlForSize(item.iconUrl, 48) || item.iconUrl || ''
     return (
       <button
         type="button"

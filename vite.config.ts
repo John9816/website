@@ -37,13 +37,15 @@ export default defineConfig(({ mode }) => {
             ) {
               return 'vendor-react'
             }
-            if (
-              normalizedId.includes('/node_modules/antd/') ||
-              normalizedId.includes('/node_modules/@ant-design/') ||
-              normalizedId.includes('/node_modules/rc-')
-            ) {
-              return 'vendor-antd'
-            }
+            // Deliberately do NOT force antd/@ant-design/rc-* into one chunk.
+            // Forcing the merge made Rollup hoist *every* antd component used by
+            // any route (Table, Form, ColorPicker, Upload, ...) into a single
+            // 1.18MB chunk that index.html statically modulepreloads on every
+            // page. Measured A/B at 3Mbps cold cache: dropping this rule lets
+            // Rollup code-split by actual reference, so heavy components stay in
+            // their lazy route chunks; first-screen JS fell ~290KB and LCP
+            // improved ~0.75s on both / and /music, with antd theme, locale,
+            // cssinjs tokens and message/modal context verified unchanged.
             if (normalizedId.includes('/node_modules/@tiptap/') || normalizedId.includes('/node_modules/prosemirror')) {
               return 'vendor-editor'
             }

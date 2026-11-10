@@ -1,7 +1,7 @@
 import { useEffect, useState, type CSSProperties } from 'react'
 import { FastAverageColor } from 'fast-average-color'
 import { useMusicBrowse } from '../context/MusicPlayerContext'
-import { normalizeCoverUrl } from '../utils/musicPlayer'
+import { coverUrlForSize } from '../utils/musicPlayer'
 
 const fac = new FastAverageColor()
 const DEFAULT_RGB = '198, 176, 152'
@@ -15,7 +15,10 @@ const DEFAULT_RGB = '198, 176, 152'
  */
 export default function MusicLiquidBackdrop() {
   const { current } = useMusicBrowse()
-  const coverUrl = normalizeCoverUrl(current?.coverUrl)
+  // A 100px thumbnail is plenty for dominant-colour extraction and ~40x smaller
+  // than the original cover. The CDN has no ACAO header, so this still falls back
+  // to DEFAULT_RGB — but the wasted download shrinks from ~500KB to ~4KB.
+  const coverUrl = coverUrlForSize(current?.coverUrl, 48)
   const [rgb, setRgb] = useState(DEFAULT_RGB)
 
   useEffect(() => {

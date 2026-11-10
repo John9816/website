@@ -11,7 +11,7 @@ import { DEFAULT_PAGE_SIZE } from '../constants/pagination'
 import { useMusicBrowse } from '../context/MusicPlayerContext'
 import { useMusicFavorites } from '../hooks/useMusicFavorites'
 import type { MusicSourceId, ToplistDetailView } from '../types'
-import { hydrateCollectionCovers, normalizeCoverUrl } from '../utils/musicPlayer'
+import { coverUrlForSize, hydrateCollectionCovers } from '../utils/musicPlayer'
 
 type MusicCollectionRouteState = {
   coverUrl?: string
@@ -94,7 +94,7 @@ export default function MusicToplistDetailPage() {
     return `${sourceLabel(validSource)} · ${detail?.list.length ?? 0} 首`
   }, [detail?.list.length, validSource])
 
-  const heroCoverUrl = normalizeCoverUrl(detail?.coverUrl)
+  const heroCoverUrl = coverUrlForSize(detail?.coverUrl, 180)
   const heroStyle = heroCoverUrl
     ? ({
         ['--music-detail-cover' as string]: `url(${JSON.stringify(heroCoverUrl)})`,

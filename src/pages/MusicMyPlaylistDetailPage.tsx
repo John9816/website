@@ -12,7 +12,7 @@ import { getImportedPlaylistDetail, removePlaylistItem, updateImportedPlaylist, 
 import MusicCover from '../components/MusicCover'
 import MusicShareAction from '../components/MusicShareAction'
 import MusicSongTable from '../components/MusicSongTable'
-import { normalizeCoverUrl } from '../utils/musicPlayer'
+import { coverUrlForSize } from '../utils/musicPlayer'
 
 const ALL_QUALITIES: MusicQuality[] = ['128k', '320k', 'flac', 'flac24bit']
 const FULL_PLAY_FETCH_SIZE = 100
@@ -303,7 +303,7 @@ export default function MusicMyPlaylistDetailPage() {
     )
   }
 
-  const heroCoverUrl = normalizeCoverUrl(playlist?.coverUrl ?? undefined)
+  const heroCoverUrl = coverUrlForSize(playlist?.coverUrl ?? undefined, 180)
   const heroStyle = heroCoverUrl
     ? ({
         ['--music-detail-cover' as string]: `url(${JSON.stringify(heroCoverUrl)})`,

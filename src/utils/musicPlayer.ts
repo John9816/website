@@ -101,13 +101,22 @@ function normalizeRemoteUrl(
 }
 
 // Qishui/ByteDance image CDN returns the -image.image ORIGINAL template (often
-// 1440px~3000px, several MB per cover) while the UI only renders 44px~240px
-// thumbnails. The same asset served as -image.webp is browser-decodable and
-// ~13x smaller in production measurements. Size-resize query params on this CDN
-// are ignored/400, only the format suffix works, so we rewrite just that suffix.
+// 1440px~3000px, several MB per cover) while the UI only renders 44px~260px
+// thumbnails. Rewriting just the format suffix to -image.webp already made them
+// browser-decodable and ~13x smaller.
+//
+// Measured on 22 production cover URLs: the same CDN ALSO supports a native
+// square-thumbnail template ~{W}x{H}.webp (e.g. ~300x300.webp), returning a real,
+// pixel-exact webp with cache-control max-age=31536000. Size query params and
+// -image suffix resizing are ignored or return 400; only this template works.
+// A 507KB original becomes ~13KB at 300px, and the ECS never proxies the bytes.
 const QISHUI_IMAGE_TEMPLATE_MARK = '~tplv-'
 const QISHUI_ORIGINAL_IMAGE_SUFFIX = /-image\.image(?=$|[?#])/
 const QISHUI_WEBP_IMAGE_SUFFIX = '-image.webp'
+const QISHUI_IMAGE_HOST = /\.(?:douyinpic|byteimg|pstatp)\.com/i
+const QISHUI_RESIZE_TEMPLATE = /~tplv-[^~/?#]*-image\.(?:image|webp)(?=$|[?#])/
+// Keep the number of CDN cache keys small; 2x DPR is enough for cover art.
+const COVER_SIZE_STEPS = [100, 200, 300, 400, 600, 800] as const
 
 function compactCoverUrl(url: string): string {
   if (!url.includes(QISHUI_IMAGE_TEMPLATE_MARK)) return url
@@ -117,6 +126,23 @@ function compactCoverUrl(url: string): string {
 export function normalizeCoverUrl(url?: string): string | undefined {
   const normalized = normalizeRemoteUrl(url, { requireUsableAssetPath: true })
   return normalized ? compactCoverUrl(normalized) : normalized
+}
+
+/**
+ * Returns a cover URL sized for the element it will be rendered in.
+ *
+ * `cssSize` is the element's CSS pixel size. ByteDance CDN URLs are rewritten to
+ * their native ~{W}x{W}.webp thumbnail template (about 40x smaller than the
+ * original); every other source keeps the existing webp-original behaviour.
+ * Pass no size for data-layer uses (cache keys, comparisons, share payloads).
+ */
+export function coverUrlForSize(url?: string, cssSize?: number): string | undefined {
+  const base = normalizeCoverUrl(url)
+  if (!base || !cssSize || !Number.isFinite(cssSize)) return base
+  if (!QISHUI_IMAGE_HOST.test(base) || !QISHUI_RESIZE_TEMPLATE.test(base)) return base
+  const wanted = Math.max(64, Math.min(800, Math.ceil((cssSize * 2) / 50) * 50))
+  const side = COVER_SIZE_STEPS.find((step) => step >= wanted) ?? 800
+  return base.replace(QISHUI_RESIZE_TEMPLATE, `~${side}x${side}.webp`)
 }
 
 export function resolveCoverUrl(
@@ -161,6 +187,40 @@ export function hydrateCollectionCovers<T extends { coverUrl?: string }>(
 
 export function normalizeMediaUrl(url?: string): string {
   return normalizeRemoteUrl(url) ?? ''
+}
+
+/**
+ * Warms the backend stream cache without downloading the audio to the browser.
+ *
+ * The local `/api/public/music/qishui/stream` endpoint resolves a whole track
+ * (download + CENC decrypt) before it can answer even the first Range request;
+ * that is the ~2-4s first-play stall. Asking for `bytes=0-0` still triggers the
+ * backend's atomic `Cache.get(key, loader)` load, but returns just 1 byte. The
+ * cache key is `trackId|quality` (no ticket), so a later playback with any
+ * ticket hits the warm cache immediately. Measured: cold 1.87s -> warm 0.12s.
+ *
+ * Only same-origin local stream URLs are touched — never third-party CDNs.
+ * Failures are always swallowed: warming must never affect playback.
+ */
+export function warmupLocalStream(playUrl?: string | null, signal?: AbortSignal): void {
+  if (!playUrl || typeof window === 'undefined') return
+  let target: URL
+  try {
+    target = new URL(playUrl, window.location.href)
+  } catch {
+    return
+  }
+  if (target.origin !== window.location.origin
+    || !target.pathname.startsWith('/api/public/music/qishui/stream')) return
+  try {
+    void fetch(target.toString(), {
+      headers: { Range: 'bytes=0-0' },
+      cache: 'no-store',
+      signal,
+    }).catch(() => {})
+  } catch {
+    // Ignore: a blocked or aborted warmup is harmless.
+  }
 }
 
 export function describeMediaError(err: MediaError | null): string {

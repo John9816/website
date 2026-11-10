@@ -71,6 +71,12 @@ function formatMembershipRemaining(membership: MembershipView | null, now: numbe
   return '已过期'
 }
 
+// Several UserAvatar instances render the same URL (trigger, drawer, menu).
+// A missing avatar returns 404 with no-store, so each instance would otherwise
+// issue its own request. Share the failure set so the first 404 suppresses all
+// retries. Keyed by URL, so uploading a new avatar naturally retries.
+const failedAvatarUrls = new Set<string>()
+
 function UserAvatar({
   avatarUrl,
   username,
@@ -80,9 +86,21 @@ function UserAvatar({
   username?: string | null
   className: string
 }) {
-  const [failedUrl, setFailedUrl] = useState<string | null>(null)
-  if (avatarUrl && avatarUrl !== failedUrl) {
-    return <img className={className} src={avatarUrl} alt="" referrerPolicy="no-referrer" onError={() => setFailedUrl(avatarUrl)} />
+  const [failed, setFailed] = useState(false)
+  const showImage = !!avatarUrl && !failed && !failedAvatarUrls.has(avatarUrl)
+  if (showImage) {
+    return (
+      <img
+        className={className}
+        src={avatarUrl}
+        alt=""
+        referrerPolicy="no-referrer"
+        onError={() => {
+          if (avatarUrl) failedAvatarUrls.add(avatarUrl)
+          setFailed(true)
+        }}
+      />
+    )
   }
   return <span className={className}>{getAvatarText(username)}</span>
 }
