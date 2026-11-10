@@ -175,6 +175,7 @@ export function MusicPlayerProvider({ children }: { children: ReactNode }) {
   const playInfoCacheRef = useRef<Map<string, PlayInfoCacheEntry>>(new Map())
   const playInfoInFlightRef = useRef<Map<string, PlayInfoInFlight>>(new Map())
   const playRecordRequestsRef = useRef<Map<string, AbortController>>(new Map())
+  const lyricPrefetchRequestsRef = useRef<Map<string, AbortController>>(new Map())
   const previousAuthSessionRef = useRef(authSessionId)
   const radioKeys = useRef(new Set<string>())
   const radioNext = useRef<(()=>void)|null>(null)
@@ -286,7 +287,7 @@ export function MusicPlayerProvider({ children }: { children: ReactNode }) {
       }
 
       const existing = playInfoInFlightRef.current.get(key)
-      if (existing) {
+      if (existing && !existing.controller.signal.aborted) {
         return {
           controller: existing.prefetch ? null : existing.controller,
           needsPlayRecord: !prefetch && existing.prefetch,
@@ -300,6 +301,7 @@ export function MusicPlayerProvider({ children }: { children: ReactNode }) {
         signal: controller.signal,
       })
         .then((info) => {
+          if (controller.signal.aborted) throw new DOMException('请求已取消', 'AbortError')
           cachePlayInfo(row, quality, info)
           return info
         })
@@ -328,7 +330,7 @@ export function MusicPlayerProvider({ children }: { children: ReactNode }) {
       const controller = new AbortController()
       playRecordRequestsRef.current.set(key, controller)
       void musicPlay(row.source, row.id, quality, { signal: controller.signal })
-        .then((info) => cachePlayInfo(row, quality, info))
+        .then((info) => { if (!controller.signal.aborted) cachePlayInfo(row, quality, info) })
         .catch(() => {})
         .finally(() => {
           if (playRecordRequestsRef.current.get(key) === controller) {
@@ -605,19 +607,36 @@ export function MusicPlayerProvider({ children }: { children: ReactNode }) {
 
   useEffect(() => {
     const connection = (navigator as Navigator & { connection?: { saveData?: boolean; effectiveType?: string } }).connection
-    if (connection?.saveData || ['slow-2g', '2g'].includes(connection?.effectiveType || '')) return
-    if (playMode !== 'sequence' || !current || currentIndex < 0) return
-    const nextSong = playlist[currentIndex + 1]
+    const canPrefetch = authSessionId && !connection?.saveData && !['slow-2g', '2g'].includes(connection?.effectiveType || '')
+      && playMode === 'sequence' && current && currentIndex >= 0
+    const nextSong = canPrefetch ? playlist[currentIndex + 1] : undefined
+    const currentKey = current ? `${current.source}:${current.id}` : null
+    const nextKey = nextSong ? `${nextSong.source}:${nextSong.id}` : null
+    // A prefetched lyric read becomes a playback read when its song is selected.
+    // Keep that subscriber alive across effect cleanup/setup; cancel only songs
+    // that are neither playing nor next in the queue.
+    for (const [key, controller] of lyricPrefetchRequestsRef.current) {
+      if (key !== currentKey && key !== nextKey) {
+        controller.abort()
+        lyricPrefetchRequestsRef.current.delete(key)
+      }
+    }
     if (!nextSong) return
 
     const resolution = resolvePlayInfo(nextSong, preferredQuality, true)
+    if (nextSong.source !== 'qishui' || !nextKey || lyricPrefetchRequestsRef.current.has(nextKey)) {
+      void resolution.promise.catch(() => {})
+      return
+    }
     const lyricsController = new AbortController()
+    lyricPrefetchRequestsRef.current.set(nextKey, lyricsController)
     void resolution.promise.then(info => {
-      if (lyricsController.signal.aborted || nextSong.source !== 'qishui' || hasQishuiInlineLyrics(info)) return
+      if (lyricsController.signal.aborted || hasQishuiInlineLyrics(info)) return
       return musicLyric('qishui', nextSong.id, lyricsController.signal)
-    }).catch(() => {})
-    return () => lyricsController.abort()
-  }, [current?.id, current?.source, currentIndex, playMode, playlist, preferredQuality, resolvePlayInfo])
+    }).catch(() => {}).finally(() => {
+      if (lyricPrefetchRequestsRef.current.get(nextKey) === lyricsController) lyricPrefetchRequestsRef.current.delete(nextKey)
+    })
+  }, [authSessionId, current?.id, current?.source, currentIndex, playMode, playlist, preferredQuality, resolvePlayInfo])
 
   useEffect(() => {
     if (previousAuthSessionRef.current === authSessionId) return
@@ -627,8 +646,10 @@ export function MusicPlayerProvider({ children }: { children: ReactNode }) {
     activePlayRequestRef.current = null
     for (const request of playInfoInFlightRef.current.values()) request.controller.abort()
     for (const controller of playRecordRequestsRef.current.values()) controller.abort()
+    for (const controller of lyricPrefetchRequestsRef.current.values()) controller.abort()
     playInfoInFlightRef.current.clear()
     playRecordRequestsRef.current.clear()
+    lyricPrefetchRequestsRef.current.clear()
     playInfoCacheRef.current.clear()
     setPendingTrackKey(null)
     setPlayLoading(false)
@@ -641,6 +662,7 @@ export function MusicPlayerProvider({ children }: { children: ReactNode }) {
       activePlayRequestRef.current?.controller?.abort()
       for (const request of playInfoInFlightRef.current.values()) request.controller.abort()
       for (const controller of playRecordRequestsRef.current.values()) controller.abort()
+      for (const controller of lyricPrefetchRequestsRef.current.values()) controller.abort()
     },
     [],
   )
