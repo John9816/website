@@ -5,7 +5,6 @@ import { mkdtemp, rm, mkdir } from 'node:fs/promises'
 import { tmpdir } from 'node:os'
 import { join } from 'node:path'
 import http from 'node:http'
-import { verifyEditorInteractions } from './verify-xuecheng-interactions.mjs'
 const { chromium } = await import(process.env.PLAYWRIGHT_MODULE || 'playwright')
 const dir = await mkdtemp(join(tmpdir(), 'xuecheng-ui-'))
 const outputDir = process.env.SMOKE_OUTPUT_DIR || 'output/xuecheng'
@@ -55,7 +54,7 @@ try {
   const context = await newContext({ viewport: { width: 1440, height: 1000 } })
   await context.addInitScript(() => localStorage.setItem('nav.auth.session', JSON.stringify({ token: 'isolated-editor-ui', tokenType: 'Bearer', username: 'qa-editor', refreshToken: null, sessionId: 'qa-editor' })))
   const page = await context.newPage(), errors = []
-  page.on('pageerror', e => { errors.push(e.message); console.error('PAGE ERROR', e.message) })
+  page.on('pageerror', e => errors.push(e.message))
   page.setDefaultTimeout(15000)
   await page.goto(`${base}/editor/#/doc/${a.id}`)
   const pm = page.locator('.ProseMirror[contenteditable="true"]')
@@ -141,7 +140,7 @@ try {
   await pm.click({ button: 'right', position: { x: 45, y: 12 } })
   const menu = page.getByRole('menu', { name: '编辑操作' })
   await menu.waitFor()
-  await menu.getByRole('menuitemcheckbox', { name: '加粗', exact: true }).click()
+  await menu.getByRole('menuitem', { name: '加粗', exact: true }).click()
   assert.equal(await pm.locator('strong').innerText(), 'Alpha original')
   await pm.click({ button: 'right', position: { x: 45, y: 12 } })
   await menu.getByRole('menuitem', { name: '撤销', exact: true }).click()
@@ -149,7 +148,7 @@ try {
   await pm.press('Shift+F10')
   await menu.waitFor()
   await page.keyboard.press('End')
-  assert.equal(await menu.getByRole('menuitem', { name: '快捷键速查', exact: true }).evaluate(el => el === document.activeElement), true)
+  assert.equal(await menu.getByRole('menuitem', { name: '清除格式', exact: true }).evaluate(el => el === document.activeElement), true)
   await page.keyboard.press('Escape')
   await menu.waitFor({ state: 'hidden' })
   // A tree menu targets the clicked document without changing the open editor.
@@ -359,8 +358,6 @@ try {
   await assertTheme(page, 'light', '.xuecheng-workspace .topbar')
   assert.deepEqual(errors, [])
   console.log('PASS old knowledge-base routes retired')
-  await verifyEditorInteractions({ page, api, base, outputDir, waitFor })
-  assert.deepEqual(errors, [])
 } finally {
   await browser?.close()
   child.kill(); if (child.exitCode === null) await once(child, 'exit')

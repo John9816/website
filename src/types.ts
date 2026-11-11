@@ -550,6 +550,14 @@ export interface PlayInfo {
   coverUrl?: string
   durationSec?: number
   playUrl: string
+  /**
+   * Rich-client direct playback URL for Qishui tracks. When present the browser fetches the
+   * CENC-encrypted bytes from this upstream CDN URL itself and decrypts them client-side, so the
+   * audio never crosses our ECS egress. `playAuth` carries the matching content-key material.
+   * Both are only set for Qishui; when absent the player uses `playUrl` (local stream) instead.
+   */
+  directUrl?: string
+  playAuth?: string
   requestedQuality: MusicQuality
   actualQuality?: MusicQuality
   fileSize?: number

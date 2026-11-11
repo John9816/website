@@ -3,6 +3,14 @@ import { usePlayerLyrics } from '../hooks/usePlayerLyrics'
 import { useMusicMediaSession } from '../hooks/useMusicMediaSession'
 import { musicPlaybackError } from '../features/music/sources'
 import {
+  hasQishuiDirectPlayback,
+  ensureRichPlayback,
+  getCachedRichPlayback,
+  setActiveRichPlaybackKey,
+  clearRichPlaybackCache,
+  richPlaybackKey,
+} from '../features/music/qishuiRichClient'
+import {
   createContext,
   useCallback,
   useContext,
@@ -185,6 +193,9 @@ export function MusicPlayerProvider({ children }: { children: ReactNode }) {
   const radioKeys = useRef(new Set<string>())
   const radioNext = useRef<(()=>void)|null>(null)
   const radioStop = useRef<(()=>void)|null>(null)
+  // Keys already submitted for next-track rich-client prefetch; avoids re-issuing on every
+  // prefetch-effect re-run. The decrypted Blob URLs themselves live in qishuiRichClient's LRU.
+  const richPrefetchRef = useRef<Set<string>>(new Set())
   const [radioAvailable, setRadioAvailable] = useState(false)
   const [artistTarget,setArtistTarget] = useState<MusicPlayerContextValue['artistTarget']>(null)
   const openArtist = useCallback((source:MusicSourceId,id:string|undefined,name:string)=>setArtistTarget({source,id,name}),[])
@@ -199,6 +210,9 @@ export function MusicPlayerProvider({ children }: { children: ReactNode }) {
   const [muted, setMuted] = useState(false)
   const [playLoading, setPlayLoading] = useState(false)
   const [pendingTrackKey, setPendingTrackKey] = useState<string | null>(null)
+  // Effective <audio> source: a client-decrypted Blob URL for Qishui rich-client playback,
+  // otherwise the (same-origin) local stream URL. Drives the load/play effect below.
+  const [audioSrc, setAudioSrc] = useState<string | undefined>(undefined)
   const [playlist, setPlaylistState] = useState<SongSearchItem[]>([])
   const [preferredQuality, setPreferredQualityState] =
     useState<MusicQuality>(getInitialPreferredQuality)
@@ -595,11 +609,51 @@ export function MusicPlayerProvider({ children }: { children: ReactNode }) {
     )
   }, [current?.id, current?.source, current?.playUrl, message, unsupportedFormat])
 
+  // Resolve the effective <audio> source. For a Qishui track carrying directUrl + playAuth we
+  // fetch the encrypted bytes from the upstream CDN and decrypt them in the browser, then serve
+  // the plaintext via a Blob URL — the audio never crosses our ECS. Decrypted Blob URLs are kept
+  // in an LRU cache (see qishuiRichClient), so a prefetched / recently played track starts with
+  // no fetch or decrypt at all. On any failure we fall back to the local stream URL.
+  useEffect(() => {
+    if (!current) {
+      setActiveRichPlaybackKey(null)
+      setAudioSrc(undefined)
+      return
+    }
+    if (!hasQishuiDirectPlayback(current)) {
+      setActiveRichPlaybackKey(null)
+      setAudioSrc(normalizeMediaUrl(current.playUrl))
+      return
+    }
+    const key = richPlaybackKey(current.source, current.id, preferredQuality)
+    setActiveRichPlaybackKey(key)
+    const cached = getCachedRichPlayback(key)
+    if (cached) {
+      setAudioSrc(cached)
+      return
+    }
+    const controller = new AbortController()
+    setPlayLoading(true)
+    void ensureRichPlayback(key, current.directUrl!, current.playAuth!)
+      .then((url) => {
+        if (controller.signal.aborted) return
+        setAudioSrc(url)
+      })
+      .catch((err: unknown) => {
+        if (controller.signal.aborted) return
+        console.warn('Qishui rich-client decrypt failed, falling back to stream URL', err)
+        setAudioSrc(normalizeMediaUrl(current.playUrl))
+      })
+    return () => {
+      controller.abort()
+    }
+  }, [current?.id, current?.source, current?.playUrl, current?.directUrl, current?.playAuth, preferredQuality])
+
   useEffect(() => {
     if (unsupportedFormat) return
 
     const el = audioRef.current
-    if (!el || !current) return
+    if (!el || !current || !audioSrc) return
 
     el.load()
     void el.play().catch((error: DOMException) => {
@@ -608,7 +662,7 @@ export function MusicPlayerProvider({ children }: { children: ReactNode }) {
         message.warning('浏览器阻止了自动播放，请手动点一下播放按钮。')
       }
     })
-  }, [current?.id, current?.source, current?.playUrl, message, unsupportedFormat])
+  }, [audioSrc, message, unsupportedFormat])
 
   useEffect(() => {
     const connection = (navigator as Navigator & { connection?: { saveData?: boolean; effectiveType?: string } }).connection
@@ -652,11 +706,37 @@ export function MusicPlayerProvider({ children }: { children: ReactNode }) {
       streamWarmupRef.current.set(warmupKey, warmupController)
       void resolution.promise
         .then(info => {
-          if (!warmupController.signal.aborted) {
+          // Skip the local-stream warmup when the rich-client path will be used: it would
+          // otherwise pull even a 1-byte Range through our ECS. The browser fetches the
+          // encrypted bytes straight from the upstream CDN at play time instead.
+          if (!warmupController.signal.aborted && !info.directUrl) {
             warmupLocalStream(info.playUrl, warmupController.signal)
           }
         })
         .catch(() => {})
+    }
+
+    // Rich-client prefetch: fetch + decrypt the next track's audio into the Blob LRU up front,
+    // so pressing "next" starts with no network/decrypt work. Keys are source:id:quality and
+    // match the ones the playback effect uses; an in-flight prefetch is shared, never repeated.
+    const currentRichKey = currentKey ? richPlaybackKey(current!.source, current!.id, preferredQuality) : null
+    const nextRichKey = nextKey ? richPlaybackKey(nextSong.source, nextSong.id, preferredQuality) : null
+    for (const key of richPrefetchRef.current) {
+      if (key !== currentRichKey && key !== nextRichKey) richPrefetchRef.current.delete(key)
+    }
+    if (nextRichKey && !richPrefetchRef.current.has(nextRichKey)) {
+      richPrefetchRef.current.add(nextRichKey)
+      void resolution.promise
+        .then(info => {
+          if (info.directUrl && info.playAuth && hasQishuiDirectPlayback(info)) {
+            return ensureRichPlayback(nextRichKey, info.directUrl, info.playAuth)
+          }
+          // No direct URL this time (upstream resolution failed) — allow a later retry.
+          richPrefetchRef.current.delete(nextRichKey)
+        })
+        .catch(() => {
+          richPrefetchRef.current.delete(nextRichKey)
+        })
     }
 
     if (nextSong.source !== 'qishui' || !nextKey || lyricPrefetchRequestsRef.current.has(nextKey)) {
@@ -687,6 +767,9 @@ export function MusicPlayerProvider({ children }: { children: ReactNode }) {
     playRecordRequestsRef.current.clear()
     lyricPrefetchRequestsRef.current.clear()
     streamWarmupRef.current.clear()
+    richPrefetchRef.current.clear()
+    setActiveRichPlaybackKey(null)
+    clearRichPlaybackCache()
     playInfoCacheRef.current.clear()
     setPendingTrackKey(null)
     setPlayLoading(false)
@@ -700,6 +783,7 @@ export function MusicPlayerProvider({ children }: { children: ReactNode }) {
       for (const request of playInfoInFlightRef.current.values()) request.controller.abort()
       for (const controller of playRecordRequestsRef.current.values()) controller.abort()
       for (const controller of lyricPrefetchRequestsRef.current.values()) controller.abort()
+      clearRichPlaybackCache()
     },
     [],
   )
@@ -820,7 +904,7 @@ export function MusicPlayerProvider({ children }: { children: ReactNode }) {
       <MusicBrowseContext.Provider value={browse}>{children}</MusicBrowseContext.Provider>
       <audio
         ref={audioRef}
-        src={current ? normalizeMediaUrl(current.playUrl) : undefined}
+        src={audioSrc}
         preload="metadata"
         style={{ display: 'none' }}
         onLoadStart={() => setPlayLoading(true)}
