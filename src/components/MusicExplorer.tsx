@@ -4,6 +4,7 @@ import { MUSIC_SOURCE_OPTIONS as SOURCE_OPTIONS, isMusicSourceId, sourceLabel, n
 import { useCallback, useEffect, useMemo, useRef, useState, Fragment } from 'react'
 import { App as AntApp, Button, Input, Modal, Pagination, Segmented } from 'antd'
 import {
+  Clock3,
   Heart,
   Play,
   Search,
@@ -85,6 +86,16 @@ const NETEASE_PLAYLIST_CATEGORIES = [
 const ALL_QUALITIES: MusicQuality[] = ['128k', '320k', 'flac', 'flac24bit']
 const SEARCH_PAGE_SIZE_OPTIONS = [10, 20, 30]
 const PLAYLIST_PAGE_SIZE_OPTIONS = [10, 20, 50]
+const RECENT_SEARCHES_KEY = 'music-recent-searches-v1'
+
+function readRecentSearches(): string[] {
+  try {
+    const value = JSON.parse(localStorage.getItem(RECENT_SEARCHES_KEY) || '[]')
+    return Array.isArray(value) ? value.filter((item): item is string => typeof item === 'string').slice(0, 8) : []
+  } catch {
+    return []
+  }
+}
 
 
 function formatPlayCount(value?: number) {
@@ -241,6 +252,7 @@ export default function MusicExplorer() {
   const [searchSource, setSearchSource] = useState<MusicSourceId>(() => isMusicSourceId(searchParams.get('source')) ? searchParams.get('source') as MusicSourceId : 'qishui')
   const [searchType, setSearchType] = useState<MusicSearchType>('song')
   const [keyword, setKeyword] = useState('')
+  const [recentSearches, setRecentSearches] = useState<string[]>(readRecentSearches)
   const [searching, setSearching] = useState(false)
   const [searchResults, setSearchResults] = useState<SongSearchItem[]>([])
   const [searchCollections, setSearchCollections] = useState<SearchCollections>({
@@ -382,6 +394,13 @@ export default function MusicExplorer() {
         setLastKeyword(trimmed)
         setLastSearchSource(nextSource)
         setLastSearchType(nextType)
+        if (nextPage === 1) {
+          setRecentSearches((previous) => {
+            const next = [trimmed, ...previous.filter((item) => item !== trimmed)].slice(0, 8)
+            try { localStorage.setItem(RECENT_SEARCHES_KEY, JSON.stringify(next)) } catch { /* storage is optional */ }
+            return next
+          })
+        }
       } catch (error) {
         if (requestId !== searchRequestIdRef.current || controller.signal.aborted) return
         message.error((error as Error).message)
@@ -434,6 +453,11 @@ export default function MusicExplorer() {
     },
     [searchPageSize, searchParams, searchSongs, setSearchParams],
   )
+
+  const clearRecentSearches = () => {
+    setRecentSearches([])
+    try { localStorage.removeItem(RECENT_SEARCHES_KEY) } catch { /* storage is optional */ }
+  }
 
   const openQishuiArtist = (name: string, artistId?: string) => openArtist('qishui', artistId, name)
 
@@ -866,7 +890,32 @@ export default function MusicExplorer() {
                 </div>}
               </section>
 
-              {!hasSearchResults && <div className="music-search-starters"><h2>从喜欢的名字开始</h2><p>搜一首歌、一位歌手，或一张陪伴你的专辑。</p><div>{['周杰伦','陈奕迅','轻音乐','独立音乐'].map(value=><button type="button" key={value} onClick={()=>searchByMeta(value,searchSource)}><Search size={15}/>{value}</button>)}</div></div>}
+              {!hasSearchResults && (
+                <div className="music-search-starters">
+                  <h2>从喜欢的名字开始</h2>
+                  <p>搜一首歌、一位歌手，或一张陪伴你的专辑。</p>
+                  {recentSearches.length > 0 && (
+                    <section className="music-search-recent" aria-label="最近搜索">
+                      <div className="music-search-recent__head">
+                        <span><Clock3 size={14} />最近搜索</span>
+                        <button type="button" onClick={clearRecentSearches}><Trash2 size={13} />清空</button>
+                      </div>
+                      <div className="music-search-recent__chips">
+                        {recentSearches.map((value) => (
+                          <button type="button" key={value} onClick={() => searchByMeta(value, searchSource)}>
+                            <Search size={14} />{value}
+                          </button>
+                        ))}
+                      </div>
+                    </section>
+                  )}
+                  <div className="music-search-starters__suggestions">
+                    {['周杰伦', '陈奕迅', '轻音乐', '独立音乐'].map((value) => (
+                      <button type="button" key={value} onClick={() => searchByMeta(value, searchSource)}><Search size={15} />{value}</button>
+                    ))}
+                  </div>
+                </div>
+              )}
               {hasSearchResults && (
                 <section className="music-search-results">
                   <div className="music-search-results__head">

@@ -1,6 +1,7 @@
 import type { ReactNode } from 'react'
 import { Heart } from 'lucide-react'
 import MusicShareAction from '../../components/MusicShareAction'
+import MusicQueueActions from '../../components/MusicQueueActions'
 import { useMusicFavorites } from '../../hooks/useMusicFavorites'
 import type { SongSearchItem } from '../../types'
 
@@ -24,6 +25,7 @@ export function useSongActions(songs: SongSearchItem[]) {
           fill={favorites.isFavorite(song) ? 'currentColor' : 'none'}
         />
       </button>
+      <MusicQueueActions song={song} />
       <MusicShareAction song={song} />
     </>
   )

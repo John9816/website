@@ -6,6 +6,7 @@ import { memo, useCallback, useEffect, useMemo, useState, type ReactNode } from 
 import { Loader2, MoreHorizontal, Pause, Play } from 'lucide-react'
 import { PAGE_SIZE_OPTIONS } from '../constants/pagination'
 import MusicCover from './MusicCover'
+import MusicQueueActions from './MusicQueueActions'
 import { useMusicBrowse } from '../context/MusicPlayerContext'
 import type { SongSearchItem } from '../types'
 import { formatDuration } from '../utils/musicPlayer'
@@ -269,6 +270,7 @@ function MusicSongTable({
                     )}
                   </button>
                 )}
+                <MusicQueueActions song={row} />
                 {renderActions?.(row)}
               </Space>
             ),
@@ -295,7 +297,7 @@ function MusicSongTable({
           <MusicCover src={row.coverUrl} size={46} rounded={10}/>
           <div className="music-song-row__copy"><button type="button" className="music-song-row__title" onClick={e=>{e.stopPropagation();handleRowActivate(row)}}>{row.name}</button><button type="button" className="music-song-row__artist" onClick={e=>{e.stopPropagation();openArtist(row.source,row.artistId,row.artist || '')}}>{row.artist || '未知歌手'}<span> · {sourceLabel(row.source).replace('（黑源）','')}</span></button></div>
           <button type="button" className="music-studio-icon" aria-label={isPlayingRow(row)&&isPlaying?'暂停':'播放'} disabled={isLoadingRow(row)} onClick={e=>{e.stopPropagation();handleRowActivate(row)}}>{isLoadingRow(row)?<Loader2 size={19} className="ctrl-btn__spinner"/>:isPlayingRow(row)&&isPlaying?<Pause size={19}/>:<Play size={19}/>}</button>
-          {renderActions && <div onClick={e=>e.stopPropagation()}><Popover trigger="click" placement="topRight" content={<div className="music-song-actions-popover" aria-label={`${row.name}操作`}>{renderActions(row)}</div>}><button type="button" className="music-studio-icon" aria-label={`更多操作：${row.name}`}><MoreHorizontal size={20}/></button></Popover></div>}
+          {renderActions && <div onClick={e=>e.stopPropagation()}><Popover trigger="click" placement="topRight" content={<div className="music-song-actions-popover" aria-label={`${row.name}操作`}><MusicQueueActions song={row}/>{renderActions(row)}</div>}><button type="button" className="music-studio-icon" aria-label={`更多操作：${row.name}`}><MoreHorizontal size={20}/></button></Popover></div>}
           <span className="music-song-row__number">{(page-1)*pageSize+index+1}</span>
         </div>)}
       </div> : <Table<SongSearchItem>

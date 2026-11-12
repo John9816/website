@@ -66,7 +66,13 @@ function getPlayModeMeta(mode: PlayMode) {
 }
 
 
-export default function MusicPlayerBar() {
+export default function MusicPlayerBar({
+  onToggleQueue,
+  queueOpen = false,
+}: {
+  onToggleQueue?: () => void
+  queueOpen?: boolean
+}) {
   const [seeking, setSeeking] = useState(false)
   const [expanded, setExpanded] = useState(false)
   const [queuePopoverOpen, setQueuePopoverOpen] = useState(false)
@@ -461,6 +467,16 @@ export default function MusicPlayerBar() {
     setPreviousCoverBackdrop(null)
   }, [coverBackdropUrl])
 
+  useEffect(() => {
+    const open = () => {
+      setQualityPopoverOpen(false)
+      setQueuePopoverOpen(false)
+      setExpanded(true)
+    }
+    window.addEventListener('music:open-fullscreen', open)
+    return () => window.removeEventListener('music:open-fullscreen', open)
+  }, [])
+
   if (!current) return null
 
   const progressPct = duration ? Math.min(100, (currentTime / duration) * 100) : 0
@@ -809,6 +825,18 @@ export default function MusicPlayerBar() {
                 <SkipForward size={18} />
               </button>
             </div>
+            {onToggleQueue && (
+              <button
+                type="button"
+                className={`ctrl-btn music-player-bar__mobile-queue-btn${queueOpen ? ' is-active' : ''}`}
+                onClick={onToggleQueue}
+                aria-expanded={queueOpen}
+                aria-label={`待播队列，共 ${queueItems.length} 首`}
+                title="待播队列"
+              >
+                <ListMusic size={16} />
+              </button>
+            )}
           </div>
 
           <div className="music-player-bar__aside">
@@ -858,29 +886,19 @@ export default function MusicPlayerBar() {
             >
               <PlayModeIcon size={16} />
             </button>
-            <Popover
-              trigger="click"
-              placement="topRight"
-              overlayClassName="music-player-fullscreen__popover"
-              content={queuePopoverContent}
-              open={queuePopoverOpen && !expanded}
-              onOpenChange={(open) => {
-                setQueuePopoverOpen(open)
-                if (open) setQualityPopoverOpen(false)
-              }}
+            <button
+              type="button"
+              className={`ctrl-btn music-player-bar__icon-btn music-player-bar__queue-btn${
+                queueOpen ? ' is-active' : ''
+              }`}
+              onClick={onToggleQueue}
+              aria-expanded={queueOpen}
+              aria-label={`待播队列，共 ${queueItems.length} 首`}
+              title={`待播队列 (${queueItems.length})`}
             >
-              <button
-                type="button"
-                className={`ctrl-btn music-player-bar__icon-btn music-player-bar__queue-btn${
-                  queuePopoverOpen && !expanded ? ' is-active' : ''
-                }`}
-                aria-label={`当前播放列表，共 ${queueItems.length} 首`}
-                title={`当前播放列表 (${queueItems.length})`}
-              >
-                <ListMusic size={16} />
-                <span>{queueItems.length}</span>
-              </button>
-            </Popover>
+              <ListMusic size={16} />
+              <span>{queueItems.length}</span>
+            </button>
             <button
               type="button"
               className="ctrl-btn"

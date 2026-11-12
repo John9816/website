@@ -3,6 +3,13 @@ import { usePlayerLyrics } from '../hooks/usePlayerLyrics'
 import { useMusicMediaSession } from '../hooks/useMusicMediaSession'
 import { musicPlaybackError } from '../features/music/sources'
 import {
+  clearQueueKeepingCurrent,
+  insertIntoQueue,
+  moveQueueItemToNext,
+  removeQueueIndex,
+  type QueueInsertPosition,
+} from '../features/music/queue'
+import {
   hasQishuiDirectPlayback,
   ensureRichPlayback,
   getCachedRichPlayback,
@@ -64,6 +71,22 @@ type PlayInfoResolution = {
 
 function playInfoKey(row: Pick<SongSearchItem, 'source' | 'id'>, quality: MusicQuality) {
   return `${row.source}:${row.id}:${quality}`
+}
+
+function playInfoToQueueSong(info: PlayInfo): SongSearchItem {
+  return {
+    id: info.id,
+    source: info.source,
+    name: info.name || '未知歌曲',
+    artist: info.artist || '未知歌手',
+    artistId: info.artistId,
+    artistIds: info.artistIds,
+    album: info.album,
+    albumId: info.albumId,
+    coverUrl: info.coverUrl,
+    durationSec: info.durationSec,
+    availableQualities: [info.requestedQuality],
+  }
 }
 
 function isMusicQuality(value: string | null): value is MusicQuality {
@@ -147,6 +170,10 @@ type MusicPlayerContextValue = ReturnType<typeof usePlayerLyrics> & ReturnType<t
     quality?: MusicQuality,
   ) => Promise<void>
   playFromQueue: (index: number, quality?: MusicQuality) => Promise<void>
+  addToQueue: (row: SongSearchItem, position?: QueueInsertPosition) => void
+  removeFromQueue: (index: number) => void
+  clearQueue: () => void
+  moveQueueToNext: (index: number) => void
   setPreferredQuality: (quality: MusicQuality) => void
   playSong: (row: SongSearchItem, quality?: MusicQuality) => Promise<void>
   playResolvedSong: (
@@ -165,7 +192,7 @@ type MusicPlayerContextValue = ReturnType<typeof usePlayerLyrics> & ReturnType<t
   setAutoNextHandler: (handler: AutoNextHandler | null) => void
 }
 
-type MusicBrowseValue = Pick<MusicPlayerContextValue, 'artistTarget' | 'openArtist' | 'closeArtist' | 'current' | 'playlist' | 'currentIndex' | 'isPlaying' | 'playLoading' | 'pendingTrackKey' | 'unsupportedFormat' | 'preferredQuality' | 'playMode' | 'canPrev' | 'canNext' | 'setPlaylist' | 'playPlaylist' | 'playFromQueue' | 'setPreferredQuality' | 'playSong' | 'playResolvedSong' | 'togglePlay' | 'playPrev' | 'playNext' | 'setAutoNextHandler' | 'roamingSession' | 'roamingBusy' | 'roamingError' | 'startRoaming' | 'nextRoaming' | 'stopRoaming'>
+type MusicBrowseValue = Pick<MusicPlayerContextValue, 'artistTarget' | 'openArtist' | 'closeArtist' | 'current' | 'playlist' | 'currentIndex' | 'isPlaying' | 'playLoading' | 'pendingTrackKey' | 'unsupportedFormat' | 'preferredQuality' | 'playMode' | 'canPrev' | 'canNext' | 'setPlaylist' | 'playPlaylist' | 'playFromQueue' | 'addToQueue' | 'removeFromQueue' | 'clearQueue' | 'moveQueueToNext' | 'setPreferredQuality' | 'playSong' | 'playResolvedSong' | 'togglePlay' | 'playPrev' | 'playNext' | 'setAutoNextHandler' | 'roamingSession' | 'roamingBusy' | 'roamingError' | 'startRoaming' | 'nextRoaming' | 'stopRoaming'>
 const MusicBrowseContext = createContext<MusicBrowseValue | null>(null)
 
 const MusicPlayerContext = createContext<MusicPlayerContextValue | null>(null)
@@ -476,6 +503,41 @@ export function MusicPlayerProvider({ children }: { children: ReactNode }) {
     },
     [playSong, playlist, preferredQuality],
   )
+
+  const addToQueue = useCallback((row: SongSearchItem, position: QueueInsertPosition = 'last') => {
+    if (!current) {
+      message.success('已开始播放')
+      void playSong(row, preferredQuality)
+      return
+    }
+    setPlaylistState((previous) => {
+      const base = previous.length ? previous : [playInfoToQueueSong(current)]
+      const activeIndex = base.findIndex((item) => item.id === current.id && item.source === current.source)
+      return insertIntoQueue(base, row, activeIndex, position)
+    })
+    message.success(position === 'next' ? '将在当前歌曲后播放' : '已添加到播放队列')
+  }, [current, message, playSong, preferredQuality])
+
+  const removeFromQueue = useCallback((index: number) => {
+    if (index === currentIndex) {
+      message.info('当前歌曲仍在播放，不能从队列中移除')
+      return
+    }
+    setPlaylistState((previous) => removeQueueIndex(previous, index, currentIndex))
+  }, [currentIndex, message])
+
+  const clearQueue = useCallback(() => {
+    setPlaylistState((previous) => {
+      const activeIndex = previous.findIndex((item) => current && item.id === current.id && item.source === current.source)
+      const remaining = clearQueueKeepingCurrent(previous, activeIndex)
+      return remaining.length || !current ? remaining : [playInfoToQueueSong(current)]
+    })
+    message.success('已清空待播，当前歌曲继续播放')
+  }, [current, message])
+
+  const moveQueueToNext = useCallback((index: number) => {
+    setPlaylistState((previous) => moveQueueItemToNext(previous, index, currentIndex))
+  }, [currentIndex])
 
   const restartCurrentTrack = useCallback(() => {
     const el = audioRef.current
@@ -802,7 +864,8 @@ export function MusicPlayerProvider({ children }: { children: ReactNode }) {
     if (current.name && current.artist && current.artistId && current.albumId && current.coverUrl && current.durationSec) return
     const id = current.id, controller = new AbortController()
     void qishuiSongInfo(id, controller.signal).then(meta => {
-      if (controller.signal.aborted) return
+      // 上游异常时可能返回空 data；不要让一次元数据补全拖垮整个播放器。
+      if (controller.signal.aborted || !meta) return
       setCurrent(previous => previous?.source === 'qishui' && previous.id === id ? {
         ...previous, name:meta.name || previous.name, artist:meta.artist || previous.artist,
         artistId:meta.artistId, artistIds:meta.artistIds, albumId:meta.albumId,
@@ -844,6 +907,10 @@ export function MusicPlayerProvider({ children }: { children: ReactNode }) {
       setPlaylist,
       playPlaylist,
       playFromQueue,
+      addToQueue,
+      removeFromQueue,
+      clearQueue,
+      moveQueueToNext,
       setPreferredQuality,
       playSong,
       playResolvedSong,
@@ -875,6 +942,10 @@ export function MusicPlayerProvider({ children }: { children: ReactNode }) {
       playLoading,
       playNext,
       playFromQueue,
+      addToQueue,
+      removeFromQueue,
+      clearQueue,
+      moveQueueToNext,
       playPrev,
       playPlaylist,
       playSong,
@@ -895,9 +966,9 @@ export function MusicPlayerProvider({ children }: { children: ReactNode }) {
   )
 
   const browse = useMemo<MusicBrowseValue>(() => ({
-    artistTarget, openArtist, closeArtist, current, playlist, currentIndex, isPlaying, playLoading, pendingTrackKey, unsupportedFormat, preferredQuality, playMode, canPrev, canNext, setPlaylist, playPlaylist, playFromQueue, setPreferredQuality, playSong, playResolvedSong, togglePlay, playPrev, playNext, setAutoNextHandler,
+    artistTarget, openArtist, closeArtist, current, playlist, currentIndex, isPlaying, playLoading, pendingTrackKey, unsupportedFormat, preferredQuality, playMode, canPrev, canNext, setPlaylist, playPlaylist, playFromQueue, addToQueue, removeFromQueue, clearQueue, moveQueueToNext, setPreferredQuality, playSong, playResolvedSong, togglePlay, playPrev, playNext, setAutoNextHandler,
     roamingSession: radio.roamingSession, roamingBusy: radio.roamingBusy, roamingError: radio.roamingError, startRoaming: radio.startRoaming, nextRoaming: radio.nextRoaming, stopRoaming: radio.stopRoaming
-  }), [artistTarget, openArtist, closeArtist, current, playlist, currentIndex, isPlaying, playLoading, pendingTrackKey, unsupportedFormat, preferredQuality, playMode, canPrev, canNext, setPlaylist, playPlaylist, playFromQueue, setPreferredQuality, playSong, playResolvedSong, togglePlay, playPrev, playNext, setAutoNextHandler, radio.roamingSession, radio.roamingBusy, radio.roamingError, radio.startRoaming, radio.nextRoaming, radio.stopRoaming])
+  }), [artistTarget, openArtist, closeArtist, current, playlist, currentIndex, isPlaying, playLoading, pendingTrackKey, unsupportedFormat, preferredQuality, playMode, canPrev, canNext, setPlaylist, playPlaylist, playFromQueue, addToQueue, removeFromQueue, clearQueue, moveQueueToNext, setPreferredQuality, playSong, playResolvedSong, togglePlay, playPrev, playNext, setAutoNextHandler, radio.roamingSession, radio.roamingBusy, radio.roamingError, radio.startRoaming, radio.nextRoaming, radio.stopRoaming])
 
   return (
     <MusicPlayerContext.Provider value={value}>
