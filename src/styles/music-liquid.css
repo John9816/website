@@ -6,11 +6,11 @@
    以及由音乐页渲染的全屏播放器。不影响站内其它页面。
    性能约定：动画只用 transform / opacity；无全屏 backdrop-filter；
    无全屏 SVG 滤镜；色斑固定 4 层；可整体关闭并兼容 reduced-motion。
-   ========================================================================== */
-
-/* --------------------------------------------------------------------------
+   ========================================================================== *//* --------------------------------------------------------------------------
    1. v2 视觉语言：覆盖 music-studio 的主题变量
    -------------------------------------------------------------------------- */
+
+
 .music-page.music-studio.music-liquid {
   --bg: #0b0c0e;
   --panel: #14161a;
@@ -35,17 +35,17 @@ html[data-theme='light'] .music-page.music-studio.music-liquid {
   --accent-soft: rgba(154, 107, 63, 0.1);
   --hover: rgba(20, 20, 20, 0.045);
   --music-on-accent: #ffffff;
-}
+}/* 内容层置于液体背景之上 */
 
-/* 内容层置于液体背景之上 */
+
 .music-page.music-studio.music-liquid > .music-studio-sidebar,
 .music-page.music-studio.music-liquid > .music-studio-main,
 .music-page.music-studio.music-liquid > .music-studio-mobile-nav {
   position: relative;
   z-index: 1;
-}
+}/* 侧栏 / 顶栏改为半透底色，让液体隐约透出（不加模糊，避免额外合成开销） */
 
-/* 侧栏 / 顶栏改为半透底色，让液体隐约透出（不加模糊，避免额外合成开销） */
+
 .music-page.music-studio.music-liquid > .music-studio-sidebar {
   padding: 30px 18px 18px;
   background: color-mix(in srgb, var(--bg) 82%, transparent);
@@ -61,8 +61,8 @@ html[data-theme='light'] .music-page.music-studio.music-liquid {
 .music-page.music-studio.music-liquid .music-studio-search .ant-input-affix-wrapper,
 .music-page.music-studio.music-liquid .music-studio-search .ant-input-search-button {
   background: color-mix(in srgb, var(--panel) 88%, transparent);
-}
-/* antd 主色实心按钮原本是白字，换浅底后必须显式给回深色文字 */
+}/* antd 主色实心按钮原本是白字，换浅底后必须显式给回深色文字 */
+
 .music-page.music-studio.music-liquid .music-studio-search .ant-input-search-button {
   color: var(--text);
   border-color: var(--border);
@@ -70,9 +70,9 @@ html[data-theme='light'] .music-page.music-studio.music-liquid {
 .music-page.music-studio.music-liquid .music-studio-search .ant-input-search-button:hover {
   color: var(--accent);
   border-color: var(--accent);
-}
+}/* v2：Hero 不再是卡片，融入背景；封面与柔光成为主视觉 */
 
-/* v2：Hero 不再是卡片，融入背景；封面与柔光成为主视觉 */
+
 .music-page.music-studio.music-liquid .music-listening-stage {
   min-height: 300px;
   padding: 26px 8px 44px;
@@ -93,8 +93,8 @@ html[data-theme='light'] .music-page.music-studio.music-liquid {
 .music-page.music-studio.music-liquid .music-page-heading h1 {
   font-size: 34px;
   letter-spacing: -1px;
-}
-/* 封面统一加柔和投影，弱化列表/卡片的边框感 */
+}/* 封面统一加柔和投影，弱化列表/卡片的边框感 */
+
 .music-page.music-studio.music-liquid .music-record-sleeve,
 .music-page.music-studio.music-liquid .music-playlist-card {
   box-shadow: 0 18px 44px rgba(0, 0, 0, 0.28);
@@ -108,11 +108,11 @@ html[data-theme='light'] .music-page.music-studio.music-liquid .music-playlist-c
 }
 .music-page.music-studio.music-liquid .ant-table-tbody > tr > td {
   border-bottom-color: var(--border);
-}
-
-/* --------------------------------------------------------------------------
+}/* --------------------------------------------------------------------------
    2. 液体背景
    -------------------------------------------------------------------------- */
+
+
 .music-liquid-backdrop {
   position: absolute;
   inset: 0;
@@ -133,8 +133,8 @@ html[data-theme='light'] .music-page.music-studio.music-liquid .music-playlist-c
     rgb(var(--music-liquid-rgb, 198, 176, 152)) 72%,
     #f0d9b8
   );
-}
-/* 深色态掺入琥珀强调色，避免在近黑底上灰成一片 */
+}/* 深色态掺入琥珀强调色，避免在近黑底上灰成一片 */
+
 html[data-theme='dark'] .music-liquid-backdrop__blob {
   background: color-mix(
     in srgb,
@@ -185,8 +185,8 @@ html[data-theme='dark'] .music-liquid-backdrop__blob {
   bottom: -12%;
   opacity: 0.32;
   animation: music-liquid-drift-d 23s ease-in-out infinite alternate;
-}
-/* 压暗遮罩：保证正文对比度，同时让底部播放条区域保持干净 */
+}/* 压暗遮罩：保证正文对比度，同时让底部播放条区域保持干净 */
+
 .music-liquid-backdrop__veil {
   position: absolute;
   inset: 0;
@@ -196,8 +196,8 @@ html[data-theme='dark'] .music-liquid-backdrop__blob {
     color-mix(in srgb, var(--bg) 42%, transparent) 55%,
     color-mix(in srgb, var(--bg) 90%, transparent) 100%
   );
-}
-/* 浅色底上色斑需要更高不透明度与饱和度，否则会被底色吃掉 */
+}/* 浅色底上色斑需要更高不透明度与饱和度，否则会被底色吃掉 */
+
 html[data-theme='light'] .music-liquid-backdrop__blob {
   opacity: 0.24;
   filter: blur(46px) saturate(140%);
@@ -239,11 +239,11 @@ html[data-theme='light'] .music-liquid-backdrop__veil {
   0% { transform: translate3d(0, 0, 0) rotate(0deg) scale(1); }
   50% { transform: translate3d(-8vw, -9vh, 0) rotate(30deg) scale(1.2); }
   100% { transform: translate3d(6vw, -3vh, 0) rotate(-12deg) scale(0.9); }
-}
-
-/* --------------------------------------------------------------------------
+}/* --------------------------------------------------------------------------
    3. 液态导航
    -------------------------------------------------------------------------- */
+
+
 .music-page.music-studio.music-liquid .music-studio-nav {
   position: relative;
 }
@@ -259,8 +259,8 @@ html[data-theme='light'] .music-liquid-backdrop__veil {
 }
 .music-page.music-studio.music-liquid .music-studio-nav button.is-active svg {
   color: var(--accent);
-}
-/* hover 时的液态扩散 */
+}/* hover 时的液态扩散 */
+
 .music-page.music-studio.music-liquid .music-studio-nav button::after {
   content: '';
   position: absolute;
@@ -279,9 +279,9 @@ html[data-theme='light'] .music-liquid-backdrop__veil {
 .music-page.music-studio.music-liquid .music-studio-nav button:hover::after {
   opacity: 1;
   transform: scale(1);
-}
+}/* gooey 指示器：一根滑动液滴 + 一个分离的小液珠，靠 SVG 滤镜融合/拉伸 */
 
-/* gooey 指示器：一根滑动液滴 + 一个分离的小液珠，靠 SVG 滤镜融合/拉伸 */
+
 .music-liquid-nav {
   position: absolute;
   left: 4px;
@@ -322,8 +322,8 @@ html[data-theme='light'] .music-liquid-backdrop__veil {
   width: 0;
   height: 0;
   overflow: hidden;
-}
-/* 切换视图时液滴轻微拉伸，强化「液体」观感 */
+}/* 切换视图时液滴轻微拉伸，强化「液体」观感 */
+
 .music-page.music-studio.music-liquid .music-studio-nav.is-switching .music-liquid-nav__blob {
   animation: music-liquid-nav-squish 0.52s ease;
 }
@@ -331,9 +331,9 @@ html[data-theme='light'] .music-liquid-backdrop__veil {
   0% { border-radius: 6px; }
   38% { border-radius: 48% 52% 60% 40% / 44% 56% 44% 56%; }
   100% { border-radius: 6px; }
-}
+}/* 移动端：液滴改为图标上方的小圆点 */
 
-/* 移动端：液滴改为图标上方的小圆点 */
+
 .music-page.music-studio.music-liquid .music-studio-mobile-nav button {
   position: relative;
 }
@@ -353,163 +353,11 @@ html[data-theme='light'] .music-liquid-backdrop__veil {
   0%, 100% { transform: scale(1) translateY(0); border-radius: 50%; }
   50% { transform: scale(1.35, 0.78) translateY(2px); border-radius: 58% 42% 46% 54%; }
 }
-
 /* --------------------------------------------------------------------------
-   4. 播放页皮肤
+   4. 外观设置菜单
    -------------------------------------------------------------------------- */
-.music-player-fullscreen__skins {
-  display: flex;
-  align-items: center;
-  margin-left: auto;
-  gap: 4px;
-  padding: 3px;
-  border: 1px solid rgba(255, 255, 255, 0.12);
-  border-radius: 9px;
-  background: rgba(255, 255, 255, 0.06);
-}
-.music-player-fullscreen__skins button {
-  min-height: 28px;
-  padding: 0 11px;
-  border: 0;
-  border-radius: 6px;
-  background: transparent;
-  color: rgba(255, 255, 255, 0.62);
-  font-size: 11.5px;
-  cursor: pointer;
-  transition: 0.18s ease;
-}
-.music-player-fullscreen__skins button:hover {
-  color: #fff;
-}
-.music-player-fullscreen__skins button.is-active {
-  background: rgba(255, 255, 255, 0.16);
-  color: #fff;
-  font-weight: 600;
-}
 
-/* 皮肤 A · 氛围：液态光晕 + 封面主导（默认） */
-.music-player-fullscreen__shell[data-skin='aura'] {
-  background:
-    radial-gradient(
-      circle at 20% 16%,
-      rgba(var(--dominant-rgb, 198, 176, 152), 0.28),
-      transparent 38%
-    ),
-    #0b0c0e;
-}
-.music-player-fullscreen__shell[data-skin='aura']::before {
-  content: '';
-  position: absolute;
-  z-index: 0;
-  width: 46vw;
-  height: 46vw;
-  right: -8vw;
-  bottom: -18vw;
-  border-radius: 44% 56% 62% 38% / 52% 44% 56% 48%;
-  background: rgba(var(--dominant-rgb, 198, 176, 152), 0.2);
-  filter: blur(60px);
-  pointer-events: none;
-  animation: music-liquid-drift-b 30s ease-in-out infinite alternate;
-}
-.music-player-fullscreen__shell[data-skin='aura'] .music-player-fullscreen__cover-backdrop {
-  opacity: 0.24;
-}
 
-/* 皮肤 B · 黑胶：更深的唱片机质感，唱臂与转盘成为主角 */
-.music-player-fullscreen__shell[data-skin='vinyl'] {
-  background:
-    radial-gradient(circle at 26% 30%, #2a2622 0%, #121110 48%, #080808 100%);
-}
-.music-player-fullscreen__shell[data-skin='vinyl'] .music-player-fullscreen__cover-backdrop {
-  opacity: 0.08;
-  filter: blur(54px) saturate(70%);
-}
-.music-player-fullscreen__shell[data-skin='vinyl'] .music-player-fullscreen__turntable-stage {
-  transform: scale(1.12);
-}
-.music-player-fullscreen__shell[data-skin='vinyl'] .music-player-fullscreen__turntable-panel {
-  gap: 34px;
-}
-.music-player-fullscreen__shell[data-skin='vinyl'] .music-player-fullscreen__disc {
-  box-shadow: 0 30px 80px rgba(0, 0, 0, 0.7), inset 0 0 40px rgba(255, 255, 255, 0.04);
-}
-.music-player-fullscreen__shell[data-skin='vinyl'] .music-player-fullscreen__lyrics-panel {
-  padding: 22px 26px;
-  border-radius: 20px;
-  border: 1px solid rgba(230, 201, 160, 0.14);
-  background: rgba(18, 17, 15, 0.55);
-}
-.music-player-fullscreen__shell[data-skin='vinyl'] .music-player-fullscreen__lyrics-line.is-active {
-  color: #e6c9a0;
-}
-
-/* 皮肤 C · 波形：极简单列，隐藏转盘，液态波形 + 大歌词 */
-.music-player-fullscreen__shell[data-skin='wave'] {
-  background: #08090b;
-}
-.music-player-fullscreen__shell[data-skin='wave'] .music-player-fullscreen__cover-backdrop {
-  opacity: 0.1;
-  filter: blur(64px) saturate(60%);
-}
-.music-player-fullscreen__shell[data-skin='wave'] .music-player-fullscreen__body {
-  grid-template-columns: minmax(0, 1fr);
-  justify-items: center;
-  padding-top: 12px;
-}
-.music-player-fullscreen__shell[data-skin='wave'] .music-player-fullscreen__turntable-panel {
-  display: none;
-}
-.music-player-fullscreen__shell[data-skin='wave'] .music-player-fullscreen__lyrics-panel {
-  width: min(760px, 100%);
-}
-.music-player-fullscreen__shell[data-skin='wave'] .music-player-fullscreen__hero {
-  text-align: center;
-}
-.music-player-fullscreen__shell[data-skin='wave'] .music-player-fullscreen__title {
-  font-size: clamp(30px, 4vw, 48px);
-}
-.music-player-fullscreen__shell[data-skin='wave'] .music-player-fullscreen__lyrics-line.is-active {
-  font-size: 22px;
-  color: #e6c9a0;
-}
-
-/* 液态波形条：只在波形皮肤出现，transform 动画，不触发布局 */
-.music-liquid-wave {
-  display: none;
-  align-items: flex-end;
-  justify-content: center;
-  gap: 5px;
-  height: 96px;
-  margin: 6px 0 18px;
-  overflow: hidden;
-}
-.music-player-fullscreen__shell[data-skin='wave'] .music-liquid-wave {
-  display: flex;
-}
-.music-liquid-wave i {
-  display: block;
-  width: 5px;
-  height: 100%;
-  border-radius: 5px;
-  transform-origin: bottom center;
-  transform: scaleY(0.18);
-  background: linear-gradient(180deg, #e6c9a0, rgba(230, 201, 160, 0.18));
-  animation: music-liquid-wave 1.5s ease-in-out infinite alternate;
-  animation-delay: calc(var(--i) * -85ms);
-}
-.music-liquid-wave.is-paused i {
-  animation-play-state: paused;
-  opacity: 0.45;
-}
-@keyframes music-liquid-wave {
-  0% { transform: scaleY(0.14) translateY(4px); border-radius: 50% 50% 5px 5px; }
-  50% { transform: scaleY(0.62); border-radius: 42% 58% 5px 5px; }
-  100% { transform: scaleY(1) translateY(-2px); border-radius: 5px; }
-}
-
-/* --------------------------------------------------------------------------
-   5. 外观设置菜单
-   -------------------------------------------------------------------------- */
 .music-appearance-popover .ant-popover-inner {
   border-radius: 14px;
 }
@@ -544,55 +392,6 @@ html[data-theme='light'] .music-appearance {
   font-size: 10px;
   letter-spacing: 0.12em;
   opacity: 0.5;
-}
-.music-appearance__skins {
-  display: grid;
-  grid-template-columns: repeat(3, 1fr);
-  gap: 7px;
-}
-.music-appearance__skin {
-  display: grid;
-  justify-items: center;
-  gap: 6px;
-  padding: 10px 4px;
-  border: 1px solid rgba(128, 128, 128, 0.25);
-  border-radius: 9px;
-  background: transparent;
-  color: inherit;
-  font-size: 11.5px;
-  cursor: pointer;
-  transition: 0.18s ease;
-}
-.music-appearance__skin:hover {
-  border-color: #e6c9a0;
-}
-.music-appearance__skin.is-active {
-  border-color: #e6c9a0;
-  background: rgba(230, 201, 160, 0.12);
-  color: #e6c9a0;
-  font-weight: 650;
-}
-html[data-theme='light'] .music-appearance__skin.is-active {
-  color: #9a6b3f;
-}
-.music-appearance__skin i {
-  width: 22px;
-  height: 22px;
-  border-radius: 50% 40% 55% 45%;
-  background: #e6c9a0;
-}
-.music-appearance__skin i[data-skin='vinyl'] {
-  border-radius: 50%;
-  background: radial-gradient(circle, #e6c9a0 22%, #2a2622 24%, #121110 70%);
-}
-.music-appearance__skin i[data-skin='wave'] {
-  border-radius: 3px;
-  background: repeating-linear-gradient(90deg, #e6c9a0 0 3px, transparent 3px 6px);
-}
-.music-appearance__hint {
-  margin: 9px 0 0;
-  font-size: 10.5px;
-  opacity: 0.55;
 }
 .music-appearance__row {
   display: flex;
@@ -653,11 +452,11 @@ html[data-theme='light'] .music-appearance__skin.is-active {
   font-size: 10px;
   line-height: 1.6;
   opacity: 0.5;
-}
-
-/* --------------------------------------------------------------------------
+}/* --------------------------------------------------------------------------
    6. 降级：关闭液体背景 / 关闭动效 / 系统减少动态效果
    -------------------------------------------------------------------------- */
+
+
 html[data-music-liquid='off'] .music-liquid-backdrop {
   display: none;
 }
@@ -665,8 +464,6 @@ html[data-music-liquid='off'] .music-page.music-studio.music-liquid {
   background: var(--bg);
 }
 html[data-music-motion='off'] .music-liquid-backdrop__blob,
-html[data-music-motion='off'] .music-player-fullscreen__shell[data-skin='aura']::before,
-html[data-music-motion='off'] .music-liquid-wave i,
 html[data-music-motion='off'] .music-studio-mobile-nav button.is-active::before {
   animation: none !important;
 }
@@ -681,8 +478,6 @@ html[data-music-motion='off'] .music-liquid-backdrop__blob--a {
 
 @media (prefers-reduced-motion: reduce) {
   .music-liquid-backdrop__blob,
-  .music-player-fullscreen__shell[data-skin='aura']::before,
-  .music-liquid-wave i,
   .music-studio-mobile-nav button.is-active::before {
     animation: none !important;
   }
@@ -690,49 +485,23 @@ html[data-music-motion='off'] .music-liquid-backdrop__blob--a {
   .music-liquid-nav__blob,
   .music-liquid-nav__drop {
     transition: none !important;
-  }
-}
-
-/* --------------------------------------------------------------------------
+  }}/* --------------------------------------------------------------------------
    7. 响应式
    -------------------------------------------------------------------------- */
+
+
 @media (max-width: 900px) {
   .music-liquid-backdrop__blob {
     filter: blur(38px);
-  }
-  .music-player-fullscreen__skins button {
-    padding: 0 8px;
-    font-size: 11px;
-  }
-  .music-player-fullscreen__shell[data-skin='vinyl'] .music-player-fullscreen__turntable-stage {
-    transform: scale(0.9);
-  }
-}
-@media (max-width: 560px) {
-  .music-player-fullscreen__skins {
-    gap: 2px;
-    padding: 2px;
-  }
-  .music-player-fullscreen__skins button {
-    min-height: 26px;
-    padding: 0 7px;
-  }
-  .music-liquid-wave {
-    height: 64px;
-    gap: 3px;
-  }
-  .music-liquid-wave i {
-    width: 3px;
-  }
-}
-
-/* --------------------------------------------------------------------------
+  }}/* --------------------------------------------------------------------------
    8. 正在播放的歌词：桌面音乐页常驻显示 + 全屏页当前行可见
-   -------------------------------------------------------------------------- */
-
-/* 桌面播放条补回被 music-studio 移除的 lyric 行，让「当前正在唱的一句」常驻可见。
+   -------------------------------------------------------------------------- *//* 桌面播放条补回被 music-studio 移除的 lyric 行，让「当前正在唱的一句」常驻可见。
    仅作用于音乐页（.music-liquid 作用域），不影响站内其它页面；
    >800px 才生效，手机端沿用 music-studio 自带的一行歌词条。 */
+
+
+
+
 @media (min-width: 801px) {
   .music-page.music-studio.music-liquid .music-player-bar {
     grid-template-areas:
@@ -769,32 +538,6 @@ html[data-music-motion='off'] .music-liquid-backdrop__blob--a {
     min-width: 0;
     max-width: min(720px, 100%);
     font-size: 12.5px;
-  }
-}
-
-/* 前奏/间奏（尚无活动行）时，把首句标为「即将播放」，避免整页一片灰暗 */
-.music-player-fullscreen__lyrics-line.is-upcoming {
-  color: rgba(255, 255, 255, 0.82);
-  background: rgba(var(--dominant-rgb, 230, 201, 160), 0.08);
-  box-shadow: inset 2px 0 0 var(--accent, #e6c9a0);
-}
-.music-player-fullscreen__lyrics-line.is-upcoming .music-lyric-word {
-  opacity: 0.72;
-}
-
-/* 手机端全屏页歌词区太矮，给当前行留出足够视野 */
-@media (max-width: 768px) {
-  .music-page.music-studio.music-liquid .music-player-fullscreen__lyrics-shell {
-    min-height: 180px;
-  }
-}
-
-/* 首尾留白：rect 居中算法需要可滚动余量，否则第一行/最后一行
+  }}/* 前奏/间奏（尚无活动行）时，把首句标为「即将播放」，避免整页一片灰暗 *//* 手机端全屏页歌词区太矮，给当前行留出足够视野 *//* 首尾留白：rect 居中算法需要可滚动余量，否则第一行/最后一行
    永远贴边（scrollTop 不能为负，也不能超过 scrollHeight - clientHeight）。
    高度取歌词容器的一半，使首句与末句同样能停在视觉中央。 */
-.music-player-fullscreen__lyrics-spacer {
-  height: 50%;
-  min-height: 88px;
-  flex: 0 0 auto;
-  pointer-events: none;
-}

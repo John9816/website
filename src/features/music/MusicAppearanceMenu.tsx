@@ -1,40 +1,16 @@
 import { Popover } from 'antd'
 import { Palette } from 'lucide-react'
-import { MUSIC_SKINS, useMusicAppearance } from '../../utils/musicAppearance'
+import { useMusicAppearance } from '../../utils/musicAppearance'
 
-/** 音乐页外观入口：播放页皮肤 + 液体背景 / 动效开关。 */
+/** 音乐页外观入口：液体背景 / 动效开关。播放页主题跟随全站亮暗。 */
 export default function MusicAppearanceMenu() {
   const appearance = useMusicAppearance()
-  const activeHint =
-    MUSIC_SKINS.find((item) => item.value === appearance.skin)?.hint ?? ''
 
   const content = (
     <div className="music-appearance">
       <div className="music-appearance__head">
         <strong>外观设置</strong>
         <span>仅作用于音乐页</span>
-      </div>
-
-      <div className="music-appearance__group">
-        <small>播放页皮肤</small>
-        <div className="music-appearance__skins">
-          {MUSIC_SKINS.map((item) => (
-            <button
-              key={item.value}
-              type="button"
-              className={`music-appearance__skin${
-                appearance.skin === item.value ? ' is-active' : ''
-              }`}
-              onClick={() => appearance.setSkin(item.value)}
-              title={item.hint}
-              aria-pressed={appearance.skin === item.value}
-            >
-              <i data-skin={item.value} />
-              <span>{item.label}</span>
-            </button>
-          ))}
-        </div>
-        <p className="music-appearance__hint">{activeHint}</p>
       </div>
 
       <div className="music-appearance__group">

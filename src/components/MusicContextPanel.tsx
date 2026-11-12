@@ -1,4 +1,5 @@
-import { useEffect, useMemo, useRef } from 'react'
+import { useEffect, useMemo, useRef, useCallback } from 'react'
+import { useNavigate } from 'react-router-dom'
 import { Popconfirm } from 'antd'
 import {
   ArrowUpToLine,
@@ -30,8 +31,10 @@ export default function MusicContextPanel({
   onClose: () => void
 }) {
   const player = useMusicPlayer()
+  const navigate = useNavigate()
   const queueRef = useRef<HTMLDivElement>(null)
   const { current, playlist, currentIndex } = player
+  const openFullPlayer = useCallback(() => navigate('/music/now'), [navigate])
   const visibleQueue = useMemo(
     () => playlist.slice(Math.max(0, currentIndex)),
     [currentIndex, playlist],
@@ -67,7 +70,7 @@ export default function MusicContextPanel({
 
         {tab === 'now' ? (
           <div className="music-context-now">
-            <button type="button" className="music-context-now__cover" onClick={() => window.dispatchEvent(new Event('music:open-fullscreen'))} aria-label="展开完整播放器">
+            <button type="button" className="music-context-now__cover" onClick={openFullPlayer} aria-label="展开完整播放器">
               <MusicCover src={current.coverUrl} size={240} rounded={18} loading="eager" />
               <span><Maximize2 size={17} /></span>
             </button>
@@ -83,7 +86,7 @@ export default function MusicContextPanel({
               <span>当前歌词</span>
               <strong>{player.lyricPreview || '纯音乐，或暂未提供歌词'}</strong>
             </div>
-            <button type="button" className="music-context-now__expand" onClick={() => window.dispatchEvent(new Event('music:open-fullscreen'))}>
+            <button type="button" className="music-context-now__expand" onClick={openFullPlayer}>
               <Captions size={16} />打开歌词与完整播放器<Maximize2 size={15} />
             </button>
           </div>

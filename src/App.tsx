@@ -24,6 +24,7 @@ const RegisterPage = lazy(() => import('./pages/RegisterPage'))
 const ForgotPasswordPage = lazy(() => import('./pages/ForgotPasswordPage'))
 const MusicLayout = lazy(() => import('./pages/MusicLayout'))
 const MusicPage = lazy(() => import('./pages/MusicPage'))
+const NowPlayingPage = lazy(() => import('./features/music/NowPlayingPage'))
 const MusicPromoPage = lazy(() => import('./pages/MusicPromoPage'))
 const AiChatPage = lazy(() => import('./pages/AiChatPage'))
 const AiImagePage = lazy(() => import('./pages/AiImagePage'))
@@ -253,6 +254,7 @@ export default function App() {
                     <Route path="/ai-image" element={<AiImagePage />} />
                     <Route path="/kb/*" element={<RetiredKnowledgePage />} />
                     <Route path="/admin/kb/*" element={<Navigate to="/editor/" replace />} />
+                    <Route path="/music/now" element={<NowPlayingPage />} />
                     <Route path="/music" element={<MusicLayout />}>
                       <Route index element={<MusicPage />} />
                       <Route path="app" element={<MusicPromoPage />} />
