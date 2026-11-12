@@ -1,0 +1,37 @@
+{
+  "name": "xuecheng-editor-workers",
+  "version": "1.0.0",
+  "private": true,
+  "type": "module",
+  "description": "学城编辑器 · Cloudflare Workers + D1 + R2 纯 Serverless 重写版",
+  "scripts": {
+    "build": "vite build",
+    "dev:frontend": "vite",
+    "dev": "wrangler dev",
+    "deploy": "wrangler deploy",
+    "seed": "node scripts/seed-kv.mjs"
+  },
+  "dependencies": {
+    "@ant-design/icons": "^6.3.4",
+    "prosemirror-commands": "^1.6.2",
+    "prosemirror-dropcursor": "^1.8.1",
+    "prosemirror-gapcursor": "^1.3.2",
+    "prosemirror-history": "^1.4.1",
+    "prosemirror-inputrules": "^1.4.0",
+    "prosemirror-keymap": "^1.2.2",
+    "prosemirror-model": "^1.23.0",
+    "prosemirror-schema-basic": "^1.2.5",
+    "prosemirror-schema-list": "^1.4.1",
+    "prosemirror-state": "^1.4.3",
+    "prosemirror-tables": "^1.5.0",
+    "prosemirror-view": "^1.34.3",
+    "react": "^18.3.1",
+    "react-dom": "^18.3.1"
+  },
+  "devDependencies": {
+    "@vitejs/plugin-react": "^4.3.3",
+    "hono": "^4.6.0",
+    "vite": "^5.4.10",
+    "wrangler": "^3.90.0"
+  }
+}

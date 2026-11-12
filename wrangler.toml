@@ -1,0 +1,36 @@
+name = "xuecheng-editor"
+main = "worker/worker.js"
+compatibility_date = "2025-01-01"
+compatibility_flags = ["nodejs_compat"]
+
+# 前端静态资源：Workers Assets 一体托管（对应原 server 的"静态+API 一体"）
+assets = { directory = "./frontend/dist", binding = "ASSETS", not_found_handling = "single-page-application" }
+
+# D1 文档库
+[[d1_databases]]
+binding = "DB"
+database_name = "xuecheng"
+database_id = "6d3fd561-a112-4bcf-a7d9-d1b91c65f55a"
+
+# R2 图片桶（替代原 server/data/files/）
+[[r2_buckets]]
+binding = "BUCKET"
+bucket_name = "xuecheng-files"
+
+# 自定义变量
+[vars]
+EDITOR_PREFIX = "/editor"
+
+# 自定义域名 km.751152.xyz 的接入说明（重要）：
+# 该部署用的 API Token 对「自定义域」接口（accounts/.../workers/domains）
+# 返回 405/10405（鉴权方案受限），因此 km 域名的接入改为「手动方式」：
+#   1) DNS：在 751152.xyz zone 建 CNAME  km → xuecheng-editor.<sub>.workers.dev（橙色代理/已建）
+#   2) 路由：在 zone 建 Worker Route  km.751152.xyz/* → xuecheng-editor（已建，script 已绑定）
+# 这两项与 Worker 代码部署互相独立，已生效。后续 `wrangler deploy` 只推代码，
+# 不要再让 wrangler 托管 routes（会触发上述 405），故此处不写 routes。
+# 访问入口：https://km.751152.xyz/editor/
+
+# 说明：
+# 1. database_id 用 `wrangler d1 create xuecheng` 后返回的 id 替换（已填好）
+# 2. bucket_name 用 `wrangler r2 bucket create xuecheng-files` 创建（已建好）
+# 3. 访问鉴权靠 Cloudflare Access 在主机名前加面板密码（学城本体零鉴权）
