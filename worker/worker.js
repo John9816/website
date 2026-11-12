@@ -81,6 +81,14 @@ export default {
     else assetUrl.pathname = p;
     if (assetUrl.pathname === "") assetUrl.pathname = "/";
     const assetReq = new Request(assetUrl.toString(), request);
-    return env.ASSETS.fetch(assetReq);
+    const assetRes = await env.ASSETS.fetch(assetReq);
+    // 给构建产物 /editor/assets/* 加重缓存头，避免每次绕海外回源（国内首屏白屏根因）。
+    // SPA 入口 index.html 等不在此列，保持默认不缓存，确保发版即时生效。
+    if (p.startsWith("/editor/assets/")) {
+      const h = new Headers(assetRes.headers);
+      h.set("Cache-Control", "public, max-age=86400, stale-while-revalidate=604800");
+      return new Response(assetRes.body, { status: assetRes.status, headers: h });
+    }
+    return assetRes;
   },
 };
