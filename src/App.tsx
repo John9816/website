@@ -172,16 +172,20 @@ function RouteFocusManager() {
   return null
 }
 
+// AppShell 页面为 100dvh 布局：内容在独立滚动容器内，备案脚要么放在各页面
+// 内容流中（首页已自带），要么由独立外壳自行处理。这里追加 body 级 footer 会
+// 造成第二屏与双滚动条，因此排除。认证页是独立整页（非 AppShell），保留全局备案脚。
+const SHELL_FOOTER_PREFIXES = [
+  '/editor', '/music', '/admin',
+  '/ai-chat', '/ai-image',
+]
+
 function GlobalBeianFooterGate() {
   const location = useLocation()
-  const auth = useAuth()
 
   if (
     location.pathname === '/'
-    || location.pathname.startsWith('/editor')
-    || location.pathname.startsWith('/music')
-    || location.pathname.startsWith('/admin')
-    || (location.pathname === '/ai-image' && !!auth.token)
+    || SHELL_FOOTER_PREFIXES.some((prefix) => location.pathname.startsWith(prefix))
   ) {
     return null
   }

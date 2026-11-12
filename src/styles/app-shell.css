@@ -1,0 +1,322 @@
+/* ============================================================
+ * AppShell · 全局应用外壳
+ * PC（>900px）：左侧空间栏 Rail；H5（≤900px）：顶栏 + 底部标签栏。
+ * 沉浸式空间（/music）在 H5 下隐藏外壳 chrome，保留自身移动导航。
+ * ============================================================ */
+
+.app-shell {
+  --app-topbar-offset: 0px;
+  display: grid;
+  grid-template-columns: var(--rail-w) minmax(0, 1fr);
+  height: var(--app-height);
+  min-height: 0;
+  background: var(--bg);
+  color: var(--text);
+}
+
+.app-shell__content {
+  min-width: 0;
+  min-height: 0;
+  height: 100%;
+  overflow-y: auto;
+  overscroll-behavior-y: contain;
+}
+
+/* 全屏子页面（AI 对话/生图、音乐）改为填满内容区 */
+.app-shell__content > .ai-chat,
+.app-shell__content > .music-page {
+  height: 100%;
+  min-height: 0;
+}
+
+/* ---------- PC：左侧空间栏 Rail ---------- */
+
+.app-shell__rail {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: var(--space-4);
+  min-height: 0;
+  padding: calc(var(--space-4) + var(--safe-top)) var(--space-2)
+    calc(var(--space-4) + var(--safe-bottom));
+  border-right: 1px solid var(--border);
+  background: var(--panel);
+}
+
+.app-shell__brand {
+  display: grid;
+  place-items: center;
+  flex: 0 0 44px;
+  width: 44px;
+  height: 44px;
+  border-radius: var(--radius-lg);
+  transition: transform var(--motion-fast), background var(--motion-fast);
+}
+
+.app-shell__brand img {
+  width: 34px;
+  height: 34px;
+  object-fit: contain;
+}
+
+.app-shell__brand:hover {
+  background: var(--hover);
+  transform: translateY(-1px);
+}
+
+.app-shell__rail-nav {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-1);
+  width: 100%;
+  margin-top: var(--space-2);
+}
+
+.app-shell__rail-item {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 5px;
+  width: 100%;
+  min-height: 54px;
+  padding: 7px 2px 6px;
+  border-radius: var(--radius-lg);
+  color: var(--text-dim);
+  font-size: 10px;
+  line-height: 1.2;
+  text-decoration: none;
+  transition: color var(--motion-fast), background var(--motion-fast),
+    transform var(--motion-fast);
+}
+
+.app-shell__rail-item svg {
+  flex-shrink: 0;
+}
+
+.app-shell__rail-item:hover {
+  color: var(--text);
+  background: var(--hover);
+}
+
+.app-shell__rail-item:active {
+  transform: scale(0.96);
+}
+
+.app-shell__rail-item.is-active {
+  color: var(--accent);
+  background: var(--accent-soft);
+  font-weight: 600;
+}
+
+.app-shell__rail-bottom {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: var(--space-2);
+  margin-top: auto;
+}
+
+.app-shell__icon-btn {
+  display: grid;
+  place-items: center;
+  width: 40px;
+  height: 40px;
+  padding: 0;
+  border: 0;
+  border-radius: var(--radius-lg);
+  background: transparent;
+  color: var(--text-dim);
+  cursor: pointer;
+  transition: color var(--motion-fast), background var(--motion-fast),
+    transform var(--motion-fast);
+}
+
+.app-shell__icon-btn:hover {
+  color: var(--text);
+  background: var(--hover);
+}
+
+.app-shell__icon-btn:active {
+  transform: scale(0.94);
+}
+
+/* 空间栏中的用户菜单：压缩为纯头像圆钮 */
+.app-shell__rail .topbar-user-trigger {
+  gap: 0;
+  width: 40px;
+  height: 40px;
+  min-height: 40px;
+  padding: 0;
+  border-radius: 50%;
+  justify-content: center;
+}
+
+.app-shell__rail .topbar-user-trigger__name,
+.app-shell__rail .topbar-user-trigger__icon,
+.app-shell__rail .topbar-user-trigger__chevron {
+  display: none;
+}
+
+/* H5 顶部头中的用户菜单：隐藏名字，保留头像 */
+.app-shell__topbar .topbar-user-trigger__name,
+.app-shell__topbar .topbar-user-trigger__icon,
+.app-shell__topbar .topbar-user-trigger__chevron {
+  display: none;
+}
+
+.app-shell__topbar .topbar-user-trigger {
+  gap: 0;
+  min-height: 38px;
+  padding: 0;
+}
+
+/* ---------- H5：顶部精简头 + 底部标签栏 ---------- */
+
+.app-shell__topbar,
+.app-shell__tabbar {
+  display: none;
+}
+
+@media (max-width: 900px) {
+  .app-shell {
+    --app-topbar-offset: var(--shell-topbar-h);
+    display: flex;
+    flex-direction: column;
+  }
+
+  .app-shell__rail {
+    display: none;
+  }
+
+  .app-shell__topbar {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: var(--space-3);
+    flex: 0 0 auto;
+    min-height: var(--shell-topbar-h);
+    padding: var(--safe-top) max(var(--space-4), var(--safe-right)) 0
+      max(var(--space-4), var(--safe-left));
+    border-bottom: 1px solid var(--border);
+    background: var(--panel);
+  }
+
+  .app-shell__topbar-brand {
+    display: inline-flex;
+    align-items: center;
+    gap: 9px;
+    min-width: 0;
+    color: var(--text);
+    font-family: var(--font-display);
+    font-size: 19px;
+    font-weight: 700;
+    text-decoration: none;
+  }
+
+  .app-shell__topbar-brand img {
+    width: 28px;
+    height: 28px;
+    object-fit: contain;
+  }
+
+  .app-shell__brand-period {
+    color: var(--accent);
+  }
+
+  .app-shell__topbar-actions {
+    display: flex;
+    align-items: center;
+    gap: var(--space-2);
+  }
+
+  .app-shell__topbar-login {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    min-height: 38px;
+    padding: 0 14px;
+    border: 1px solid var(--border);
+    border-radius: var(--radius-full);
+    background: var(--panel-alt);
+    color: var(--text);
+    font-size: var(--text-sm);
+    font-weight: 550;
+    text-decoration: none;
+  }
+
+  .app-shell__topbar-login:hover {
+    color: var(--accent);
+    border-color: var(--border-strong);
+  }
+
+  .app-shell__content {
+    flex: 1;
+  }
+
+  .app-shell__tabbar {
+    display: grid;
+    grid-template-columns: repeat(5, minmax(0, 1fr));
+    flex: 0 0 auto;
+    min-height: var(--shell-tabbar-h);
+    padding: 6px max(var(--space-1), var(--safe-right))
+      max(6px, var(--safe-bottom)) max(var(--space-1), var(--safe-left));
+    border-top: 1px solid var(--border);
+    background: var(--panel);
+  }
+
+  .app-shell__tab {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    gap: 3px;
+    min-height: 46px;
+    border-radius: var(--radius-md);
+    color: var(--text-dim);
+    font-size: 10px;
+    line-height: 1.2;
+    text-decoration: none;
+    transition: color var(--motion-fast), background var(--motion-fast);
+  }
+
+  .app-shell__tab:active {
+    background: var(--hover);
+  }
+
+  .app-shell__tab.is-active {
+    color: var(--accent);
+    font-weight: 600;
+  }
+
+  /* 沉浸式空间（音乐）：H5 隐藏外壳，保留其自身移动导航 */
+  .app-shell--immersive-mobile .app-shell__topbar,
+  .app-shell--immersive-mobile .app-shell__tabbar {
+    display: none;
+  }
+
+  .app-shell--immersive-mobile {
+    --app-topbar-offset: 0px;
+  }
+}
+
+/* 音乐坞在带底部标签栏的页面上抬升避让 */
+@media (max-width: 900px) {
+  body.has-app-tabbar .music-dock {
+    bottom: calc(var(--shell-tabbar-h) + 10px);
+  }
+}
+
+/* 空间栏与内容区共享滚动条美学：内容区滚动条贴右边 */
+.app-shell__content {
+  scrollbar-width: thin;
+  scrollbar-color: var(--border) transparent;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .app-shell__brand,
+  .app-shell__rail-item,
+  .app-shell__icon-btn {
+    transition: none;
+  }
+}

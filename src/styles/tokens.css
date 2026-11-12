@@ -1,0 +1,50 @@
+/* ============================================================
+ * Design tokens · oldwang workspace
+ * 全站统一的设计系统变量：间距 / 圆角 / 字阶 / 外壳度量 / 层级。
+ * 色板亮暗同源定义在 index.css（--bg/--panel/--accent 等），
+ * 这里补充「尺度系统」，并约定断点：640 / 900 / 1200。
+ * ============================================================ */
+
+:root {
+  /* 间距（4px 基网） */
+  --space-1: 4px;
+  --space-2: 8px;
+  --space-3: 12px;
+  --space-4: 16px;
+  --space-5: 20px;
+  --space-6: 24px;
+  --space-8: 32px;
+  --space-10: 40px;
+  --space-12: 48px;
+  --space-16: 64px;
+
+  /* 圆角 */
+  --radius-sm: 6px;
+  --radius-md: 8px;
+  --radius-lg: 12px;
+  --radius-xl: 16px;
+  --radius-full: 999px;
+
+  /* 字阶 */
+  --text-xs: 11px;
+  --text-sm: 12px;
+  --text-base: 14px;
+  --text-md: 16px;
+  --text-lg: 18px;
+  --text-xl: 22px;
+  --text-2xl: 28px;
+  --text-3xl: 36px;
+
+  /* 全局外壳度量 */
+  --rail-w: 76px;
+  --shell-topbar-h: calc(56px + var(--safe-top));
+  --shell-tabbar-h: calc(58px + var(--safe-bottom));
+
+  /* 层级 */
+  --z-shell: 60;
+  --z-dock: 70;
+
+  /* 内容容器 */
+  --container: 1120px;
+  --container-wide: 1344px;
+}

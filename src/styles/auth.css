@@ -1,3 +1,8 @@
+/* ============================================================
+ * 认证页 · 品牌分栏（登录 / 注册 / 找回密码）
+ * 移动优先单列 + 顶部品牌带；PC（>900px）左品牌面板 / 右表单。
+ * ============================================================ */
+
 .account-page {
   min-height: 100dvh;
   display: flex;
@@ -7,13 +12,155 @@
   font-family: var(--font-sans);
 }
 
+/* ---------- 品牌面板（默认：H5 顶部品牌带） ---------- */
+
+.account-brand {
+  position: relative;
+  overflow: hidden;
+  flex: 0 0 auto;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  padding: calc(18px + var(--safe-top)) 24px 20px;
+  color: #f3faf7;
+  background: linear-gradient(150deg, #1a8a7b 0%, #10665b 52%, #0c4a42 100%);
+}
+
+.account-brand__top {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.account-brand__logo {
+  width: 34px;
+  height: 34px;
+  border-radius: 10px;
+  object-fit: contain;
+  background: rgba(255, 255, 255, 0.14);
+}
+
+.account-brand__word {
+  font-family: var(--font-display);
+  font-size: 21px;
+  font-weight: 700;
+  letter-spacing: 0;
+}
+
+.account-brand__word span {
+  color: #bdebdc;
+}
+
+.account-brand__body {
+  position: relative;
+  z-index: 1;
+}
+
+.account-brand__eyebrow {
+  margin: 0 0 10px;
+  color: rgba(255, 255, 255, 0.66);
+  font-size: 10px;
+  font-weight: 600;
+  letter-spacing: 0.14em;
+}
+
+.account-brand__title {
+  margin: 0;
+  font-family: var(--font-display);
+  font-size: 30px;
+  font-weight: 650;
+  line-height: 1.35;
+  letter-spacing: 0;
+}
+
+.account-brand__title span {
+  color: #bdebdc;
+}
+
+.account-brand__desc {
+  margin: 12px 0 0;
+  color: rgba(255, 255, 255, 0.82);
+  font-size: 13px;
+  line-height: 1.7;
+}
+
+.account-brand__features {
+  position: relative;
+  z-index: 1;
+  display: none;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 12px 18px;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.account-brand__features li {
+  display: inline-flex;
+  align-items: center;
+  gap: 9px;
+  color: rgba(255, 255, 255, 0.9);
+  font-size: 13px;
+}
+
+.account-brand__features svg {
+  flex-shrink: 0;
+  color: #bdebdc;
+}
+
+.account-brand__foot {
+  position: relative;
+  z-index: 1;
+  display: none;
+  color: rgba(255, 255, 255, 0.6);
+  font-size: 12px;
+}
+
+/* 装饰 */
+.account-brand__orb {
+  position: absolute;
+  border-radius: 50%;
+  filter: blur(2px);
+  pointer-events: none;
+}
+
+.account-brand__orb--1 {
+  width: 220px;
+  height: 220px;
+  top: -90px;
+  right: -70px;
+  background: radial-gradient(circle, rgba(255, 255, 255, 0.16), transparent 70%);
+}
+
+.account-brand__orb--2 {
+  width: 260px;
+  height: 260px;
+  bottom: -140px;
+  left: -60px;
+  background: radial-gradient(circle, rgba(189, 235, 220, 0.22), transparent 70%);
+}
+
+.account-brand__grid {
+  position: absolute;
+  inset: 0;
+  background-image:
+    linear-gradient(rgba(255, 255, 255, 0.05) 1px, transparent 1px),
+    linear-gradient(90deg, rgba(255, 255, 255, 0.05) 1px, transparent 1px);
+  background-size: 34px 34px;
+  mask-image: linear-gradient(135deg, rgba(0, 0, 0, 0.5), transparent 70%);
+  -webkit-mask-image: linear-gradient(135deg, rgba(0, 0, 0, 0.5), transparent 70%);
+  pointer-events: none;
+}
+
+/* ---------- header / main / footer（表单区） ---------- */
+
 .account-page__header {
-  min-height: calc(76px + env(safe-area-inset-top));
+  min-height: calc(56px + 0px);
   display: flex;
   align-items: center;
   justify-content: space-between;
   gap: 16px;
-  padding: env(safe-area-inset-top) max(40px, env(safe-area-inset-right)) 0 max(40px, env(safe-area-inset-left));
+  padding: 12px max(24px, var(--safe-right)) 12px max(24px, var(--safe-left));
   border-bottom: 1px solid var(--border);
 }
 
@@ -35,7 +182,7 @@
   flex: 1;
   display: grid;
   place-items: center;
-  padding: 56px 24px;
+  padding: 44px 24px;
 }
 
 .account-page__form {
@@ -97,7 +244,7 @@
   min-height: 48px;
   padding: 10px 13px;
   border-color: var(--border);
-  border-radius: 6px;
+  border-radius: 8px;
   background: var(--bg);
   box-shadow: none;
 }
@@ -146,7 +293,7 @@
   align-items: center;
   justify-content: center;
   gap: 12px;
-  border-radius: 6px;
+  border-radius: 8px;
   box-shadow: none;
   font-size: 14px;
   font-weight: 600;
@@ -168,7 +315,7 @@
 }
 
 .account-page__footer {
-  padding: 0 24px max(24px, env(safe-area-inset-bottom));
+  padding: 0 24px max(24px, var(--safe-bottom));
   color: var(--text-dim);
   font-size: 12px;
   text-align: center;
@@ -197,12 +344,94 @@
   margin-bottom: 18px;
 }
 
-@media (max-width: 600px) {
-  .account-page__header {
-    min-height: calc(64px + env(safe-area-inset-top));
-    padding-inline: max(20px, env(safe-area-inset-left)) max(20px, env(safe-area-inset-right));
+/* ---------- PC：左品牌 / 右表单分栏 ---------- */
+
+@media (min-width: 901px) {
+  .account-page {
+    display: grid;
+    grid-template-columns: minmax(0, 0.9fr) minmax(0, 1.1fr);
+    grid-template-rows: auto 1fr auto;
   }
 
+  .account-brand {
+    grid-column: 1;
+    grid-row: 1 / -1;
+    gap: 0;
+    padding: 48px clamp(36px, 5vw, 72px);
+  }
+
+  .account-brand__top {
+    margin-bottom: auto;
+  }
+
+  .account-brand__logo {
+    width: 40px;
+    height: 40px;
+    border-radius: 12px;
+  }
+
+  .account-brand__word {
+    font-size: 23px;
+  }
+
+  .account-brand__body {
+    margin: auto 0;
+    padding-block: 48px;
+  }
+
+  .account-brand__eyebrow {
+    font-size: 11px;
+    margin-bottom: 18px;
+  }
+
+  .account-brand__title {
+    font-size: clamp(34px, 3.4vw, 48px);
+    line-height: 1.28;
+  }
+
+  .account-brand__desc {
+    margin-top: 20px;
+    font-size: 15px;
+  }
+
+  .account-brand__features {
+    display: grid;
+    margin-top: 40px;
+    padding-top: 30px;
+    border-top: 1px solid rgba(255, 255, 255, 0.18);
+  }
+
+  .account-brand__foot {
+    display: block;
+    margin-top: auto;
+  }
+
+  .account-page__header,
+  .account-page__main,
+  .account-page__footer {
+    grid-column: 2;
+  }
+
+  .account-page__header {
+    grid-row: 1;
+    min-height: calc(76px + var(--safe-top));
+    padding: var(--safe-top) clamp(28px, 4vw, 56px) 0;
+    border-bottom: 0;
+  }
+
+  .account-page__main {
+    grid-row: 2;
+    padding: 40px clamp(28px, 4vw, 56px);
+  }
+
+  .account-page__footer {
+    grid-row: 3;
+  }
+}
+
+/* ---------- H5 细节 ---------- */
+
+@media (max-width: 600px) {
   .account-page__main,
   .account-page--register .account-page__main {
     padding: 32px 24px 40px;
@@ -218,5 +447,15 @@
 
   .account-page .ant-input-affix-wrapper .ant-input {
     font-size: 16px;
+  }
+
+  .account-brand__title {
+    font-size: 24px;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .account-brand__orb {
+    filter: none;
   }
 }

@@ -5,7 +5,7 @@ import { Link as RouterLink } from 'react-router-dom'
 import { listSharedImages } from '../api/public'
 import ImageStudio from '../components/ImageStudio'
 import ImagePreviewOverlay from '../components/ImagePreviewOverlay'
-import SiteHeader from '../components/SiteHeader'
+import AppShell from '../components/AppShell'
 import { DEFAULT_PAGE_SIZE } from '../constants/pagination'
 import { useAuth } from '../context/AuthContext'
 import type { GeneratedImageView } from '../types'
@@ -69,10 +69,9 @@ export default function AiImagePage() {
   }, [auth.token])
 
   return (
-    <div className={pageClassName}>
-      <SiteHeader />
-
-      <main className={mainClassName}>
+    <AppShell>
+      <div className={pageClassName}>
+        <main className={mainClassName}>
         {auth.token ? (
           <ImageStudio layout="standalone" />
         ) : (
@@ -228,8 +227,9 @@ export default function AiImagePage() {
             )}
           </div>
         )}
-      </main>
-    </div>
+        </main>
+      </div>
+    </AppShell>
   )
 }
 

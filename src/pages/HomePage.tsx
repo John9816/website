@@ -2,7 +2,6 @@ import { useCallback, useDeferredValue, useEffect, useMemo, useRef, useState } f
 import { Modal, Tooltip } from 'antd'
 import {
   AlertCircle,
-  ArrowDownLeft,
   ArrowUpRight,
   BookOpen,
   CircleX,
@@ -20,9 +19,9 @@ import {
 import { Link } from 'react-router-dom'
 import { getNav } from '../api/public'
 import { siteImages } from '../utils/siteImages'
+import AppShell from '../components/AppShell'
 import BeianFooter from '../components/BeianFooter'
 import CategoryIcon from '../components/CategoryIcon'
-import SiteHeader from '../components/SiteHeader'
 import HomeOrbit from '../components/HomeOrbit'
 import type { CategoryWithLinks, NavLink } from '../types'
 import '../styles/home.css'
@@ -173,50 +172,14 @@ export default function HomePage() {
   }
 
   return (
-    <div className="home-page">
-      <SiteHeader />
-      <div className="home-workspace">
-        <aside className="home-sidebar" aria-label="导航分类">
-          <div className="home-sidebar__label">浏览分类</div>
-          <nav className="home-categories" aria-label="资源分类筛选">
-            <button
-              type="button"
-              className={`home-category${selectedCategory === null ? ' is-active' : ''}`}
-              aria-pressed={selectedCategory === null}
-              onClick={() => setSelectedCategory(null)}
-            >
-              <Compass size={17} aria-hidden="true" />
-              <span className="home-category__name">全部站点</span>
-              <span className="home-category__count">{data ? totalCount : '—'}</span>
-            </button>
-            {categories.map((category) => (
-              <button
-                type="button"
-                key={category.id}
-                className={`home-category${selectedCategory === category.id ? ' is-active' : ''}`}
-                aria-pressed={selectedCategory === category.id}
-                onClick={() => setSelectedCategory(category.id)}
-              >
-                <span className="home-category__icon" aria-hidden="true">
-                  <CategoryIcon icon={category.icon || 'folder'} size={17} />
-                </span>
-                <span className="home-category__name" title={category.name}>{category.name}</span>
-                <span className="home-category__count">{category.links.length}</span>
-              </button>
-            ))}
-          </nav>
-          <div className="home-sidebar__bottom">
-            <ArrowDownLeft size={15} aria-hidden="true" />
-            <span>oldwang 的收藏</span>
-          </div>
-        </aside>
-
+    <AppShell>
+      <div className="home-page">
         <main className="home-main" id="main-content">
-          <header className="home-heading">
-            <div className="home-heading__copy">
-              <p className="home-heading__eyebrow">个人工作台</p>
+          <header className="home-hero">
+            <div className="home-hero__copy">
+              <p className="home-hero__eyebrow">个人工作台</p>
               <h1>我的导航<span aria-hidden="true">.</span></h1>
-              <p className="home-heading__description">收藏好用的，连接有趣的。</p>
+              <p className="home-hero__description">收藏好用的，连接有趣的。</p>
               <div className="home-identity">
                 <img src={siteImages.logo.url} width={28} height={28} alt="oldwang" />
                 <span>oldwang</span>
@@ -295,6 +258,34 @@ export default function HomePage() {
               </div>
             </div>
 
+            <div className="home-chips" role="group" aria-label="资源分类筛选">
+              <button
+                type="button"
+                className={`home-chip${selectedCategory === null ? ' is-active' : ''}`}
+                aria-pressed={selectedCategory === null}
+                onClick={() => setSelectedCategory(null)}
+              >
+                <Compass size={14} aria-hidden="true" />
+                <span className="home-chip__name">全部站点</span>
+                <span className="home-chip__count">{data ? totalCount : '—'}</span>
+              </button>
+              {categories.map((category) => (
+                <button
+                  type="button"
+                  key={category.id}
+                  className={`home-chip${selectedCategory === category.id ? ' is-active' : ''}`}
+                  aria-pressed={selectedCategory === category.id}
+                  onClick={() => setSelectedCategory(category.id)}
+                >
+                  <span className="home-chip__icon" aria-hidden="true">
+                    <CategoryIcon icon={category.icon || 'folder'} size={14} />
+                  </span>
+                  <span className="home-chip__name" title={category.name}>{category.name}</span>
+                  <span className="home-chip__count">{category.links.length}</span>
+                </button>
+              ))}
+            </div>
+
             {error && (
               <div className="home-error" role="alert">
                 <AlertCircle size={19} aria-hidden="true" />
@@ -347,20 +338,20 @@ export default function HomePage() {
           </div>
           <BeianFooter />
         </main>
-      </div>
 
-      <Modal
-        title={currentQr?.title}
-        open={!!currentQr}
-        onCancel={() => setQrImage(null)}
-        footer={null}
-        centered
-        width={350}
-        className="home-qr-modal"
-        destroyOnClose
-      >
-        {currentQr && <img className="home-qr-image" src={currentQr.src} alt={currentQr.alt} />}
-      </Modal>
-    </div>
+        <Modal
+          title={currentQr?.title}
+          open={!!currentQr}
+          onCancel={() => setQrImage(null)}
+          footer={null}
+          centered
+          width={350}
+          className="home-qr-modal"
+          destroyOnClose
+        >
+          {currentQr && <img className="home-qr-image" src={currentQr.src} alt={currentQr.alt} />}
+        </Modal>
+      </div>
+    </AppShell>
   )
 }

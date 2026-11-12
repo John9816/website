@@ -10,6 +10,7 @@ import {
 } from '@ant-design/icons'
 import { resetPassword, sendPasswordResetEmailCode } from '../api/auth'
 import ThemeToggle from '../components/ThemeToggle'
+import AccountBrand from '../components/AccountBrand'
 import { useAuth } from '../context/AuthContext'
 import { ACCOUNT_EMAIL_HINT, ACCOUNT_EMAIL_PATTERN } from '../utils/email'
 import '../styles/auth.css'
@@ -78,6 +79,7 @@ export default function ForgotPasswordPage() {
 
   return (
     <div className="account-page account-page--register">
+      <AccountBrand />
       <header className="account-page__header">
         <Link to="/login" className="account-page__home">
           <ArrowLeftOutlined />
