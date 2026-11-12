@@ -24,14 +24,16 @@ function accountError(error: unknown) {
   return e?.message || '暂时无法获取授权状态，请重试。'
 }
 
-export default function QishuiAccountControl() {
+export default function QishuiAccountControl({ openSignal = 0 }: { openSignal?: number }) {
   const auth = useAuth()
   if (!auth.token) return null
-  return <AccountControl key={getAuthSessionId() || 'signed-out'} />
+  return <AccountControl key={getAuthSessionId() || 'signed-out'} openSignal={openSignal} />
 }
 
-function AccountControl() {
+function AccountControl({ openSignal = 0 }: { openSignal?: number }) {
   const [open, setOpen] = useState(false)
+  // 漫游引导态的主 CTA 可以直接唤起扫码弹窗，无需用户再找一次按钮。
+  useEffect(() => { if (openSignal > 0) setOpen(true) }, [openSignal])
   const [account, setAccount] = useState<QishuiAccountView | null>(null)
   const [session, setSession] = useState<QishuiAccountView | null>(null)
   const [busy, setBusy] = useState(false)
