@@ -2,6 +2,7 @@ import MusicDailyPage from './MusicDailyPage'
 import MusicRoamingPage from './MusicRoamingPage'
 import '../../styles/music-daily-roam.css'
 import '../../styles/music-roam-v4.css'
+import '../../styles/aurora-browse.css'
 
 /**
  * 发现音乐 / 音乐漫游 的分发入口。

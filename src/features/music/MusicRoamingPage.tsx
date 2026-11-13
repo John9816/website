@@ -33,7 +33,7 @@ import { useMusicBrowse } from '../../context/MusicPlayerContext'
 import type { QishuiAccountView, QishuiFeedMode, SongSearchItem } from '../../types'
 import { coverUrlForSize, normalizeCoverUrl } from '../../utils/musicPlayer'
 import QishuiAccountControl from './QishuiAccountControl'
-import { formatClock, songKey, useSongActions } from './MusicHomeShared'
+import { AuroraSceneArt, formatClock, songKey, useSongActions } from './MusicHomeShared'
 
 /**
  * 音乐漫游 · v4
@@ -287,6 +287,25 @@ export default function MusicRoamingPage() {
         /* 状态二：已连接 —— 场景卡片墙 */
         <>
           <section className="roam-v4-scenes" aria-label="选择收听场景">
+            {modes.length ? (
+              <div className="ab-tuner" aria-label="场景调频">
+                <span className="ab-tuner__label"><Radio size={14} /> 调频</span>
+                <div className="ab-tuner__rail">
+                  {modes.map((item) => (
+                    <button
+                      type="button"
+                      key={item.id}
+                      className={`ab-tuner__chip${mode === item.id ? ' is-active' : ''}`}
+                      onClick={() => setMode(item.id)}
+                      aria-pressed={mode === item.id}
+                    >
+                      <AuroraSceneArt iconUrl={item.iconUrl} tone={sceneVisual(item).tone} seed={item.id} size={26} />
+                      <span>{item.name}</span>
+                    </button>
+                  ))}
+                </div>
+              </div>
+            ) : null}
             {groups.length ? groups.map((group) => (
               <div className="roam-v4-group" key={group.name}>
                 <div className="roam-v4-group__head">
@@ -338,9 +357,18 @@ export default function MusicRoamingPage() {
         </>
       ) : (
         /* 状态三：漫游中 —— 正在播放 + 待播队列 */
-        <section className="roam-v4-journey" aria-label="正在漫游">
-          <div className="roam-v4-now">
-            <div className="roam-v4-now__art">
+        <section className="roam-v4-journey ab-journey" aria-label="正在漫游">
+          <div className="ab-stage">
+            <span className="ab-stage__glow" aria-hidden="true" />
+            <div className="ab-stage__status">
+              <span><Radio size={14} /> 当前场景 · <strong>{selectedMode?.name || '个人推荐'}</strong></span>
+              <span className="ab-stage__count">已漫游 <strong>{currentIndex + 1}</strong> / {queue.length || '—'} 首</span>
+              <button type="button" className="ab-stage__exit" onClick={player.stopRoaming}>
+                <Square size={14} /> 退出漫游
+              </button>
+            </div>
+            <div className="roam-v4-now">
+            <div key={player.current ? songKey(player.current) : 'idle'} className="roam-v4-now__art ab-stage__cover">
               <RoamCover
                 src={player.current?.coverUrl}
                 seed={player.current ? songKey(player.current) : selectedMode?.id || 'roam'}
@@ -378,6 +406,8 @@ export default function MusicRoamingPage() {
               <span className="roam-v4-next__dur">{formatClock(nextUp.durationMs, nextUp.durationSec)}</span>
             </div>
           )}
+          </div>
+          {/* ab-stage 结束：队列保持在舞台之外，保证浏览效率 */}
 
           <div className="roam-v4-queue">
             <div className="roam-v4-queue__head">
