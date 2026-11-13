@@ -1,6 +1,7 @@
 import { useQishuiRoaming } from '../hooks/useQishuiRoaming'
 import { usePlayerLyrics } from '../hooks/usePlayerLyrics'
 import { useMusicMediaSession } from '../hooks/useMusicMediaSession'
+import { useListenTimeReporter } from '../hooks/useListenTimeReporter'
 import { musicPlaybackError } from '../features/music/sources'
 import {
   clearQueueKeepingCurrent,
@@ -233,6 +234,14 @@ export function MusicPlayerProvider({ children }: { children: ReactNode }) {
   const [isPlaying, setIsPlaying] = useState(false)
   const [currentTime, setCurrentTime] = useState(0)
   const [duration, setDuration] = useState(0)
+  // Report real playback seconds for the listening-time leaderboard. Internally
+  // clamps the currentTime delta against wall-clock time, so seeking and frozen
+  // background tabs cannot inflate the total; no-op for anonymous visitors.
+  useListenTimeReporter(isPlaying, currentTime)
+  // Smooth playback clock: timeupdate only fires ~4×/sec, which makes word-level
+  // lyric highlighting lag the audio by up to 250ms. We read audioRef.currentTime
+  // every animation frame while playing so the lyric active index stays in sync.
+  const smoothClockLastRef = useRef(0)
   const [volume, setVolumeState] = useState(1)
   const [muted, setMuted] = useState(false)
   const [playLoading, setPlayLoading] = useState(false)
@@ -402,6 +411,12 @@ export function MusicPlayerProvider({ children }: { children: ReactNode }) {
       })
       setCurrentTime(0)
       setDuration(info.durationSec ?? 0)
+      // Stop the previous track immediately. The new audioSrc isn't set until the
+      // new source resolves, so without this the old song would keep playing (and
+      // the "loading" spinner would mask a silent track switch) for the whole
+      // resolve/decrypt window.
+      audioRef.current?.pause()
+      smoothClockLastRef.current = 0
       setPlayLoading(true)
     },
     [],
@@ -694,17 +709,24 @@ export function MusicPlayerProvider({ children }: { children: ReactNode }) {
       setAudioSrc(cached)
       return
     }
+    // The decrypted Blob isn't ready yet (cold track / fast skip / shuffle).
+    // Start the stream URL immediately so audio begins within ~100–300ms instead
+    // of blocking on a full fetch + decrypt, then upgrade to the private Blob once
+    // it lands. The upgrade only happens near the start of playback (currentTime
+    // < 0.4s) so it is seamless; otherwise we keep the stream for the rest of the
+    // song. Prefetched tracks still hit the cache above and never touch the stream.
+    setAudioSrc(normalizeMediaUrl(current.playUrl))
     const controller = new AbortController()
     setPlayLoading(true)
     void ensureRichPlayback(key, current.directUrl!, current.playAuth!)
       .then((url) => {
         if (controller.signal.aborted) return
-        setAudioSrc(url)
+        const el = audioRef.current
+        if (!el || el.currentTime < 0.4) setAudioSrc(url)
       })
       .catch((err: unknown) => {
         if (controller.signal.aborted) return
-        console.warn('Qishui rich-client decrypt failed, falling back to stream URL', err)
-        setAudioSrc(normalizeMediaUrl(current.playUrl))
+        console.warn('Qishui rich-client decrypt pending, keeping stream URL', err)
       })
     return () => {
       controller.abort()
@@ -725,6 +747,32 @@ export function MusicPlayerProvider({ children }: { children: ReactNode }) {
       }
     })
   }, [audioSrc, message, unsupportedFormat])
+
+  // High-frequency playback clock. The native `timeupdate` event throttles to
+  // ~250ms, so the lyric active line and progress bar would visibly trail the
+  // audio. While playing, poll the element clock each frame and commit to state
+  // only when it has moved past a small threshold (~40ms) — enough for smooth
+  // word-level lyrics without re-rendering 60×/sec.
+  useEffect(() => {
+    if (typeof window === 'undefined' || !current || !isPlaying) return
+    smoothClockLastRef.current = currentTime
+    let raf = 0
+    const tick = () => {
+      const el = audioRef.current
+      if (el && !el.paused && Number.isFinite(el.currentTime)) {
+        const t = el.currentTime
+        if (Math.abs(t - smoothClockLastRef.current) >= 0.04) {
+          smoothClockLastRef.current = t
+          setCurrentTime(t)
+        }
+      }
+      raf = requestAnimationFrame(tick)
+    }
+    raf = requestAnimationFrame(tick)
+    return () => {
+      if (raf) cancelAnimationFrame(raf)
+    }
+  }, [current, isPlaying])
 
   useEffect(() => {
     const connection = (navigator as Navigator & { connection?: { saveData?: boolean; effectiveType?: string } }).connection
