@@ -9,7 +9,8 @@
   --now-line: var(--border);
   --now-muted: var(--text-dim);
   --now-track: color-mix(in srgb, var(--text) 15%, transparent);
-  --now-cover-opacity: 0.16;
+  /* 封面光晕淡入的终态透明度；Aurora Live 下由渐变光晕复用此机制 */
+  --now-cover-opacity: 0.6;
   position: fixed;
   inset: 0;
   z-index: 200;
@@ -30,30 +31,16 @@
     radial-gradient(circle at 88% 92%, rgba(var(--now-glow), 0.08), transparent 46%);
 }
 
-.now-page__cover-bg {
-  position: absolute;
-  inset: 0;
-  background-position: center;
-  background-size: cover;
-  filter: blur(64px) saturate(120%);
-  opacity: var(--now-cover-opacity);
-  transform: scale(1.16);
-}
-
-.now-page__cover-bg.is-current {
-  animation: now-cover-fade 0.52s ease both;
-}
-
-.now-page__cover-bg.is-previous {
-  animation: now-cover-out 0.52s ease both;
-}
+/* 旧版「大面积实时高半径 blur 封面背景」已移除：
+ * Aurora Live 改用 aurora-now.css 中的低分辨率 CSS 渐变光晕，
+ * 交叉淡化仍复用下方 now-cover-fade / now-cover-out 与 --now-cover-opacity。 */
 
 [data-theme='light'] .now-page {
-  --now-cover-opacity: 0.09;
+  --now-cover-opacity: 0.42;
 }
 
 [data-theme='dark'] .now-page {
-  --now-cover-opacity: 0.2;
+  --now-cover-opacity: 0.78;
 }
 
 /* 动画终态必须用变量，否则 opacity:1 会覆盖主题透明度、把整页染成封面色 */
@@ -1103,10 +1090,6 @@
   .now-ctrl--primary {
     width: 58px;
     height: 58px;
-  }
-
-  .now-page__cover-bg {
-    filter: blur(48px) saturate(115%);
   }
 }
 

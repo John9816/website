@@ -1,17 +1,17 @@
 import { sourceLabel } from '../features/music/sources'
-import { useCallback, useEffect, useMemo, useState, type CSSProperties } from 'react'
-import { App as AntApp, Button, Result, Spin, Typography } from 'antd'
-import { ChevronLeft, Copy, Play, RefreshCcw } from 'lucide-react'
+import { useCallback, useEffect, useMemo, useRef, useState, type CSSProperties } from 'react'
+import { App as AntApp, Button, Result, Spin } from 'antd'
+import { ChevronLeft, Copy, Headphones, LockOpen, Pause, Play, RefreshCcw } from 'lucide-react'
 import { Link, useParams } from 'react-router-dom'
 import { getPublicMusicShare } from '../api/music'
 import MusicCover from '../components/MusicCover'
 import { useMusicBrowse } from '../context/MusicPlayerContext'
 import type { MusicPublicShareView, SongSearchItem } from '../types'
 import { coverUrlForSize, formatDuration } from '../utils/musicPlayer'
-import { copyText, formatDateTime } from '../utils/share'
+import { copyText } from '../utils/share'
+import '../styles/music-share-live.css'
 
 const ALL_QUALITIES = ['128k', '320k', 'flac', 'flac24bit'] as const
-
 
 function toSongSearchItem(data: MusicPublicShareView): SongSearchItem {
   return {
@@ -26,13 +26,41 @@ function toSongSearchItem(data: MusicPublicShareView): SongSearchItem {
   }
 }
 
+function absoluteCoverUrl(raw?: string | null, origin?: string): string {
+  const value = (raw || '').trim()
+  if (/^https?:\/\//i.test(value)) return value
+  if (origin && value.startsWith('/')) return `${origin}${value}`
+  return origin ? `${origin}/share-cover.png` : ''
+}
+
+/** Upsert a document.head meta tag and remember its previous value for cleanup. */
+function upsertMeta(
+  attr: 'property' | 'name',
+  key: string,
+  value: string,
+  restore: Map<string, string | null>,
+) {
+  const selector = `meta[${attr}="${key}"]`
+  let el = document.head.querySelector<HTMLMetaElement>(selector)
+  const id = `${attr}:${key}`
+  if (!restore.has(id)) restore.set(id, el?.getAttribute('content') ?? null)
+  if (!el) {
+    el = document.createElement('meta')
+    el.setAttribute(attr, key)
+    document.head.appendChild(el)
+  }
+  el.setAttribute('content', value)
+}
+
 export default function MusicSharePage() {
   const { message } = AntApp.useApp()
   const { token } = useParams<{ token: string }>()
-  const { playPlaylist, playResolvedSong } = useMusicBrowse()
+  const { playResolvedSong, togglePlay, isPlaying, playLoading } = useMusicBrowse()
   const [loading, setLoading] = useState(true)
   const [share, setShare] = useState<MusicPublicShareView | null>(null)
   const [error, setError] = useState<string | null>(null)
+  const [started, setStarted] = useState(false)
+  const autoTriedToken = useRef<string | null>(null)
 
   const loadShare = useCallback(async () => {
     if (!token) {
@@ -59,11 +87,60 @@ export default function MusicSharePage() {
     void loadShare()
   }, [loadShare])
 
-  const shareSong = useMemo(() => (share ? toSongSearchItem(share) : null), [share])
   const shareUrl = useMemo(() => {
     if (!token || typeof window === 'undefined') return ''
     return new URL(`/music/share/${token}`, window.location.origin).toString()
   }, [token])
+
+  // Give real users (and in-app browsers) the same title/card as social crawlers get
+  // from the Node layer. Restore everything on unmount so the SPA keeps its own meta.
+  useEffect(() => {
+    if (!share) return
+    const previousTitle = document.title
+    const restore = new Map<string, string | null>()
+    const who = share.artist?.trim() || '未知歌手'
+    const title = `${share.name} - ${who} · 无需登录点开即听`
+    const description = `${share.name} - ${who}，无需登录，点开即听。来自 751152.xyz 音乐分享。`
+    const origin = typeof window === 'undefined' ? undefined : window.location.origin
+    const cover = absoluteCoverUrl(share.playInfo?.coverUrl ?? share.coverUrl, origin)
+
+    document.title = title
+    upsertMeta('property', 'og:title', title, restore)
+    upsertMeta('property', 'og:description', description, restore)
+    upsertMeta('property', 'og:type', 'music.song', restore)
+    if (shareUrl) upsertMeta('property', 'og:url', shareUrl, restore)
+    if (cover) {
+      upsertMeta('property', 'og:image', cover, restore)
+      upsertMeta('name', 'twitter:image', cover, restore)
+    }
+    upsertMeta('name', 'twitter:card', 'summary_large_image', restore)
+    upsertMeta('name', 'twitter:title', title, restore)
+    upsertMeta('name', 'twitter:description', description, restore)
+
+    return () => {
+      document.title = previousTitle
+      for (const [id, previous] of restore) {
+        const [attr, key] = id.split(':')
+        const el = document.head.querySelector<HTMLMetaElement>(`meta[${attr}="${key}"]`)
+        if (!el) continue
+        if (previous === null) el.remove()
+        else el.setAttribute('content', previous)
+      }
+    }
+  }, [share, shareUrl])
+
+  // Try to start playback as soon as the public share resolves. Browsers may block
+  // autoplay; the big play button below always remains available as the fallback.
+  useEffect(() => {
+    if (!token || !share?.playable || !share.playInfo?.playUrl) return
+    if (autoTriedToken.current === token) return
+    autoTriedToken.current = token
+    void playResolvedSong(toSongSearchItem(share), share.playInfo, share.requestedQuality)
+      .then(() => setStarted(true))
+      .catch(() => {
+        // Autoplay rejection (NotAllowedError etc.) is expected; the user can tap play.
+      })
+  }, [token, share, playResolvedSong, share?.requestedQuality])
 
   const handleCopyLink = async () => {
     if (!shareUrl) return
@@ -75,39 +152,47 @@ export default function MusicSharePage() {
     }
   }
 
-  const handlePlay = async () => {
-    if (!shareSong || !share) return
-    if (share.playInfo?.playUrl) {
-      await playResolvedSong(shareSong, share.playInfo, share.requestedQuality)
+  const handlePrimary = async () => {
+    if (!share) return
+    if (started) {
+      togglePlay()
       return
     }
-    await playPlaylist([shareSong], 0, share.requestedQuality)
+    if (!share.playInfo?.playUrl) {
+      await loadShare()
+      return
+    }
+    try {
+      await playResolvedSong(toSongSearchItem(share), share.playInfo, share.requestedQuality)
+      setStarted(true)
+    } catch {
+      message.error('播放失败，请稍后重新解析')
+    }
   }
 
-  const heroCoverUrl = coverUrlForSize(share?.playInfo?.coverUrl ?? share?.coverUrl ?? undefined, 180)
+  const heroCoverUrl = coverUrlForSize(share?.playInfo?.coverUrl ?? share?.coverUrl ?? undefined, 320)
   const heroStyle = heroCoverUrl
-    ? ({
-        ['--music-detail-cover' as string]: `url(${JSON.stringify(heroCoverUrl)})`,
-      } as CSSProperties)
+    ? ({ ['--sl-cover' as string]: `url(${JSON.stringify(heroCoverUrl)})` } as CSSProperties)
     : undefined
 
   if (loading && !share) {
     return (
-      <div className="music-detail-shell music-share-shell music-share-shell--center">
+      <div className="sl-page sl-page--center">
         <Spin size="large" />
+        <p className="sl-loading-copy">正在准备这首歌…</p>
       </div>
     )
   }
 
   if (error && !share) {
     return (
-      <div className="music-detail-shell music-share-shell">
+      <div className="sl-page sl-page--center">
         <Result
           status="warning"
           title="分享歌曲不可用"
           subTitle={error}
           extra={
-            <div className="music-detail-actions-group">
+            <div className="sl-actions">
               <Link to="/music">
                 <Button type="primary">返回音乐页</Button>
               </Link>
@@ -126,135 +211,120 @@ export default function MusicSharePage() {
   const actualSource = share.playInfo?.actualSource || share.playInfo?.source || share.source
   const actualQuality = share.playInfo?.actualQuality || share.playInfo?.requestedQuality
   const lyricText = share.playInfo?.lyric?.lineLyrics?.trim()
+  const pausedByBrowser = started && !isPlaying && !playLoading
+  const primaryLabel = !started
+    ? '立即播放'
+    : isPlaying
+      ? '暂停'
+      : pausedByBrowser
+        ? '继续播放'
+        : '播放中'
 
   return (
-    <div className="music-detail-shell music-share-shell">
-      <div className="music-detail-actions">
-        <Link to="/music" className="music-back-link">
+    <div className="sl-page" style={heroStyle}>
+      <div className="sl-ambient" aria-hidden="true" />
+      <div className="sl-ambient-cover" aria-hidden="true" />
+
+      <header className="sl-topbar">
+        <Link to="/music" className="sl-back">
           <ChevronLeft size={16} />
           <span>返回音乐页</span>
         </Link>
-
-        <div className="music-detail-actions-group">
+        <div className="sl-actions">
           <Button icon={<Copy size={14} />} onClick={() => void handleCopyLink()}>
-            复制公开链接
+            复制链接
           </Button>
           <Button icon={<RefreshCcw size={14} />} loading={loading} onClick={() => void loadShare()}>
-            刷新解析
+            刷新
           </Button>
         </div>
-      </div>
+      </header>
 
-      <div
-        className={`music-detail-hero${heroCoverUrl ? ' music-detail-hero--with-cover' : ''}`}
-        style={heroStyle}
-      >
-        <MusicCover
-          src={share.playInfo?.coverUrl ?? share.coverUrl ?? undefined}
-          size={148}
-          rounded={32}
-          loading="eager"
-        />
-        <div className="music-detail-hero__copy">
-          <span className="music-stage-kicker">公开单曲分享</span>
-          <h2>{share.name}</h2>
-          <p>
-            {share.artist || '未知歌手'}
-            {share.album ? ` · ${share.album}` : ''}
-          </p>
-          <div className="music-detail-meta">
-            <span>{sourceLabel(share.source)}</span>
-            <span>{formatDuration(share.durationSec ?? share.playInfo?.durationSec)}</span>
-            <span>预设 {share.requestedQuality.toUpperCase()}</span>
-            <span>{share.playable ? '当前可播放' : '当前解析失败'}</span>
-          </div>
+      <main className="sl-stage">
+        <div className="sl-cover-wrap">
+          <MusicCover
+            src={share.playInfo?.coverUrl ?? share.coverUrl ?? undefined}
+            size={260}
+            rounded={28}
+            loading="eager"
+            className="sl-cover"
+          />
+          <span className="sl-cover-ring" aria-hidden="true" />
         </div>
-      </div>
 
-      <div className="music-share-grid">
-        <section className="music-share-card">
-          <div className="music-share-card__head">
-            <div>
-              <Typography.Title level={4} style={{ margin: 0 }}>
-                播放状态
-              </Typography.Title>
-              <Typography.Text type="secondary">
-                分享页已实时尝试解析当前可用播放地址
-              </Typography.Text>
-            </div>
-            <span
-              className={`music-share-state-pill${
-                share.playable ? ' is-playable' : ' is-unavailable'
-              }`}
-            >
-              {share.playable ? '可播放' : '暂不可播放'}
+        <div className="sl-copy">
+          <div className="sl-badges">
+            <span className="sl-badge sl-badge--free">
+              <LockOpen size={13} />
+              无需登录 · 点开即听
             </span>
+            <span className="sl-badge">{sourceLabel(share.source)}</span>
+            {actualQuality ? <span className="sl-badge">{actualQuality.toUpperCase()}</span> : null}
           </div>
 
-          <p className="music-share-card__copy">
-            {share.playable
-              ? '当前链接已解析成功，可以直接用下方按钮播放，也可以稍后再次刷新检查。'
-              : share.playError || '当前没有解析到可播放地址，你可以稍后重试。'}
+          <h1 className="sl-title">{share.name}</h1>
+          <p className="sl-artist">
+            {share.artist || '未知歌手'}
+            {share.album ? <span> · {share.album}</span> : null}
           </p>
 
-          <div className="music-share-facts">
-            <span>解析来源：{sourceLabel(actualSource)}</span>
-            <span>实际音质：{actualQuality ? actualQuality.toUpperCase() : '-'}</span>
-            <span>缓存状态：{share.playInfo?.fromCache ? '命中缓存' : '实时解析'}</span>
-            <span>
-              链接时效：
-              {typeof share.playInfo?.expireSec === 'number' ? `${share.playInfo.expireSec} 秒` : '-'}
+          <div className="sl-meta">
+            <span>{formatDuration(share.durationSec ?? share.playInfo?.durationSec)}</span>
+            <span>{sourceLabel(actualSource)}</span>
+            <span className={share.playable ? 'is-ok' : 'is-warn'}>
+              {share.playable ? '当前可播放' : '解析暂不可用'}
             </span>
           </div>
 
-          <div className="music-detail-actions-group">
-            <Button type="primary" icon={<Play size={14} />} onClick={() => void handlePlay()}>
-              立即播放
-            </Button>
-            <Button icon={<RefreshCcw size={14} />} loading={loading} onClick={() => void loadShare()}>
-              重新解析
-            </Button>
-          </div>
-        </section>
-
-        <section className="music-share-card">
-          <div className="music-share-card__head">
-            <div>
-              <Typography.Title level={4} style={{ margin: 0 }}>
-                分享信息
-              </Typography.Title>
-              <Typography.Text type="secondary">这首歌的公开访问快照</Typography.Text>
+          <div className="sl-play-row">
+            <button
+              type="button"
+              className={`sl-play-btn${isPlaying ? ' is-playing' : ''}`}
+              onClick={() => void handlePrimary()}
+              aria-label={primaryLabel}
+              disabled={playLoading && !started}
+            >
+              {isPlaying ? <Pause size={26} fill="currentColor" /> : <Play size={26} fill="currentColor" />}
+            </button>
+            <div className="sl-play-copy">
+              <strong>{primaryLabel}</strong>
+              <span>
+                {started
+                  ? isPlaying
+                    ? '正在播放，点按可暂停'
+                    : '浏览器已拦截自动播放，点按即可继续'
+                  : share.playable
+                    ? '已自动尝试播放；若未出声，点按即可收听'
+                    : share.playError || '正在重新解析可播放地址'}
+              </span>
             </div>
           </div>
 
-          <div className="music-share-facts">
-            <span>访问量：{share.viewCount}</span>
-            <span>过期时间：{formatDateTime(share.expiresAt)}</span>
-            <span>歌曲来源：{sourceLabel(share.source)}</span>
-            <span>公开路由：`/music/share/:token`</span>
-          </div>
+          <p className="sl-hint">
+            <Headphones size={14} />
+            这条链接是公开单曲，不需要账号，转发给朋友也能直接听。
+          </p>
+        </div>
+      </main>
 
-          <div className="music-share-link" title={shareUrl}>
-            {shareUrl || '当前环境无法生成完整公开链接'}
-          </div>
+      <footer className="sl-footer">
+        <div className="sl-footer-link" title={shareUrl}>
+          {shareUrl || '当前环境无法生成完整公开链接'}
+        </div>
+        <div className="sl-footer-facts">
+          <span>访问量 {share.viewCount}</span>
+          <span>·</span>
+          <span>{share.playInfo?.fromCache ? '缓存命中' : '实时解析'}</span>
+          <span>·</span>
+          <span>751152.xyz 音乐分享</span>
+        </div>
+      </footer>
+
+      {lyricText ? (
+        <section className="sl-lyrics" aria-label="歌词预览">
+          <pre>{lyricText}</pre>
         </section>
-
-        {lyricText ? (
-          <section className="music-share-card music-share-card--full">
-            <div className="music-share-card__head">
-              <div>
-                <Typography.Title level={4} style={{ margin: 0 }}>
-                  歌词预览
-                </Typography.Title>
-                <Typography.Text type="secondary">
-                  使用公开分享时解析到的当前歌词内容
-                </Typography.Text>
-              </div>
-            </div>
-            <pre className="music-share-lyric">{lyricText}</pre>
-          </section>
-        ) : null}
-      </div>
+      ) : null}
     </div>
   )
 }

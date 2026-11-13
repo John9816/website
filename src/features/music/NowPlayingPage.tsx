@@ -22,22 +22,33 @@ import {
   Shuffle,
   SkipBack,
   SkipForward,
+  SlidersHorizontal,
+  Sparkles,
   Volume2,
   VolumeX,
   X,
 } from 'lucide-react'
-import { FastAverageColor } from 'fast-average-color'
 import { sourceLabel } from './sources'
 import type { MusicQuality, SongSearchItem } from '../../types'
 import { useMusicPlayer, type PlayMode } from '../../context/MusicPlayerContext'
+import { useMusicAppearance } from '../../utils/musicAppearance'
+import {
+  extractAurora,
+  lowPowerDevice,
+  readGlowLevel,
+  writeGlowLevel,
+  GLOW_INTENSITY,
+  GLOW_OPTIONS,
+  type AuroraPalette,
+  type GlowLevel,
+} from './auroraVisual'
 import MusicCover from '../../components/MusicCover'
 import MusicLyricText from '../../components/MusicLyricText'
 import MusicLyricsSettings from '../../components/MusicLyricsSettings'
 import { useMusicFavorites } from '../../hooks/useMusicFavorites'
 import { coverUrlForSize, formatDuration } from '../../utils/musicPlayer'
 import '../../styles/now-playing.css'
-
-const fac = new FastAverageColor()
+import '../../styles/aurora-now.css'
 
 const QUALITY_OPTIONS: Array<{ value: MusicQuality; label: string }> = [
   { value: '128k', label: '128K' },
@@ -57,18 +68,45 @@ function getPlayModeMeta(mode: PlayMode) {
   }
 }
 
+/** 单层极光光晕：把该歌曲自己的调色板钉在图层上，切歌交叉淡化时互不串色。 */
+function auroraLayerStyle(p: AuroraPalette): CSSProperties {
+  return {
+    '--aurora-a': p.a,
+    '--aurora-b': p.b,
+    '--aurora-c': p.c,
+  } as CSSProperties
+}
+
 export default function NowPlayingPage() {
   const navigate = useNavigate()
   const location = useLocation()
 
+  // 极光视觉设置（环境光强度持久化；动效复用音乐页的全局 appearance 设置）
+  const appearance = useMusicAppearance()
+  const lowPower = useMemo(() => lowPowerDevice(), [])
+  const [glowLevel, setGlowLevel] = useState<GlowLevel>(() => readGlowLevel(lowPower))
+  const [auroraOpen, setAuroraOpen] = useState(false)
+  const [pageVisible, setPageVisible] = useState(
+    () => typeof document === 'undefined' || !document.hidden,
+  )
+  const [reducedMotion, setReducedMotion] = useState(
+    () =>
+      typeof window !== 'undefined' &&
+      !!window.matchMedia?.('(prefers-reduced-motion: reduce)').matches,
+  )
+
+  // 封面取色 + 交叉淡化（替代旧的 blurred cover backdrop）
   const [dominantColor, setDominantColor] = useState<string | null>(null)
-  const [coverBackdrop, setCoverBackdrop] = useState<string | null>(null)
-  const [previousCoverBackdrop, setPreviousCoverBackdrop] = useState<string | null>(null)
-  const coverBackdropRef = useRef<string | null>(null)
-  const coverBackdropTimeoutRef = useRef<number | null>(null)
+  const [auroraCurrent, setAuroraCurrent] = useState<AuroraPalette | null>(null)
+  const [auroraPrevious, setAuroraPrevious] = useState<AuroraPalette | null>(null)
+  const [auroraSeq, setAuroraSeq] = useState(0)
+  const auroraCurrentRef = useRef<AuroraPalette | null>(null)
+  const crossfadeTimerRef = useRef<number | null>(null)
+
   const [qualityOpen, setQualityOpen] = useState(false)
   const [queueOpen, setQueueOpen] = useState(false)
   const [mobileTab, setMobileTab] = useState<'cover' | 'lyrics'>('lyrics')
+  const [progressHover, setProgressHover] = useState<{ ratio: number; time: number } | null>(null)
   const touchStartXRef = useRef<number | null>(null)
   const lyricScrollRef = useRef<HTMLDivElement | null>(null)
   const currentTimeRef = useRef(0)
@@ -118,10 +156,6 @@ export default function NowPlayingPage() {
     () => coverUrlForSize(current?.coverUrl, 48),
     [current?.coverUrl],
   )
-  const coverBackdropUrl = useMemo(
-    () => coverUrlForSize(current?.coverUrl, 180),
-    [current?.coverUrl],
-  )
 
   const currentRow = useMemo<SongSearchItem | null>(() => {
     if (!current) return null
@@ -153,6 +187,17 @@ export default function NowPlayingPage() {
   const isCurrentFavorite = currentRow ? favoriteState.isFavorite(currentRow) : false
   const isFavoriteLoading = currentRow ? favoriteState.isFavoriteLoading(currentRow) : false
 
+  // H5 封面视图的「两行歌词入口」：当前行 + 相邻行，点击进入歌词视图。
+  const lyricTeaser = useMemo<string[]>(() => {
+    if (lrcLines.length) {
+      const idx = activeLrcIndex >= 0 ? activeLrcIndex : 0
+      const first = lrcLines[idx]?.text || ''
+      const second = lrcLines[idx + 1]?.text || lrcLines[idx - 1]?.text || ''
+      return [first, second].filter(Boolean)
+    }
+    return (lyricPlainText || '').split('\n').map((line) => line.trim()).filter(Boolean).slice(0, 2)
+  }, [lrcLines, activeLrcIndex, lyricPlainText])
+
   const switchQuality = useCallback(
     (quality: MusicQuality) => {
       setPreferredQuality(quality)
@@ -165,6 +210,11 @@ export default function NowPlayingPage() {
     if (!currentRow || isFavoriteLoading) return
     void favoriteState.toggleFavorite(currentRow)
   }, [currentRow, favoriteState, isFavoriteLoading])
+
+  const changeGlow = useCallback((level: GlowLevel) => {
+    setGlowLevel(level)
+    writeGlowLevel(level)
+  }, [])
 
   // Lock the page behind the player and wire global shortcuts. The bar itself is
   // unmounted on this route, so these handlers are the only ones active here.
@@ -180,7 +230,7 @@ export default function NowPlayingPage() {
         tag === 'INPUT' ||
         tag === 'TEXTAREA' ||
         tag === 'SELECT' ||
-        !!target.closest('button,a,[role=button],[role=slider]')
+        !!target.closest('button,a,[role=button],[role=slider],[role=switch]')
       )
     }
 
@@ -203,6 +253,7 @@ export default function NowPlayingPage() {
         if (hasVisibleOverlay) {
           setQueueOpen(false)
           setQualityOpen(false)
+          setAuroraOpen(false)
           return
         }
         close()
@@ -262,55 +313,68 @@ export default function NowPlayingPage() {
     volume,
   ])
 
+  // 封面取色 + 切歌交叉淡化：沿用 --now-cover-opacity / now-cover-fade 机制，
+  // 只是把「模糊大图」换成低分辨率 CSS 渐光晕。取色来自小缩略图（共用浏览器
+  // 缓存，不重复请求大图），失败时平滑降级为空光晕，绝不影响播放。
   useEffect(() => {
-    if (!coverSampleUrl) {
-      setDominantColor(null)
-      return
+    let mounted = true
+
+    const apply = (palette: AuroraPalette | null) => {
+      if (!mounted) return
+      const previous = auroraCurrentRef.current
+      setAuroraPrevious(previous === palette ? null : previous)
+      auroraCurrentRef.current = palette
+      setDominantColor(palette ? palette.dominant : null)
+      setAuroraCurrent(palette)
+      // 递增 key 让 is-current/is-previous 图层重新挂载，重放淡入/淡出动画。
+      setAuroraSeq((seq) => seq + 1)
+      if (crossfadeTimerRef.current !== null) {
+        window.clearTimeout(crossfadeTimerRef.current)
+        crossfadeTimerRef.current = null
+      }
+      if (previous) {
+        crossfadeTimerRef.current = window.setTimeout(() => {
+          if (mounted) setAuroraPrevious(null)
+          crossfadeTimerRef.current = null
+        }, 540)
+      }
     }
-    let isMounted = true
-    fac
-      .getColorAsync(coverSampleUrl, { algorithm: 'dominant', crossOrigin: 'anonymous' })
-      .then((color) => {
-        if (isMounted) setDominantColor(color.value.slice(0, 3).join(', '))
-      })
-      .catch(() => {
-        if (isMounted) setDominantColor(null)
-      })
+
+    if (!coverSampleUrl) {
+      apply(null)
+      return () => {
+        mounted = false
+      }
+    }
+    extractAurora(coverSampleUrl).then(apply).catch(() => apply(null))
     return () => {
-      isMounted = false
+      mounted = false
     }
   }, [coverSampleUrl])
 
   useEffect(() => {
     return () => {
-      if (coverBackdropTimeoutRef.current !== null) {
-        window.clearTimeout(coverBackdropTimeoutRef.current)
+      if (crossfadeTimerRef.current !== null) {
+        window.clearTimeout(crossfadeTimerRef.current)
       }
     }
   }, [])
 
+  // 页面切后台时停止装饰动画；回到前台恢复。
   useEffect(() => {
-    if (coverBackdropTimeoutRef.current !== null) {
-      window.clearTimeout(coverBackdropTimeoutRef.current)
-      coverBackdropTimeoutRef.current = null
-    }
-    const nextCover = coverBackdropUrl ?? null
-    const previous = coverBackdropRef.current
-    if (previous === nextCover) return
+    const onVisibility = () => setPageVisible(!document.hidden)
+    document.addEventListener('visibilitychange', onVisibility)
+    return () => document.removeEventListener('visibilitychange', onVisibility)
+  }, [])
 
-    setPreviousCoverBackdrop(previous)
-    coverBackdropRef.current = nextCover
-    setCoverBackdrop(nextCover)
-
-    if (previous && nextCover) {
-      coverBackdropTimeoutRef.current = window.setTimeout(() => {
-        setPreviousCoverBackdrop(null)
-        coverBackdropTimeoutRef.current = null
-      }, 520)
-      return
-    }
-    setPreviousCoverBackdrop(null)
-  }, [coverBackdropUrl])
+  // 系统「减少动态效果」偏好，完全降级装饰动画。
+  useEffect(() => {
+    const query = window.matchMedia?.('(prefers-reduced-motion: reduce)')
+    if (!query) return
+    const onChange = () => setReducedMotion(query.matches)
+    query.addEventListener?.('change', onChange)
+    return () => query.removeEventListener?.('change', onChange)
+  }, [])
 
   // Keep the active lyric line centred without restarting the smooth scroll on
   // every timeupdate. Only the intro falls back to the first line.
@@ -351,9 +415,26 @@ export default function NowPlayingPage() {
   const progressValueText = `${formatDuration(
     Math.min(currentTime, duration || currentTime),
   )} / ${formatDuration(duration)}`
-  const glowStyle = dominantColor
-    ? ({ '--now-glow': dominantColor } as CSSProperties)
-    : undefined
+  // 装饰动效主开关：用户关闭动效 / 系统减少动效 / 页面切后台时全部停止。
+  const animated = appearance.motion && !reducedMotion && pageVisible
+  const glowStyle = {
+    ...(dominantColor ? { '--now-glow': dominantColor } : {}),
+    ...(auroraCurrent
+      ? {
+          '--aurora-a': auroraCurrent.a,
+          '--aurora-b': auroraCurrent.b,
+          '--aurora-c': auroraCurrent.c,
+        }
+      : {}),
+    '--aurora-intensity': GLOW_INTENSITY[glowLevel],
+  } as CSSProperties
+
+  const updateProgressHover = (clientX: number, target: HTMLDivElement) => {
+    if (!duration) return
+    const rect = target.getBoundingClientRect()
+    const ratio = Math.min(1, Math.max(0, (clientX - rect.left) / rect.width))
+    setProgressHover({ ratio, time: ratio * duration })
+  }
 
   const qualityMenu = (
     <div className="now-quality-menu">
@@ -375,21 +456,86 @@ export default function NowPlayingPage() {
     </div>
   )
 
+  const auroraSettings = (
+    <div className="now-aurora-settings">
+      <div className="now-aurora-settings__head">
+        <Sparkles size={15} />
+        <span>Aurora Live · 极光现场</span>
+      </div>
+      <div className="now-aurora-settings__group">
+        <span className="now-aurora-settings__label">环境光强度</span>
+        <div className="now-aurora-settings__seg" role="group" aria-label="环境光强度">
+          {GLOW_OPTIONS.map((opt) => (
+            <button
+              key={opt.level}
+              type="button"
+              className={glowLevel === opt.level ? 'is-active' : ''}
+              aria-pressed={glowLevel === opt.level}
+              onClick={() => changeGlow(opt.level)}
+            >
+              {opt.label}
+            </button>
+          ))}
+        </div>
+      </div>
+      <button
+        type="button"
+        role="switch"
+        aria-checked={!appearance.motion}
+        className="now-aurora-settings__toggle"
+        onClick={() => appearance.setMotion(!appearance.motion)}
+      >
+        <span className="now-aurora-settings__toggle-copy">
+          关闭动效
+          <small>封面呼吸 / 极光漂移 / 切歌转场</small>
+        </span>
+        <span
+          className={`now-aurora-settings__switch${appearance.motion ? '' : ' is-on'}`}
+          aria-hidden="true"
+        >
+          <span className="now-aurora-settings__switch-thumb" />
+        </span>
+      </button>
+      {lowPower && (
+        <p className="now-aurora-settings__note">
+          已按设备性能自动降低装饰动效，播放不受影响。
+        </p>
+      )}
+    </div>
+  )
+
   const renderProgress = (className = '') => (
     <div className={`now-progress ${className}`}>
       <span className="now-progress__time">{formatDuration(currentTime)}</span>
-      <input
-        className="now-range now-range--progress"
-        type="range"
-        min={0}
-        max={Math.max(duration, 0.01)}
-        step={0.1}
-        value={Math.min(currentTime, duration || currentTime)}
-        onChange={(event) => seekToTime(Number(event.target.value))}
-        style={{ '--progress': `${progressPct}%` } as CSSProperties}
-        aria-label="播放进度"
-        aria-valuetext={progressValueText}
-      />
+      <div
+        className="now-progress__track"
+        onPointerMove={(event) => updateProgressHover(event.clientX, event.currentTarget)}
+        onPointerDown={(event) => updateProgressHover(event.clientX, event.currentTarget)}
+        onPointerLeave={() => setProgressHover(null)}
+        onPointerCancel={() => setProgressHover(null)}
+      >
+        <input
+          className="now-range now-range--progress"
+          type="range"
+          min={0}
+          max={Math.max(duration, 0.01)}
+          step={0.1}
+          value={Math.min(currentTime, duration || currentTime)}
+          onChange={(event) => seekToTime(Number(event.target.value))}
+          style={{ '--progress': `${progressPct}%` } as CSSProperties}
+          aria-label="播放进度"
+          aria-valuetext={progressValueText}
+        />
+        {progressHover && (
+          <span
+            className="now-progress__bubble"
+            style={{ left: `${progressHover.ratio * 100}%` }}
+            aria-hidden="true"
+          >
+            {formatDuration(progressHover.time)}
+          </span>
+        )}
+      </div>
       <span className="now-progress__time now-progress__time--right">
         {formatDuration(duration)}
       </span>
@@ -570,21 +716,33 @@ export default function NowPlayingPage() {
   }
 
   return (
-    <div className="now-page" style={glowStyle} role="dialog" aria-modal="true" aria-label="正在播放">
+    <div
+      className="now-page"
+      style={glowStyle}
+      data-aurora-anim={animated ? 'on' : 'off'}
+      data-aurora-low={lowPower ? 'true' : 'false'}
+      data-aurora-glow={glowLevel}
+      role="dialog"
+      aria-modal="true"
+      aria-label="正在播放"
+    >
       <div className="now-page__ambient" aria-hidden="true">
-        {previousCoverBackdrop && previousCoverBackdrop !== coverBackdrop ? (
-          <div
-            className="now-page__cover-bg is-previous"
-            style={{ backgroundImage: `url("${previousCoverBackdrop}")` }}
-          />
-        ) : null}
-        {coverBackdrop ? (
-          <div
-            key={coverBackdrop}
-            className="now-page__cover-bg is-current"
-            style={{ backgroundImage: `url("${coverBackdrop}")` }}
-          />
-        ) : null}
+        <div className="now-aurora__field">
+          {auroraPrevious && (
+            <div
+              key={`prev-${auroraSeq}`}
+              className="now-aurora__layer is-previous"
+              style={auroraLayerStyle(auroraPrevious)}
+            />
+          )}
+          {auroraCurrent && (
+            <div
+              key={`cur-${auroraSeq}`}
+              className="now-aurora__layer is-current"
+              style={auroraLayerStyle(auroraCurrent)}
+            />
+          )}
+        </div>
       </div>
 
       <div className="now-page__shell">
@@ -623,6 +781,23 @@ export default function NowPlayingPage() {
               >
                 <AudioLines size={16} />
                 <span>{current.actualQuality || preferredQuality}</span>
+              </button>
+            </Popover>
+            <Popover
+              trigger="click"
+              placement="bottomRight"
+              overlayClassName="now-aurora-popover"
+              content={auroraSettings}
+              open={auroraOpen}
+              onOpenChange={setAuroraOpen}
+            >
+              <button
+                type="button"
+                className={`now-topbar__btn now-topbar__btn--icon${auroraOpen ? ' is-active' : ''}`}
+                aria-label="极光视觉设置"
+                title="极光视觉设置"
+              >
+                <SlidersHorizontal size={16} />
               </button>
             </Popover>
             <button
@@ -665,8 +840,10 @@ export default function NowPlayingPage() {
         >
           <section className="now-cover-panel" aria-label="歌曲信息">
             <div className="now-cover-panel__inner">
-              <div className="now-cover">
-                <MusicCover src={current.coverUrl} size={480} rounded={18} loading="eager" />
+              <div className="now-stage">
+                <div className={`now-cover${isPlaying ? ' is-playing' : ''}`}>
+                  <MusicCover src={current.coverUrl} size={480} rounded={18} loading="eager" />
+                </div>
               </div>
               <h1 className="now-cover-panel__title" title={current.name}>
                 {current.name || '未知歌曲'}
@@ -681,6 +858,20 @@ export default function NowPlayingPage() {
                 </button>
                 {current.album ? ` · ${current.album}` : ''}
               </div>
+              {lyricTeaser.length > 0 && (
+                <button
+                  type="button"
+                  className="now-lyric-teaser"
+                  onClick={() => setMobileTab('lyrics')}
+                  aria-label="查看完整歌词"
+                >
+                  {lyricTeaser.map((line, index) => (
+                    <span key={index} className={index === 0 ? 'is-current' : ''}>
+                      {line}
+                    </span>
+                  ))}
+                </button>
+              )}
               <div className="now-cover-panel__badges">
                 <span>{current.actualQuality || current.requestedQuality}</span>
                 <span>{sourceLabel(current.actualSource || current.source)}</span>

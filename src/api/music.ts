@@ -1,11 +1,13 @@
 import { request } from './client'
 import { musicRead } from './musicRead'
 import type {
+  CreateMusicShareRequest,
   LyricView,
   MusicFavoriteItem,
   MusicFavoriteStatusView,
   MusicPublicShareView,
   MusicQuality,
+  MusicShareView,
   MusicHistoryItem,
   MusicPlaylistSourceId,
   MusicSourceId,
@@ -216,8 +218,15 @@ export const getMusicFavoriteStatuses = (source: MusicSourceId, songIds: string[
     body: { source, songIds },
   })
 
-export const getPublicMusicShare = (token: string) =>
-  request<MusicPublicShareView>(`/api/public/music/share/${encodeURIComponent(token)}`)
+export const createMusicShare = (body: CreateMusicShareRequest) =>
+  request<MusicShareView>('/api/user/music/shares', {
+    method: 'POST',
+    auth: true,
+    body,
+  })
+
+export const getPublicMusicShare = (token: string, signal?: AbortSignal) =>
+  request<MusicPublicShareView>(`/api/public/music/share/${encodeURIComponent(token)}`, { signal })
 
 export const getImportedPlaylists = (page = 0, size = DEFAULT_PAGE_SIZE) =>
   request<PageView<ImportedPlaylist>>('/api/user/music/playlists', {

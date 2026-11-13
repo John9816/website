@@ -13,6 +13,7 @@ const port = Number(process.env.PORT || 3000)
 const backendUrl = normalizeBackendUrl(process.env.BACKEND_URL)
 const xuecheng = createXuechengHandler({ backendUrl, dataDir: process.env.EDITOR_DATA_DIR || join(rootDir, 'data', 'xuecheng') })
 const apiProxyTimeoutMs = positiveInteger(process.env.API_PROXY_TIMEOUT_MS, 30000)
+const shareMetaTimeoutMs = positiveInteger(process.env.SHARE_META_TIMEOUT_MS, 1200)
 
 const hopByHopHeaders = new Set([
   'connection',
@@ -131,6 +132,10 @@ const SITE_ORIGIN = process.env.SITE_ORIGIN || 'https://hi.751152.xyz'
 const SITE_NAME = '个人导航'
 const DEFAULT_DESCRIPTION =
   '个人导航与工作台：常用网站导航、AI 对话、AI 生图、在线音乐与学城文档，一站直达。'
+// 仅音乐分享页需要按 token 向后端取动态 meta；token 收紧到 URL 安全字符集。
+const SHARE_PATH_RE = /^\/music\/share\/([A-Za-z0-9_-]{8,128})\/?$/
+const SHARE_DESCRIPTION_PREFIX = '无需登录，点开即听'
+const SHARE_COVER_FALLBACK = `${SITE_ORIGIN}/share-cover.png`
 
 // 服务端逐路由 meta，与前端 src/hooks/usePageTitle.ts 保持一致。
 // 爬虫无需执行 JS 即可读到正确的 title/description/canonical。
@@ -171,7 +176,7 @@ function readIndexHtml() {
   return indexHtmlCache.html
 }
 
-function renderIndexHtml(pathname) {
+function renderIndexHtmlSync(pathname) {
   const meta = metaForPath(pathname)
   const fullTitle =
     meta.title === SITE_NAME ? SITE_NAME : `${escapeHtml(meta.title)} - ${SITE_NAME}`
@@ -195,6 +200,108 @@ function renderIndexHtml(pathname) {
   return html
 }
 
+function trimTrailingSlash(pathname) {
+  return pathname.replace(/\/+$/, '') || '/'
+}
+
+function matchShareToken(pathname) {
+  const match = SHARE_PATH_RE.exec(trimTrailingSlash(pathname))
+  return match ? match[1] : null
+}
+
+function cleanShareText(value) {
+  return typeof value === 'string' ? value.trim() : ''
+}
+
+// 只允许 http/https 绝对地址，拒绝危险协议与内嵌凭据，防止 XSS 与 SSRF。
+function safeHttpUrl(value, fallback) {
+  try {
+    const parsed = new URL(value)
+    if (['http:', 'https:'].includes(parsed.protocol) && !parsed.username && !parsed.password) {
+      return parsed.toString()
+    }
+  } catch {
+    // 解析失败按兜底处理
+  }
+  return fallback
+}
+
+async function fetchShareMeta(token) {
+  if (!backendUrl) return null
+  const controller = new AbortController()
+  const timeoutId = setTimeout(
+    () => controller.abort(new Error('share meta timed out')),
+    shareMetaTimeoutMs,
+  )
+  timeoutId.unref?.()
+  try {
+    // 与 handleApiProxy 一样基于内网 backendUrl 拼接上游地址
+    const upstreamUrl = new URL(backendUrl)
+    upstreamUrl.pathname = `${backendUrl.pathname.replace(/\/$/, '')}/api/public/music/share/${token}/meta`
+    upstreamUrl.search = ''
+    const response = await fetch(upstreamUrl, {
+      headers: { Accept: 'application/json' },
+      redirect: 'manual',
+      signal: controller.signal,
+    })
+    // 404（不存在）/410（过期）/5xx/超时一律静默回退到默认 meta
+    if (!response.ok) return null
+    const envelope = await response.json()
+    if (!envelope || envelope.code !== 0 || !envelope.data || typeof envelope.data !== 'object') {
+      return null
+    }
+    return envelope.data
+  } catch {
+    return null
+  } finally {
+    clearTimeout(timeoutId)
+  }
+}
+
+function resolveShareImage(coverUrl) {
+  const raw = cleanShareText(coverUrl)
+  if (!raw) return SHARE_COVER_FALLBACK
+  // http(s) 绝对地址直接使用；相对路径按 SITE_ORIGIN 补全为站点内地址；
+  // javascript:/data:/ftp: 等含冒号的危险协议一律回退，避免 XSS 与 SSRF。
+  const isAbsoluteHttp = /^https?:\/\//i.test(raw)
+  if (!isAbsoluteHttp && raw.includes(':')) return SHARE_COVER_FALLBACK
+  const absolute = isAbsoluteHttp ? raw : `${SITE_ORIGIN}/${raw.replace(/^\/+/, '')}`
+  return safeHttpUrl(absolute, SHARE_COVER_FALLBACK)
+}
+
+function injectShareMeta(html, pathname, data) {
+  const parts = [cleanShareText(data.name), cleanShareText(data.artist)].filter(Boolean)
+  const shareTitle = parts.length ? parts.join(' - ') : SITE_NAME
+  const title = escapeHtml(shareTitle)
+  const description = escapeHtml(`${SHARE_DESCRIPTION_PREFIX}：${shareTitle}`)
+  const shareUrl = escapeHtml(
+    safeHttpUrl(`${SITE_ORIGIN}${trimTrailingSlash(pathname)}`, SITE_ORIGIN),
+  )
+  const image = escapeHtml(resolveShareImage(data.coverUrl))
+
+  let out = html
+  out = out.replace(/<title>[\s\S]*?<\/title>/i, `<title>${title}</title>`)
+  out = replaceMeta(out, 'name', 'description', description)
+  out = replaceMeta(out, 'property', 'og:title', title)
+  out = replaceMeta(out, 'property', 'og:description', description)
+  out = replaceMeta(out, 'property', 'og:url', shareUrl)
+  out = replaceMeta(out, 'property', 'og:image', image)
+  out = replaceMeta(out, 'name', 'twitter:card', 'summary_large_image')
+  out = replaceMeta(out, 'name', 'twitter:title', title)
+  out = replaceMeta(out, 'name', 'twitter:description', description)
+  out = replaceMeta(out, 'name', 'twitter:image', image)
+  // robots/canonical 沿用 renderIndexHtmlSync：分享页保持 noindex,nofollow
+  return out
+}
+
+async function renderIndexHtml(pathname) {
+  const html = renderIndexHtmlSync(pathname)
+  const token = matchShareToken(pathname)
+  if (!token) return html
+  const data = await fetchShareMeta(token)
+  return data ? injectShareMeta(html, pathname, data) : html
+}
+
 function replaceMeta(html, attr, key, value) {
   const re = new RegExp(`<meta\\s+${attr}="${key}"[^>]*>`, 'i')
   const tag = `<meta ${attr}="${key}" content="${value}" />`
@@ -209,7 +316,7 @@ const server = http.createServer(async (req, res) => {
 
     if (/^\/kb(?:\/|$)/.test(requestUrl.pathname)) {
       res.writeHead(410, { 'Content-Type': 'text/html; charset=utf-8', 'Cache-Control': 'no-store' })
-      res.end(renderIndexHtml(requestUrl.pathname))
+      res.end(await renderIndexHtml(requestUrl.pathname))
       return
     }
 
@@ -262,7 +369,7 @@ const server = http.createServer(async (req, res) => {
       return
     }
 
-    serveStatic(req, res, requestUrl)
+    await serveStatic(req, res, requestUrl)
   } catch (error) {
     console.error(error)
     sendJson(res, 500, { message: 'Internal server error.' })
@@ -590,7 +697,7 @@ function hasBlockedHostname(hostname) {
   return ipv4 ? isBlockedIpv4(ipv4) : false
 }
 
-function serveStatic(req, res, requestUrl) {
+async function serveStatic(req, res, requestUrl) {
   if (!['GET', 'HEAD'].includes(req.method || 'GET')) {
     sendJson(res, 405, { message: 'Method not allowed.' })
     return
@@ -616,7 +723,7 @@ function serveStatic(req, res, requestUrl) {
       sendJson(res, 404, { message: 'Not found.' })
       return
     }
-    const html = renderIndexHtml(pathname)
+    const html = await renderIndexHtml(pathname)
     const body = Buffer.from(html, 'utf8')
     res.writeHead(200, {
       'Content-Length': String(body.byteLength),
