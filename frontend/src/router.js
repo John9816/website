@@ -11,7 +11,7 @@
  */
 import { useCallback, useEffect, useState } from "react";
 
-export const PAGES = ["home", "templates", "square", "favspace", "trash"];
+export const PAGES = ["home", "templates", "square", "favspace", "trash", "shared"];
 
 /** 解析 path 段（已去 base、无 #），如 "doc/abc" -> {name:"doc",id:"abc"} */
 export function parsePath(p) {

@@ -13,7 +13,7 @@ import {
   publicUsersByIds, setUserDisabled, setUserRole, deleteUser, resetUserPassword,
   loginBlocked, noteLoginFail, clearLoginFail, mergePrefsInto, writePrefFor,
   PREF_KEYS, normalizeAcl, effectiveAcl, aclSource, sanitizeAcl, canView, canEdit, canManage,
-  effectiveOwner, reconcileOwners, addNotification, ACL_ROLES, ROLE_LABELS,
+  effectiveOwner, reconcileOwners, addNotification, ACL_ROLES, ROLE_LABELS, roleOf,
 } from "./auth.js";
 
 const PREFIX = "/editor";
@@ -853,6 +853,7 @@ async function handleApi(req, res, route) {
     const list = readDb();
     const prefs = readPrefs();
     const byId = new Map(list.map((d) => [d.id, d]));
+    const usersById = new Map(readUsers().map((u) => [u.id, u]));
     const normParent = (d) => (d.parentId && byId.has(d.parentId) ? d.parentId : null);
 
     const visible = new Set();
@@ -896,6 +897,8 @@ async function handleApi(req, res, route) {
     const out = [];
     for (const d of list) {
       if (visible.has(d.id)) {
+        const r = roleOf(user, d, list);
+        const isShared = !!r && r !== "owner";
         const proj = {
           id: d.id,
           title: d.title,
@@ -908,8 +911,16 @@ async function handleApi(req, res, route) {
           canManage: canManage(user, d, list),
           visibility: effectiveAcl(d, list).visibility,
           inherit: normalizeAcl(d).inherit,
+          // 归属标识：区分「我拥有的」与「别人分享给我的（对方空间）」
+          ownedByMe: effectiveOwner(d, list) === user.id,
+          sharedWithMe: isShared,
+          ownerName: null,
         };
         mergePrefsInto(proj, user.id, d.id, prefs);
+        if (isShared) {
+          const ow = usersById.get(effectiveOwner(d, list));
+          proj.ownerName = ow ? ow.displayName || ow.username : null;
+        }
         out.push(proj);
       } else if (placeholders.has(d.id)) {
         out.push(placeholders.get(d.id));

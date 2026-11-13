@@ -35,6 +35,7 @@ const AiPanel = lazy(() => import("./AiPanel.jsx"));
 const PermissionDialog = lazy(() => import("./PermissionDialog.jsx"));
 const AccessRequestView = lazy(() => import("./AccessRequestView.jsx"));
 const TrashView = lazy(() => import("./TrashView.jsx"));
+const SharedView = lazy(() => import("./SharedView.jsx"));
 
 const loadViews = () => import("./Views.jsx");
 const HomeView = lazy(() => loadViews().then((m) => ({ default: m.HomeView })));
@@ -139,6 +140,14 @@ const NAV_ICONS = {
       <path d="M8.6 8.6v4.8M11.4 8.6v4.8" />
     </>
   ),
+  share: (
+    <>
+      <circle cx="7" cy="7.2" r="2.5" />
+      <circle cx="14" cy="6.2" r="2.1" />
+      <circle cx="13.4" cy="14" r="2.1" />
+      <path d="M8.7 8.9 12.2 12.7M9.3 8.4 12.6 6.6" />
+    </>
+  ),
   doc: (
     <>
       <path d="M5.4 3.6h6l3.2 3.2v9.6H5.4z" />
@@ -192,8 +201,8 @@ const LS = {
   sideCollapsed: "xc.sidebarCollapsed",
 };
 
-const VIEW_NAME = { home: "主页", templates: "模板市场", square: "知识广场", favspace: "收藏空间", trash: "回收站" };
-const VIEW_ICON = { home: "home", templates: "grid", square: "book", favspace: "star", trash: "trash" };
+const VIEW_NAME = { home: "主页", templates: "模板市场", square: "知识广场", favspace: "收藏空间", trash: "回收站", shared: "收到的分享" };
+const VIEW_ICON = { home: "home", templates: "grid", square: "book", favspace: "star", trash: "trash", shared: "share" };
 
 export default function App() {
   const [docs, setDocs] = useState([]);
@@ -1280,6 +1289,12 @@ export default function App() {
               >
                 <NavIco name="trash" />回收站
               </button>
+              <button
+                className={"side-nav-item" + (view === "shared" ? " active" : "")}
+                onClick={() => goView("shared")}
+              >
+                <NavIco name="share" />收到的分享
+              </button>
             </nav>
 
             <div className="side-group">
@@ -1293,7 +1308,7 @@ export default function App() {
                 {loading && <div className="doc-empty">加载中…</div>}
                 {!loading && (
                   <SidebarTree
-                    docs={docs}
+                    docs={docs.filter((d) => !d.sharedWithMe)}
                     currentId={doc?.id || ""}
                     collapsed={collapsed}
                     onToggle={(id) =>
@@ -1561,6 +1576,14 @@ export default function App() {
             onPurge={purgeTrash}
             onClear={clearTrash}
             onGoHome={() => goView("home")}
+          />
+        ) : view === "shared" ? (
+          <SharedView
+            docs={docs.filter((d) => d.sharedWithMe)}
+            onOpen={openDoc}
+            onTogglePin={togglePin}
+            onRowMenu={openCtx}
+            loading={loading}
           />
         ) : (
           <FavoritesSpaceView favorites={favorites} onOpen={openDoc} onToggleFav={toggleFavorite} />

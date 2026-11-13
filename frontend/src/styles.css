@@ -5443,3 +5443,26 @@ button {
 /* 文档内与分享页的音频/嵌入渲染 */
 .audio-embed { display: block; margin: 6px 0; background: #000; }
 audio { display: block; margin: 6px 0; }
+
+/* ---------------- 收到的分享（对方空间）视图 ---------------- */
+.shared-view .shared-list { margin-top: 18px; display: flex; flex-direction: column; gap: 8px; }
+.shared-row {
+  display: flex; align-items: center; gap: 12px;
+  padding: 12px 14px; background: var(--panel); border: 1px solid var(--line);
+  border-radius: 10px; cursor: pointer; transition: border-color .15s, box-shadow .15s, transform .15s;
+}
+.shared-row:hover { border-color: var(--brand); box-shadow: 0 4px 14px rgba(20,30,60,.07); transform: translateY(-1px); }
+.shared-row.pinned { border-color: rgba(51,112,255,.4); }
+.shared-ico { color: var(--text-3); font-size: 16px; flex: 0 0 auto; }
+.shared-main { flex: 1 1 auto; min-width: 0; }
+.shared-title { font-size: 15px; font-weight: 600; color: var(--text); margin-bottom: 4px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.shared-meta { display: flex; align-items: center; flex-wrap: wrap; gap: 10px; font-size: 12px; color: var(--text-3); }
+.shared-owner { color: var(--brand); font-weight: 500; }
+.shared-perm { padding: 1px 7px; border-radius: 999px; background: rgba(120,130,150,.14); color: var(--text-3); font-size: 11px; }
+.shared-perm.edit { background: rgba(51,112,255,.14); color: var(--brand); }
+.shared-time { color: var(--text-3); }
+.shared-more {
+  flex: 0 0 auto; border: none; background: transparent; color: var(--text-3);
+  font-size: 18px; line-height: 1; cursor: pointer; padding: 4px 6px; border-radius: 6px;
+}
+.shared-more:hover { background: rgba(120,130,150,.12); color: var(--text); }
