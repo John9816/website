@@ -32,7 +32,46 @@ export const api = {
   getShared: (token) => request("/share/" + encodeURIComponent(token)),
   upload: (dataUrl, name) =>
     request("/upload", { method: "POST", body: { dataUrl, name } }),
+  uploadAudio: (dataUrl, name) =>
+    request("/upload/audio", { method: "POST", body: { dataUrl, name } }),
   health: () => request("/health"),
+
+  /* ---------- 回收站 ---------- */
+  trash: {
+    list: () => request("/trash"),
+    restore: (id) => request("/trash/" + encodeURIComponent(id), { method: "POST" }),
+    purge: (id) => request("/trash/" + encodeURIComponent(id), { method: "DELETE" }),
+  },
+  /* ---------- 通知 ---------- */
+  notifications: {
+    list: (unreadOnly) => request("/notifications" + (unreadOnly ? "?unread=1" : "")),
+    readAll: (ids) => request("/notifications/read-all", { method: "POST", body: { ids } }),
+  },
+  /* ---------- 提及 ---------- */
+  mentions: {
+    list: (unreadOnly) => request("/mentions" + (unreadOnly ? "?unread=1" : "")),
+    create: (body) => request("/mention", { method: "POST", body }),
+    readAll: (ids) => request("/mentions/read-all", { method: "POST", body: { ids } }),
+  },
+  /* ---------- 评论 ---------- */
+  comments: {
+    list: (docId) => request("/comments" + (docId ? "?doc=" + encodeURIComponent(docId) : "")),
+    create: (docId, text) => request("/comments", { method: "POST", body: { docId, text } }),
+    reply: (id, text) => request("/comments/" + encodeURIComponent(id) + "/reply", { method: "POST", body: { text } }),
+    remove: (id) => request("/comments/" + encodeURIComponent(id), { method: "DELETE" }),
+  },
+  /* ---------- 权限申请 / 审批 ---------- */
+  access: {
+    list: (inbox) => request("/access-requests" + (inbox ? "?inbox=1" : "")),
+    request: (body) => request("/access-request", { method: "POST", body }),
+    decide: (id, approve) => request("/access-requests/" + encodeURIComponent(id), { method: "POST", body: { approve } }),
+  },
+  /* ---------- 在线状态（轮询） ---------- */
+  presence: {
+    list: () => request("/presence"),
+    heartbeat: (docId) => request("/heartbeat", { method: "POST", body: { docId } }),
+  },
+  stats: () => request("/stats"),
 
   /* ---------- MCP（模型上下文协议） ---------- */
   mcp: {

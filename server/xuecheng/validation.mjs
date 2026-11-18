@@ -1,4 +1,4 @@
-const nodes = new Set(['doc', 'paragraph', 'heading', 'text', 'blockquote', 'code_block', 'horizontal_rule', 'hard_break', 'image', 'bullet_list', 'ordered_list', 'list_item', 'task_list', 'task_item', 'table', 'table_row', 'table_cell', 'table_header', 'callout', 'toggle'])
+const nodes = new Set(['doc', 'paragraph', 'heading', 'text', 'blockquote', 'code_block', 'horizontal_rule', 'hard_break', 'image', 'bullet_list', 'ordered_list', 'list_item', 'task_list', 'task_item', 'table', 'table_row', 'table_cell', 'table_header', 'callout', 'toggle', 'poll', 'survey'])
 const marks = new Set(['link', 'em', 'strong', 'code', 'underline', 'strikethrough', 'highlight', 'textColor', 'bgColor', 'superscript', 'subscript', 'fontSize'])
 function invalid(message) { throw Object.assign(new Error(message), { status: 400 }) }
 export function validateContent(content) {
@@ -13,7 +13,9 @@ export function validateContent(content) {
     if (node.attrs) {
       if (typeof node.attrs !== 'object' || Array.isArray(node.attrs)) invalid('节点属性格式不正确')
       for (const [key, value] of Object.entries(node.attrs)) {
-        if (value && typeof value === 'object' && !(key === 'colwidth' && Array.isArray(value) && value.every(n => Number.isFinite(n) && n >= 0))) invalid('节点属性格式不正确')
+        const arrayAttr = (key === 'colwidth' && Array.isArray(value) && value.every(n => Number.isFinite(n) && n >= 0))
+          || (['options', 'votes', 'fields'].includes(key) && (node.type === 'poll' || node.type === 'survey') && Array.isArray(value) && value.length <= 200 && value.every(v => typeof v === 'string' || (Array.isArray(v) && v.every(n => Number.isSafeInteger(n))) || (v && typeof v === 'object' && !Array.isArray(v))))
+        if (value && typeof value === 'object' && !arrayAttr) invalid('节点属性格式不正确')
         if (key === 'href' || key === 'src') {
           if (typeof value !== 'string' || /[\u0000-\u0020\u007f]/.test(value)) invalid('链接地址无效')
           const safe = /^https?:\/\//i.test(value) || /^\/(?!\/)/.test(value) || (key === 'href' && /^(mailto:|tel:|#)/i.test(value))

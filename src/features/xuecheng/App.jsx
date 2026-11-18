@@ -21,6 +21,7 @@ import { useHashRoute, docHash } from "./router.js";
 import SharePage, { ShareDialog } from "./ShareView.jsx";
 import ThemeToggle from "../../components/ThemeToggle";
 import ContextMenu, { contextMenuAt } from './ContextMenu.jsx';
+import FeaturesPanel from './FeaturesPanel.jsx';
 
 const SAVE_DEBOUNCE = 800;
 
@@ -132,6 +133,7 @@ export default function App({ canUseMcp = false, onBack }) {
   useEffect(() => () => { openGeneration.current += 1; }, []);
   const [error, setError] = useState("");
   const [contextMenu, setContextMenu] = useState(null);
+  const [featuresOpen, setFeaturesOpen] = useState(false);
 
   // 侧栏：宽度 / 折叠 / 树节点折叠
   const [sidebarWidth, setSidebarWidth] = useState(() => {
@@ -891,6 +893,17 @@ export default function App({ canUseMcp = false, onBack }) {
                   </svg>
                   <span>AI</span>
                 </button>
+                <button
+                  className={"top-ai"}
+                  data-tip="通知 / 回收站 / 评论 / 审批 / 在线"
+                  aria-label="更多功能"
+                  onClick={() => setFeaturesOpen(true)}
+                >
+                  <svg width="14" height="14" viewBox="0 0 20 20" fill="none" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" aria-hidden="true">
+                    <circle cx="5" cy="10" r="1.2" /><circle cx="10" cy="10" r="1.2" /><circle cx="15" cy="10" r="1.2" />
+                  </svg>
+                  <span>更多</span>
+                </button>
                 <span className="top-meta">
                   所有者 <b>我</b>
                 </span>
@@ -905,12 +918,22 @@ export default function App({ canUseMcp = false, onBack }) {
               </div>
             </>
           ) : (
-            <div className="crumb">
-              <span className="crumb-ico">
-                <NavIco name={VIEW_ICON[view] || "doc"} />
-              </span>
-              <span className="crumb-name">{VIEW_NAME[view] || "学城"}</span>
-            </div>
+            <>
+              <div className="crumb">
+                <span className="crumb-ico">
+                  <NavIco name={VIEW_ICON[view] || "doc"} />
+                </span>
+                <span className="crumb-name">{VIEW_NAME[view] || "学城"}</span>
+              </div>
+              <div className="topbar-right">
+                <button className="top-ai" data-tip="通知 / 回收站 / 审批 / 在线" aria-label="更多功能" onClick={() => setFeaturesOpen(true)}>
+                  <svg width="14" height="14" viewBox="0 0 20 20" fill="none" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" aria-hidden="true">
+                    <circle cx="5" cy="10" r="1.2" /><circle cx="10" cy="10" r="1.2" /><circle cx="15" cy="10" r="1.2" />
+                  </svg>
+                  <span>更多</span>
+                </button>
+              </div>
+            </>
           )}
           <ThemeToggle bare />
         </header>
@@ -1005,6 +1028,16 @@ export default function App({ canUseMcp = false, onBack }) {
           charCount={words}
           onClose={() => setSaveTplOpen(false)}
           onSave={saveAsTemplate}
+        />
+      )}
+
+      {featuresOpen && (
+        <FeaturesPanel
+          open={featuresOpen}
+          onClose={() => setFeaturesOpen(false)}
+          docId={doc?.id || null}
+          onError={setError}
+          onRestored={(msg) => setToast(msg)}
         />
       )}
 

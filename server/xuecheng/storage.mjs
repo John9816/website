@@ -34,5 +34,9 @@ export function userStore(root, userId) {
     writeDb: value => writeJson(path.join(dir, 'docs.json'), value),
     readTpl: () => read('templates.json'),
     writeTpl: value => writeJson(path.join(dir, 'templates.json'), value),
+    // 扩展集合：回收站、通知、评论、提及等（均为数组结构）
+    readColl: name => read(name + '.json'),
+    writeColl: (name, value) => writeJson(path.join(dir, name + '.json'), value),
+    dir,
   }
 }

@@ -214,6 +214,95 @@ const extraMarks = {
   },
 };
 
+/* ---------- 投票 / 问卷（原子块：用 toDOM 渲染成只读卡片） ---------- */
+const poll = {
+  group: "block",
+  atom: true,
+  selectable: true,
+  draggable: true,
+  attrs: { question: { default: "" }, options: { default: [] }, votes: { default: [] }, multiple: { default: false } },
+  parseDOM: [{ tag: "div[data-poll]", getAttrs: (dom) => {
+    try {
+      return {
+        question: dom.getAttribute("data-question") || "",
+        options: JSON.parse(dom.getAttribute("data-options") || "[]"),
+        votes: JSON.parse(dom.getAttribute("data-votes") || "[]"),
+        multiple: dom.getAttribute("data-multiple") === "true",
+      };
+    } catch { return null; }
+  } }],
+  toDOM: (node) => {
+    const { question, options, votes, multiple } = node.attrs;
+    const counts = {};
+    (votes || []).forEach((v) => { (v || []).forEach((i) => { counts[i] = (counts[i] || 0) + 1; }); });
+    const total = (votes || []).length;
+    const wrap = document.createElement("div");
+    wrap.setAttribute("data-poll", "1");
+    wrap.setAttribute("data-question", question || "");
+    wrap.setAttribute("data-options", JSON.stringify(options || []));
+    wrap.setAttribute("data-votes", JSON.stringify(votes || []));
+    wrap.setAttribute("data-multiple", String(!!multiple));
+    wrap.className = "poll-block";
+    const q = document.createElement("div");
+    q.className = "poll-q";
+    q.textContent = "📊 " + (question || "投票");
+    wrap.appendChild(q);
+    (options || []).forEach((opt, i) => {
+      const row = document.createElement("div");
+      row.className = "poll-opt";
+      const pct = total ? Math.round(((counts[i] || 0) / total) * 100) : 0;
+      row.textContent = `${opt} — ${counts[i] || 0} 票 (${pct}%)`;
+      wrap.appendChild(row);
+    });
+    const foot = document.createElement("div");
+    foot.className = "poll-foot";
+    foot.textContent = `${total} 人参与${multiple ? " · 多选" : ""}`;
+    wrap.appendChild(foot);
+    return wrap;
+  },
+};
+
+const survey = {
+  group: "block",
+  atom: true,
+  selectable: true,
+  draggable: true,
+  attrs: { title: { default: "" }, fields: { default: [] }, responses: { default: 0 } },
+  parseDOM: [{ tag: "div[data-survey]", getAttrs: (dom) => {
+    try {
+      return {
+        title: dom.getAttribute("data-title") || "",
+        fields: JSON.parse(dom.getAttribute("data-fields") || "[]"),
+        responses: parseInt(dom.getAttribute("data-responses") || "0", 10),
+      };
+    } catch { return null; }
+  } }],
+  toDOM: (node) => {
+    const { title, fields, responses } = node.attrs;
+    const wrap = document.createElement("div");
+    wrap.setAttribute("data-survey", "1");
+    wrap.setAttribute("data-title", title || "");
+    wrap.setAttribute("data-fields", JSON.stringify(fields || []));
+    wrap.setAttribute("data-responses", String(responses || 0));
+    wrap.className = "survey-block";
+    const h = document.createElement("div");
+    h.className = "survey-title";
+    h.textContent = "📝 " + (title || "问卷");
+    wrap.appendChild(h);
+    (fields || []).forEach((f) => {
+      const row = document.createElement("div");
+      row.className = "survey-field";
+      row.textContent = "· " + (typeof f === "string" ? f : (f.label || f.title || ""));
+      wrap.appendChild(row);
+    });
+    const foot = document.createElement("div");
+    foot.className = "survey-foot";
+    foot.textContent = `${responses || 0} 份回答`;
+    wrap.appendChild(foot);
+    return wrap;
+  },
+};
+
 /* ---------- 组装 ---------- */
 let nodes = basicSchema.spec.nodes;
 nodes = nodes.update("paragraph", paragraph);
@@ -224,6 +313,8 @@ nodes = nodes.append({
   toggle,
   task_list: taskList,
   task_item: taskItem,
+  poll,
+  survey,
   ...tables,
 });
 // 列表节点需要允许任意 block 作为内容（列表项里可以放代码块 / 提示块）

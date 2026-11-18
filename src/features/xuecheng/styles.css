@@ -4177,3 +4177,91 @@
   .xuecheng-workspace .theme-toggle { min-width: 70px; height: 38px; padding: 2px; }
   .xuecheng-workspace .theme-toggle__option { width: 30px; height: 32px; }
 }
+
+/* ===== 扩展功能面板：通知/回收站/评论/审批/在线/统计 ===== */
+.xuecheng-workspace .fp-mask {
+  position: fixed; inset: 0; z-index: 200;
+  background: rgba(0,0,0,.38);
+  display: flex; align-items: center; justify-content: center;
+  padding: 20px;
+}
+.xuecheng-workspace .fp-panel {
+  width: min(560px, 100%); max-height: min(74vh, 640px);
+  display: flex; flex-direction: column;
+  background: var(--panel); color: var(--text);
+  border: 1px solid var(--border-strong); border-radius: 12px;
+  box-shadow: var(--shadow-lg); overflow: hidden;
+}
+.xuecheng-workspace .fp-head {
+  display: flex; align-items: center; justify-content: space-between;
+  padding: 14px 18px; border-bottom: 1px solid var(--line-soft);
+}
+.xuecheng-workspace .fp-title { font-weight: 600; font-size: 15px; }
+.xuecheng-workspace .fp-close {
+  border: 0; background: transparent; color: var(--text);
+  font-size: 22px; line-height: 1; cursor: pointer; padding: 0 4px;
+}
+.xuecheng-workspace .fp-close:hover { color: var(--danger); }
+.xuecheng-workspace .fp-tabs {
+  display: flex; gap: 2px; padding: 8px 12px 0; flex-wrap: wrap;
+  border-bottom: 1px solid var(--line-soft);
+}
+.xuecheng-workspace .fp-tab {
+  border: 0; background: transparent; color: var(--text);
+  padding: 8px 12px; cursor: pointer; font-size: 13px;
+  border-bottom: 2px solid transparent; opacity: .7;
+}
+.xuecheng-workspace .fp-tab:hover { opacity: 1; }
+.xuecheng-workspace .fp-tab.active { opacity: 1; color: var(--accent); border-bottom-color: var(--accent); }
+.xuecheng-workspace .fp-body { padding: 14px 18px 20px; overflow-y: auto; min-height: 180px; }
+.xuecheng-workspace .fp-list { display: flex; flex-direction: column; gap: 10px; }
+.xuecheng-workspace .fp-empty { color: var(--text); opacity: .5; text-align: center; padding: 36px 0; font-size: 13px; }
+.xuecheng-workspace .fp-item {
+  border: 1px solid var(--line-soft); border-radius: 8px;
+  padding: 10px 12px; background: var(--panel-soft);
+}
+.xuecheng-workspace .fp-item.unread { border-left: 3px solid var(--accent); }
+.xuecheng-workspace .fp-item-title { font-size: 13px; line-height: 1.5; word-break: break-word; }
+.xuecheng-workspace .fp-item-meta { font-size: 11px; opacity: .6; margin-top: 4px; }
+.xuecheng-workspace .fp-reply { font-size: 12px; opacity: .85; margin: 6px 0 0 12px; }
+.xuecheng-workspace .fp-actions { display: flex; gap: 8px; margin-top: 8px; }
+.xuecheng-workspace .fp-btn {
+  border: 1px solid var(--accent); background: var(--accent); color: var(--on-accent);
+  border-radius: 6px; padding: 5px 12px; font-size: 12px; cursor: pointer;
+}
+.xuecheng-workspace .fp-btn:hover { background: var(--accent-hover); }
+.xuecheng-workspace .fp-btn:disabled { opacity: .5; cursor: not-allowed; }
+.xuecheng-workspace .fp-btn.ghost { background: transparent; color: var(--text); border-color: var(--border-strong); }
+.xuecheng-workspace .fp-compose { display: flex; flex-direction: column; gap: 8px; }
+.xuecheng-workspace .fp-compose textarea {
+  width: 100%; box-sizing: border-box; resize: vertical;
+  background: var(--bg); color: var(--text); border: 1px solid var(--border-strong);
+  border-radius: 6px; padding: 8px 10px; font: inherit; font-size: 13px;
+}
+.xuecheng-workspace .fp-online-dot {
+  display: inline-block; width: 7px; height: 7px; border-radius: 50%;
+  background: var(--accent-green); margin-right: 6px;
+}
+.xuecheng-workspace .fp-stats {
+  display: grid; grid-template-columns: repeat(3, 1fr); gap: 12px;
+}
+.xuecheng-workspace .fp-stat {
+  display: flex; flex-direction: column; align-items: center; gap: 4px;
+  padding: 16px 8px; border: 1px solid var(--line-soft);
+  border-radius: 8px; background: var(--panel-soft);
+}
+.xuecheng-workspace .fp-stat b { font-size: 22px; color: var(--accent); }
+.xuecheng-workspace .fp-stat span { font-size: 12px; opacity: .7; }
+
+/* ===== 投票 / 问卷原子块 ===== */
+.xuecheng-workspace .poll-block,
+.xuecheng-workspace .survey-block {
+  border: 1px solid var(--border-strong); border-radius: 8px;
+  padding: 12px 16px; margin: 10px 0; background: var(--panel-soft);
+}
+.xuecheng-workspace .poll-q,
+.xuecheng-workspace .survey-title { font-weight: 600; margin-bottom: 8px; }
+.xuecheng-workspace .poll-opt,
+.xuecheng-workspace .survey-field { font-size: 13px; padding: 4px 0; opacity: .9; }
+.xuecheng-workspace .poll-foot,
+.xuecheng-workspace .survey-foot { font-size: 11px; opacity: .55; margin-top: 8px; }

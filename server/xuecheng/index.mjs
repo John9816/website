@@ -6,6 +6,14 @@ import { McpManager } from './mcp.mjs';
 import { userStore, readJson, writeJson } from './storage.mjs';
 import { authenticate } from './auth.mjs';
 import { validateContent } from './validation.mjs';
+import {
+  listTrash, pushTrash, restoreTrash, purgeTrash,
+  listNotifications, addNotification, markNotificationsRead,
+  listComments, addComment, replyComment, deleteComment,
+  listMentions, addMention, markMentionsRead,
+  listAccessRequests, addAccessRequest, decideAccessRequest,
+  readPresence, heartbeat, statsOf,
+} from './features.mjs';
 const PREFIX = '/editor';
 const MAX_BODY = 8 * 1024 * 1024;
 const nowISO = () => new Date().toISOString();
@@ -81,6 +89,10 @@ const MIME = {
   ".svg": "image/svg+xml",
   ".ico": "image/x-icon",
   ".woff2": "font/woff2",
+  ".mp3": "audio/mpeg",
+  ".wav": "audio/wav",
+  ".ogg": "audio/ogg",
+  ".m4a": "audio/mp4",
 };
 
 function serveFile(res, filePath, cache = false) {
@@ -115,8 +127,10 @@ export function createXuechengHandler({ backendUrl, dataDir }) {
     return typeof value === 'function' ? value.bind(manager) : value;
   } });
 async function handleApi(req, res, route, user) {
-  const { readDb, writeDb, readTpl, writeTpl } = userStore(DATA_DIR, user.id);
+  const store = userStore(DATA_DIR, user.id);
+  const { readDb, writeDb, readTpl, writeTpl } = store;
   const method = req.method;
+  const query = new URL(req.url || '', 'http://local').searchParams;
   if (route.startsWith("/api/mcp/") && (user.role !== "ADMIN" || user.canManageSystemConfig !== true)) return json(res, 403, null, "只有系统管理员可管理 MCP 工具");
 
   if (route === "/api/health") {
@@ -428,12 +442,14 @@ async function handleApi(req, res, route, user) {
       const remaining = list.filter((d) => !toDelete.has(d.id));
       const tokens = removed.map(d => d.share?.token).filter(Boolean);
       const shares = tokens.length ? readJson(SHARES_FILE, {}) : null;
+      // 删除前存入回收站（含完整快照与分享 token，供恢复时还原 shares.json）
+      const batch = pushTrash(store, removed, 'delete');
       writeDb(remaining);
       if (shares) {
         for (const token of tokens) delete shares[token];
         writeJson(SHARES_FILE, shares);
       }
-      return json(res, 200, { id, count: removed.length });
+      return json(res, 200, { id, count: removed.length, trashId: batch?.id || null });
     }
   }
 
@@ -454,6 +470,129 @@ async function handleApi(req, res, route, user) {
     return json(res, 200, { url: `${PREFIX}/files/${name}`, name });
   }
 
+  /* ============ 扩展功能：回收站 ============ */
+  if (route === "/api/trash" && method === "GET") return json(res, 200, listTrash(store));
+  const trashMatch = route.match(/^\/api\/trash\/([A-Za-z0-9_-]+)$/);
+  if (trashMatch) {
+    const id = trashMatch[1];
+    if (method === "POST") {
+      const r = restoreTrash(store, id);
+      if (!r) return json(res, 404, null, "回收站记录不存在");
+      // 恢复分享 token 映射
+      const tokens = (r.batch?.shareTokens || []).filter(Boolean);
+      if (tokens.length) {
+        const shares = readJson(SHARES_FILE, {});
+        for (const t of tokens) shares[t] = user.id;
+        writeJson(SHARES_FILE, shares);
+      }
+      return json(res, 200, { restored: r.restored });
+    }
+    if (method === "DELETE") {
+      return purgeTrash(store, id) ? json(res, 200, { id }) : json(res, 404, null, "回收站记录不存在");
+    }
+  }
+
+  /* ============ 扩展功能：通知 ============ */
+  if (route === "/api/notifications" && method === "GET") {
+    return json(res, 200, listNotifications(store, { unreadOnly: query.get('unread') === '1' }));
+  }
+  if (route === "/api/notifications/read-all" && method === "POST") {
+    const body = (await readBody(req)) || {};
+    return json(res, 200, { read: markNotificationsRead(store, body.ids) });
+  }
+
+  /* ============ 扩展功能：评论 ============ */
+  if (route === "/api/comments" && method === "GET") {
+    const doc = query.get('doc');
+    return json(res, 200, listComments(store, doc));
+  }
+  if (route === "/api/comments" && method === "POST") {
+    const body = (await readBody(req)) || {};
+    if (!body.docId) return json(res, 400, null, "缺少文档 id");
+    if (!String(body.text || "").trim()) return json(res, 400, null, "评论内容不能为空");
+    const c = addComment(store, { docId: body.docId, text: body.text, author: user.username, authorId: user.id });
+    // 给文档作者自己之外的人评论时生成通知（此处单用户版：评论即通知自己，便于展示）
+    addNotification(store, { type: 'comment', docId: body.docId, actor: user.username, text: '你发表了一条评论' });
+    return json(res, 200, c);
+  }
+  const commentMatch = route.match(/^\/api\/comments\/([A-Za-z0-9_-]+)(?:\/(reply))?$/);
+  if (commentMatch) {
+    const id = commentMatch[1];
+    if (commentMatch[2] === 'reply' && method === "POST") {
+      const body = (await readBody(req)) || {};
+      const c = replyComment(store, id, { text: body.text, author: user.username, authorId: user.id });
+      return c ? json(res, 200, c) : json(res, 404, null, "评论不存在");
+    }
+    if (method === "DELETE") {
+      return deleteComment(store, id, user.id) ? json(res, 200, { id }) : json(res, 404, null, "评论不存在或无权限");
+    }
+  }
+
+  /* ============ 扩展功能：提及 ============ */
+  if (route === "/api/mentions" && method === "GET") {
+    return json(res, 200, listMentions(store, { unreadOnly: query.get('unread') === '1' }));
+  }
+  if (route === "/api/mentions/read-all" && method === "POST") {
+    const body = (await readBody(req)) || {};
+    return json(res, 200, { ok: true, total: markMentionsRead(store, body.ids) });
+  }
+  if (route === "/api/mention" && method === "POST") {
+    const body = (await readBody(req)) || {};
+    const m = addMention(store, { docId: body.docId, docTitle: body.docTitle, by: user.username, byId: user.id, text: body.text });
+    addNotification(store, { type: 'mention', docId: body.docId, docTitle: body.docTitle, actor: user.username, text: '有人在文档中提到了你' });
+    return json(res, 200, m);
+  }
+
+  /* ============ 扩展功能：权限申请 / 审批 ============ */
+  if (route === "/api/access-requests" && method === "GET") {
+    return json(res, 200, listAccessRequests(store, { inbox: query.get('inbox') === '1' }));
+  }
+  if (route === "/api/access-request" && method === "POST") {
+    const body = (await readBody(req)) || {};
+    if (!body.docId) return json(res, 400, null, "缺少文档 id");
+    const docs = readDb();
+    const doc = docs.find((d) => d.id === body.docId);
+    const r = addAccessRequest(store, {
+      docId: body.docId, docTitle: body.docTitle || doc?.title || '',
+      applicant: user.username, applicantId: user.id, role: body.role || 'viewer', message: body.message,
+    });
+    addNotification(store, { type: 'access_request', docId: body.docId, docTitle: r.docTitle, actor: user.username, text: '收到一条文档访问申请' });
+    return json(res, 200, r);
+  }
+  const accessMatch = route.match(/^\/api\/access-requests\/([A-Za-z0-9_-]+)$/);
+  if (accessMatch && (method === "POST" || method === "PATCH")) {
+    const body = (await readBody(req)) || {};
+    const r = decideAccessRequest(store, accessMatch[1], { approve: !!body.approve, handledBy: user.username });
+    if (!r) return json(res, 404, null, "申请不存在或已处理");
+    addNotification(store, { type: 'access_decision', docId: r.docId, docTitle: r.docTitle, actor: user.username, text: r.status === 'approved' ? '你的访问申请已通过' : '你的访问申请被拒绝' });
+    return json(res, 200, r);
+  }
+
+  /* ============ 扩展功能：在线状态 / 心跳（轮询版） ============ */
+  if (route === "/api/presence" && method === "GET") {
+    return json(res, 200, readPresence(readJson, DATA_DIR));
+  }
+  if (route === "/api/heartbeat" && method === "POST") {
+    const body = (await readBody(req)) || {};
+    return json(res, 200, heartbeat(readJson, DATA_DIR, user, body.docId));
+  }
+
+  /* ============ 扩展功能：统计 / 音频上传 ============ */
+  if (route === "/api/stats" && method === "GET") return json(res, 200, statsOf(store));
+  if (route === "/api/upload/audio" && method === "POST") {
+    const body = (await readBody(req)) || {};
+    const m3 = /^data:audio\/(mpeg|mp3|wav|ogg|mp4|x-wav);base64,(.+)$/i.exec(body.dataUrl || "");
+    if (!m3) return json(res, 400, null, "仅支持 audio dataUrl");
+    const extMap = { mpeg: 'mp3', mp3: 'mp3', wav: 'wav', 'x-wav': 'wav', ogg: 'ogg', mp4: 'm4a' };
+    const ext = extMap[m3[1].toLowerCase()] || 'mp3';
+    const bytes = Buffer.from(m3[2], 'base64');
+    if (bytes.length > 12 * 1024 * 1024) return json(res, 413, null, "音频不能超过 12MB");
+    fs.mkdirSync(FILES_DIR, { recursive: true, mode: 0o700 });
+    const name = `${crypto.randomBytes(24).toString('hex')}.${ext}`;
+    fs.writeFileSync(path.join(FILES_DIR, name), bytes, { mode: 0o600 });
+    return json(res, 200, { url: `${PREFIX}/files/${name}`, name });
+  }
+
   return json(res, 404, null, "接口不存在");
 }
 
@@ -465,7 +604,7 @@ async function handleApi(req, res, route, user) {
       try {
         if (pathname.startsWith('/editor/files/')) {
           const name = pathname.slice('/editor/files/'.length);
-          if (!/^[a-f0-9]{48}\.(png|jpg|gif|webp)$/.test(name) || !['GET', 'HEAD'].includes(req.method)) json(res, 404, null, '文件不存在');
+          if (!/^[a-f0-9]{48}\.(png|jpg|gif|webp|mp3|wav|ogg|m4a)$/.test(name) || !['GET', 'HEAD'].includes(req.method)) json(res, 404, null, '文件不存在');
           else serveFile(res, path.join(FILES_DIR, name), true);
           return true;
         }
