@@ -43,6 +43,7 @@ const AdminRedeemCodes = lazy(() => import('./pages/AdminRedeemCodes'))
 const AdminKnowledgeBase = lazy(() => import('./pages/AdminKnowledgeBase'))
 const KbSharePage = lazy(() => import('./pages/KbSharePage'))
 const DevEditorPreview = lazy(() => import('./pages/DevEditorPreview'))
+const EditorApp = lazy(() => import('./pages/EditorApp'))
 
 function RouteFallback() {
   return (
@@ -318,6 +319,8 @@ export default function App() {
                     {import.meta.env.DEV ? (
                       <Route path="/dev/editor" element={<DevEditorPreview />} />
                     ) : null}
+                    {/* 学城编辑器（xuecheng-editor）：独立挂载在 /editor/*，内部自有 history 路由 */}
+                    <Route path="/editor/*" element={<EditorApp />} />
                     <Route path="*" element={<Navigate to="/" replace />} />
                   </Routes>
                 </Suspense>

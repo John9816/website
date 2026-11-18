@@ -20,6 +20,16 @@ export default defineConfig(({ mode }) => {
         renderLegacyChunks: true,
       }),
     ],
+    // 学城编辑器使用独立的 prosemirror-* 包（非 @tiptap/pm）。强制单一实例，
+    // 否则 prosemirror-view 内部与直接 import 会解析出两份类，导致 instanceof 失效。
+    resolve: {
+      dedupe: [
+        'prosemirror-state',
+        'prosemirror-model',
+        'prosemirror-view',
+        'prosemirror-tables',
+      ],
+    },
     build: {
       target: 'es2018',
       cssTarget: 'chrome61',
