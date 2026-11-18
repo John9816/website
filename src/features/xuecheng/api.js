@@ -1,7 +1,14 @@
 import { request as websiteRequest } from '../../api/client'
-const BASE = '/editor/api';
+// 后端已迁移到 website-backend（Java）。认证接口走 /api/user/editor/**，
+// 公开只读接口（分享、文件）走 /api/public/editor/**。
+const BASE = '/api/user/editor';
+const PUBLIC_BASE = '/api/public/editor';
 function request(path, { method = 'GET', body } = {}) {
-  return websiteRequest(BASE + path, { method, body, auth: !path.startsWith('/share/'), sameOrigin: true });
+  return websiteRequest(BASE + path, { method, body, auth: true, sameOrigin: true });
+}
+// 分享读取免登录，走 public 端点
+function publicRequest(path, opts = {}) {
+  return websiteRequest(PUBLIC_BASE + path, { ...opts, auth: false, sameOrigin: true });
 }
 
 export const api = {
@@ -29,7 +36,7 @@ export const api = {
   shareDoc: (id) => request("/docs/" + encodeURIComponent(id) + "/share", { method: "POST" }),
   unshareDoc: (id) => request("/docs/" + encodeURIComponent(id) + "/share", { method: "DELETE" }),
   getShareState: (id) => request("/docs/" + encodeURIComponent(id) + "/share"),
-  getShared: (token) => request("/share/" + encodeURIComponent(token)),
+  getShared: (token) => publicRequest("/share/" + encodeURIComponent(token)),
   upload: (dataUrl, name) =>
     request("/upload", { method: "POST", body: { dataUrl, name } }),
   uploadAudio: (dataUrl, name) =>
@@ -72,20 +79,4 @@ export const api = {
     heartbeat: (docId) => request("/heartbeat", { method: "POST", body: { docId } }),
   },
   stats: () => request("/stats"),
-
-  /* ---------- MCP（模型上下文协议） ---------- */
-  mcp: {
-    meta: () => request("/mcp/meta"),
-    list: () => request("/mcp/servers"),
-    create: (body) => request("/mcp/servers", { method: "POST", body }),
-    update: (id, body) => request("/mcp/servers/" + encodeURIComponent(id), { method: "PATCH", body }),
-    remove: (id) => request("/mcp/servers/" + encodeURIComponent(id), { method: "DELETE" }),
-    connect: (id) => request("/mcp/servers/" + encodeURIComponent(id) + "/connect", { method: "POST" }),
-    disconnect: (id) => request("/mcp/servers/" + encodeURIComponent(id) + "/disconnect", { method: "POST" }),
-    call: (id, name, args) =>
-      request("/mcp/servers/" + encodeURIComponent(id) + "/call", {
-        method: "POST",
-        body: { name, arguments: args || {} },
-      }),
-  },
 };
