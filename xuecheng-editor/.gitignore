@@ -1,0 +1,14 @@
+node_modules/
+.wrangler/
+*.log
+.DS_Store
+# frontend/dist 由 npm run build 生成，部署时 wrangler 自动包含；
+# 如需纳入 git 可删除下一行
+frontend/dist/
+# 一次性生成的管理员凭据，切勿提交
+.admin-creds.json
+# 部署用临时凭据
+.env.deploy
+
+# 本地导出种子数据（由脚本再生成），非源码
+data/
