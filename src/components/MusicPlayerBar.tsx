@@ -103,6 +103,7 @@ export default function MusicPlayerBar({
     playNext,
     seekToTime,
     setPreferredQuality,
+    prefetchQuality,
     setVolume,
     cyclePlayMode,
     toggleMuted,
@@ -353,6 +354,12 @@ export default function MusicPlayerBar({
             preferredQuality === item.value ? ' is-active' : ''
           }`}
           disabled={playLoading}
+          onPointerEnter={() => {
+            if (preferredQuality !== item.value) prefetchQuality(item.value)
+          }}
+          onFocus={() => {
+            if (preferredQuality !== item.value) prefetchQuality(item.value)
+          }}
           onClick={() => {
             if (preferredQuality !== item.value) {
               switchQuality(item.value)
