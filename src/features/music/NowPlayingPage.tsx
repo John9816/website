@@ -140,6 +140,7 @@ export default function NowPlayingPage() {
     playNext,
     seekToTime,
     setPreferredQuality,
+    prefetchQuality,
     setVolume,
     cyclePlayMode,
     toggleMuted,
@@ -444,6 +445,12 @@ export default function NowPlayingPage() {
           type="button"
           className={`now-quality-menu__item${preferredQuality === item.value ? ' is-active' : ''}`}
           disabled={playLoading}
+          onPointerEnter={() => {
+            if (preferredQuality !== item.value) prefetchQuality(item.value)
+          }}
+          onFocus={() => {
+            if (preferredQuality !== item.value) prefetchQuality(item.value)
+          }}
           onClick={() => {
             if (preferredQuality !== item.value) switchQuality(item.value)
             setQualityOpen(false)
