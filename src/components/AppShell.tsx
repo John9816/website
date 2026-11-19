@@ -50,17 +50,52 @@ function ThemeCycleButton({ className }: { className: string }) {
   )
 }
 
+/**
+ * Tab 显隐缓存（模块级 + localStorage）。
+ * 背景：每个空间页面各自包裹一个 <AppShell>，路由切换时 AppShell 会重新挂载。
+ * 若每次都用「全部可见」作初始 state、再等异步接口回来隐藏，被管理员隐藏的 tab
+ * 就会在每次切换时闪现一下。这里同步读取上一次已解析的显隐配置作初始值，
+ * 消除闪烁；接口返回后再刷新缓存与 state（管理员改配置后最多下一次挂载生效）。
+ */
+const TAB_VISIBILITY_CACHE_KEY = 'app-shell.tab-visibility'
+let tabVisibilityCache: Record<string, boolean> | null = null
+
+function readCachedVisibility(): Record<string, boolean> | null {
+  if (tabVisibilityCache) return tabVisibilityCache
+  try {
+    const raw = localStorage.getItem(TAB_VISIBILITY_CACHE_KEY)
+    if (raw) {
+      tabVisibilityCache = parseTabVisibility(JSON.parse(raw))
+      return tabVisibilityCache
+    }
+  } catch { /* localStorage 不可用（隐私模式等）时忽略 */ }
+  return null
+}
+
+function writeCachedVisibility(map: Record<string, boolean>) {
+  tabVisibilityCache = map
+  try { localStorage.setItem(TAB_VISIBILITY_CACHE_KEY, JSON.stringify(map)) } catch { /* 忽略 */ }
+}
+
 export default function AppShell({ children }: { children: ReactNode }) {
   const auth = useAuth()
   const location = useLocation()
-  const [visibility, setVisibility] = useState<Record<string, boolean>>(DEFAULT_TAB_VISIBILITY)
+  // 同步初始化：优先用缓存，避免「先全显示再隐藏」的闪现；无缓存时才用默认全显示
+  const [visibility, setVisibility] = useState<Record<string, boolean>>(
+    () => readCachedVisibility() ?? DEFAULT_TAB_VISIBILITY,
+  )
 
-  // 加载管理员配置的 tab 显隐；失败时保持默认全部显示
+  // 加载管理员配置的 tab 显隐；失败时保持缓存/默认值
   useEffect(() => {
     let alive = true
     getTabVisibility()
-      .then((raw) => { if (alive) setVisibility(parseTabVisibility(raw)) })
-      .catch(() => { /* 网络/接口异常时维持默认全显示 */ })
+      .then((raw) => {
+        if (!alive) return
+        const parsed = parseTabVisibility(raw)
+        writeCachedVisibility(parsed)
+        setVisibility(parsed)
+      })
+      .catch(() => { /* 网络/接口异常时维持缓存/默认全显示 */ })
     return () => { alive = false }
   }, [])
 
