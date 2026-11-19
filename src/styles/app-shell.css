@@ -31,6 +31,8 @@
    播放器、编辑器面板、弹窗等 fixed 元素相对内容区而非视口定位，出现整体下移/错位。 */
 .app-shell__route-view {
   min-height: 100%;
+  display: flex;
+  flex-direction: column;
   animation: app-route-enter 0.26s ease-out both;
 }
 
@@ -39,17 +41,29 @@
   to { opacity: 1; }
 }
 
-/* 全屏子页面（AI 对话/生图、音乐、文档编辑器）改为填满内容区 */
-.app-shell__content > .ai-chat,
-.app-shell__content > .music-page,
-.app-shell__content > .xuecheng-workspace {
+/* 全屏子页面（AI 对话/生图、音乐、文档编辑器）改为填满内容区。
+   注意：它们位于 .app-shell__route-view 包装层内（不是 content 的直接子元素），
+   选择器必须穿透该包装层，否则这些页面仍按 100dvh 渲染、比内容区高出一个顶栏，
+   造成底部裁切 + 多余嵌套滚动条。 */
+.app-shell__route-view > .ai-chat,
+.app-shell__route-view > .music-page,
+.app-shell__route-view > .xuecheng-workspace {
+  flex: 1 1 auto;
   height: 100%;
   min-height: 0;
 }
 
 /* 编辑器 .app 原本按整屏 100vh/100dvh 布局；嵌入外壳后改为填满内容区，避免双滚动条 */
-.app-shell__content > .xuecheng-workspace .app {
+.app-shell__route-view > .xuecheng-workspace .app {
   height: 100%;
+}
+
+/* 音乐页 .music-studio/.music-v4 内部写死 100dvh（整屏高度）。嵌入带顶栏的外壳后必须
+   改为 100%（= 内容区高度），否则比内容区高出一个顶栏，底部被裁切并产生嵌套滚动。 */
+.app-shell__route-view > .music-page.music-studio,
+.app-shell__route-view > .music-page.music-v4 {
+  height: 100%;
+  min-height: 0;
 }
 
 /* ---------- PC：顶部横栏 ---------- */
