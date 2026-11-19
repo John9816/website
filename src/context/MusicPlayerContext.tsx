@@ -176,6 +176,8 @@ type MusicPlayerContextValue = ReturnType<typeof usePlayerLyrics> & ReturnType<t
   clearQueue: () => void
   moveQueueToNext: (index: number) => void
   setPreferredQuality: (quality: MusicQuality) => void
+  /** Warm the decrypted Blob for the current track at a given quality (hover-to-prefetch). */
+  prefetchQuality: (quality: MusicQuality) => void
   playSong: (row: SongSearchItem, quality?: MusicQuality) => Promise<void>
   playResolvedSong: (
     row: SongSearchItem,
@@ -242,6 +244,9 @@ export function MusicPlayerProvider({ children }: { children: ReactNode }) {
   // lyric highlighting lag the audio by up to 250ms. We read audioRef.currentTime
   // every animation frame while playing so the lyric active index stays in sync.
   const smoothClockLastRef = useRef(0)
+  // When the client-decrypted Blob replaces the 3Mbps fallback stream mid-playback,
+  // remember where the listener was so the upgrade is seamless instead of restarting.
+  const pendingSeekRef = useRef<{ key: string; time: number } | null>(null)
   const [volume, setVolumeState] = useState(1)
   const [muted, setMuted] = useState(false)
   const [playLoading, setPlayLoading] = useState(false)
@@ -425,6 +430,27 @@ export function MusicPlayerProvider({ children }: { children: ReactNode }) {
   const setPreferredQuality = useCallback((quality: MusicQuality) => {
     setPreferredQualityState(quality)
   }, [])
+
+  // Hover-to-prefetch: warm the decrypted Blob for the current track at `quality`.
+  // Hovering a quality option starts the ~48MB download + decrypt up to several seconds
+  // before the user clicks, so switching feels instant and never falls back to the
+  // 3Mbps ECS stream. No-ops for non-Qishui tracks, the active quality, or cached blobs.
+  const prefetchQuality = useCallback((quality: MusicQuality) => {
+    if (!current || quality === current.requestedQuality) return
+    if (!hasQishuiDirectPlayback(current)) return
+    const key = richPlaybackKey(current.source, current.id, quality)
+    if (getCachedRichPlayback(key) || richPrefetchRef.current.has(key)) return
+    richPrefetchRef.current.add(key)
+    const row = { source: current.source, id: current.id }
+    void resolvePlayInfo(row, quality, true)
+      .promise.then((info) => {
+        if (info.directUrl && info.playAuth && hasQishuiDirectPlayback(info)) {
+          return ensureRichPlayback(key, info.directUrl, info.playAuth)
+        }
+        richPrefetchRef.current.delete(key)
+      })
+      .catch(() => { richPrefetchRef.current.delete(key) })
+  }, [current, resolvePlayInfo])
 
   const setPlayMode = useCallback((mode: PlayMode) => {
     setPlayModeState(mode)
@@ -712,9 +738,19 @@ export function MusicPlayerProvider({ children }: { children: ReactNode }) {
     // The decrypted Blob isn't ready yet (cold track / fast skip / shuffle).
     // Start the stream URL immediately so audio begins within ~100–300ms instead
     // of blocking on a full fetch + decrypt, then upgrade to the private Blob once
-    // it lands. The upgrade only happens near the start of playback (currentTime
-    // < 0.4s) so it is seamless; otherwise we keep the stream for the rest of the
-    // song. Prefetched tracks still hit the cache above and never touch the stream.
+    // it lands.
+    //
+    // Why the window matters: the backend stream is capped at ECS uplink ~3.3Mbps,
+    // just enough for a ~3.2Mbps FLAC with no buffering headroom, so listening on it
+    // feels stuttery/slow. The Blob is local and smooth. A lossless file is ~48MB and
+    // takes ~2s to download + ~0.9s to decrypt; the old 0.4s window always expired
+    // before the Blob landed, so lossless tracks stayed on the slow stream the whole
+    // song — that is the "switching quality is slow" symptom.
+    //
+    // Fix: widen the upgrade window to cover the worst-case cold decrypt, and seek
+    // to the exact currentTime after the swap so the upgrade is inaudible. The window
+    // only guards against installing a stale Blob long into a track; it never blocks
+    // a fast (cached/prefetched) Blob, which resolves above before this branch runs.
     setAudioSrc(normalizeMediaUrl(current.playUrl))
     const controller = new AbortController()
     setPlayLoading(true)
@@ -722,7 +758,14 @@ export function MusicPlayerProvider({ children }: { children: ReactNode }) {
       .then((url) => {
         if (controller.signal.aborted) return
         const el = audioRef.current
-        if (!el || el.currentTime < 0.4) setAudioSrc(url)
+        if (!el) return
+        // Ignore the upgrade only when the listener is already well into the track
+        // (> 8s) — by then the stream is fine and swapping would be more jarring than
+        // helpful. Otherwise remember progress and swap to the local Blob.
+        if (el.currentTime <= 8) {
+          pendingSeekRef.current = { key, time: el.currentTime }
+          setAudioSrc(url)
+        }
       })
       .catch((err: unknown) => {
         if (controller.signal.aborted) return
@@ -960,6 +1003,7 @@ export function MusicPlayerProvider({ children }: { children: ReactNode }) {
       clearQueue,
       moveQueueToNext,
       setPreferredQuality,
+      prefetchQuality,
       playSong,
       playResolvedSong,
       togglePlay,
@@ -1004,6 +1048,7 @@ export function MusicPlayerProvider({ children }: { children: ReactNode }) {
       setPlayMode,
       setPlaylist,
       setPreferredQuality,
+      prefetchQuality,
       setVolume,
       toggleMuted,
       togglePlay,
@@ -1037,6 +1082,13 @@ export function MusicPlayerProvider({ children }: { children: ReactNode }) {
           const el = event.target as HTMLAudioElement
           if (Number.isFinite(el.duration) && el.duration > 0) {
             setDuration(el.duration)
+          }
+          // Restore the exact position when a decrypted Blob has just replaced the
+          // fallback stream, so the swap is seamless (no audible restart).
+          const pending = pendingSeekRef.current
+          if (pending) {
+            pendingSeekRef.current = null
+            try { el.currentTime = pending.time } catch { /* ignore seek race */ }
           }
         }}
         onPlay={() => setIsPlaying(true)}
