@@ -194,6 +194,16 @@ export default function HomePage() {
               <span className="home-decor__item home-decor__bubble">···</span>
               <span className="home-decor__item home-decor__bookmark" />
               <span className="home-decor__item home-decor__ring" />
+              <span className="home-decor__link home-decor__link--b" />
+              <span className="home-decor__item home-decor__plane">➤</span>
+              <span className="home-decor__item home-decor__note">♪</span>
+              <span className="home-decor__item home-decor__gear">⚙</span>
+              <span className="home-decor__item home-decor__heart">♥</span>
+              <span className="home-decor__item home-decor__cloud" />
+              <span className="home-decor__item home-decor__target" />
+              <span className="home-decor__item home-decor__wave">∿∿∿</span>
+              <span className="home-decor__item home-decor__dot home-decor__dot--d" />
+              <span className="home-decor__item home-decor__spark home-decor__spark--d">✦</span>
             </div>
             <div className="home-hero__copy">
               <p className="home-hero__eyebrow"><span className="home-hero__eyebrow-dot" aria-hidden="true" />个人工作台</p>
