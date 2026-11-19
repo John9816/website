@@ -71,7 +71,7 @@ export default function AdminLayout() {
     {
       key: '/editor/',
       icon: <BookOutlined />,
-      title: '学城文档',
+      title: '知识库',
     },
     {
       key: '/admin/password',
@@ -134,10 +134,10 @@ export default function AdminLayout() {
       theme={{
         algorithm: isLight ? antdTheme.defaultAlgorithm : antdTheme.darkAlgorithm,
         token: {
-          colorPrimary: isLight ? '#167d70' : '#79c5b1',
+          colorPrimary: isLight ? '#26c265' : '#4ad98a',
           colorBgContainer: isLight ? '#ffffff' : '#202724',
-          colorBgLayout: isLight ? '#f5f7f6' : '#171d1a',
-          colorBorder: isLight ? '#e2e8e4' : '#34413a',
+          colorBgLayout: isLight ? '#f7f9f8' : '#171d1a',
+          colorBorder: isLight ? '#e8ece9' : '#34413a',
           borderRadius: 6,
           fontFamily: 'var(--font-sans)',
         },

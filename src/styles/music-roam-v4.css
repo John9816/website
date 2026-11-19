@@ -14,7 +14,7 @@
   --roam-dim: var(--text-dim, #7b8496);
   --roam-text: var(--text, #1c2434);
   --roam-shadow: 0 10px 30px rgba(16, 24, 40, 0.06);
-  --roam-accent: var(--accent, #4b6bff);
+  --roam-accent: var(--accent, #26c265);
   --roam-accent-soft: var(--accent-soft, rgba(75, 107, 255, 0.1));
   display: flex;
   flex-direction: column;
@@ -29,8 +29,8 @@
 
 /* 色彩 tone：图标与封面的渐变底，也用于快捷入口 */
 .music-roam-v4 .roam-v4-tone--coral { --tone-a: #ff8a9b; --tone-b: #f2596f; }
-.music-roam-v4 .roam-v4-tone--violet { --tone-a: #a58bff; --tone-b: #7b5be0; }
-.music-roam-v4 .roam-v4-tone--blue { --tone-a: #79a8ff; --tone-b: #3f83f1; }
+.music-roam-v4 .roam-v4-tone--violet { --tone-a: #4ad98a; --tone-b: #1e9e63; }
+.music-roam-v4 .roam-v4-tone--blue { --tone-a: #4ad9c8; --tone-b: #1e9e94; }
 .music-roam-v4 .roam-v4-tone--green { --tone-a: #4ad3a8; --tone-b: #1e9e7c; }
 .music-roam-v4 .roam-v4-tone--amber { --tone-a: #ffc06a; --tone-b: #f0912f; }
 
@@ -109,6 +109,12 @@ html[data-theme='dark'] .music-roam-v4 {
   gap: 10px;
   flex-shrink: 0;
 }
+.music-roam-v4 .roam-v4-head__start {
+  height: 36px;
+  padding-inline: 18px;
+  font-weight: 600;
+  box-shadow: 0 6px 18px color-mix(in srgb, var(--roam-accent) 28%, transparent);
+}
 .music-roam-v4 .roam-v4-status {
   display: inline-flex;
   align-items: center;
@@ -172,8 +178,8 @@ html[data-theme='dark'] .music-roam-v4 {
   border-radius: 22px;
   overflow: hidden;
   background:
-    radial-gradient(circle at 8% 20%, color-mix(in srgb, var(--music-v4-violet, #8a6cf2) 18%, transparent) 0, transparent 52%),
-    radial-gradient(circle at 92% 90%, color-mix(in srgb, var(--music-v4-blue, #3f83f1) 14%, transparent) 0, transparent 48%),
+    radial-gradient(circle at 8% 20%, color-mix(in srgb, var(--music-v4-violet, #26c265) 18%, transparent) 0, transparent 52%),
+    radial-gradient(circle at 92% 90%, color-mix(in srgb, var(--music-v4-blue, #1e9e94) 14%, transparent) 0, transparent 48%),
     var(--roam-panel);
   box-shadow: var(--roam-shadow);
 }
@@ -186,7 +192,7 @@ html[data-theme='dark'] .music-roam-v4 {
 }
 .music-roam-v4 .roam-v4-intro__ring {
   position: absolute;
-  border: 1px solid color-mix(in srgb, var(--music-v4-violet, #8a6cf2) 34%, transparent);
+  border: 1px solid color-mix(in srgb, var(--music-v4-violet, #26c265) 34%, transparent);
   border-radius: 50%;
 }
 .music-roam-v4 .roam-v4-intro__ring--1 { inset: 0; }
@@ -200,7 +206,7 @@ html[data-theme='dark'] .music-roam-v4 {
   height: 116px;
   border-radius: 50%;
   color: #fff;
-  background: linear-gradient(135deg, #a58bff, #6f52dd);
+  background: linear-gradient(135deg, #4ad98a, #1e9e63);
   box-shadow: 0 20px 40px rgba(122, 88, 224, 0.36), inset 0 0 0 8px rgba(255, 255, 255, 0.14);
   animation: roam-v4-float 6s ease-in-out infinite;
 }
@@ -213,8 +219,8 @@ html[data-theme='dark'] .music-roam-v4 {
   border-radius: 999px;
   font-size: 11px;
   font-weight: 700;
-  color: var(--music-v4-violet, #8a6cf2);
-  background: color-mix(in srgb, var(--music-v4-violet, #8a6cf2) 12%, transparent);
+  color: var(--music-v4-violet, #26c265);
+  background: color-mix(in srgb, var(--music-v4-violet, #26c265) 12%, transparent);
 }
 .music-roam-v4 .roam-v4-intro h2 {
   margin: 16px 0 12px;
@@ -249,7 +255,7 @@ html[data-theme='dark'] .music-roam-v4 {
 }
 .music-roam-v4 .roam-v4-steps li > span {
   font: 700 13px/1.4 ui-monospace, monospace;
-  color: var(--music-v4-blue, #3f83f1);
+  color: var(--music-v4-blue, #1e9e94);
 }
 .music-roam-v4 .roam-v4-steps strong { display: block; font-size: 13px; }
 .music-roam-v4 .roam-v4-steps small { display: block; margin-top: 3px; font-size: 11px; line-height: 1.5; color: var(--roam-dim); }
@@ -349,7 +355,7 @@ html[data-theme='dark'] .music-roam-v4 {
   border: 1px solid var(--roam-border);
   border-radius: var(--roam-radius);
   background:
-    linear-gradient(100deg, color-mix(in srgb, var(--music-v4-violet, #8a6cf2) 10%, transparent), transparent 62%),
+    linear-gradient(100deg, color-mix(in srgb, var(--music-v4-violet, #26c265) 10%, transparent), transparent 62%),
     var(--roam-panel);
   box-shadow: var(--roam-shadow);
 }
@@ -369,7 +375,7 @@ html[data-theme='dark'] .music-roam-v4 {
   border: 1px solid var(--roam-border);
   border-radius: 20px;
   background:
-    radial-gradient(circle at 12% 20%, color-mix(in srgb, var(--music-v4-violet, #8a6cf2) 14%, transparent) 0, transparent 46%),
+    radial-gradient(circle at 12% 20%, color-mix(in srgb, var(--music-v4-violet, #26c265) 14%, transparent) 0, transparent 46%),
     var(--roam-panel);
   box-shadow: var(--roam-shadow);
 }
@@ -383,8 +389,8 @@ html[data-theme='dark'] .music-roam-v4 {
   border-radius: 999px;
   font-size: 11px;
   font-weight: 700;
-  color: var(--music-v4-violet, #8a6cf2);
-  background: color-mix(in srgb, var(--music-v4-violet, #8a6cf2) 12%, transparent);
+  color: var(--music-v4-violet, #26c265);
+  background: color-mix(in srgb, var(--music-v4-violet, #26c265) 12%, transparent);
 }
 .music-roam-v4 .roam-v4-now h2 {
   margin: 14px 0 6px;
@@ -408,7 +414,7 @@ html[data-theme='dark'] .music-roam-v4 {
   display: block;
   height: 100%;
   border-radius: inherit;
-  background: linear-gradient(90deg, var(--music-v4-violet, #8a6cf2), var(--music-v4-blue, #3f83f1));
+  background: linear-gradient(90deg, var(--music-v4-violet, #26c265), var(--music-v4-blue, #1e9e94));
   transition: width 0.5s ease;
 }
 .music-roam-v4 .roam-v4-progress small { display: block; margin-top: 8px; font-size: 11px; color: var(--roam-dim); font-variant-numeric: tabular-nums; }

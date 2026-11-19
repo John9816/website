@@ -14,8 +14,8 @@
   --music-v4-shadow: 0 10px 32px rgba(16, 24, 40, 0.08);
   --music-v4-shadow-strong: 0 18px 48px rgba(10, 16, 30, 0.24);
   --music-v4-coral: #f2596f;
-  --music-v4-violet: #8a6cf2;
-  --music-v4-blue: #3f83f1;
+  --music-v4-violet: #26c265;
+  --music-v4-blue: #1e9e94;
   --music-v4-green: #24b187;
 
   /* 覆盖 music.css 的 topbar/body 网格，改为纯三列应用外壳 */
@@ -30,8 +30,8 @@
 html[data-theme='dark'] .music-v4 {
   --music-v4-shadow: 0 10px 32px rgba(0, 0, 0, 0.34);
   --music-v4-coral: #ff7186;
-  --music-v4-violet: #a58bff;
-  --music-v4-blue: #79a8ff;
+  --music-v4-violet: #4ad98a;
+  --music-v4-blue: #4ad9c8;
   --music-v4-green: #4ad3a8;
 }
 

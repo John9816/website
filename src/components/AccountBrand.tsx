@@ -15,12 +15,12 @@ export default function AccountBrand() {
         <h2 className="account-brand__title">
           收藏好用的，<br />连接有趣的<span>.</span>
         </h2>
-        <p className="account-brand__desc">一个账号，畅游导航、音乐、AI 对话与文档。</p>
+        <p className="account-brand__desc">一个账号，畅游导航、音乐、AI 对话与知识库。</p>
         <ul className="account-brand__features">
           <li><Compass size={16} /> 个人导航</li>
           <li><Music2 size={16} /> 在线音乐</li>
           <li><Sparkles size={16} /> AI 创作</li>
-          <li><BookOpen size={16} /> 学城文档</li>
+          <li><BookOpen size={16} /> 知识库</li>
         </ul>
       </div>
 

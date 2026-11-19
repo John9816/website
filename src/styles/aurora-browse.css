@@ -32,16 +32,16 @@
 
 /* 补齐 AuroraTone 色板（aurora-visual.css 只覆盖了部分 tone） */
 .aurora-tone--coral { background: linear-gradient(140deg, #f0a45a, #f0718f); }
-.aurora-tone--violet { background: linear-gradient(140deg, #8b7bff, #c38bff); }
-.aurora-tone--blue { background: linear-gradient(140deg, #4f7cff, #62c8ff); }
+.aurora-tone--violet { background: linear-gradient(140deg, #26c265, #7ee0a8); }
+.aurora-tone--blue { background: linear-gradient(140deg, #26c265, #7ee0a8); }
 .aurora-tone--green { background: linear-gradient(140deg, #2fb8a8, #7cd6c0); }
 .aurora-tone--amber { background: linear-gradient(140deg, #eab35c, #ffd08a); }
 .aurora-tone--pink { background: linear-gradient(140deg, #ef7196, #ffb0a8); }
 
 /* ---------- 色板变量 ---------- */
 .ab-tone--coral { --ab-rgb: 240, 113, 143; }
-.ab-tone--violet { --ab-rgb: 139, 123, 255; }
-.ab-tone--blue { --ab-rgb: 79, 124, 255; }
+.ab-tone--violet { --ab-rgb: 38, 194, 101; }
+.ab-tone--blue { --ab-rgb: 38, 178, 148; }
 .ab-tone--green { --ab-rgb: 47, 184, 168; }
 .ab-tone--amber { --ab-rgb: 234, 179, 92; }
 .ab-tone--pink { --ab-rgb: 239, 113, 150; }
@@ -89,7 +89,7 @@
 }
 
 .music-v4 .aurora-home .ab-search-trigger:hover {
-  border-color: var(--accent, #8b7bff);
+  border-color: var(--accent, #26c265);
   transform: translateY(-1px);
 }
 
@@ -106,8 +106,8 @@
   pointer-events: none;
   opacity: 0.55;
   background:
-    radial-gradient(ellipse 44% 60% at 18% 30%, rgba(139, 123, 255, 0.34), transparent 70%),
-    radial-gradient(ellipse 40% 54% at 74% 78%, rgba(72, 156, 255, 0.28), transparent 72%);
+    radial-gradient(ellipse 44% 60% at 18% 30%, rgba(38, 194, 101, 0.34), transparent 70%),
+    radial-gradient(ellipse 40% 54% at 74% 78%, rgba(38, 178, 148, 0.28), transparent 72%);
   animation: ab-orbit 18s ease-in-out infinite alternate;
 }
 
@@ -135,7 +135,7 @@
   width: 264px !important;
   height: 208px !important;
   border-radius: 18px;
-  background: rgba(139, 123, 255, 0.14);
+  background: rgba(38, 194, 101, 0.14);
 }
 
 .music-v4 .aurora-home .ab-hero__tiles {
@@ -213,7 +213,7 @@
   white-space: nowrap;
 }
 
-.music-v4 .aurora-home .ab-section__more:hover { color: var(--accent, #8b7bff); }
+.music-v4 .aurora-home .ab-section__more:hover { color: var(--accent, #26c265); }
 
 .music-v4 .aurora-home .ab-empty {
   margin: 0;
@@ -254,11 +254,11 @@
 
 .music-v4 .aurora-home .ab-continue-card:hover {
   transform: translateY(-3px);
-  border-color: rgba(139, 123, 255, 0.5);
+  border-color: rgba(38, 194, 101, 0.5);
   box-shadow: 0 14px 32px rgba(0, 0, 0, 0.18);
 }
 
-.music-v4 .aurora-home .ab-continue-card.is-current { border-color: rgba(139, 123, 255, 0.65); }
+.music-v4 .aurora-home .ab-continue-card.is-current { border-color: rgba(38, 194, 101, 0.65); }
 
 .music-v4 .aurora-home .ab-continue-card__copy {
   display: flex;
@@ -297,7 +297,7 @@
   display: block;
   height: 100%;
   border-radius: 999px;
-  background: var(--accent, #8b7bff);
+  background: var(--accent, #26c265);
 }
 
 .music-v4 .aurora-home .ab-continue-card__play {
@@ -309,7 +309,7 @@
   width: 26px;
   height: 26px;
   border-radius: 50%;
-  background: rgba(139, 123, 255, 0.9);
+  background: rgba(38, 194, 101, 0.9);
   color: #fff;
   opacity: 0;
   transform: scale(0.85);
@@ -425,7 +425,7 @@
 }
 
 .music-v4 .aurora-home .ab-chart-list li + li { border-top: 1px solid var(--border, rgba(255, 255, 255, 0.08)); }
-.music-v4 .aurora-home .ab-chart-list li:hover { background: rgba(139, 123, 255, 0.09); }
+.music-v4 .aurora-home .ab-chart-list li:hover { background: rgba(38, 194, 101, 0.09); }
 
 .music-v4 .aurora-home .ab-chart-list__no {
   width: 24px;
@@ -475,8 +475,8 @@
   width: 28px;
   height: 28px;
   border-radius: 50%;
-  background: rgba(139, 123, 255, 0.14);
-  color: var(--accent, #8b7bff);
+  background: rgba(38, 194, 101, 0.14);
+  color: var(--accent, #26c265);
   opacity: 0;
   transition: opacity 160ms ease;
 }
@@ -574,7 +574,7 @@
   cursor: pointer;
 }
 
-.ab-search__group-head button:hover { color: var(--accent, #8b7bff); }
+.ab-search__group-head button:hover { color: var(--accent, #26c265); }
 
 .ab-search__chips { display: flex; flex-wrap: wrap; gap: 8px; }
 
@@ -589,8 +589,8 @@
   transition: border-color 160ms ease, background 160ms ease;
 }
 
-.ab-search__chips button:hover { border-color: var(--accent, #8b7bff); background: rgba(139, 123, 255, 0.12); }
-.ab-search__hot button { border-color: rgba(139, 123, 255, 0.3); }
+.ab-search__chips button:hover { border-color: var(--accent, #26c265); background: rgba(38, 194, 101, 0.12); }
+.ab-search__hot button { border-color: rgba(38, 194, 101, 0.3); }
 
 .ab-search__empty, .ab-search__hint {
   display: block;
@@ -615,7 +615,7 @@
   cursor: pointer;
 }
 
-.ab-preview-row:hover { background: rgba(139, 123, 255, 0.12); }
+.ab-preview-row:hover { background: rgba(38, 194, 101, 0.12); }
 
 .ab-preview-row__copy { display: flex; flex-direction: column; gap: 3px; flex: 1; min-width: 0; }
 .ab-preview-row__copy strong { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; font-size: 13px; }
@@ -634,7 +634,7 @@
   padding: 8px 16px;
   border: none;
   border-radius: 999px;
-  background: var(--accent, #8b7bff);
+  background: var(--accent, #26c265);
   color: #fff;
   font-size: 13px;
   cursor: pointer;
@@ -686,8 +686,8 @@
 
 .music-roam-v4 .ab-tuner__chip:hover { color: var(--text, #f2f3f6); }
 .music-roam-v4 .ab-tuner__chip.is-active {
-  border-color: rgba(139, 123, 255, 0.6);
-  background: rgba(139, 123, 255, 0.14);
+  border-color: rgba(38, 194, 101, 0.6);
+  background: rgba(38, 194, 101, 0.14);
   color: var(--text, #f2f3f6);
   font-weight: 600;
 }
@@ -700,8 +700,8 @@
   border: 1px solid var(--border, rgba(255, 255, 255, 0.14));
   border-radius: 24px;
   background:
-    radial-gradient(ellipse 60% 70% at 16% 12%, rgba(139, 123, 255, 0.18), transparent 70%),
-    radial-gradient(ellipse 56% 64% at 86% 88%, rgba(72, 156, 255, 0.14), transparent 72%),
+    radial-gradient(ellipse 60% 70% at 16% 12%, rgba(38, 194, 101, 0.18), transparent 70%),
+    radial-gradient(ellipse 56% 64% at 86% 88%, rgba(38, 178, 148, 0.14), transparent 72%),
     var(--panel, rgba(255, 255, 255, 0.05));
   overflow: hidden;
 }
@@ -711,7 +711,7 @@
   inset: -18%;
   z-index: 0;
   pointer-events: none;
-  background: radial-gradient(circle at 30% 30%, rgba(139, 123, 255, 0.24), transparent 58%);
+  background: radial-gradient(circle at 30% 30%, rgba(38, 194, 101, 0.24), transparent 58%);
   animation: ab-orbit 16s ease-in-out infinite alternate;
 }
 
@@ -760,8 +760,8 @@
 
 .music-roam-v4 .ab-journey .roam-v4-next {
   margin-top: 16px;
-  border-color: rgba(139, 123, 255, 0.3);
-  background: rgba(139, 123, 255, 0.08);
+  border-color: rgba(38, 194, 101, 0.3);
+  background: rgba(38, 194, 101, 0.08);
 }
 
 /* ---------- 响应式 ---------- */

@@ -1,14 +1,14 @@
 /* Music workspace: navigation, content and transport are separate layout regions. */
 .music-studio,
 .music-studio-overlay {
-  --bg: #f4f6fb;
+  --bg: #f7f9f8;
   --panel: #fff;
-  --text: #172233;
-  --text-dim: #77849a;
-  --border: #e5e9f1;
-  --accent: #395fbb;
-  --accent-soft: #e8eefc;
-  --hover: #edf1f8;
+  --text: #18181b;
+  --text-dim: #6b7580;
+  --border: #e8ece9;
+  --accent: #26c265;
+  --accent-soft: #e8f8ef;
+  --hover: #f1f7f3;
   --music-on-accent: #fff;
   --music-sidebar-width: 208px;
   --music-topbar-height: 76px;
@@ -26,15 +26,15 @@
 }
 html[data-theme='dark'] .music-studio,
 html[data-theme='dark'] .music-studio-overlay {
-  --bg: #101520;
-  --panel: #171e2b;
-  --text: #eef2fc;
-  --text-dim: #91a0b8;
-  --border: #252e40;
-  --accent: #9bb4ff;
-  --accent-soft: #25324e;
-  --hover: #1f293b;
-  --music-on-accent: #14213b;
+  --bg: #131b17;
+  --panel: #1b2420;
+  --text: #eef4f0;
+  --text-dim: #91a89b;
+  --border: #253d31;
+  --accent: #4ad98a;
+  --accent-soft: #1d3f2c;
+  --hover: #1f3128;
+  --music-on-accent: #0c2a1b;
 }
 .music-studio button {
   -webkit-tap-highlight-color: transparent;

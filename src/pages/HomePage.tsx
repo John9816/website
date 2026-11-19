@@ -31,7 +31,7 @@ const TOOLS = [
   { to: '/music', name: '在线音乐', detail: '音乐', Icon: Music2, tone: 'music' },
   { to: '/ai-chat', name: 'AI 对话', detail: '对话', Icon: MessageSquare, tone: 'chat' },
   { to: '/ai-image', name: 'AI 生图', detail: '创作', Icon: Image, tone: 'image' },
-  { to: '/editor/', name: '学城文档', detail: '写作', Icon: BookOpen, tone: 'knowledge' },
+  { to: '/editor/', name: '知识库', detail: '写作', Icon: BookOpen, tone: 'knowledge' },
 ]
 
 const QR_IMAGES = {
@@ -176,9 +176,17 @@ export default function HomePage() {
       <div className="home-page">
         <main className="home-main" id="main-content">
           <header className="home-hero">
+            <div className="home-decor" aria-hidden="true">
+              <span className="home-decor__item home-decor__pill" />
+              <span className="home-decor__item home-decor__doc"><i /><i /><i /></span>
+              <span className="home-decor__item home-decor__spark home-decor__spark--a">✦</span>
+              <span className="home-decor__item home-decor__spark home-decor__spark--b">✦</span>
+              <span className="home-decor__item home-decor__check">✓</span>
+              <span className="home-decor__item home-decor__dot" />
+            </div>
             <div className="home-hero__copy">
-              <p className="home-hero__eyebrow">个人工作台</p>
-              <h1>我的导航<span aria-hidden="true">.</span></h1>
+              <p className="home-hero__eyebrow"><span className="home-hero__eyebrow-dot" aria-hidden="true" />个人工作台</p>
+              <h1>我的<span className="home-hero__pill">导航</span><span className="home-hero__dot" aria-hidden="true">.</span></h1>
               <p className="home-hero__description">收藏好用的，连接有趣的。</p>
               <div className="home-identity">
                 <img src={siteImages.logo.url} width={28} height={28} alt="oldwang" />

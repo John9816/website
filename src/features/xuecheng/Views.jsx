@@ -106,7 +106,7 @@ export function HomeView({ stats, edited, recents, favorites, onOpen, onNew, onT
   return (
     <div className="view home">
       <div className="view-head">
-        <h1>👋 欢迎回到学城</h1>
+        <h1>👋 欢迎回到知识库</h1>
         <p className="view-sub">你的知识工作台 · 今天也好好记录吧</p>
       </div>
 

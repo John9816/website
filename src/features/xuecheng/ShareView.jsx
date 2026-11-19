@@ -94,12 +94,12 @@ export default function SharePage({ token, onHome }) {
       .then((d) => {
         if (!alive) return;
         setState({ loading: false, doc: d, error: "" });
-        document.title = `${d.title || "未命名文档"} · 学城分享`;
+        document.title = `${d.title || "未命名文档"} · 知识库分享`;
       })
       .catch((e) => {
         if (!alive) return;
         setState({ loading: false, doc: null, error: e.message });
-        document.title = "分享不可用 · 学城";
+        document.title = "分享不可用 · 知识库";
       });
     return () => {
       alive = false;
@@ -117,9 +117,9 @@ export default function SharePage({ token, onHome }) {
   return (
     <div className="share-root">
       <header className="share-top">
-        <button className="share-brand" onClick={onHome} title="打开学城编辑器">
-          <span className="brand-mark">学</span>
-          <span className="brand-name">学城</span>
+        <button className="share-brand" onClick={onHome} title="打开知识库">
+          <span className="brand-mark">知</span>
+          <span className="brand-name">知识库</span>
         </button>
         <div className="share-top-right">
           <ThemeToggle bare />
@@ -133,7 +133,7 @@ export default function SharePage({ token, onHome }) {
           </button>
           {onHome && (
             <button className="share-btn primary" onClick={onHome}>
-              打开编辑器
+              打开知识库
             </button>
           )}
         </div>
@@ -172,7 +172,7 @@ export default function SharePage({ token, onHome }) {
         )}
 
         <footer className="share-foot">
-          由 <b>学城编辑器</b> 分享 · 此链接仅可查看，内容以原作者发布的最新版本为准
+          由 <b>知识库</b> 分享 · 此链接仅可查看，内容以原作者发布的最新版本为准
         </footer>
       </div>
     </div>

@@ -4,6 +4,7 @@ import type { CurrentUserView } from '../types'
 import { Navigate, useLocation, useNavigate } from 'react-router-dom'
 import { useAuth } from '../context/AuthContext'
 import { canManageSystemConfig } from '../utils/permissions'
+import AppShell from '../components/AppShell'
 import XuechengApp from '../features/xuecheng/App.jsx'
 import '../features/xuecheng/styles.css'
 
@@ -25,12 +26,14 @@ export default function XuechengPage() {
     return <div className="admin-shell-loading" role="status">正在确认登录状态…</div>
   }
   return (
-    <div className="xuecheng-workspace">
-      <XuechengApp
-        key={shared ? location.hash : String(sessionId)}
-        canUseMcp={canManageSystemConfig(user)}
-        onBack={() => navigate('/admin')}
-      />
-    </div>
+    <AppShell>
+      <div className="xuecheng-workspace">
+        <XuechengApp
+          key={shared ? location.hash : String(sessionId)}
+          canUseMcp={canManageSystemConfig(user)}
+          onBack={() => navigate('/admin')}
+        />
+      </div>
+    </AppShell>
   )
 }

@@ -1,4 +1,4 @@
-/* 学城文档：复用网站的双主题、品牌色和字体，编辑内容中的显式配色不变。 */
+/* 知识库文档：复用网站的双主题、品牌色和字体，编辑内容中的显式配色不变。 */
 .xuecheng-workspace {
   --brand: var(--accent);
   --brand-strong: var(--accent-hover);
@@ -134,7 +134,7 @@
   min-height: 0;
 }
 
-/* ---- 侧栏导航分组（学城结构：主页/模板市场/知识广场 + 我的空间 + 快速访问/收藏夹） ---- */
+/* ---- 侧栏导航分组（知识库结构：主页/模板市场/知识广场 + 我的空间 + 快速访问/收藏夹） ---- */
 .xuecheng-workspace .side-scroll {
   flex: 1;
   min-height: 0;
@@ -482,7 +482,7 @@
   position: relative;
 }
 
-/* 正文左边缘的悬浮折叠手柄（学城同款） */
+/* 正文左边缘的悬浮折叠手柄（知识库同款） */
 .xuecheng-workspace .pane-toggle {
   position: absolute;
   left: 0;
@@ -1223,7 +1223,7 @@
   position: relative;
 }
 
-/* 学城是「工具栏下直接白纸」：去掉卡片阴影与灰底，纸面铺满 */
+/* 知识库是「工具栏下直接白纸」：去掉卡片阴影与灰底，纸面铺满 */
 .xuecheng-workspace .editor-page {
   width: 100%;
   max-width: none;

@@ -18,6 +18,7 @@
 /* ---------- Hero ---------- */
 
 .home-hero {
+  position: relative;
   display: flex;
   align-items: center;
   justify-content: space-between;
@@ -25,11 +26,139 @@
   margin-bottom: var(--space-6);
 }
 
+/* ---------- 轻量装饰：千问风格漂浮小道具（纯 CSS，无图片/无 JS） ---------- */
+.home-decor {
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  z-index: 0;
+  overflow: hidden;
+}
+
+.home-hero__copy,
+.home-hero > .home-orbit {
+  position: relative;
+  z-index: 1;
+}
+
+.home-decor__item {
+  position: absolute;
+  display: block;
+  animation: home-decor-float 6s ease-in-out infinite;
+  will-change: transform;
+}
+
+/* 绿色胶囊 */
+.home-decor__pill {
+  top: 4%;
+  left: 30%;
+  width: 46px;
+  height: 22px;
+  border-radius: 999px;
+  background: linear-gradient(135deg, var(--accent), color-mix(in srgb, var(--accent) 60%, #7ee0a8));
+  box-shadow: 0 6px 16px color-mix(in srgb, var(--accent) 30%, transparent);
+  transform: rotate(-14deg);
+  animation-delay: -0.8s;
+}
+.home-decor__pill::after {
+  content: '';
+  position: absolute;
+  top: 50%;
+  left: 9px;
+  width: 22px;
+  height: 3px;
+  border-radius: 3px;
+  background: rgba(255,255,255,0.85);
+  transform: translateY(-50%);
+  box-shadow: 0 6px 0 -1px rgba(255,255,255,0.6);
+}
+
+/* 文档卡 */
+.home-decor__doc {
+  right: 27%;
+  bottom: 2%;
+  width: 34px;
+  height: 42px;
+  padding: 9px 7px;
+  display: grid;
+  align-content: start;
+  gap: 4px;
+  border: 1px solid color-mix(in srgb, var(--accent) 26%, var(--border));
+  border-radius: 7px;
+  background: var(--panel);
+  box-shadow: var(--shadow-md);
+  transform: rotate(11deg);
+  animation-delay: -2.4s;
+}
+.home-decor__doc i {
+  display: block;
+  height: 3px;
+  border-radius: 3px;
+  background: color-mix(in srgb, var(--accent) 45%, var(--border));
+}
+.home-decor__doc i:first-child { width: 70%; background: var(--accent); }
+.home-decor__doc i:last-child { width: 55%; }
+
+/* 四角星 */
+.home-decor__spark {
+  color: var(--accent-2, var(--accent));
+  font-size: 18px;
+  line-height: 1;
+}
+.home-decor__spark--a { top: 8%; left: 46%; animation-delay: -1.6s; font-size: 14px; }
+.home-decor__spark--b { bottom: 12%; left: 24%; animation-delay: -3.6s; color: var(--accent); font-size: 22px; }
+
+/* 对勾圆 */
+.home-decor__check {
+  top: 2%;
+  right: 32%;
+  width: 26px;
+  height: 26px;
+  display: grid;
+  place-items: center;
+  border-radius: 50%;
+  background: var(--accent-soft);
+  color: var(--accent);
+  font-size: 15px;
+  font-weight: 700;
+  box-shadow: var(--shadow-sm);
+  animation-delay: -4.2s;
+}
+
+/* 小圆点 */
+.home-decor__dot {
+  bottom: 8%;
+  left: 41%;
+  width: 9px;
+  height: 9px;
+  border-radius: 50%;
+  background: var(--accent-2, var(--accent));
+  opacity: 0.6;
+  animation-delay: -2.9s;
+}
+
+@keyframes home-decor-float {
+  0%, 100% { translate: 0 0; }
+  50% { translate: 0 -7px; }
+}
+
+/* 窄屏隐藏装饰，避免拥挤 */
+@media (max-width: 1000px) {
+  .home-decor { display: none; }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .home-decor__item { animation: none !important; }
+}
+
 .home-hero__copy {
   min-width: 0;
 }
 
 .home-hero__eyebrow {
+  display: inline-flex;
+  align-items: center;
+  gap: 7px;
   margin: 0 0 var(--space-2);
   color: var(--text-dim);
   font-size: var(--text-xs);
@@ -37,17 +166,57 @@
   letter-spacing: 0.08em;
 }
 
+.home-hero__eyebrow-dot {
+  width: 20px;
+  height: 20px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 50%;
+  background: var(--text);
+  color: var(--panel);
+  font-size: 11px;
+  line-height: 1;
+}
+
+.home-hero__eyebrow-dot::after {
+  content: '';
+  width: 8px;
+  height: 8px;
+  border-radius: 3px;
+  background: currentColor;
+}
+
 .home-hero h1 {
   margin: 0;
   font-family: var(--font-display, var(--font-sans));
   font-size: var(--text-3xl);
   font-weight: 650;
-  line-height: 1.25;
+  line-height: 1.35;
   letter-spacing: 0;
 }
 
-.home-hero h1 > span {
-  margin-left: 3px;
+/* 千问风格：关键词绿色胶囊高亮 */
+.home-hero__pill {
+  position: relative;
+  display: inline-block;
+  margin-left: 6px;
+  padding: 0 14px;
+  color: var(--on-accent);
+  z-index: 0;
+}
+
+.home-hero__pill::before {
+  content: '';
+  position: absolute;
+  inset: 8% -2px 6%;
+  z-index: -1;
+  border-radius: 999px;
+  background: var(--accent);
+}
+
+.home-hero__dot {
+  margin-left: 4px;
   color: var(--accent);
 }
 

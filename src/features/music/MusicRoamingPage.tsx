@@ -240,6 +240,18 @@ export default function MusicRoamingPage() {
             <span className="roam-v4-status__dot" />
             {active ? '正在漫游' : ready ? '已连接' : '等待连接'}
           </span>
+          {ready && !active ? (
+            <Button
+              type="primary"
+              className="roam-v4-head__start"
+              icon={<Play size={16} fill="currentColor" />}
+              loading={player.roamingBusy}
+              disabled={!modes.length}
+              onClick={start}
+            >
+              开始漫游
+            </Button>
+          ) : null}
           <QishuiAccountControl openSignal={connectSignal} />
           <button type="button" className="roam-v4-icon-btn" onClick={reload} disabled={loading} aria-label="刷新状态" title="刷新状态">
             <RefreshCw size={18} className={loading ? 'is-spinning' : ''} />

@@ -6,9 +6,9 @@
  * ============================================================ */
 
 .now-page {
-  --aurora-a: rgb(139, 123, 255);
-  --aurora-b: rgb(94, 176, 255);
-  --aurora-c: rgb(160, 130, 255);
+  --aurora-a: rgb(38, 194, 101);
+  --aurora-b: rgb(62, 200, 184);
+  --aurora-c: rgb(86, 214, 148);
   --aurora-intensity: 0.82;
 }
 
@@ -108,7 +108,7 @@
 }
 
 .now-aurora-settings__head svg {
-  color: var(--accent, #8b7bff);
+  color: var(--accent, #26c265);
 }
 
 .now-aurora-settings__group {
@@ -147,7 +147,7 @@
 .now-aurora-settings__seg button:hover { color: var(--text, #f2f3f6); }
 
 .now-aurora-settings__seg button.is-active {
-  background: var(--accent, #8b7bff);
+  background: var(--accent, #26c265);
   color: #fff;
   font-weight: 600;
 }
@@ -189,7 +189,7 @@
   transition: background 160ms ease;
 }
 
-.now-aurora-settings__switch.is-on { background: var(--accent, #8b7bff); }
+.now-aurora-settings__switch.is-on { background: var(--accent, #26c265); }
 
 .now-aurora-settings__switch-thumb {
   position: absolute;

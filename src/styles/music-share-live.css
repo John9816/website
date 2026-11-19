@@ -10,8 +10,8 @@
   --sl-muted: var(--text-dim, #a2a7b4);
   --sl-line: var(--border, rgba(255, 255, 255, 0.12));
   --sl-panel: var(--panel, rgba(255, 255, 255, 0.055));
-  --sl-accent: var(--accent, #8b7bff);
-  --sl-accent-rgb: var(--accent-rgb, 139, 123, 255);
+  --sl-accent: var(--accent, #26c265);
+  --sl-accent-rgb: var(--accent-rgb, 38, 194, 101);
   --sl-cover-opacity: 0.22;
   position: relative;
   min-height: 100vh;
@@ -48,7 +48,7 @@
 .sl-ambient {
   background:
     radial-gradient(ellipse 58% 44% at 18% 12%, rgba(var(--sl-accent-rgb), 0.16), transparent 70%),
-    radial-gradient(ellipse 52% 46% at 86% 82%, rgba(72, 156, 255, 0.11), transparent 72%);
+    radial-gradient(ellipse 52% 46% at 86% 82%, rgba(38, 178, 148, 0.11), transparent 72%);
   animation: sl-drift 22s ease-in-out infinite alternate;
 }
 
@@ -76,7 +76,7 @@
 [data-theme='light'] .sl-ambient {
   background:
     radial-gradient(ellipse 58% 44% at 18% 12%, rgba(var(--sl-accent-rgb), 0.1), transparent 70%),
-    radial-gradient(ellipse 52% 46% at 86% 82%, rgba(72, 156, 255, 0.07), transparent 72%);
+    radial-gradient(ellipse 52% 46% at 86% 82%, rgba(38, 178, 148, 0.07), transparent 72%);
 }
 
 /* --- 顶栏 --- */

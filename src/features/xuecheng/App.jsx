@@ -482,7 +482,7 @@ export default function App({ canUseMcp = false, onBack }) {
         let list = await api.listDocs();
         if (!active) return;
         if (!list.length) {
-          const created = await api.createDoc("欢迎使用学城编辑器", starterDoc().toJSON());
+          const created = await api.createDoc("欢迎使用知识库", starterDoc().toJSON());
           list = await api.listDocs();
           if (!active) return;
           setDocs(list);
@@ -526,8 +526,8 @@ export default function App({ canUseMcp = false, onBack }) {
   /* 浏览器标题跟随文档 */
   useEffect(() => {
     if (route.name === "share") return;
-    const name = view === "doc" ? doc?.title || "未命名文档" : VIEW_NAME[view] || "学城";
-    document.title = `${name} · 学城`;
+    const name = view === "doc" ? doc?.title || "未命名文档" : VIEW_NAME[view] || "知识库";
+    document.title = `${name} · 知识库`;
   }, [doc?.title, view, route.name]);
 
   /* ---------- 保存 ---------- */
@@ -707,7 +707,7 @@ export default function App({ canUseMcp = false, onBack }) {
         <div className="brand">
           <button className="brand-back" title="返回工作台" aria-label="返回工作台" onClick={async () => { if (await saver.flushAll()) onBack?.(); }}>←</button>
           <span className="brand-mark">学</span>
-          {!sidebarCollapsed && <span className="brand-name">学城文档</span>}
+          {!sidebarCollapsed && <span className="brand-name">知识库</span>}
         </div>
 
         {!sidebarCollapsed && (
@@ -923,7 +923,7 @@ export default function App({ canUseMcp = false, onBack }) {
                 <span className="crumb-ico">
                   <NavIco name={VIEW_ICON[view] || "doc"} />
                 </span>
-                <span className="crumb-name">{VIEW_NAME[view] || "学城"}</span>
+                <span className="crumb-name">{VIEW_NAME[view] || "知识库"}</span>
               </div>
               <div className="topbar-right">
                 <button className="top-ai" data-tip="通知 / 回收站 / 审批 / 在线" aria-label="更多功能" onClick={() => setFeaturesOpen(true)}>

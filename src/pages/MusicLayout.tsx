@@ -1,6 +1,7 @@
 import { Suspense, lazy, useEffect, useState } from 'react'
 import { Outlet } from 'react-router-dom'
 import { useMusicBrowse } from '../context/MusicPlayerContext'
+import AppShell from '../components/AppShell'
 import MusicWorkspace from '../features/music/MusicWorkspace'
 import MusicContextPanel, { type MusicContextTab } from '../components/MusicContextPanel'
 import { useMusicAppearance } from '../utils/musicAppearance'
@@ -34,12 +35,14 @@ export default function MusicLayout() {
   }
 
   return (
-    <div className={`music-page music-studio music-v4${current ? ' has-current' : ''}${current && contextOpen ? ' has-context' : ''}`}>
-      <MusicWorkspace>
-        <main className={`music-body${current ? ' music-body--with-player' : ''}`} aria-label="音乐内容"><Outlet /></main>
-      </MusicWorkspace>
-      <MusicContextPanel open={contextOpen} tab={contextTab} onTabChange={setContextTab} onClose={() => setContextOpen(false)} />
-      <Suspense fallback={null}><MusicPlayerBar onToggleQueue={toggleQueue} queueOpen={contextOpen && contextTab === 'queue'} /></Suspense>
-    </div>
+    <AppShell>
+      <div className={`music-page music-studio music-v4${current ? ' has-current' : ''}${current && contextOpen ? ' has-context' : ''}`}>
+        <MusicWorkspace>
+          <main className={`music-body${current ? ' music-body--with-player' : ''}`} aria-label="音乐内容"><Outlet /></main>
+        </MusicWorkspace>
+        <MusicContextPanel open={contextOpen} tab={contextTab} onTabChange={setContextTab} onClose={() => setContextOpen(false)} />
+        <Suspense fallback={null}><MusicPlayerBar onToggleQueue={toggleQueue} queueOpen={contextOpen && contextTab === 'queue'} /></Suspense>
+      </div>
+    </AppShell>
   )
 }

@@ -914,7 +914,7 @@ export default function Editor({ initialDoc, onChange, onSelectionInfo, title, o
 
 /* ================= 工具栏组件 ================= */
 
-/* 线框图标：统一 20 网格、1.5 描边，贴近学城工具栏的细腻风格 */
+/* 线框图标：统一 20 网格、1.5 描边，贴近知识库工具栏的细腻风格 */
 const ICONS = {
   undo: (
     <>
@@ -1097,7 +1097,7 @@ function Ico({ name }) {
   );
 }
 
-/* 段落格式（学城：正文 + 标题 1~6） */
+/* 段落格式（知识库：正文 + 标题 1~6） */
 const FORMATS = [
   { key: "p", label: "正文", level: 0 },
   ...[1, 2, 3, 4, 5, 6].map((n) => ({ key: `h${n}`, label: `标题 ${n}`, level: n })),

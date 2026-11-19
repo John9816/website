@@ -30,6 +30,10 @@ function normalizeGeneratedImageView(item: GeneratedImageView): GeneratedImageVi
   }
 }
 
+/** Public tab visibility map (tab id -> visible). Missing/invalid defaults to visible. */
+export const getTabVisibility = () =>
+  request<Record<string, boolean>>('/api/public/ui/tabs')
+
 export const getCategories = () => request<Category[]>('/api/public/categories')
 export const getLinks = (categoryId?: number) =>
   request<NavLink[]>('/api/public/links', { query: { categoryId } })

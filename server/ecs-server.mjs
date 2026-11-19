@@ -131,7 +131,7 @@ const contentTypes = new Map([
 const SITE_ORIGIN = process.env.SITE_ORIGIN || 'https://hi.751152.xyz'
 const SITE_NAME = '个人导航'
 const DEFAULT_DESCRIPTION =
-  '个人导航与工作台：常用网站导航、AI 对话、AI 生图、在线音乐与学城文档，一站直达。'
+  '个人导航与工作台：常用网站导航、AI 对话、AI 生图、在线音乐与知识库，一站直达。'
 // 仅音乐分享页需要按 token 向后端取动态 meta；token 收紧到 URL 安全字符集。
 const SHARE_PATH_RE = /^\/music\/share\/([A-Za-z0-9_-]{8,128})\/?$/
 const SHARE_DESCRIPTION_PREFIX = '无需登录，点开即听'

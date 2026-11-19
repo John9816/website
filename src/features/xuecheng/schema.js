@@ -1,5 +1,5 @@
 /**
- * 文档 schema — 对齐企业 Wiki（学城）的内容模型
+ * 文档 schema — 对齐企业 Wiki（知识库）的内容模型
  *
  * 结构：doc(block+) → paragraph/heading/blockquote/code_block/list/table/callout/toggle/image/hr
  * 设计要点：
@@ -68,7 +68,7 @@ const codeBlock = {
   ],
 };
 
-/* ---------- 提示块（学城的「高亮块」）：info / success / warning / danger ---------- */
+/* ---------- 提示块（知识库的「高亮块」）：info / success / warning / danger ---------- */
 const callout = {
   content: "block+",
   group: "block",
@@ -335,7 +335,7 @@ export function starterDoc() {
   const n = schema.nodes;
   const t = (text, marks) => schema.text(text, marks);
   return n.doc.create(null, [
-    n.heading.create({ level: 1 }, t("欢迎使用学城编辑器")),
+    n.heading.create({ level: 1 }, t("欢迎使用知识库")),
     // 注意：NodeType.create(attrs, content, marks) 只有三个参数，
     // 多段文本必须用数组传入，否则多余的 TextNode 会被当成 marks
     n.paragraph.create(null, [

@@ -11,13 +11,14 @@ interface PageMeta {
 }
 
 const DEFAULT_DESCRIPTION =
-  '个人导航与工作台：常用网站导航、AI 对话、AI 生图、在线音乐与学城文档，一站直达。'
+  '个人导航与工作台：常用网站导航、AI 对话、AI 生图、在线音乐与知识库，一站直达。'
 
 const metaMap: Record<string, PageMeta> = {
   '/': { title: '首页', description: DEFAULT_DESCRIPTION },
-  '/editor': { title: '学城文档' },
+  '/editor': { title: '知识库' },
   '/ai-chat': { title: 'AI 对话' },
   '/ai-image': { title: 'AI 生图' },
+  '/server-monitor': { title: '服务器监控' },
   '/music': {
     title: '音乐',
     description: '在线音乐聚合：QQ、网易云、酷我搜索、播放、歌词、榜单与歌单，一处畅听。',

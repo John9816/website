@@ -7,8 +7,8 @@
 
 :root {
   /* 使用独立的 browse-* 变量，避免与播放页 rgb() 调色板变量混淆 */
-  --browse-a: 139, 123, 255;
-  --browse-b: 72, 156, 255;
+  --browse-a: 38, 194, 101;
+  --browse-b: 38, 178, 148;
   --browse-opacity: 0.36;
   --browse-glow: 0.3;
 }
@@ -124,8 +124,8 @@ html[data-aurora='off'] .music-v4 {
   object-fit: cover;
 }
 
-.aurora-tone--blue   { background: linear-gradient(140deg, #4f7cff, #62c8ff); }
-.aurora-tone--violet { background: linear-gradient(140deg, #8b7bff, #c38bff); }
+.aurora-tone--blue   { background: linear-gradient(140deg, #26c265, #7ee0a8); }
+.aurora-tone--violet { background: linear-gradient(140deg, #26c265, #7ee0a8); }
 .aurora-tone--teal   { background: linear-gradient(140deg, #2fb8a8, #7cd6c0); }
 .aurora-tone--amber  { background: linear-gradient(140deg, #f0a45a, #ffd08a); }
 .aurora-tone--rose   { background: linear-gradient(140deg, #f0718f, #ffb0a8); }
