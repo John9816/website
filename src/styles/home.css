@@ -29,10 +29,65 @@
 /* ---------- 轻量装饰：千问风格漂浮小道具（纯 CSS，无图片/无 JS） ---------- */
 .home-decor {
   position: absolute;
-  inset: 0;
+  inset: -40px -24px;
   pointer-events: none;
   z-index: 0;
   overflow: hidden;
+}
+
+/* 柔和渐变光晕：翠绿 + 淡紫 + 暖金，主题感知，缓慢呼吸 */
+.home-decor__glow {
+  position: absolute;
+  border-radius: 50%;
+  filter: blur(48px);
+  opacity: 0.55;
+  animation: home-glow-breathe 12s ease-in-out infinite;
+  will-change: transform, opacity;
+}
+.home-decor__glow--a {
+  top: -14%;
+  left: 8%;
+  width: 320px;
+  height: 320px;
+  background: radial-gradient(circle at 40% 40%,
+    color-mix(in srgb, var(--accent) 34%, transparent), transparent 70%);
+}
+.home-decor__glow--b {
+  right: 6%;
+  bottom: -22%;
+  width: 380px;
+  height: 380px;
+  background: radial-gradient(circle at 55% 45%,
+    color-mix(in srgb, var(--accent-2) 24%, transparent), transparent 70%);
+  animation-delay: -5s;
+}
+[data-theme='dark'] .home-decor__glow { opacity: 0.4; }
+
+/* 点阵网格纹理：给留白加细腻层次 */
+.home-decor__grid {
+  position: absolute;
+  inset: 0;
+  background-image: radial-gradient(
+    color-mix(in srgb, var(--accent) 22%, var(--border)) 1px,
+    transparent 1px
+  );
+  background-size: 22px 22px;
+  -webkit-mask-image: radial-gradient(ellipse 62% 78% at 28% 42%, #000 0%, transparent 78%);
+  mask-image: radial-gradient(ellipse 62% 78% at 28% 42%, #000 0%, transparent 78%);
+  opacity: 0.5;
+}
+
+/* 连接虚线：串起漂浮道具，营造"连接"意象 */
+.home-decor__link {
+  position: absolute;
+  top: 30%;
+  left: 26%;
+  width: 30%;
+  height: 90px;
+  border-top: 1.5px dashed color-mix(in srgb, var(--accent) 34%, transparent);
+  border-radius: 50%;
+  transform: rotate(-12deg);
+  opacity: 0.7;
 }
 
 .home-hero__copy,
@@ -136,10 +191,121 @@
   opacity: 0.6;
   animation-delay: -2.9s;
 }
+.home-decor__dot--b {
+  top: 16%;
+  left: 20%;
+  width: 6px;
+  height: 6px;
+  bottom: auto;
+  background: var(--accent-warm);
+  opacity: 0.7;
+  animation-delay: -1.2s;
+}
+.home-decor__dot--c {
+  right: 36%;
+  bottom: 18%;
+  left: auto;
+  width: 5px;
+  height: 5px;
+  background: var(--accent);
+  opacity: 0.5;
+  animation-delay: -3.8s;
+}
+
+/* 第三颗星 */
+.home-decor__spark--c {
+  top: 20%;
+  right: 22%;
+  color: var(--accent-warm);
+  font-size: 13px;
+  animation-delay: -2.2s;
+}
+
+/* 代码括号徽标 */
+.home-decor__bracket {
+  bottom: 14%;
+  left: 31%;
+  padding: 4px 7px;
+  border: 1px solid color-mix(in srgb, var(--accent-2) 32%, var(--border));
+  border-radius: 8px;
+  background: var(--accent-2-soft);
+  color: var(--accent-2);
+  font-family: var(--font-display);
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: 0.5px;
+  box-shadow: var(--shadow-sm);
+  transform: rotate(-7deg);
+  animation-delay: -3.1s;
+}
+
+/* 聊天气泡 */
+.home-decor__bubble {
+  top: 5%;
+  left: 54%;
+  padding: 2px 9px 7px;
+  border: 1px solid color-mix(in srgb, var(--accent) 24%, var(--border));
+  border-radius: 14px 14px 14px 4px;
+  background: var(--panel);
+  color: var(--accent);
+  font-size: 14px;
+  line-height: 1;
+  letter-spacing: 1px;
+  box-shadow: var(--shadow-sm);
+  transform: rotate(6deg);
+  animation-delay: -4.8s;
+}
+
+/* 书签 */
+.home-decor__bookmark {
+  right: 24%;
+  top: 10%;
+  width: 20px;
+  height: 27px;
+  border-radius: 3px 3px 7px 7px;
+  background: linear-gradient(160deg, var(--accent-warm), color-mix(in srgb, var(--accent-warm) 70%, #fff));
+  clip-path: polygon(0 0, 100% 0, 100% 100%, 50% 72%, 0 100%);
+  box-shadow: 0 4px 12px color-mix(in srgb, var(--accent-warm) 30%, transparent);
+  transform: rotate(14deg);
+  animation-delay: -0.4s;
+}
+
+/* 空心轨道环 */
+.home-decor__ring {
+  left: 15%;
+  bottom: 6%;
+  width: 34px;
+  height: 34px;
+  border: 2px solid color-mix(in srgb, var(--accent) 42%, transparent);
+  border-radius: 50%;
+  box-shadow: inset 0 0 0 4px color-mix(in srgb, var(--accent) 8%, transparent);
+  animation-delay: -2.6s;
+}
+.home-decor__ring::after {
+  content: '';
+  position: absolute;
+  top: -3px;
+  left: 50%;
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  background: var(--accent);
+  transform: translateX(-50%);
+}
 
 @keyframes home-decor-float {
   0%, 100% { translate: 0 0; }
   50% { translate: 0 -7px; }
+}
+
+@keyframes home-glow-breathe {
+  0%, 100% { transform: scale(1); opacity: 0.5; }
+  50% { transform: scale(1.12); opacity: 0.72; }
+}
+[data-theme='dark'] .home-decor__glow { animation-name: home-glow-breathe-dark; }
+@keyframes home-glow-breathe-dark {
+  0%, 100% { transform: scale(1); opacity: 0.34; }
+  50% { transform: scale(1.12); opacity: 0.5; }
 }
 
 /* 窄屏隐藏装饰，避免拥挤 */
@@ -148,7 +314,8 @@
 }
 
 @media (prefers-reduced-motion: reduce) {
-  .home-decor__item { animation: none !important; }
+  .home-decor__item,
+  .home-decor__glow { animation: none !important; }
 }
 
 .home-hero__copy {

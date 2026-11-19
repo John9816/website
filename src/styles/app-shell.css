@@ -25,6 +25,17 @@
   overscroll-behavior-y: contain;
 }
 
+/* 路由切换：内容淡入 + 轻微上滑，避免硬切造成的不流畅感 */
+.app-shell__route-view {
+  min-height: 100%;
+  animation: app-route-enter 0.26s cubic-bezier(0.2, 0.82, 0.2, 1) both;
+}
+
+@keyframes app-route-enter {
+  from { opacity: 0; transform: translateY(8px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+
 /* 全屏子页面（AI 对话/生图、音乐、文档编辑器）改为填满内容区 */
 .app-shell__content > .ai-chat,
 .app-shell__content > .music-page,
@@ -94,6 +105,7 @@
 }
 
 .app-shell__nav-item {
+  position: relative;
   display: inline-flex;
   align-items: center;
   gap: 7px;
@@ -109,6 +121,22 @@
   transition: color var(--motion-fast), background var(--motion-fast),
     transform var(--motion-fast);
 }
+
+/* active 项底部指示条：宽度过渡，切换更灵动 */
+.app-shell__nav-item::after {
+  content: '';
+  position: absolute;
+  left: 14px;
+  right: 14px;
+  bottom: 3px;
+  height: 2px;
+  border-radius: 2px;
+  background: var(--accent);
+  transform: scaleX(0);
+  transform-origin: center;
+  transition: transform var(--motion-base);
+}
+.app-shell__nav-item.is-active::after { transform: scaleX(1); }
 
 .app-shell__nav-item svg {
   flex-shrink: 0;
@@ -336,4 +364,6 @@
   .app-shell__topbar-login {
     transition: none;
   }
+  .app-shell__nav-item::after { transition: none; }
+  .app-shell__route-view { animation: none; }
 }

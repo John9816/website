@@ -153,8 +153,10 @@ export default function AppShell({ children }: { children: ReactNode }) {
         </div>
       </header>
 
-      {/* 内容区 */}
-      <div className="app-shell__content">{children}</div>
+      {/* 内容区：按路径 key 触发淡入过渡，让 tab 切换更顺滑 */}
+      <div className="app-shell__content" key={location.pathname}>
+        <div className="app-shell__route-view">{children}</div>
+      </div>
 
       {/* H5：底部标签栏 */}
       <nav className="app-shell__tabbar" aria-label="主导航">

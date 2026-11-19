@@ -177,12 +177,23 @@ export default function HomePage() {
         <main className="home-main" id="main-content">
           <header className="home-hero">
             <div className="home-decor" aria-hidden="true">
+              <span className="home-decor__glow home-decor__glow--a" />
+              <span className="home-decor__glow home-decor__glow--b" />
+              <span className="home-decor__grid" />
+              <span className="home-decor__link" />
               <span className="home-decor__item home-decor__pill" />
               <span className="home-decor__item home-decor__doc"><i /><i /><i /></span>
               <span className="home-decor__item home-decor__spark home-decor__spark--a">✦</span>
               <span className="home-decor__item home-decor__spark home-decor__spark--b">✦</span>
+              <span className="home-decor__item home-decor__spark home-decor__spark--c">✧</span>
               <span className="home-decor__item home-decor__check">✓</span>
               <span className="home-decor__item home-decor__dot" />
+              <span className="home-decor__item home-decor__dot home-decor__dot--b" />
+              <span className="home-decor__item home-decor__dot home-decor__dot--c" />
+              <span className="home-decor__item home-decor__bracket">{'</>'}</span>
+              <span className="home-decor__item home-decor__bubble">···</span>
+              <span className="home-decor__item home-decor__bookmark" />
+              <span className="home-decor__item home-decor__ring" />
             </div>
             <div className="home-hero__copy">
               <p className="home-hero__eyebrow"><span className="home-hero__eyebrow-dot" aria-hidden="true" />个人工作台</p>
