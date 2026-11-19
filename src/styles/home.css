@@ -1152,3 +1152,289 @@
   .home-tool,
   .home-resource { transition: none; }
 }
+
+/* ============================================================
+ * 装饰增强层（第二轮）—— 不改动上面任何既有规则，纯增量。
+ * 目标：Hero 天空更热闹；下半部分卡片/标题也有轻盈的层次与色彩。
+ * 全部 pointer-events:none，仅用主题变量，窄屏收敛，尊重减少动效。
+ * ============================================================ */
+
+/* --- 1. Hero 天空：新增漂浮道具 --- */
+.home-decor__plane,
+.home-decor__note,
+.home-decor__gear,
+.home-decor__heart,
+.home-decor__cloud,
+.home-decor__target,
+.home-decor__wave {
+  position: absolute;
+  display: block;
+  pointer-events: none;
+}
+/* 纸飞机 */
+.home-decor__plane {
+  top: 30%;
+  left: 41%;
+  color: var(--accent);
+  font-size: 20px;
+  transform: rotate(-18deg);
+  opacity: 0.75;
+  animation-delay: -1.1s;
+}
+/* 音符 */
+.home-decor__note {
+  bottom: 20%;
+  left: 12%;
+  color: var(--accent-2, var(--accent));
+  font-size: 19px;
+  animation-delay: -3.3s;
+}
+/* 齿轮（/settings 意象） */
+.home-decor__gear {
+  top: 6%;
+  right: 12%;
+  color: var(--text-dim);
+  font-size: 17px;
+  opacity: 0.55;
+  animation: home-decor-spin 14s linear infinite;
+}
+/* 爱心（赞助/联系意象） */
+.home-decor__heart {
+  bottom: 30%;
+  right: 40%;
+  color: #e07a8b;
+  font-size: 15px;
+  opacity: 0.8;
+  animation-delay: -2.7s;
+}
+[data-theme='dark'] .home-decor__heart { color: #e899a6; }
+/* 云朵 */
+.home-decor__cloud {
+  top: 40%;
+  right: 30%;
+  width: 44px;
+  height: 15px;
+  border-radius: 999px;
+  background: color-mix(in srgb, var(--panel) 88%, var(--accent));
+  box-shadow: 0 0 0 1px color-mix(in srgb, var(--accent) 12%, var(--border)) inset;
+  opacity: 0.85;
+  animation-delay: -4.4s;
+}
+.home-decor__cloud::before,
+.home-decor__cloud::after {
+  content: '';
+  position: absolute;
+  bottom: 4px;
+  border-radius: 50%;
+  background: inherit;
+}
+.home-decor__cloud::before { left: 8px; width: 17px; height: 17px; }
+.home-decor__cloud::after { right: 8px; width: 13px; height: 13px; }
+/* 靶心/定位点 */
+.home-decor__target {
+  bottom: 8%;
+  left: 52%;
+  width: 15px;
+  height: 15px;
+  border: 2px solid var(--accent);
+  border-radius: 50%;
+  opacity: 0.6;
+  animation-delay: -1.9s;
+}
+.home-decor__target::after {
+  content: '';
+  position: absolute;
+  inset: 3px;
+  border-radius: 50%;
+  background: var(--accent);
+}
+/* 波浪线 */
+.home-decor__wave {
+  top: 52%;
+  left: 8%;
+  width: 46px;
+  height: 12px;
+  color: var(--accent-2, var(--accent));
+  font-size: 16px;
+  line-height: 12px;
+  letter-spacing: -2px;
+  opacity: 0.7;
+  animation-delay: -3.9s;
+}
+
+/* 额外的小星点 */
+.home-decor__item.home-decor__dot--d {
+  top: 34%;
+  right: 18%;
+  width: 4px;
+  height: 4px;
+  bottom: auto;
+  left: auto;
+  background: var(--accent-2, var(--accent));
+  opacity: 0.55;
+  animation-delay: -0.6s;
+}
+.home-decor__item.home-decor__spark--d {
+  top: 62%;
+  right: 8%;
+  color: var(--accent);
+  font-size: 11px;
+  animation-delay: -2.1s;
+}
+
+/* 第二条连接弧线（与已有的 .home-decor__link 交叉，形成"网络"感） */
+.home-decor__link--b {
+  top: 46%;
+  left: 40%;
+  width: 26%;
+  height: 70px;
+  transform: rotate(14deg);
+  border-top-color: color-mix(in srgb, var(--accent-2, var(--accent)) 30%, transparent);
+}
+
+@keyframes home-decor-spin {
+  to { rotate: 360deg; }
+}
+
+/* --- 2. 区块标题：左侧渐变色条 + 轻微分隔 --- */
+.home-tools h2,
+.home-directory__heading h2,
+.home-group__heading h3 {
+  position: relative;
+  padding-left: 13px;
+}
+.home-tools h2::before,
+.home-directory__heading h2::before,
+.home-group__heading h3::before {
+  content: '';
+  position: absolute;
+  left: 0;
+  top: 50%;
+  width: 4px;
+  height: 0.92em;
+  border-radius: 4px;
+  background: linear-gradient(180deg, var(--accent), var(--accent-2, var(--accent)));
+  transform: translateY(-50%);
+  box-shadow: 0 0 0 3px color-mix(in srgb, var(--accent) 10%, transparent);
+}
+
+/* --- 3. 搜索框：聚焦时流动渐变描边 --- */
+.home-search { position: relative; isolation: isolate; }
+.home-search::before {
+  content: '';
+  position: absolute;
+  inset: -1px;
+  z-index: -1;
+  border-radius: inherit;
+  padding: 1.5px;
+  background: linear-gradient(110deg, var(--accent), var(--accent-2, var(--accent)), var(--accent-warm), var(--accent));
+  background-size: 300% 100%;
+  -webkit-mask: linear-gradient(#000 0 0) content-box, linear-gradient(#000 0 0);
+  -webkit-mask-composite: xor;
+  mask: linear-gradient(#000 0 0) content-box, linear-gradient(#000 0 0);
+  mask-composite: exclude;
+  opacity: 0;
+  transition: opacity 200ms ease;
+}
+.home-search:focus-within::before {
+  opacity: 1;
+  animation: home-search-flow 3.2s linear infinite;
+}
+@keyframes home-search-flow {
+  to { background-position: -300% 0; }
+}
+
+/* --- 4. 常用工具卡片：右上角柔光 + 图标彩色底 --- */
+.home-tool { position: relative; overflow: hidden; }
+.home-tool::after {
+  content: '';
+  position: absolute;
+  top: -26px;
+  right: -26px;
+  width: 84px;
+  height: 84px;
+  border-radius: 50%;
+  background: radial-gradient(circle, color-mix(in srgb, var(--tool-color, var(--accent)) 26%, transparent), transparent 68%);
+  opacity: 0.7;
+  pointer-events: none;
+  transition: transform 240ms ease, opacity 240ms ease;
+}
+.home-tool:hover::after { transform: scale(1.25); opacity: 1; }
+.home-tool__icon {
+  position: relative;
+  z-index: 1;
+  border-radius: 11px;
+  background: color-mix(in srgb, var(--tool-color, var(--accent)) 11%, transparent);
+  box-shadow: inset 0 0 0 1px color-mix(in srgb, var(--tool-color, var(--accent)) 16%, transparent);
+}
+
+/* --- 5. 资源卡片：图标柔光底 + hover 顶部渐变描边 --- */
+.home-resource__icon {
+  background: linear-gradient(150deg,
+    color-mix(in srgb, var(--accent) 12%, var(--panel-alt)),
+    var(--panel-alt));
+  border-color: color-mix(in srgb, var(--accent) 20%, var(--border));
+}
+.home-resource { position: relative; }
+.home-resource::before {
+  content: '';
+  position: absolute;
+  left: 14px;
+  right: 14px;
+  top: 0;
+  height: 2px;
+  border-radius: 0 0 4px 4px;
+  background: linear-gradient(90deg, transparent, var(--accent), var(--accent-2, var(--accent)), transparent);
+  opacity: 0;
+  transform: scaleX(0.4);
+  transition: opacity 220ms ease, transform 220ms ease;
+  pointer-events: none;
+}
+.home-resource:hover::before,
+.home-resource:focus-within::before { opacity: 0.9; transform: scaleX(1); }
+
+/* --- 6. 分组标签 chip：活动项柔光 --- */
+.home-chip.is-active {
+  box-shadow: 0 4px 14px color-mix(in srgb, var(--accent) 26%, transparent);
+}
+
+/* --- 7. 整页顶部氛围：主内容区一层柔和光晕 --- */
+.home-main { position: relative; }
+.home-main::before {
+  content: '';
+  position: absolute;
+  top: -60px;
+  left: 50%;
+  width: min(920px, 96%);
+  height: 360px;
+  transform: translateX(-50%);
+  background:
+    radial-gradient(ellipse 40% 60% at 20% 40%, color-mix(in srgb, var(--accent) 12%, transparent), transparent 100%),
+    radial-gradient(ellipse 45% 55% at 78% 55%, color-mix(in srgb, var(--accent-2, var(--accent)) 10%, transparent), transparent 100%);
+  filter: blur(10px);
+  opacity: 0.7;
+  pointer-events: none;
+  z-index: 0;
+}
+[data-theme='dark'] .home-main::before { opacity: 0.4; }
+.home-main > * { position: relative; z-index: 1; }
+
+/* --- 窄屏收敛：隐藏细碎漂浮道具，保留标题色条与卡片质感 --- */
+@media (max-width: 1000px) {
+  .home-decor__plane,
+  .home-decor__note,
+  .home-decor__gear,
+  .home-decor__heart,
+  .home-decor__cloud,
+  .home-decor__target,
+  .home-decor__wave,
+  .home-decor__link--b { display: none; }
+}
+
+/* --- 减少动效：停用所有新增动画 --- */
+@media (prefers-reduced-motion: reduce) {
+  .home-decor__gear,
+  .home-search:focus-within::before { animation: none !important; }
+  .home-tool::after,
+  .home-resource::before { transition: none !important; }
+}
