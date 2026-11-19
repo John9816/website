@@ -6,6 +6,8 @@
 // so the audio bytes never traverse our ECS egress. The decrypted bytes are served to
 // <audio> via a Blob URL. Any failure falls back to the local stream URL.
 
+import { clearStoredAudio, readStoredAudio, writeStoredAudio } from './richAudioStore'
+
 type Bytes = Uint8Array<ArrayBuffer>
 
 function bitCount(n: number): number {
@@ -473,6 +475,7 @@ async function decryptCenc(fileBytes: Bytes, playAuth: string): Promise<Bytes> {
 interface RichPlayback {
   url: string
   bytes: number
+  plain?: Uint8Array
 }
 
 async function fetchDecryptRichPlayback(
@@ -487,7 +490,14 @@ async function fetchDecryptRichPlayback(
   const bytes = encrypted.byteLength
   const decrypted = await decryptCenc(encrypted, playAuth)
   const blob = new Blob([decrypted], { type: 'audio/mp4' })
-  return { url: URL.createObjectURL(blob), bytes }
+  return { url: URL.createObjectURL(blob), bytes, plain: decrypted }
+}
+
+/** Rehydrate a Blob URL from plaintext bytes held in the persistent store. */
+async function loadPersistedRichPlayback(key: string): Promise<RichPlayback | null> {
+  const plain = await readStoredAudio(key)
+  if (!plain) return null
+  return { url: URL.createObjectURL(new Blob([plain], { type: 'audio/mp4' })), bytes: plain.byteLength }
 }
 
 /**
@@ -568,14 +578,24 @@ export function ensureRichPlayback(
   if (cached) return Promise.resolve(cached)
   const pending = richInFlight.get(key)
   if (pending) return pending
-  const task = fetchDecryptRichPlayback(directUrl, playAuth)
-    .then((entry) => {
+  const task = (async () => {
+    // Persistent store (survives reload) is checked before any network work.
+    const persisted = await loadPersistedRichPlayback(key)
+    if (persisted) {
       const existing = richBlobCache.get(key)
       if (existing) URL.revokeObjectURL(existing.url)
-      richBlobCache.set(key, entry)
+      richBlobCache.set(key, persisted)
       trimRichCache(key)
-      return entry.url
-    })
+      return persisted.url
+    }
+    const entry = await fetchDecryptRichPlayback(directUrl, playAuth)
+    const existing = richBlobCache.get(key)
+    if (existing) URL.revokeObjectURL(existing.url)
+    richBlobCache.set(key, entry)
+    trimRichCache(key)
+    if (entry.plain) void writeStoredAudio(key, entry.plain)
+    return entry.url
+  })()
     .finally(() => {
       richInFlight.delete(key)
     })
@@ -589,6 +609,11 @@ export function clearRichPlaybackCache(): void {
   richBlobCache.clear()
   richInFlight.clear()
   activeRichKey = null
+}
+
+/** Clears the on-disk plaintext cache too — only on auth-session change. */
+export function clearPersistedRichPlayback(): void {
+  void clearStoredAudio()
 }
 
 /** True when a PlayInfo carries the rich-client direct playback fields. */

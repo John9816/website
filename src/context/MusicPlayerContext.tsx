@@ -16,8 +16,13 @@ import {
   getCachedRichPlayback,
   setActiveRichPlaybackKey,
   clearRichPlaybackCache,
+  clearPersistedRichPlayback,
   richPlaybackKey,
 } from '../features/music/qishuiRichClient'
+import {
+  FALLBACK_SOURCES,
+  findBestMatchOnSource,
+} from '../features/music/sourceFallback'
 import {
   createContext,
   useCallback,
@@ -30,7 +35,7 @@ import {
 import type { ReactNode } from 'react'
 import { App as AntApp } from 'antd'
 import { musicLyric, musicPlay, qishuiSongInfo } from '../api/music'
-import { getAuthSessionId } from '../api/client'
+import { getAuthSessionId, ApiError } from '../api/client'
 import { useAuth } from './AuthContext'
 import type { MusicSourceId, MusicQuality, PlayInfo, SongSearchItem } from '../types'
 import {
@@ -226,6 +231,22 @@ export function MusicPlayerProvider({ children }: { children: ReactNode }) {
   // Keys already submitted for next-track rich-client prefetch; avoids re-issuing on every
   // prefetch-effect re-run. The decrypted Blob URLs themselves live in qishuiRichClient's LRU.
   const richPrefetchRef = useRef<Set<string>>(new Set())
+
+  // ---- Preload state machine (modelled on TuneFreeNext 4.3.7) --------------
+  type PreparedNext = {
+    key: string
+    song: SongSearchItem
+    info: PlayInfo
+    quality: MusicQuality
+    preparedAt: number
+  }
+  const preparedNextRef = useRef<PreparedNext | null>(null)
+  const prepareGenerationRef = useRef(0)
+  const PREPARED_NEXT_TTL_MS = 5 * 60_000
+  const fallbackAttemptedRef = useRef<Set<string>>(new Set())
+  const autoSkipStreakRef = useRef(0)
+  const autoSkipTimerRef = useRef<number | null>(null)
+
   const [radioAvailable, setRadioAvailable] = useState(false)
   const [artistTarget,setArtistTarget] = useState<MusicPlayerContextValue['artistTarget']>(null)
   const openArtist = useCallback((source:MusicSourceId,id:string|undefined,name:string)=>setArtistTarget({source,id,name}),[])
@@ -401,6 +422,44 @@ export function MusicPlayerProvider({ children }: { children: ReactNode }) {
     [cachePlayInfo],
   )
 
+  const invalidateNextPreparation = useCallback(() => {
+    prepareGenerationRef.current += 1
+    preparedNextRef.current = null
+    fallbackAttemptedRef.current.clear()
+  }, [])
+
+  const ensureNextPrepared = useCallback(
+    (song: SongSearchItem, quality: MusicQuality) => {
+      const key = playInfoKey(song, quality)
+      const existing = preparedNextRef.current
+      if (existing && existing.key === key && Date.now() - existing.preparedAt < PREPARED_NEXT_TTL_MS) {
+        return
+      }
+      const generation = prepareGenerationRef.current
+      const resolution = resolvePlayInfo(song, quality, true)
+      void resolution.promise
+        .then((info) => {
+          if (generation !== prepareGenerationRef.current) return
+          preparedNextRef.current = { key, song, info, quality, preparedAt: Date.now() }
+        })
+        .catch(() => {})
+    },
+    [resolvePlayInfo],
+  )
+
+  const takePreparedNext = useCallback(
+    (row: SongSearchItem, quality: MusicQuality): PlayInfo | null => {
+      const key = playInfoKey(row, quality)
+      const prepared = preparedNextRef.current
+      preparedNextRef.current = null
+      if (prepared && prepared.key === key && Date.now() - prepared.preparedAt < PREPARED_NEXT_TTL_MS) {
+        return prepared.info
+      }
+      return null
+    },
+    [],
+  )
+
   const applyPlayInfo = useCallback(
     (row: SongSearchItem, info: PlayInfo, quality: MusicQuality) => {
       setPreferredQualityState(quality)
@@ -428,8 +487,9 @@ export function MusicPlayerProvider({ children }: { children: ReactNode }) {
   )
 
   const setPreferredQuality = useCallback((quality: MusicQuality) => {
+    invalidateNextPreparation()
     setPreferredQualityState(quality)
-  }, [])
+  }, [invalidateNextPreparation])
 
   // Hover-to-prefetch: warm the decrypted Blob for the current track at `quality`.
   // Hovering a quality option starts the ~48MB download + decrypt up to several seconds
@@ -453,15 +513,61 @@ export function MusicPlayerProvider({ children }: { children: ReactNode }) {
   }, [current, resolvePlayInfo])
 
   const setPlayMode = useCallback((mode: PlayMode) => {
+    invalidateNextPreparation()
     setPlayModeState(mode)
-  }, [])
+  }, [invalidateNextPreparation])
 
   const cyclePlayMode = useCallback(() => {
+    invalidateNextPreparation()
     setPlayModeState((currentMode) => {
       const currentIndex = PLAY_MODE_ORDER.indexOf(currentMode)
       return PLAY_MODE_ORDER[(currentIndex + 1) % PLAY_MODE_ORDER.length]
     })
-  }, [])
+  }, [invalidateNextPreparation])
+
+  // Resolve a playable info for a song, and when the original source fails,
+  // search the other catalogs for the same title+artist and re-resolve there.
+  const resolveWithFallback = useCallback(
+    async (
+      row: SongSearchItem,
+      quality: MusicQuality,
+      generation: number,
+      skipOriginal = false,
+    ): Promise<{ row: SongSearchItem; info: PlayInfo; quality: MusicQuality } | null> => {
+      if (!skipOriginal) {
+        try {
+          const info = await resolvePlayInfo(row, quality, false).promise
+          return { row, info, quality }
+        } catch (error) {
+          if (isCanceledRequest(error)) return null
+          if (error instanceof ApiError && (error.code === 401 || error.code === 403)) throw error
+        }
+      }
+      const attemptKey = playInfoKey(row, quality)
+      if (fallbackAttemptedRef.current.has(attemptKey)) return null
+      fallbackAttemptedRef.current.add(attemptKey)
+      for (const source of FALLBACK_SOURCES) {
+        if (source === row.source) continue
+        if (generation !== playGenerationRef.current) return null
+        const match = await findBestMatchOnSource({ name: row.name, artist: row.artist }, source)
+        if (!match || generation !== playGenerationRef.current) continue
+        try {
+          const info = await resolvePlayInfo(match, quality, false).promise
+          if (generation !== playGenerationRef.current) return null
+          const merged: SongSearchItem = {
+            ...match,
+            coverUrl: match.coverUrl || row.coverUrl,
+            durationSec: match.durationSec || row.durationSec,
+          }
+          return { row: merged, info, quality }
+        } catch {
+          // next source
+        }
+      }
+      return null
+    },
+    [resolvePlayInfo],
+  )
 
   const playSong = useCallback(
     async (row: SongSearchItem, quality = preferredQuality) => {
@@ -473,22 +579,43 @@ export function MusicPlayerProvider({ children }: { children: ReactNode }) {
       }
 
       const generation = ++playGenerationRef.current
+      fallbackAttemptedRef.current.clear()
       setPlayLoading(true)
       setPendingTrackKey(key)
       setPreferredQualityState(quality)
       let applied = false
       try {
+        const prepared = takePreparedNext(row, quality)
+        if (prepared) {
+          if (generation !== playGenerationRef.current) return
+          recordCachedPlayback(row, quality)
+          applyPlayInfo(row, prepared, quality)
+          applied = true
+          return
+        }
         const resolution = resolvePlayInfo(row, quality, false)
         activePlayRequestRef.current = { controller: resolution.controller, key }
-        const info = await resolution.promise
-        if (generation !== playGenerationRef.current) return
-        if (resolution.needsPlayRecord) recordCachedPlayback(row, quality)
-        applyPlayInfo(row, info, quality)
-        applied = true
-      } catch (error) {
-        if (generation === playGenerationRef.current && !isCanceledRequest(error)) {
-          message.error(musicPlaybackError(row.source, error))
+        let info: PlayInfo
+        let playRow = row
+        let playQuality = quality
+        try {
+          info = await resolution.promise
+          if (generation !== playGenerationRef.current) return
+          if (resolution.needsPlayRecord) recordCachedPlayback(row, quality)
+        } catch (resolveError) {
+          const switched = await resolveWithFallback(row, quality, generation)
+          if (generation !== playGenerationRef.current) return
+          if (!switched) {
+            if (!isCanceledRequest(resolveError)) message.error(musicPlaybackError(row.source, resolveError))
+            return
+          }
+          info = switched.info
+          playRow = switched.row
+          playQuality = switched.quality
+          message.info(`已自动切换到${switched.row.source === 'qishui' ? '汽水' : switched.row.source === 'netease' ? '网易' : switched.row.source === 'qq' ? 'QQ' : '酷我'}音源`)
         }
+        applyPlayInfo(playRow, info, playQuality)
+        applied = true
       } finally {
         if (generation === playGenerationRef.current) {
           activePlayRequestRef.current = null
@@ -497,7 +624,7 @@ export function MusicPlayerProvider({ children }: { children: ReactNode }) {
         }
       }
     },
-    [applyPlayInfo, message, preferredQuality, recordCachedPlayback, resolvePlayInfo],
+    [applyPlayInfo, message, preferredQuality, recordCachedPlayback, resolvePlayInfo, resolveWithFallback, takePreparedNext],
   )
 
   const playResolvedSong = useCallback(
@@ -702,6 +829,51 @@ export function MusicPlayerProvider({ children }: { children: ReactNode }) {
     restartCurrentTrack,
   ])
 
+  const handlePlaybackFailure = useCallback(
+    (reason: string) => {
+      const failed = current
+      if (!failed) return
+      if (autoSkipTimerRef.current != null) return
+      if (autoSkipStreakRef.current >= playlist.length && playlist.length > 0) {
+        setPlayLoading(false)
+        message.error(`连续多首无法播放，已停止自动跳过。${reason}`)
+        return
+      }
+      const generation = ++playGenerationRef.current
+      fallbackAttemptedRef.current.clear()
+      setPlayLoading(true)
+      void resolveWithFallback(playInfoToQueueSong(failed), failed.requestedQuality, generation, true)
+        .then((switched) => {
+          if (generation !== playGenerationRef.current) return
+          if (switched) {
+            autoSkipStreakRef.current = 0
+            message.info(`当前音源无法播放，已自动切换到${switched.row.source === 'qishui' ? '汽水' : switched.row.source === 'netease' ? '网易' : switched.row.source === 'qq' ? 'QQ' : '酷我'}音源`)
+            applyPlayInfo(switched.row, switched.info, switched.quality)
+            return
+          }
+          autoSkipStreakRef.current += 1
+          setPlayLoading(false)
+          if (autoSkipTimerRef.current != null) window.clearTimeout(autoSkipTimerRef.current)
+          autoSkipTimerRef.current = window.setTimeout(() => {
+            autoSkipTimerRef.current = null
+            if (generation !== playGenerationRef.current) return
+            const advanced = advanceQueue()
+            if (!advanced) message.error(`播放失败：${reason}`)
+          }, 350)
+        })
+        .catch(() => {
+          if (generation !== playGenerationRef.current) return
+          setPlayLoading(false)
+          message.error(`播放失败：${reason}`)
+        })
+    },
+    [advanceQueue, applyPlayInfo, current, message, playlist.length, resolveWithFallback],
+  )
+
+  useEffect(() => () => {
+    if (autoSkipTimerRef.current != null) window.clearTimeout(autoSkipTimerRef.current)
+  }, [])
+
   useEffect(() => {
     if (!current || !unsupportedFormat) return
 
@@ -849,6 +1021,9 @@ export function MusicPlayerProvider({ children }: { children: ReactNode }) {
 
     const resolution = resolvePlayInfo(nextSong, preferredQuality, true)
 
+    // Preload state machine: stash the next song's resolved PlayInfo for zero-wait skip.
+    ensureNextPrepared(nextSong, preferredQuality)
+
     // Warm the next track's backend stream cache as soon as its play URL is
     // known. The audio bytes never reach the browser here; when the user later
     // hits "next", the first Range lands on a warm cache (~0.12s vs ~2-4s cold).
@@ -904,7 +1079,7 @@ export function MusicPlayerProvider({ children }: { children: ReactNode }) {
     }).catch(() => {}).finally(() => {
       if (lyricPrefetchRequestsRef.current.get(nextKey) === lyricsController) lyricPrefetchRequestsRef.current.delete(nextKey)
     })
-  }, [authSessionId, current?.id, current?.source, currentIndex, playMode, playlist, preferredQuality, resolvePlayInfo])
+  }, [authSessionId, current?.id, current?.source, currentIndex, playMode, playlist, preferredQuality, resolvePlayInfo, ensureNextPrepared])
 
   useEffect(() => {
     if (previousAuthSessionRef.current === authSessionId) return
@@ -921,8 +1096,10 @@ export function MusicPlayerProvider({ children }: { children: ReactNode }) {
     lyricPrefetchRequestsRef.current.clear()
     streamWarmupRef.current.clear()
     richPrefetchRef.current.clear()
+    invalidateNextPreparation()
     setActiveRichPlaybackKey(null)
     clearRichPlaybackCache()
+    clearPersistedRichPlayback()
     playInfoCacheRef.current.clear()
     setPendingTrackKey(null)
     setPlayLoading(false)
@@ -1095,6 +1272,7 @@ export function MusicPlayerProvider({ children }: { children: ReactNode }) {
         onPlaying={() => {
           setIsPlaying(true)
           setPlayLoading(false)
+          if (autoSkipStreakRef.current !== 0) autoSkipStreakRef.current = 0
         }}
         onPause={() => setIsPlaying(false)}
         onEnded={() => {
@@ -1104,11 +1282,8 @@ export function MusicPlayerProvider({ children }: { children: ReactNode }) {
         onError={(event) => {
           const el = event.currentTarget as HTMLAudioElement
           setIsPlaying(false)
-          setPlayLoading(false)
           if (current) invalidatePlayInfo(current, current.requestedQuality)
-          message.error(
-            `播放失败：${describeMediaError(el.error)}。`,
-          )
+          handlePlaybackFailure(describeMediaError(el.error))
         }}
       />
     </MusicPlayerContext.Provider>
