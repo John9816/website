@@ -87,6 +87,11 @@ function readU32(d: Bytes, p: number): number {
 function readU16(d: Bytes, p: number): number {
   return ((d[p] & 0xff) << 8) | (d[p + 1] & 0xff)
 }
+function readU64(d: Bytes, p: number): number {
+  const hi = readU32(d, p)
+  const lo = readU32(d, p + 4)
+  return hi * 0x100000000 + lo
+}
 
 function asciiEquals(d: Bytes, p: number, s: string): boolean {
   if (p + 4 > d.length || s.length !== 4) return false
@@ -191,6 +196,71 @@ function parseStsz(d: Bytes): number[] {
     }
   }
   return sizes
+}
+
+// Stsc entry: [firstChunk (1-based), samplesPerChunk].
+type StscEntry = [number, number]
+
+function parseStsc(d: Bytes): StscEntry[] {
+  if (d.length < 8) return []
+  const count = readU32(d, 4)
+  const out: StscEntry[] = []
+  for (let i = 0; i < count; i++) {
+    const p = 8 + i * 12
+    if (p + 12 > d.length) break
+    out.push([readU32(d, p), readU32(d, p + 4)])
+  }
+  return out
+}
+
+// stco = 32-bit chunk offsets, co64 = 64-bit. Body starts at version/flags.
+function parseChunkOffsets(d: Bytes, wide: boolean): number[] {
+  if (d.length < 8) return []
+  const count = readU32(d, 4)
+  const out: number[] = []
+  const step = wide ? 8 : 4
+  for (let i = 0; i < count; i++) {
+    const p = 8 + i * step
+    if (p + step > d.length) break
+    out.push(wide ? readU64(d, p) : readU32(d, p))
+  }
+  return out
+}
+
+/**
+ * Resolves the absolute byte offset of every sample from the real ISO BMFF chunk
+ * table (stco/co64 + stsc + stsz). Encrypted streams here contain a leading `encd`
+ * box (and inter-chunk padding), so samples are NOT contiguous from mdat+8 — reading
+ * them sequentially corrupts every sample. This mirrors the backend Java fix.
+ * Returns null when the table is incomplete, so callers can fall back to sequential.
+ */
+function computeSampleOffsets(
+  stsc: StscEntry[],
+  chunkOffsets: number[],
+  sampleSizes: number[],
+): number[] | null {
+  if (!stsc.length || !chunkOffsets.length || !sampleSizes.length) return null
+  const offsets: number[] = []
+  let sampleIndex = 0
+  for (let ci = 0; ci < chunkOffsets.length; ci++) {
+    const chunkNo = ci + 1 // stsc first_chunk is 1-based
+    let spc = 0
+    for (const entry of stsc) {
+      if (entry[0] <= chunkNo) spc = entry[1]
+      else break
+    }
+    if (spc <= 0) spc = 1
+    let offset = chunkOffsets[ci]
+    for (let k = 0; k < spc; k++) {
+      if (sampleIndex >= sampleSizes.length) break
+      offsets.push(offset)
+      offset += sampleSizes[sampleIndex]
+      sampleIndex++
+    }
+    if (sampleIndex >= sampleSizes.length) break
+  }
+  if (offsets.length !== sampleSizes.length) return null
+  return offsets
 }
 
 function perSampleIvSize(d: Bytes, start: number, end: number): number {
@@ -298,6 +368,22 @@ async function decryptCenc(fileBytes: Bytes, playAuth: string): Promise<Bytes> {
   const mdatPayloadStart = mdat.offset + 8
   const payloadLimit = Math.min(mdat.offset + mdat.size, d.length)
 
+  // Resolve real sample offsets from the chunk table. The upstream file places an `encd`
+  // box before the samples and pads between chunks, so samples are not contiguous from
+  // mdat+8. Fall back to sequential offsets only when the table cannot be parsed.
+  let sampleOffsets: number[] | null = null
+  const stsc = findBox(d, 'stsc', stbl.offset + 8, stbl.offset + stbl.size)
+  const stco = findBox(d, 'stco', stbl.offset + 8, stbl.offset + stbl.size)
+  const co64 = stco ? null : findBox(d, 'co64', stbl.offset + 8, stbl.offset + stbl.size)
+  const chunkBox = stco || co64
+  if (stsc && chunkBox) {
+    sampleOffsets = computeSampleOffsets(
+      parseStsc(stsc.body),
+      parseChunkOffsets(chunkBox.body, !!co64),
+      sampleSizes,
+    )
+  }
+
   // patchHeader: enca -> original format
   if (encaIdx >= 0 && encaIdx + 4 <= d.length) d.set(origFmt, encaIdx)
 
@@ -316,13 +402,13 @@ async function decryptCenc(fileBytes: Bytes, playAuth: string): Promise<Bytes> {
   let readPtr = mdatPayloadStart
   for (let i = 0; i < sampleSizes.length; i++) {
     const size = sampleSizes[i]
-    if (size <= 0 || readPtr + size > payloadLimit) break
+    const segStart = sampleOffsets ? sampleOffsets[i] : readPtr
+    if (size <= 0 || segStart + size > payloadLimit) break
     if (i >= samples.length) break
     const sample = samples[i]
     const iv = new Uint8Array(16)
     iv.set(sample.iv.subarray(0, Math.min(sample.iv.length, 16)))
-    const segStart = readPtr
-    const segEnd = readPtr + size
+    const segEnd = segStart + size
     let data: Bytes
     if (!sample.subsamples || sample.subsamples.length === 0) {
       data = d.slice(segStart, segEnd)
