@@ -136,12 +136,14 @@ function computeOutline(doc) {
   return items;
 }
 
-export default function Editor({ initialDoc, onChange, onSelectionInfo, title, onTitleChange, words, onViewReady, onError }) {
+export default function Editor({ initialDoc, onChange, onSelectionInfo, title, onTitleChange, words, onViewReady, onError, readOnly = false }) {
   const [contextMenu, setContextMenu] = useState(null);
   const [dialog, setDialog] = useState(null);
   const toolbarRef = useRef(null);
   const errorRef = useRef(onError);
   errorRef.current = onError;
+  const readOnlyRef = useRef(readOnly);
+  readOnlyRef.current = readOnly;
   const openDialog = (type, replace = false) => {
     const view = viewRef.current;
     if (!view || view.composing) return;
@@ -198,6 +200,7 @@ export default function Editor({ initialDoc, onChange, onSelectionInfo, title, o
 
     const view = new EditorView(hostRef.current, {
       state,
+      editable: () => !readOnlyRef.current,
       dispatchTransaction(tr) {
         const next = view.state.apply(tr);
         view.updateState(next);

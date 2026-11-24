@@ -19,6 +19,7 @@ import AiPanel from "./AiPanel.jsx";
 import { docToPlainText } from "./skills.js";
 import { useHashRoute, docHash } from "./router.js";
 import SharePage, { ShareDialog } from "./ShareView.jsx";
+import AccessRequest from "./AccessRequest.jsx";
 import ThemeToggle from "../../components/ThemeToggle";
 import ContextMenu, { contextMenuAt } from './ContextMenu.jsx';
 import FeaturesPanel from './FeaturesPanel.jsx';
@@ -134,6 +135,8 @@ export default function App({ canUseMcp = false, onBack }) {
   const [error, setError] = useState("");
   const [contextMenu, setContextMenu] = useState(null);
   const [featuresOpen, setFeaturesOpen] = useState(false);
+  // 打开一篇不属于自己、且未获授权的文档时，展示「申请访问」页（存文档 id）
+  const [accessDocId, setAccessDocId] = useState(null);
 
   // 侧栏：宽度 / 折叠 / 树节点折叠
   const [sidebarWidth, setSidebarWidth] = useState(() => {
@@ -481,6 +484,26 @@ export default function App({ canUseMcp = false, onBack }) {
       try {
         let list = await api.listDocs();
         if (!active) return;
+
+        // 地址栏指向一篇「不在我列表里」的文档：可能是别人分享的，需要判定是否已授权 / 是否要申请
+        let foreignId = null;
+        if (want.name === "doc" && want.id && !list.some((d) => d.id === want.id)) {
+          foreignId = want.id;
+          // 已获授权的文档会出现在 listDocs 里；走到这里说明尚未授权。
+          // 先确认文档确实存在（docMeta 成功），再进入申请页；不存在则按原逻辑回退。
+          try {
+            const meta = await api.access.docMeta(foreignId);
+            if (active && meta) {
+              setAccessDocId(foreignId);
+              setLoading(false);
+              return;
+            }
+          } catch (_) {
+            // 文档不存在或链接失效 -> 继续原回退逻辑
+            foreignId = null;
+          }
+        }
+
         if (!list.length) {
           const created = await api.createDoc("欢迎使用知识库", starterDoc().toJSON());
           list = await api.listDocs();
@@ -533,14 +556,14 @@ export default function App({ canUseMcp = false, onBack }) {
   /* ---------- 保存 ---------- */
   const flush = useCallback(async () => {
     const current = docRef.current;
-    if (!current) return;
+    if (!current || current.readOnly) return;
     saver.schedule(current);
     await saver.flush(current.id);
   }, [saver]);
 
   const scheduleSave = useCallback((payload) => {
     const current = docRef.current;
-    if (!current) return;
+    if (!current || current.readOnly) return;
     const snapshot = { ...current, ...payload };
     docRef.current = snapshot;
     saver.schedule(snapshot);
@@ -678,6 +701,24 @@ export default function App({ canUseMcp = false, onBack }) {
               .then((list) => list.length && openDoc(list[0].id, { auto: true }))
               .catch(() => {});
           }
+        }}
+      />
+    );
+  }
+
+  /* 访问申请页：打开一篇不属于自己、未授权的外部文档 */
+  if (accessDocId) {
+    return (
+      <AccessRequest
+        docId={accessDocId}
+        onBack={() => {
+          setAccessDocId(null);
+          navigate("#/home");
+          setView("home");
+        }}
+        onOpen={(id) => {
+          setAccessDocId(null);
+          refresh().then(() => openDoc(id, { auto: true })).catch(() => {});
         }}
       />
     );
@@ -939,11 +980,14 @@ export default function App({ canUseMcp = false, onBack }) {
         </header>
 
         {error && <div className="banner-error" onClick={() => setError("")}>{error}（点击关闭）</div>}
+        {view === "doc" && doc?.readOnly && (
+          <div className="banner-readonly">🔒 只读文档 · 来自 {doc.ownerName || "其他用户"}的分享，你无法修改内容</div>
+        )}
 
         {view === "doc" ? (
           doc ? (
             <Editor
-              key={doc.id}
+              key={doc.id + (doc.readOnly ? ":ro" : ":rw")}
               initialDoc={doc.content || null}
               onChange={onEditorChange}
               title={doc.title}
@@ -951,6 +995,7 @@ export default function App({ canUseMcp = false, onBack }) {
               words={words}
               onViewReady={handleViewReady}
               onError={setError}
+              readOnly={!!doc.readOnly}
             />
           ) : (
             <div className="loading-page">正在打开文档…</div>

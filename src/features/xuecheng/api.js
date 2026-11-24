@@ -67,11 +67,14 @@ export const api = {
     reply: (id, text) => request("/comments/" + encodeURIComponent(id) + "/reply", { method: "POST", body: { text } }),
     remove: (id) => request("/comments/" + encodeURIComponent(id), { method: "DELETE" }),
   },
-  /* ---------- 权限申请 / 审批 ---------- */
+  /* ---------- 权限申请 / 审批（跨用户） ---------- */
   access: {
     list: (inbox) => request("/access-requests" + (inbox ? "?inbox=1" : "")),
+    mine: () => request("/my-access-requests"),
+    docMeta: (id) => request("/doc-meta/" + encodeURIComponent(id)),
     request: (body) => request("/access-request", { method: "POST", body }),
     decide: (id, approve) => request("/access-requests/" + encodeURIComponent(id), { method: "POST", body: { approve } }),
+    revoke: (id, applicantId) => request("/access-requests/" + encodeURIComponent(id), { method: "DELETE", body: { applicantId } }),
   },
   /* ---------- 在线状态（轮询） ---------- */
   presence: {
