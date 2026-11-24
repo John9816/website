@@ -467,16 +467,33 @@ export interface AiConversationReplyView {
   assistantMessage: AiChatMessageView
 }
 
-export type MusicSourceId = 'qq' | 'netease' | 'kuwo'
-export type MusicPlaylistSourceId = Extract<MusicSourceId, 'netease' | 'kuwo'>
+export type MusicSourceId = 'qq' | 'netease' | 'kuwo' | 'qishui'
+export type MusicPlaylistSourceId = MusicSourceId
 export type MusicQuality = '128k' | '320k' | 'flac' | 'flac24bit'
 export type MusicSearchType = 'song' | 'album' | 'artist' | 'playlist'
+
+export interface QishuiAccountView {
+  bound: boolean
+  status: 'unbound' | 'bound' | 'new' | 'scanned' | 'confirmed' | 'refused' | 'expired' | 'failed'
+  sessionId?: string | null
+  qrcode?: string | null
+  qrcodeUrl?: string | null
+  expiresAt?: string | null
+  sessionExpiresAt?: string | null
+  nickname?: string | null
+  avatarUrl?: string | null
+  vip?: boolean | null
+  pollIntervalSeconds?: number | null
+}
 
 export interface SongSearchItem {
   id: string
   source: MusicSourceId
   name: string
   artist: string
+  /** 后端 SongSearchItem 实际返回歌手 ID，前端此前遗漏，导致无法调用 /artist/works */
+  artistId?: string
+  artistIds?: string[]
   album?: string
   albumId?: string
   coverUrl?: string
@@ -505,6 +522,8 @@ export interface SearchCollectionItem {
   type: MusicSearchType
   name: string
   artist?: string
+  artistId?: string
+  artistIds?: string[]
   creatorName?: string
   coverUrl?: string
   trackCount?: number
@@ -517,6 +536,11 @@ export interface LyricInfo {
 }
 
 export interface PlayInfo {
+  actualId?: string
+  lyricMatch?: string
+  artistId?: string
+  artistIds?: string[]
+  albumId?: string
   id: string
   source: MusicSourceId
   actualSource?: MusicSourceId
@@ -526,6 +550,14 @@ export interface PlayInfo {
   coverUrl?: string
   durationSec?: number
   playUrl: string
+  /**
+   * Rich-client direct playback URL for Qishui tracks. When present the browser fetches the
+   * CENC-encrypted bytes from this upstream CDN URL itself and decrypts them client-side, so the
+   * audio never crosses our ECS egress. `playAuth` carries the matching content-key material.
+   * Both are only set for Qishui; when absent the player uses `playUrl` (local stream) instead.
+   */
+  directUrl?: string
+  playAuth?: string
   requestedQuality: MusicQuality
   actualQuality?: MusicQuality
   fileSize?: number
@@ -566,6 +598,38 @@ export interface ToplistDetailView {
   pageSize: number
   total: number | null
   list: SongSearchItem[]
+}
+
+/** 听歌时长榜（公开周榜/月榜）*/
+export interface ListenRankItem {
+  rank: number
+  userId?: number | null
+  username: string
+  avatarUrl?: string | null
+  seconds: number
+}
+
+export interface ListenRankingView {
+  period: 'week' | 'month'
+  from: string
+  to: string
+  /** reported = 真实心跳数据；estimated = 播放历史估算 */
+  source: string
+  participants: number
+  items: ListenRankItem[]
+}
+
+/** 我的听歌数据与排名（登录态）*/
+export interface MyListenTimeView {
+  totalSec: number
+  weekSec: number
+  monthSec: number
+  weekRank: number
+  monthRank: number
+  weekParticipants: number
+  monthParticipants: number
+  weekSource?: string
+  monthSource?: string
 }
 
 export interface PlaylistItem {
@@ -618,6 +682,40 @@ export interface AlbumDetailView {
   list: SongSearchItem[]
 }
 
+export interface AlbumSummaryItem {
+  id: string
+  source: MusicSourceId
+  name?: string
+  artist?: string
+  artistId?: string
+  artistIds?: string[]
+  coverUrl?: string
+  publishTime?: string
+  trackCount?: number | null
+  description?: string
+}
+
+export interface ArtistDetailView {
+  id: string
+  source: MusicSourceId
+  name?: string
+  coverUrl?: string
+  songCount?: number | null
+  albumCount?: number | null
+  description?: string
+}
+
+export interface ArtistWorksView {
+  artistId: string
+  source: MusicSourceId
+  type: string
+  page: number
+  pageSize: number
+  total?: number | null
+  songs: SongSearchItem[]
+  albums?: AlbumSummaryItem[]
+}
+
 export interface MusicHistoryItem {
   id: number
   source: MusicSourceId
@@ -650,6 +748,34 @@ export interface MusicFavoriteStatusView {
   favoriteId?: number | null
 }
 
+export interface CreateMusicShareRequest {
+  source: MusicSourceId
+  songId: string
+  name: string
+  artist?: string
+  album?: string
+  coverUrl?: string
+  durationSec?: number
+  requestedQuality: MusicQuality
+}
+
+export interface MusicShareView {
+  id: number
+  source: MusicSourceId
+  songId: string
+  name: string
+  artist?: string | null
+  album?: string | null
+  coverUrl?: string | null
+  durationSec?: number | null
+  requestedQuality: MusicQuality
+  token: string
+  expiresAt?: string | null
+  viewCount: number
+  createdAt?: string
+  updatedAt?: string
+}
+
 export interface MusicPublicShareView {
   token: string
   source: MusicSourceId
@@ -665,120 +791,6 @@ export interface MusicPublicShareView {
   playable: boolean
   playError?: string | null
   playInfo?: PlayInfo | null
-}
-
-export type KbDocStatus = 'draft' | 'published'
-
-export interface KbSpace {
-  id: number
-  name: string
-  description?: string | null
-  icon?: string | null
-  sortOrder: number
-  docCount: number
-  createdAt?: string
-  updatedAt?: string
-}
-
-export interface KbDocTreeNode {
-  id: number
-  parentId?: number | null
-  title: string
-  status: KbDocStatus
-  sortOrder: number
-  children: KbDocTreeNode[]
-}
-
-export interface KbTag {
-  id: number
-  name: string
-  color?: string | null
-  createdAt?: string
-}
-
-export interface KbDocShare {
-  docId: number
-  token: string
-  enabled: boolean
-  expiresAt?: string | null
-  viewCount: number
-  createdAt?: string
-  updatedAt?: string
-}
-
-export interface KbDocSummary {
-  id: number
-  spaceId: number
-  parentId?: number | null
-  title: string
-  summary?: string | null
-  status: KbDocStatus
-  sortOrder: number
-  versionNo: number
-  createdAt?: string
-  updatedAt?: string
-}
-
-export interface KbDoc {
-  id: number
-  spaceId: number
-  parentId?: number | null
-  title: string
-  summary?: string | null
-  contentJson?: string | null
-  contentHtml?: string | null
-  status: KbDocStatus
-  sortOrder: number
-  versionNo: number
-  tags: KbTag[]
-  share?: KbDocShare | null
-  createdAt?: string
-  updatedAt?: string
-}
-
-export interface KbDocVersion {
-  id: number
-  docId: number
-  versionNo: number
-  title: string
-  summary?: string | null
-  editorUserId: number
-  changeNote?: string | null
-  createdAt?: string
-}
-
-export interface KbDocVersionDetail {
-  id: number
-  docId: number
-  versionNo: number
-  title: string
-  summary?: string | null
-  contentJson?: string | null
-  contentHtml?: string | null
-  editorUserId: number
-  changeNote?: string | null
-  createdAt?: string
-}
-
-export interface KbPublicDoc {
-  id: number
-  token: string
-  title: string
-  summary?: string | null
-  contentJson?: string | null
-  contentHtml?: string | null
-  updatedAt?: string
-  documents: KbPublicDocItem[]
-}
-
-export interface KbPublicDocItem {
-  id: number
-  token: string
-  parentId?: number | null
-  title: string
-  summary?: string | null
-  sortOrder?: number
-  updatedAt?: string
 }
 
 export interface ImportedPlaylist {
@@ -870,3 +882,6 @@ export interface RedeemCodeBatchView {
   quantity: number
   codes: string[]
 }
+
+export interface QishuiFeedMode { id:string; name:string; group?:string; iconUrl?:string; toast?:string }
+export interface QishuiRoamingPage { sessionId:string; source:MusicSourceId; modeId:string; sequence:number; nextSequence:number; hasMore:boolean; expiresAt:string; list:SongSearchItem[] }

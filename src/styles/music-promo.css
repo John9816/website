@@ -1551,8 +1551,7 @@
 }
 
 [data-theme='dark'] .music-promo-launcher,
-[data-theme='light'] .music-promo-launcher,
-[data-theme='image'] .music-promo-launcher {
+[data-theme='light'] .music-promo-launcher {
   background: rgb(14 17 16 / 88%);
   color: #fff;
 }

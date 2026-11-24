@@ -166,3 +166,8 @@
   .topbar-redeem-group { flex-direction: column; align-items: stretch; }
   .topbar-redeem-group__actions .ant-btn { flex: 1; }
 }
+
+/* 纯数字用户名头像 fallback 用 lucide 图标，按容器尺寸缩放 */
+svg.topbar-user-trigger__avatar { width: 16px; height: 16px; }
+svg.topbar-user-card__avatar { width: 26px; height: 26px; }
+svg.topbar-profile-avatar-editor__preview { width: 34px; height: 34px; }

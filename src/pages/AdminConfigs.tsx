@@ -12,15 +12,18 @@ import {
   Typography,
   Skeleton,
   Tag,
+  Switch,
 } from 'antd'
-import { PlusOutlined, EditOutlined, DeleteOutlined, ReloadOutlined, SettingOutlined } from '@ant-design/icons'
+import { PlusOutlined, EditOutlined, DeleteOutlined, ReloadOutlined, SettingOutlined, CheckCircleOutlined } from '@ant-design/icons'
 import {
   adminListConfigs,
   adminCreateConfig,
   adminUpdateConfig,
   adminDeleteConfig,
 } from '../api/admin'
+import { APP_TABS, TAB_VISIBILITY_KEY, parseTabVisibility } from '../constants/tabs'
 import type { SysConfig } from '../types'
+import '../styles/admin-tab-visibility.css'
 
 const sortConfigs = (items: SysConfig[]) =>
   [...items].sort((a, b) => a.configKey.localeCompare(b.configKey) || a.id - b.id)
@@ -42,14 +45,74 @@ export default function AdminConfigs() {
   const secretField = isSecretKey(configKey || '')
   const { message } = AntApp.useApp()
 
+  // 导航 Tab 显隐管理
+  const [tabVisibility, setTabVisibility] = useState<Record<string, boolean>>(() => parseTabVisibility(null))
+  const [tabConfigId, setTabConfigId] = useState<number | null>(null)
+  const [tabSaving, setTabSaving] = useState(false)
+  const [tabDirty, setTabDirty] = useState(false)
+
+  const applyRows = (items: SysConfig[]) => {
+    setRows(sortConfigs(items))
+    const cfg = items.find((item) => item.configKey === TAB_VISIBILITY_KEY)
+    let parsed: Record<string, boolean> = parseTabVisibility(null)
+    if (cfg?.configValue) {
+      try {
+        parsed = parseTabVisibility(JSON.parse(cfg.configValue))
+      } catch {
+        parsed = parseTabVisibility(null)
+      }
+    }
+    setTabVisibility(parsed)
+    setTabConfigId(cfg?.id ?? null)
+    setTabDirty(false)
+  }
+
   const load = async () => {
     setLoading(true)
     try {
-      setRows(sortConfigs(await adminListConfigs()))
+      applyRows(await adminListConfigs())
     } catch (e) {
       message.error((e as Error).message)
     } finally {
       setLoading(false)
+    }
+  }
+
+  const toggleTab = (id: string, visible: boolean) => {
+    setTabVisibility((prev) => ({ ...prev, [id]: visible }))
+    setTabDirty(true)
+  }
+
+  const showAllTabs = () => {
+    setTabVisibility(parseTabVisibility(null))
+    setTabDirty(true)
+  }
+
+  const saveTabVisibility = async () => {
+    setTabSaving(true)
+    try {
+      const value = JSON.stringify(tabVisibility)
+      if (tabConfigId != null) {
+        await adminUpdateConfig(tabConfigId, {
+          configKey: TAB_VISIBILITY_KEY,
+          configValue: value,
+          description: '全局导航 Tab 显隐（JSON，id -> true/false）',
+        })
+      } else {
+        const created = await adminCreateConfig({
+          configKey: TAB_VISIBILITY_KEY,
+          configValue: value,
+          description: '全局导航 Tab 显隐（JSON，id -> true/false）',
+        })
+        setTabConfigId(created.id)
+      }
+      setTabDirty(false)
+      message.success('导航 Tab 显隐已保存，刷新页面即可生效')
+      void load()
+    } catch (e) {
+      message.error((e as Error).message)
+    } finally {
+      setTabSaving(false)
     }
   }
 
@@ -126,6 +189,54 @@ export default function AdminConfigs() {
           </Button>
         </Space>
       </div>
+
+      <Card
+        className="admin-page__panel"
+        title={
+          <Space size="small">
+            <SettingOutlined />
+            <span>导航 Tab 显隐</span>
+          </Space>
+        }
+        extra={
+          <Space size="small" wrap>
+            <Button icon={<CheckCircleOutlined />} onClick={showAllTabs} size="small">
+              全部显示
+            </Button>
+            <Button
+              type="primary"
+              onClick={() => void saveTabVisibility()}
+              loading={tabSaving}
+              disabled={!tabDirty}
+              size="small"
+            >
+              保存设置
+            </Button>
+          </Space>
+        }
+        style={{ marginBottom: 16 }}
+      >
+        <Typography.Paragraph type="secondary" style={{ marginBottom: 16 }}>
+          控制顶部导航（PC）与底部标签栏（手机）中各个 Tab 的展示或隐藏。修改后点击「保存设置」，用户刷新页面即可生效；未配置的 Tab 默认显示。
+        </Typography.Paragraph>
+        <div className="admin-tab-visibility">
+          {APP_TABS.map((tab) => (
+            <div className="admin-tab-visibility__row" key={tab.id}>
+              <tab.Icon size={17} aria-hidden="true" />
+              <span className="admin-tab-visibility__label">{tab.label}</span>
+              <code className="admin-tab-visibility__id">{tab.id}</code>
+              <Switch
+                checked={tabVisibility[tab.id] !== false}
+                onChange={(v) => toggleTab(tab.id, v)}
+                aria-label={`${tabVisibility[tab.id] !== false ? '隐藏' : '显示'}${tab.label}`}
+              />
+            </div>
+          ))}
+        </div>
+        {tabDirty && (
+          <div className="admin-tab-visibility__hint">有未保存的改动，请点击右上角「保存设置」。</div>
+        )}
+      </Card>
 
       <Card className="admin-page__panel" styles={{ body: { padding: 0 } }}>
         {loading && rows.length === 0 ? (

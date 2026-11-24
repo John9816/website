@@ -1,10 +1,13 @@
 import { request } from './client'
+import { musicRead } from './musicRead'
 import type {
+  CreateMusicShareRequest,
   LyricView,
   MusicFavoriteItem,
   MusicFavoriteStatusView,
   MusicPublicShareView,
   MusicQuality,
+  MusicShareView,
   MusicHistoryItem,
   MusicPlaylistSourceId,
   MusicSourceId,
@@ -22,8 +25,26 @@ import type {
   ImportPlaylistRequest,
   UpdatePlaylistRequest,
   MusicSearchType,
+  QishuiAccountView,
+  ArtistDetailView,
+  ArtistWorksView,
 } from '../types'
 import { DEFAULT_PAGE_SIZE } from '../constants/pagination'
+
+export const getQishuiAccount = (signal?: AbortSignal) =>
+  request<QishuiAccountView>('/api/v1/music/qishui/account', { auth: true, signal })
+
+export const createQishuiQr = (signal?: AbortSignal) =>
+  request<QishuiAccountView>('/api/v1/music/qishui/auth/qr', { method: 'POST', auth: true, signal })
+
+export const pollQishuiQr = (sessionId: string, signal?: AbortSignal) =>
+  request<QishuiAccountView>(`/api/v1/music/qishui/auth/qr/${encodeURIComponent(sessionId)}`, { auth: true, signal })
+
+export const refreshQishuiAccount = (signal?: AbortSignal) =>
+  request<QishuiAccountView>('/api/v1/music/qishui/account/refresh', { method: 'POST', auth: true, signal })
+
+export const deleteQishuiAccount = (signal?: AbortSignal) =>
+  request<void>('/api/v1/music/qishui/account', { method: 'DELETE', auth: true, signal })
 
 export const musicSearch = (
   source: MusicSourceId,
@@ -31,9 +52,10 @@ export const musicSearch = (
   page = 1,
   pageSize = DEFAULT_PAGE_SIZE,
   type: MusicSearchType = 'song',
+  signal?: AbortSignal,
 ) =>
-  request<SearchResultView>('/api/v1/music/search', {
-    auth: true,
+  musicRead<SearchResultView>('/api/v1/music/search', {
+    auth: true, signal,
     query: {
       source,
       keyword,
@@ -55,11 +77,12 @@ export const musicPlay = (
     signal: options.signal,
   })
 
-export const musicLyric = (source: MusicSourceId, id: string) =>
-  request<LyricView>('/api/v1/music/lyric', { auth: true, query: { source, id } })
+export const musicLyric = (source: MusicSourceId, id: string, signal?: AbortSignal, refresh = false) =>
+  musicRead<LyricView>('/api/v1/music/lyric', { auth: true, query: { source, id }, signal },
+    source === 'qishui' ? 30 * 60_000 : 60_000, refresh)
 
 export const musicToplist = (source: MusicSourceId) =>
-  request<ToplistListView>('/api/v1/music/toplist', {
+  musicRead<ToplistListView>('/api/v1/music/toplist', {
     auth: true,
     query: { source },
   })
@@ -70,7 +93,7 @@ export const musicToplistDetail = (
   page = 1,
   pageSize = DEFAULT_PAGE_SIZE,
 ) =>
-  request<ToplistDetailView>('/api/v1/music/toplist/detail', {
+  musicRead<ToplistDetailView>('/api/v1/music/toplist/detail', {
     auth: true,
     query: { source, id, page, pageSize },
   })
@@ -82,7 +105,7 @@ export const musicPlaylist = (
   category?: string,
   order?: string,
 ) =>
-  request<PlaylistListView>('/api/v1/music/playlist', {
+  musicRead<PlaylistListView>('/api/v1/music/playlist', {
     auth: true,
     query: { source, page, pageSize, category, order },
   })
@@ -93,7 +116,7 @@ export const musicPlaylistDetail = (
   page = 1,
   pageSize = DEFAULT_PAGE_SIZE,
 ) =>
-  request<PlaylistDetailView>('/api/v1/music/playlist/detail', {
+  musicRead<PlaylistDetailView>('/api/v1/music/playlist/detail', {
     auth: true,
     query: { source, id, page, pageSize },
   })
@@ -104,9 +127,29 @@ export const musicAlbumDetail = (
   page = 1,
   pageSize = DEFAULT_PAGE_SIZE,
 ) =>
-  request<AlbumDetailView>('/api/v1/music/album/detail', {
+  musicRead<AlbumDetailView>('/api/v1/music/album/detail', {
     auth: true,
     query: { source, id, page, pageSize },
+  })
+
+/** 歌手简要资料；后端 @RequestParam List<String> ids 接受重复 query 键。 */
+export const musicArtistDetail = (source: MusicSourceId, ids: string[]) =>
+  musicRead<ArtistDetailView[]>('/api/v1/music/artist', {
+    auth: true,
+    query: { source, ids },
+  })
+
+/** 歌手作品：song 返回歌曲，album 返回专辑（黑源两者均已支持）。 */
+export const musicArtistWorks = (
+  source: MusicSourceId,
+  id: string,
+  type: 'song' | 'album' = 'song',
+  page = 1,
+  pageSize = DEFAULT_PAGE_SIZE,
+) =>
+  musicRead<ArtistWorksView>('/api/v1/music/artist/works', {
+    auth: true,
+    query: { source, id, type, page, pageSize },
   })
 
 export const musicNewSongs = (
@@ -114,7 +157,7 @@ export const musicNewSongs = (
   page = 1,
   pageSize = DEFAULT_PAGE_SIZE,
 ) =>
-  request<ToplistDetailView>('/api/v1/music/new', {
+  musicRead<ToplistDetailView>('/api/v1/music/new', {
     auth: true,
     query: { source, page, pageSize },
   })
@@ -175,8 +218,15 @@ export const getMusicFavoriteStatuses = (source: MusicSourceId, songIds: string[
     body: { source, songIds },
   })
 
-export const getPublicMusicShare = (token: string) =>
-  request<MusicPublicShareView>(`/api/public/music/share/${encodeURIComponent(token)}`)
+export const createMusicShare = (body: CreateMusicShareRequest) =>
+  request<MusicShareView>('/api/user/music/shares', {
+    method: 'POST',
+    auth: true,
+    body,
+  })
+
+export const getPublicMusicShare = (token: string, signal?: AbortSignal) =>
+  request<MusicPublicShareView>(`/api/public/music/share/${encodeURIComponent(token)}`, { signal })
 
 export const getImportedPlaylists = (page = 0, size = DEFAULT_PAGE_SIZE) =>
   request<PageView<ImportedPlaylist>>('/api/user/music/playlists', {
@@ -235,3 +285,30 @@ export const removePlaylistItem = (playlistId: number, itemId: number) =>
     method: 'DELETE',
     auth: true,
   })
+
+export const qishuiSearchSuggestions = (keyword: string, signal?: AbortSignal) =>
+  musicRead<string[]>('/api/v1/music/qishui/search/suggestions', { auth: true, query: { keyword }, signal })
+
+export const musicTtml = (source: MusicSourceId, id: string, signal?: AbortSignal) =>
+  musicRead<{available: boolean; content: string | null; provider: string | null}>('/api/v1/music/lyrics/ttml', { auth: true, query: { source, id }, signal })
+
+export const qishuiSongInfo = (id: string, signal?: AbortSignal) =>
+  musicRead<import('../types').SongSearchItem>('/api/v1/music/qishui/song', { auth:true, query:{id}, signal })
+export const qishuiDiscovery = (signal?: AbortSignal, refresh = false) =>
+  musicRead<{source:MusicSourceId;list:import('../types').SongSearchItem[]}>('/api/v1/music/qishui/discovery', {auth:true,signal}, 45_000, refresh)
+export const qishuiRoamingModes = (signal?: AbortSignal) =>
+  request<import('../types').QishuiFeedMode[]>('/api/v1/music/qishui/roaming/modes',{auth:true,signal})
+export const startQishuiRoaming = (modeId?: string, signal?: AbortSignal) =>
+  request<import('../types').QishuiRoamingPage>('/api/v1/music/qishui/roaming/sessions',{method:'POST',auth:true,query:{modeId},signal})
+export const nextQishuiRoaming = (sessionId:string,sequence:number,signal?:AbortSignal) =>
+  request<import('../types').QishuiRoamingPage>(`/api/v1/music/qishui/roaming/sessions/${encodeURIComponent(sessionId)}/next`,{method:'POST',auth:true,query:{sequence},signal})
+export const closeQishuiRoaming = (sessionId:string) =>
+  request<void>(`/api/v1/music/qishui/roaming/sessions/${encodeURIComponent(sessionId)}`,{method:'DELETE',auth:true})
+
+/** 听歌时长公开榜（周/月），无需登录 */
+export const musicListeningRanking = (period: 'week' | 'month' = 'week', limit = 50, signal?: AbortSignal) =>
+  request<import('../types').ListenRankingView>('/api/public/music/listening/ranking', { query: { period, limit }, signal })
+
+/** 我的听歌时长与排名（需登录） */
+export const myListeningTime = (signal?: AbortSignal) =>
+  request<import('../types').MyListenTimeView>('/api/user/music/listening/me', { auth: true, signal })

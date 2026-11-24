@@ -43,7 +43,7 @@ import {
 } from '../api/ai'
 import { ApiError } from '../api/client'
 import MessageMarkdown from '../components/MessageMarkdown'
-import SiteHeader from '../components/SiteHeader'
+import AppShell from '../components/AppShell'
 import { useAuth } from '../context/AuthContext'
 import type {
   AiChatMessageView,
@@ -1325,17 +1325,12 @@ export default function AiChatPage() {
     (!sending && ((!draft.trim() && !hasAudioInput) || charDanger))
 
   return (
-    <div className="ai-chat">
-      <SiteHeader />
-
-      <main className={mainClassName}>
+    <AppShell>
+      <div className="ai-chat">
+        <main className={mainClassName}>
         {!auth.token ? (
           <section className="ai-chat__guest">
             <article className="ai-chat__welcome-card">
-              <div className="ai-chat__eyebrow">
-                <Bot size={16} />
-                <span>AI CHAT</span>
-              </div>
               <h1>AI 对话</h1>
             </article>
 
@@ -1698,7 +1693,8 @@ export default function AiChatPage() {
             </section>
           </section>
         )}
-      </main>
-    </div>
+        </main>
+      </div>
+    </AppShell>
   )
 }

@@ -1,4 +1,4 @@
-import { Moon, Sun, Wallpaper } from 'lucide-react'
+import { Moon, Sun } from 'lucide-react'
 import { THEME_MODES, type ThemeMode, useTheme } from '../context/ThemeContext'
 
 type Props = {
@@ -10,22 +10,17 @@ const themeMeta: Record<
   {
     label: string
     title: string
-    Icon: typeof Wallpaper
+    Icon: typeof Sun
   }
 > = {
-  image: {
-    label: '背景',
-    title: '切换到背景图皮肤',
-    Icon: Wallpaper,
-  },
   light: {
-    label: '浅色',
-    title: '切换到浅色主题',
+    label: '白天',
+    title: '切换到白天模式',
     Icon: Sun,
   },
   dark: {
-    label: '深色',
-    title: '切换到深色主题',
+    label: '黑夜',
+    title: '切换到黑夜模式',
     Icon: Moon,
   },
 }
@@ -37,7 +32,7 @@ export default function ThemeToggle({ bare = false }: Props) {
     <div
       className={bare ? 'theme-toggle theme-toggle--bare' : 'theme-toggle'}
       role="group"
-      aria-label="选择网站皮肤"
+      aria-label="选择显示模式"
       data-mode={mode}
     >
       {THEME_MODES.map((themeMode) => {

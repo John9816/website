@@ -9,6 +9,7 @@ import {
 import { ArrowLeftOutlined, ArrowRightOutlined, LockOutlined, UserOutlined } from '@ant-design/icons'
 import { getCurrentUser, login as apiLogin } from '../api/auth'
 import ThemeToggle from '../components/ThemeToggle'
+import AccountBrand from '../components/AccountBrand'
 import { useAuth } from '../context/AuthContext'
 import '../styles/auth.css'
 
@@ -40,6 +41,7 @@ export default function LoginPage() {
 
   return (
     <div className="account-page">
+      <AccountBrand />
       <header className="account-page__header">
         <Link to="/" className="account-page__home">
           <ArrowLeftOutlined />
@@ -51,9 +53,7 @@ export default function LoginPage() {
       <main className="account-page__main">
         <section className="account-page__form" aria-labelledby="account-title">
           <div className="account-page__intro">
-            <Link to="/" className="account-page__brand">个人导航<span> / 账号</span></Link>
             <h1 id="account-title">{isAdminEntry ? '管理后台登录' : '欢迎回来'}</h1>
-            <p>登录你的账号</p>
           </div>
 
         <Form

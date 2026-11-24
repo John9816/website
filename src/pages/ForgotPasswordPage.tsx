@@ -10,6 +10,7 @@ import {
 } from '@ant-design/icons'
 import { resetPassword, sendPasswordResetEmailCode } from '../api/auth'
 import ThemeToggle from '../components/ThemeToggle'
+import AccountBrand from '../components/AccountBrand'
 import { useAuth } from '../context/AuthContext'
 import { ACCOUNT_EMAIL_HINT, ACCOUNT_EMAIL_PATTERN } from '../utils/email'
 import '../styles/auth.css'
@@ -78,6 +79,7 @@ export default function ForgotPasswordPage() {
 
   return (
     <div className="account-page account-page--register">
+      <AccountBrand />
       <header className="account-page__header">
         <Link to="/login" className="account-page__home">
           <ArrowLeftOutlined />
@@ -89,9 +91,7 @@ export default function ForgotPasswordPage() {
       <main className="account-page__main">
         <section className="account-page__form" aria-labelledby="account-title">
           <div className="account-page__intro">
-            <Link to="/" className="account-page__brand">个人导航<span> / 账号</span></Link>
             <h1 id="account-title">重设密码</h1>
-            <p>验证邮箱后设置新的登录密码</p>
           </div>
 
           <Form<ForgotPasswordValues>

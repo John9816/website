@@ -15,8 +15,10 @@ const DEFAULT_DESCRIPTION =
 
 const metaMap: Record<string, PageMeta> = {
   '/': { title: '首页', description: DEFAULT_DESCRIPTION },
+  '/editor': { title: '知识库' },
   '/ai-chat': { title: 'AI 对话' },
   '/ai-image': { title: 'AI 生图' },
+  '/server-monitor': { title: '服务器监控' },
   '/music': {
     title: '音乐',
     description: '在线音乐聚合：QQ、网易云、酷我搜索、播放、歌词、榜单与歌单，一处畅听。',
@@ -29,7 +31,6 @@ const metaMap: Record<string, PageMeta> = {
   '/music/share': { title: '音乐分享' },
   '/music/toplist': { title: '榜单详情' },
   '/music/playlist': { title: '歌单详情' },
-  '/kb/share': { title: '知识库分享' },
   '/login': { title: '登录' },
   '/register': { title: '注册' },
   '/admin/login': { title: '管理员登录' },
@@ -38,7 +39,6 @@ const metaMap: Record<string, PageMeta> = {
   '/admin/links': { title: '链接管理' },
   '/admin/configs': { title: '站点配置' },
   '/admin/content': { title: '内容工厂' },
-  '/admin/kb': { title: '知识库管理' },
   '/admin/password': { title: '密码管理' },
 }
 

@@ -86,7 +86,7 @@ export function getRefreshToken(): string | null {
   return readAuthSession()?.refreshToken ?? null
 }
 
-function getAuthSessionId(): string | null {
+export function getAuthSessionId(): string | null {
   return readAuthSession()?.sessionId ?? null
 }
 
@@ -164,6 +164,7 @@ function normalizeApiErrorMessage(message: string | undefined): string {
 }
 
 type Options = {
+  sameOrigin?: boolean
   method?: 'GET' | 'POST' | 'PUT' | 'DELETE' | 'PATCH'
   body?: unknown
   auth?: boolean
@@ -223,7 +224,7 @@ export async function request<T>(path: string, opts: Options = {}): Promise<T> {
     signal,
     retryOnUnauthorized = true,
   } = opts
-  const url = new URL(BASE + path, window.location.origin)
+  const url = new URL((opts.sameOrigin ? '' : BASE) + path, window.location.origin)
   const isFormData = typeof FormData !== 'undefined' && body instanceof FormData
   if (query) {
     for (const [k, v] of Object.entries(query)) {

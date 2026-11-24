@@ -1,0 +1,27 @@
+/* ============================================================
+ * 服务器监控页 · 把独立监控面板内嵌进 AppShell 内容区
+ * ============================================================ */
+
+/* 兼容两种层级：
+   - 旧：.app-shell__content > .server-monitor
+   - 新：.app-shell__content > .app-shell__route-view > .server-monitor（路由视图包装层）
+   若只写旧选择器，插入 route-view 后会失效，iframe 退化成默认 150px 高度，
+   导致监控面板下半部分（历史趋势/服务健康）看不到。 */
+:is(.app-shell__content, .app-shell__route-view) > .server-monitor {
+  flex: 1 1 auto;
+  height: 100%;
+  min-height: 0;
+  width: 100%;
+  display: flex;
+  flex-direction: column;
+  background: var(--bg);
+}
+
+.server-monitor__frame {
+  flex: 1 1 auto;
+  width: 100%;
+  height: 100%;
+  min-height: 0;
+  border: 0;
+  background: var(--bg);
+}

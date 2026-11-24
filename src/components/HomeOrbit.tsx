@@ -49,6 +49,39 @@ export default function HomeOrbit() {
 
     const sync = () => scene?.setRunning(inView && !document.hidden && !pausedRef.current)
     syncRef.current = sync
+    // Defer the 129KB scene bundle until the browser is idle, so it does not
+    // compete with the HTML/CSS/entry JS on the first-screen critical path.
+    // IntersectionObserver still gates *whether* to load; idle only decides
+    // *when*. An absolute fallback timer is always armed: requestIdleCallback
+    // may never fire in headless browsers, background tabs, or on a
+    // continuously busy main thread, and relying on it alone silently drops
+    // the 3D scene. Whichever path runs first cancels the other.
+    let idleHandle: number | undefined
+    let fallbackTimer: number | undefined
+    const scheduleLoad = () => {
+      if (loading || cancelled) return
+      const run = () => {
+        cancelScheduled()
+        if (!cancelled) void load()
+      }
+      const ric = (window as Window & {
+        requestIdleCallback?: (cb: () => void, opts?: { timeout: number }) => number
+        cancelIdleCallback?: (handle: number) => void
+      }).requestIdleCallback
+      if (typeof ric === 'function') {
+        idleHandle = ric(run, { timeout: 2500 })
+      }
+      fallbackTimer = window.setTimeout(run, 1500)
+    }
+    const cancelScheduled = () => {
+      const cancelRic = (window as Window & {
+        cancelIdleCallback?: (handle: number) => void
+      }).cancelIdleCallback
+      if (idleHandle !== undefined && typeof cancelRic === 'function') cancelRic(idleHandle)
+      if (fallbackTimer !== undefined) window.clearTimeout(fallbackTimer)
+      idleHandle = undefined
+      fallbackTimer = undefined
+    }
     const load = async () => {
       if (loading || cancelled) return
       loading = true
@@ -70,16 +103,18 @@ export default function HomeOrbit() {
     const observer = typeof IntersectionObserver !== 'undefined'
       ? new IntersectionObserver(([entry]) => {
         inView = entry.isIntersecting
-        if (inView) void load()
+        if (inView) scheduleLoad()
+        else cancelScheduled()
         sync()
       })
       : null
     if (observer) observer.observe(host)
-    else { inView = true; void load() }
+    else { inView = true; scheduleLoad() }
     document.addEventListener('visibilitychange', sync)
 
     return () => {
       cancelled = true
+      cancelScheduled()
       observer?.disconnect()
       document.removeEventListener('visibilitychange', sync)
       scene?.dispose()

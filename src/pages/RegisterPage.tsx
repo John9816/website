@@ -20,6 +20,7 @@ import {
   sendRegistrationEmailCode,
 } from '../api/auth'
 import ThemeToggle from '../components/ThemeToggle'
+import AccountBrand from '../components/AccountBrand'
 import { useAuth } from '../context/AuthContext'
 import { ACCOUNT_EMAIL_HINT, ACCOUNT_EMAIL_PATTERN } from '../utils/email'
 import '../styles/auth.css'
@@ -93,6 +94,7 @@ export default function RegisterPage() {
 
   return (
     <div className="account-page account-page--register">
+      <AccountBrand />
       <header className="account-page__header">
         <Link to="/" className="account-page__home">
           <ArrowLeftOutlined />
@@ -104,9 +106,7 @@ export default function RegisterPage() {
       <main className="account-page__main">
         <section className="account-page__form" aria-labelledby="account-title">
           <div className="account-page__intro">
-            <Link to="/" className="account-page__brand">个人导航<span> / 账号</span></Link>
             <h1 id="account-title">创建账号</h1>
-            <p>支持 QQ 邮箱和 @751152.xyz 邮箱</p>
           </div>
 
         <Form<RegisterValues>

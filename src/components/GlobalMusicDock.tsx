@@ -1,4 +1,5 @@
-import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
+import { sourceLabel } from '../features/music/sources'
+import { useCallback, useEffect, useRef, useState } from 'react'
 import { Link as RouterLink, useLocation } from 'react-router-dom'
 import {
   ChevronDown,
@@ -14,8 +15,9 @@ import {
 import { FastAverageColor } from 'fast-average-color'
 import MusicCover from './MusicCover'
 import { useMusicPlayer } from '../context/MusicPlayerContext'
-import { useActiveLyric } from '../hooks/useActiveLyric'
-import { formatDuration, normalizeCoverUrl } from '../utils/musicPlayer'
+import MusicLyricText from './MusicLyricText'
+import MusicLyricsSettings from './MusicLyricsSettings'
+import { coverUrlForSize, formatDuration } from '../utils/musicPlayer'
 import '../styles/music-dock.css'
 
 const fac = new FastAverageColor()
@@ -54,16 +56,6 @@ function clampDockPosition(
   }
 }
 
-function sourceLabel(source: 'qq' | 'netease' | 'kuwo') {
-  switch (source) {
-    case 'qq':
-      return 'QQ'
-    case 'netease':
-      return '网易云'
-    case 'kuwo':
-      return '酷我'
-  }
-}
 
 export default function GlobalMusicDock() {
   const location = useLocation()
@@ -82,6 +74,10 @@ export default function GlobalMusicDock() {
 
   const {
     current,
+    lyricLines: lrcLines,
+    lyricPreview: currentLrcText,
+    lyricPlainText, lyricLoading, lyricError, retryLyrics,
+    activeLyricIndex: activeLrcIndex,
     playlist,
     currentIndex,
     isPlaying,
@@ -100,26 +96,6 @@ export default function GlobalMusicDock() {
     playFromQueue,
   } = useMusicPlayer()
 
-  const { lines: lrcLines, activeIndex: activeLrcIndex } = useActiveLyric(
-    current?.lyric?.lineLyrics,
-    currentTime,
-  )
-
-  const currentLrcText = useMemo(() => {
-    if (activeLrcIndex >= 0) {
-      return lrcLines[activeLrcIndex]?.text || '...'
-    }
-
-    if (current?.lyric?.lineLyrics) {
-      const firstLine = current.lyric.lineLyrics
-        .split(/\r?\n/)
-        .map((line) => line.trim())
-        .find(Boolean)
-      return firstLine || '暂无歌词'
-    }
-
-    return '暂无歌词'
-  }, [activeLrcIndex, current?.lyric?.lineLyrics, lrcLines])
 
   useEffect(() => {
     if (!dragging && !seeking) return
@@ -157,20 +133,40 @@ export default function GlobalMusicDock() {
     }
   }, [collapsed, panel, position])
 
+  // 同 MusicPlayerBar：用 ref 读最新播放时间，避免 effect 依赖 currentTime
+  // 而每次 timeupdate 都重启平滑滚动。
+  const currentTimeRef = useRef(currentTime)
+  currentTimeRef.current = currentTime
+
   useEffect(() => {
     if (panel !== 'lyrics') return
     const container = lyricScrollRef.current
-    if (!container || activeLrcIndex < 0) return
+    if (!container) return
+
+    if (activeLrcIndex < 0) {
+      // 逐字歌词(YRC)每行带 end，行间空隙/间奏/尾奏索引都会变 -1。
+      // 只有前奏才回顶部，其余保持当前位置，避免每句间隙跳回第一行。
+      const firstTime = lrcLines[0]?.time ?? 0
+      if (currentTimeRef.current < firstTime) {
+        container.scrollTo({ top: 0, behavior: 'smooth' })
+      }
+      return
+    }
 
     const activeLine = container.querySelector<HTMLElement>(
       `[data-dock-lrc-idx="${activeLrcIndex}"]`,
     )
     if (!activeLine) return
 
+    const containerRect = container.getBoundingClientRect()
+    const lineRect = activeLine.getBoundingClientRect()
     const top =
-      activeLine.offsetTop - container.clientHeight / 2 + activeLine.clientHeight / 2
+      container.scrollTop +
+      (lineRect.top - containerRect.top) -
+      container.clientHeight / 2 +
+      activeLine.clientHeight / 2
     container.scrollTo({ top, behavior: 'smooth' })
-  }, [activeLrcIndex, panel])
+  }, [activeLrcIndex, panel, lrcLines])
 
   useEffect(() => {
     if (panel !== 'queue') return
@@ -188,7 +184,7 @@ export default function GlobalMusicDock() {
   }, [currentIndex, panel])
 
   useEffect(() => {
-    const url = normalizeCoverUrl(current?.coverUrl)
+    const url = coverUrlForSize(current?.coverUrl, 48)
     if (!url) {
       setDominantColor(null)
       return
@@ -544,11 +540,12 @@ export default function GlobalMusicDock() {
 
           {panel === 'lyrics' ? (
             <div ref={lyricScrollRef} className="music-dock__panel-body music-dock__lyrics">
+              <MusicLyricsSettings />
               {lrcLines.length === 0 ? (
-                current.lyric?.lineLyrics ? (
-                  <pre className="music-dock__lyrics-plain">{current.lyric.lineLyrics}</pre>
+                lyricPlainText ? (
+                  <pre className="music-dock__lyrics-plain">{lyricPlainText}</pre>
                 ) : (
-                  <div className="music-dock__empty">暂无歌词</div>
+                  <div className="music-dock__empty">{lyricLoading ? '正在加载歌词…' : lyricError || '暂无歌词'}{!lyricLoading && <button type="button" onClick={retryLyrics}>重试</button>}</div>
                 )
               ) : (
                 lrcLines.map((line, index) => (
@@ -567,7 +564,7 @@ export default function GlobalMusicDock() {
                       }
                     }}
                   >
-                    {line.text || '\u00A0'}
+                    <MusicLyricText line={line} time={currentTime} active={index === activeLrcIndex} />
                   </div>
                 ))
               )}

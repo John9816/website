@@ -2,9 +2,9 @@ import { useCallback, useDeferredValue, useEffect, useMemo, useRef, useState } f
 import { Modal, Tooltip } from 'antd'
 import {
   AlertCircle,
-  ArrowDownLeft,
   ArrowUpRight,
   BookOpen,
+  BookOpenText,
   CircleX,
   Compass,
   Heart,
@@ -20,19 +20,21 @@ import {
 import { Link } from 'react-router-dom'
 import { getNav } from '../api/public'
 import { siteImages } from '../utils/siteImages'
+import AppShell from '../components/AppShell'
 import BeianFooter from '../components/BeianFooter'
 import CategoryIcon from '../components/CategoryIcon'
-import SiteHeader from '../components/SiteHeader'
 import HomeOrbit from '../components/HomeOrbit'
+import { usePointerParallax } from '../hooks/usePointerParallax'
 import type { CategoryWithLinks, NavLink } from '../types'
 import '../styles/home.css'
 
 const REFRESH_INTERVAL = 5 * 60 * 1000
 const TOOLS = [
-  { to: '/music', name: '在线音乐', detail: '音乐', Icon: Music2, tone: 'music' },
-  { to: '/ai-chat', name: 'AI 对话', detail: '对话', Icon: MessageSquare, tone: 'chat' },
-  { to: '/ai-image', name: 'AI 生图', detail: '创作', Icon: Image, tone: 'image' },
-  { to: '/admin/kb', name: '知识库', detail: '笔记', Icon: BookOpen, tone: 'knowledge' },
+  { to: '/music', name: '在线音乐', Icon: Music2, tone: 'music' },
+  { to: '/reading', name: '在线阅读', Icon: BookOpenText, tone: 'reading' },
+  { to: '/ai-chat', name: 'AI 对话', Icon: MessageSquare, tone: 'chat' },
+  { to: '/ai-image', name: 'AI 生图', Icon: Image, tone: 'image' },
+  { to: '/editor/', name: '知识库', Icon: BookOpen, tone: 'knowledge' },
 ]
 
 const QR_IMAGES = {
@@ -92,6 +94,7 @@ function ResourceCard({ link }: { link: NavLink }) {
 }
 
 export default function HomePage() {
+  const heroRef = usePointerParallax<HTMLElement>()
   const [data, setData] = useState<CategoryWithLinks[] | null>(null)
   const [error, setError] = useState<string | null>(null)
   const [refreshing, setRefreshing] = useState(false)
@@ -163,7 +166,6 @@ export default function HomePage() {
   [categories, deferredQuery, selectedCategory])
 
   const totalCount = categories.reduce((total, category) => total + category.links.length, 0)
-  const resultCount = visibleCategories.reduce((total, category) => total + category.links.length, 0)
   const activeCategory = categories.find(({ id }) => id === selectedCategory)
   const currentQr = qrImage ? QR_IMAGES[qrImage] : null
 
@@ -173,54 +175,41 @@ export default function HomePage() {
   }
 
   return (
-    <div className="home-page">
-      <SiteHeader />
-      <div className="home-workspace">
-        <aside className="home-sidebar" aria-label="导航分类">
-          <div className="home-sidebar__label">浏览分类</div>
-          <nav className="home-categories" aria-label="资源分类筛选">
-            <button
-              type="button"
-              className={`home-category${selectedCategory === null ? ' is-active' : ''}`}
-              aria-pressed={selectedCategory === null}
-              onClick={() => setSelectedCategory(null)}
-            >
-              <Compass size={17} aria-hidden="true" />
-              <span className="home-category__name">全部站点</span>
-              <span className="home-category__count">{data ? totalCount : '—'}</span>
-            </button>
-            {categories.map((category) => (
-              <button
-                type="button"
-                key={category.id}
-                className={`home-category${selectedCategory === category.id ? ' is-active' : ''}`}
-                aria-pressed={selectedCategory === category.id}
-                onClick={() => setSelectedCategory(category.id)}
-              >
-                <span className="home-category__icon" aria-hidden="true">
-                  <CategoryIcon icon={category.icon || 'folder'} size={17} />
-                </span>
-                <span className="home-category__name" title={category.name}>{category.name}</span>
-                <span className="home-category__count">{category.links.length}</span>
-              </button>
-            ))}
-          </nav>
-          <div className="home-sidebar__bottom">
-            <ArrowDownLeft size={15} aria-hidden="true" />
-            <span>oldwang 的收藏</span>
-          </div>
-        </aside>
-
+    <AppShell>
+      <div className="home-page">
         <main className="home-main" id="main-content">
-          <header className="home-heading">
-            <div className="home-heading__copy">
-              <p className="home-heading__eyebrow">个人工作台</p>
-              <h1>我的导航<span aria-hidden="true">.</span></h1>
-              <p className="home-heading__description">收藏好用的，连接有趣的。</p>
-              <div className="home-identity">
-                <img src={siteImages.logo.url} width={28} height={28} alt="oldwang" />
-                <span>oldwang</span>
-              </div>
+          <header className="home-hero" ref={heroRef}>
+            <div className="home-decor" aria-hidden="true">
+              <span className="home-decor__glow home-decor__glow--a" />
+              <span className="home-decor__glow home-decor__glow--b" />
+              <span className="home-decor__grid" />
+              <span className="home-decor__link" />
+              <span className="home-decor__item home-decor__pill" />
+              <span className="home-decor__item home-decor__doc"><i /><i /><i /></span>
+              <span className="home-decor__item home-decor__spark home-decor__spark--a">✦</span>
+              <span className="home-decor__item home-decor__spark home-decor__spark--b">✦</span>
+              <span className="home-decor__item home-decor__spark home-decor__spark--c">✧</span>
+              <span className="home-decor__item home-decor__check">✓</span>
+              <span className="home-decor__item home-decor__dot" />
+              <span className="home-decor__item home-decor__dot home-decor__dot--b" />
+              <span className="home-decor__item home-decor__dot home-decor__dot--c" />
+              <span className="home-decor__item home-decor__bracket">{'</>'}</span>
+              <span className="home-decor__item home-decor__bubble">···</span>
+              <span className="home-decor__item home-decor__bookmark" />
+              <span className="home-decor__item home-decor__ring" />
+              <span className="home-decor__link home-decor__link--b" />
+              <span className="home-decor__item home-decor__plane">➤</span>
+              <span className="home-decor__item home-decor__note">♪</span>
+              <span className="home-decor__item home-decor__gear">⚙</span>
+              <span className="home-decor__item home-decor__heart">♥</span>
+              <span className="home-decor__item home-decor__cloud" />
+              <span className="home-decor__item home-decor__target" />
+              <span className="home-decor__item home-decor__wave">∿∿∿</span>
+              <span className="home-decor__item home-decor__dot home-decor__dot--d" />
+              <span className="home-decor__item home-decor__spark home-decor__spark--d">✦</span>
+            </div>
+            <div className="home-hero__copy">
+              <h1>我的<span className="home-hero__pill">导航</span><span className="home-hero__dot" aria-hidden="true">.</span></h1>
             </div>
             <HomeOrbit />
           </header>
@@ -250,10 +239,10 @@ export default function HomePage() {
           <section className="home-tools" aria-labelledby="home-tools-title">
             <h2 id="home-tools-title">常用工具</h2>
             <div className="home-tools__grid">
-              {TOOLS.map(({ to, name, detail, Icon, tone }) => (
+              {TOOLS.map(({ to, name, Icon, tone }) => (
                 <Link key={to} to={to} className={`home-tool home-tool--${tone}`}>
                   <span className="home-tool__icon"><Icon size={21} aria-hidden="true" /></span>
-                  <span className="home-tool__copy"><strong>{name}</strong><span>{detail}</span></span>
+                  <span className="home-tool__copy"><strong>{name}</strong></span>
                   <ArrowUpRight size={14} className="home-tool__arrow" aria-hidden="true" />
                 </Link>
               ))}
@@ -264,9 +253,6 @@ export default function HomePage() {
             <div className="home-directory__bar">
               <div className="home-directory__heading">
                 <h2 id="home-directory-title">{deferredQuery ? '搜索结果' : activeCategory?.name || '站点收藏'}</h2>
-                <span className="home-directory__count" role="status" aria-live="polite">
-                  {data ? `${resultCount} 个站点` : refreshing ? '加载中' : ''}
-                </span>
               </div>
               <div className="home-directory__actions">
                 <Tooltip title="刷新站点">
@@ -293,6 +279,34 @@ export default function HomePage() {
                   </Tooltip>
                 </div>
               </div>
+            </div>
+
+            <div className="home-chips" role="group" aria-label="资源分类筛选">
+              <button
+                type="button"
+                className={`home-chip${selectedCategory === null ? ' is-active' : ''}`}
+                aria-pressed={selectedCategory === null}
+                onClick={() => setSelectedCategory(null)}
+              >
+                <Compass size={14} aria-hidden="true" />
+                <span className="home-chip__name">全部站点</span>
+                <span className="home-chip__count">{data ? totalCount : '—'}</span>
+              </button>
+              {categories.map((category) => (
+                <button
+                  type="button"
+                  key={category.id}
+                  className={`home-chip${selectedCategory === category.id ? ' is-active' : ''}`}
+                  aria-pressed={selectedCategory === category.id}
+                  onClick={() => setSelectedCategory(category.id)}
+                >
+                  <span className="home-chip__icon" aria-hidden="true">
+                    <CategoryIcon icon={category.icon || 'folder'} size={14} />
+                  </span>
+                  <span className="home-chip__name" title={category.name}>{category.name}</span>
+                  <span className="home-chip__count">{category.links.length}</span>
+                </button>
+              ))}
             </div>
 
             {error && (
@@ -328,7 +342,6 @@ export default function HomePage() {
                   <div className="home-group__heading">
                     <span className="home-group__icon" aria-hidden="true"><CategoryIcon icon={category.icon || 'folder'} size={17} /></span>
                     <h3 id={`home-category-${category.id}`}>{category.name}</h3>
-                    <span>{category.links.length}</span>
                     <div className="home-group__rule" />
                   </div>
                   {category.links.length ? (
@@ -347,20 +360,20 @@ export default function HomePage() {
           </div>
           <BeianFooter />
         </main>
-      </div>
 
-      <Modal
-        title={currentQr?.title}
-        open={!!currentQr}
-        onCancel={() => setQrImage(null)}
-        footer={null}
-        centered
-        width={350}
-        className="home-qr-modal"
-        destroyOnClose
-      >
-        {currentQr && <img className="home-qr-image" src={currentQr.src} alt={currentQr.alt} />}
-      </Modal>
-    </div>
+        <Modal
+          title={currentQr?.title}
+          open={!!currentQr}
+          onCancel={() => setQrImage(null)}
+          footer={null}
+          centered
+          width={350}
+          className="home-qr-modal"
+          destroyOnClose
+        >
+          {currentQr && <img className="home-qr-image" src={currentQr.src} alt={currentQr.alt} />}
+        </Modal>
+      </div>
+    </AppShell>
   )
 }

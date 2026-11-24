@@ -27,6 +27,9 @@ import {
   getLatestMusicInstaller,
   type MusicInstallerReleaseView,
 } from '../api/public'
+// App 下载页是独立整页路由，不再由 MusicLayout 引入样式，这里自行加载。
+import '../styles/music-promo.css'
+import '../styles/apple-music.css'
 
 type PlatformId = 'android' | 'ios' | 'windows' | 'macos'
 
@@ -35,7 +38,6 @@ type PlatformOption = {
   label: string
   shortLabel: string
   icon: LucideIcon
-  eyebrow: string
   title: string
   description: string
   requirement: string
@@ -67,7 +69,6 @@ const platforms: PlatformOption[] = [
     label: 'Android',
     shortLabel: 'Android',
     icon: Smartphone,
-    eyebrow: '随身听',
     title: 'Android 版',
     description: '从本站服务器直接下载 APK。支持后台播放、通知栏控制与本地下载。',
     requirement: 'Android 8.0 或更高版本',
@@ -78,7 +79,6 @@ const platforms: PlatformOption[] = [
     label: 'iPhone / iPad',
     shortLabel: 'iOS',
     icon: Apple,
-    eyebrow: '移动端',
     title: 'iOS 版',
     description: '与其他客户端共享音乐库和账号，提供需自行签名安装的 IPA 测试包。',
     requirement: 'iOS 15 或更高版本',
@@ -89,7 +89,6 @@ const platforms: PlatformOption[] = [
     label: 'Windows',
     shortLabel: 'Windows',
     icon: Laptop,
-    eyebrow: '桌面端',
     title: 'Windows 版',
     description: '为键鼠和大屏优化的音乐工作台，EXE 安装包从本站服务器直接下载。',
     requirement: 'Windows 10 / 11 · 64 位',
@@ -100,7 +99,6 @@ const platforms: PlatformOption[] = [
     label: 'macOS',
     shortLabel: 'macOS',
     icon: Apple,
-    eyebrow: '桌面端',
     title: 'macOS 版',
     description: '原生窗口体验，提供 Apple Silicon 与 Intel 两种构建的直接下载。',
     requirement: 'macOS 12 或更高版本',
@@ -226,6 +224,7 @@ export default function MusicPromoPage() {
   }, [selectedPlatform, macArchitecture, activeInstaller.downloadUrl])
 
   return (
+    <div className="music-v4 music-promo-standalone">
     <main className="music-promo">
       <header className="music-promo__nav" aria-label="应用页面导航">
         <Link className="music-promo__brand" to="/music" aria-label="返回柒伍壹壹音乐网页版">
@@ -243,17 +242,7 @@ export default function MusicPromoPage() {
 
       <section className="music-promo__hero" aria-labelledby="music-promo-title">
         <div className="music-promo__hero-copy">
-          <p className="music-promo__eyebrow">
-            <span /> 四端同步 · 随处继续听
-          </p>
-          <h1 id="music-promo-title">
-            一份音乐库，
-            <span>每块屏幕都在播放。</span>
-          </h1>
-          <p className="music-promo__lead">
-            DuckMusic 将搜索、歌单、歌词与播放进度带到 Android、iOS、Windows 和 macOS。
-            同一个账号，放下手机后，在电脑上从刚才的位置继续。
-          </p>
+          <h1 id="music-promo-title">下载客户端</h1>
 
           <div className="music-promo__platform-picker" role="tablist" aria-label="选择系统">
             {platforms.map(({ id, shortLabel, icon: Icon }) => (
@@ -323,7 +312,6 @@ export default function MusicPromoPage() {
 
         <div className="music-promo__stage" data-platform={selectedPlatform}>
           <div className="music-promo__stage-label" aria-hidden="true">
-            <span>{platform.eyebrow}</span>
             <strong>{platform.label}</strong>
           </div>
           {selectedPlatform === 'ios' ? <IosPreview /> : null}
@@ -395,7 +383,6 @@ export default function MusicPromoPage() {
           <span className="music-promo__install-icon">
             <PlatformIcon size={28} aria-hidden="true" />
           </span>
-          <p>{platform.eyebrow}</p>
           <h2 id="install-title">{platform.title}</h2>
           <p>{platform.description}</p>
           <dl>
@@ -463,6 +450,7 @@ export default function MusicPromoPage() {
         <Link to="/music">打开网页版播放器</Link>
       </footer>
     </main>
+    </div>
   )
 }
 

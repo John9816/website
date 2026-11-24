@@ -1,60 +1,51 @@
-import { Suspense, lazy, useEffect, useRef } from 'react'
-import { Link as RouterLink, Outlet, useLocation } from 'react-router-dom'
-import { Download } from 'lucide-react'
-import SiteHeader from '../components/SiteHeader'
-import { useMusicPlayer } from '../context/MusicPlayerContext'
-import '../styles/topbar.css'
+import { Suspense, lazy, useEffect, useState } from 'react'
+import { Outlet } from 'react-router-dom'
+import { useMusicBrowse } from '../context/MusicPlayerContext'
+import AppShell from '../components/AppShell'
+import MusicWorkspace from '../features/music/MusicWorkspace'
+import MusicContextPanel, { type MusicContextTab } from '../components/MusicContextPanel'
+import { useMusicAppearance } from '../utils/musicAppearance'
 import '../styles/music.css'
 import '../styles/music-promo.css'
+import '../styles/music-studio.css'
+import '../styles/music-liquid.css'
+import '../styles/music-v4.css'
+// Apple Music 风独立深色皮肤：必须排在 music-v4.css 之后以覆盖浅色样式。
+import '../styles/apple-music.css'
 
 const MusicPlayerBar = lazy(() => import('../components/MusicPlayerBar'))
 
 export default function MusicLayout() {
-  const { current } = useMusicPlayer()
-  const location = useLocation()
-  const pageRef = useRef<HTMLDivElement | null>(null)
-  const topbarRef = useRef<HTMLElement | null>(null)
-  const showPromoLauncher = location.pathname !== '/music/app'
+  const { current } = useMusicBrowse()
+  const appearance = useMusicAppearance()
+  // 右侧播放面板默认收起，不再按宽屏自动弹出；用户点底部播放条的队列按钮才展开。
+  const [contextOpen, setContextOpen] = useState(false)
+  const [contextTab, setContextTab] = useState<MusicContextTab>('now')
 
   useEffect(() => {
-    const page = pageRef.current
-    const topbar = topbarRef.current
-    if (!page || !topbar) return
+    const root = document.documentElement
+    root.dataset.musicMotion = appearance.motion ? 'on' : 'off'
+    root.dataset.musicLiquid = appearance.liquid ? 'on' : 'off'
+  }, [appearance.motion, appearance.liquid])
 
-    const updateTopbarHeight = () => {
-      page.style.setProperty('--music-topbar-height', `${topbar.offsetHeight}px`)
+  const toggleQueue = () => {
+    if (contextOpen && contextTab === 'queue') {
+      setContextOpen(false)
+      return
     }
-
-    updateTopbarHeight()
-
-    if (typeof ResizeObserver !== 'undefined') {
-      const observer = new ResizeObserver(updateTopbarHeight)
-      observer.observe(topbar)
-      return () => observer.disconnect()
-    }
-
-    window.addEventListener('resize', updateTopbarHeight)
-    return () => window.removeEventListener('resize', updateTopbarHeight)
-  }, [])
+    setContextTab('queue')
+    setContextOpen(true)
+  }
 
   return (
-    <div ref={pageRef} className="music-page">
-      <SiteHeader ref={topbarRef} />
-
-      <div className={`music-body${current ? ' music-body--with-player' : ''}`}>
-        <Outlet />
+    <AppShell>
+      <div className={`music-page music-studio music-v4${current ? ' has-current' : ''}${current && contextOpen ? ' has-context' : ''}`}>
+        <MusicWorkspace>
+          <main className={`music-body${current ? ' music-body--with-player' : ''}`} aria-label="音乐内容"><Outlet /></main>
+        </MusicWorkspace>
+        <MusicContextPanel open={contextOpen} tab={contextTab} onTabChange={setContextTab} onClose={() => setContextOpen(false)} />
+        <Suspense fallback={null}><MusicPlayerBar onToggleQueue={toggleQueue} queueOpen={contextOpen && contextTab === 'queue'} /></Suspense>
       </div>
-
-      {showPromoLauncher ? (
-        <RouterLink className="music-promo-launcher" to="/music/app">
-          <Download size={16} />
-          <span>下载 App</span>
-        </RouterLink>
-      ) : null}
-
-      <Suspense fallback={null}>
-        <MusicPlayerBar />
-      </Suspense>
-    </div>
+    </AppShell>
   )
 }

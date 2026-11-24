@@ -1,3 +1,4 @@
+import MusicArtistDrawer from './components/MusicArtistDrawer'
 import { Suspense, lazy, useEffect, type ReactNode } from 'react'
 import { BrowserRouter, Navigate, Route, Routes, useLocation } from 'react-router-dom'
 import { App as AntApp, ConfigProvider, Spin, theme as antdTheme } from 'antd'
@@ -15,6 +16,7 @@ import {
   type AdminPermission,
 } from './utils/permissions'
 
+const XuechengPage = lazy(() => import('./pages/XuechengPage'))
 const HomePage = lazy(() => import('./pages/HomePage'))
 const GlobalMusicDock = lazy(() => import('./components/GlobalMusicDock'))
 const LoginPage = lazy(() => import('./pages/LoginPage'))
@@ -22,9 +24,11 @@ const RegisterPage = lazy(() => import('./pages/RegisterPage'))
 const ForgotPasswordPage = lazy(() => import('./pages/ForgotPasswordPage'))
 const MusicLayout = lazy(() => import('./pages/MusicLayout'))
 const MusicPage = lazy(() => import('./pages/MusicPage'))
+const NowPlayingPage = lazy(() => import('./features/music/NowPlayingPage'))
 const MusicPromoPage = lazy(() => import('./pages/MusicPromoPage'))
 const AiChatPage = lazy(() => import('./pages/AiChatPage'))
 const AiImagePage = lazy(() => import('./pages/AiImagePage'))
+const ServerMonitorPage = lazy(() => import('./pages/ServerMonitorPage'))
 const MusicPlaylistDetailPage = lazy(
   () => import('./pages/MusicPlaylistDetailPage'),
 )
@@ -40,9 +44,14 @@ const AdminContentFactory = lazy(() => import('./pages/AdminContentFactory'))
 const AdminPassword = lazy(() => import('./pages/AdminPassword'))
 const AdminUsers = lazy(() => import('./pages/AdminUsers'))
 const AdminRedeemCodes = lazy(() => import('./pages/AdminRedeemCodes'))
-const AdminKnowledgeBase = lazy(() => import('./pages/AdminKnowledgeBase'))
-const KbSharePage = lazy(() => import('./pages/KbSharePage'))
+const RetiredKnowledgePage = lazy(() => import('./pages/RetiredKnowledgePage'))
 const DevEditorPreview = lazy(() => import('./pages/DevEditorPreview'))
+const BookCityPage = lazy(() => import('./pages/reading/BookCityPage'))
+const BookSearchPage = lazy(() => import('./pages/reading/BookSearchPage'))
+const BookDetailPage = lazy(() => import('./pages/reading/BookDetailPage'))
+const BookTocPage = lazy(() => import('./pages/reading/BookTocPage'))
+const BookSourcesPage = lazy(() => import('./pages/reading/BookSourcesPage'))
+const ReaderPage = lazy(() => import('./pages/ReaderPage'))
 
 function RouteFallback() {
   return (
@@ -67,13 +76,13 @@ function RouteFallback() {
 function ThemedAntd({ children }: { children: ReactNode }) {
   const { mode } = useTheme()
   const isLight = mode === 'light'
-  const colorPrimary = isLight ? '#167d70' : '#79c5b1'
-  const colorText = isLight ? '#242d29' : '#e8eeea'
-  const colorTextSecondary = isLight ? '#718079' : '#a0afa6'
-  const colorBgBase = isLight ? '#f5f7f6' : '#171d1a'
+  const colorPrimary = isLight ? '#26c265' : '#4ad98a'
+  const colorText = isLight ? '#18181b' : '#e8eeea'
+  const colorTextSecondary = isLight ? '#6b7580' : '#a0afa6'
+  const colorBgBase = isLight ? '#f7f9f8' : '#171d1a'
   const colorBgContainer = isLight ? '#ffffff' : '#202724'
   const colorBgElevated = isLight ? '#ffffff' : '#272f2b'
-  const colorBorder = isLight ? '#e2e8e4' : '#34413a'
+  const colorBorder = isLight ? '#e8ece9' : '#34413a'
   return (
     <ConfigProvider
       locale={zhCN}
@@ -87,7 +96,7 @@ function ThemedAntd({ children }: { children: ReactNode }) {
           controlHeightSM: 32,
           fontFamily: 'var(--font-sans)',
           colorText,
-          colorTextLightSolid: isLight ? '#ffffff' : '#132a22',
+          colorTextLightSolid: isLight ? '#ffffff' : '#0c2a1b',
           colorTextSecondary,
           colorBgBase,
           colorBgContainer,
@@ -111,7 +120,7 @@ function ThemedAntd({ children }: { children: ReactNode }) {
           Input: {
             borderRadius: 8,
             activeShadow: `0 0 0 4px ${
-              isLight ? 'rgba(22,125,112,0.12)' : 'rgba(121,197,177,0.12)'
+              isLight ? 'rgba(38,194,101,0.14)' : 'rgba(74,217,138,0.16)'
             }`,
           },
           Select: {
@@ -171,14 +180,20 @@ function RouteFocusManager() {
   return null
 }
 
+// AppShell 页面为 100dvh 布局：内容在独立滚动容器内，备案脚要么放在各页面
+// 内容流中（首页已自带），要么由独立外壳自行处理。这里追加 body 级 footer 会
+// 造成第二屏与双滚动条，因此排除。认证页是独立整页（非 AppShell），保留全局备案脚。
+const SHELL_FOOTER_PREFIXES = [
+  '/editor', '/music', '/admin',
+  '/ai-chat', '/ai-image',
+]
+
 function GlobalBeianFooterGate() {
   const location = useLocation()
-  const auth = useAuth()
 
   if (
     location.pathname === '/'
-    || location.pathname.startsWith('/admin')
-    || (location.pathname === '/ai-image' && !!auth.token)
+    || SHELL_FOOTER_PREFIXES.some((prefix) => location.pathname.startsWith(prefix))
   ) {
     return null
   }
@@ -241,12 +256,17 @@ export default function App() {
                 <Suspense fallback={<RouteFallback />}>
                   <Routes>
                     <Route path="/" element={<HomePage />} />
+                    <Route path="/editor/*" element={<XuechengPage />} />
                     <Route path="/ai-chat" element={<AiChatPage />} />
                     <Route path="/ai-image" element={<AiImagePage />} />
-                    <Route path="/kb/share/:token" element={<KbSharePage />} />
+                    <Route path="/server-monitor" element={<ServerMonitorPage />} />
+                    <Route path="/kb/*" element={<RetiredKnowledgePage />} />
+                    <Route path="/admin/kb/*" element={<Navigate to="/editor/" replace />} />
+                    <Route path="/music/now" element={<NowPlayingPage />} />
+                    {/* App 下载页为整页独立路由：不套 MusicLayout 的顶栏/侧栏/播放条 */}
+                    <Route path="/music/app" element={<MusicPromoPage />} />
                     <Route path="/music" element={<MusicLayout />}>
                       <Route index element={<MusicPage />} />
-                      <Route path="app" element={<MusicPromoPage />} />
                       <Route path="share/:token" element={<MusicSharePage />} />
                       <Route
                         path="toplist/:source/:id"
@@ -265,6 +285,12 @@ export default function App() {
                         element={<MusicMyPlaylistDetailPage />}
                       />
                     </Route>
+                    <Route path="/reading" element={<BookCityPage />} />
+                    <Route path="/reading/search" element={<BookSearchPage />} />
+                    <Route path="/reading/detail" element={<BookDetailPage />} />
+                    <Route path="/reading/toc" element={<BookTocPage />} />
+                    <Route path="/reading/sources" element={<BookSourcesPage />} />
+                    <Route path="/reading/read" element={<ReaderPage />} />
                     <Route path="/login" element={<LoginPage />} />
                     <Route path="/register" element={<RegisterPage />} />
                     <Route path="/forgot-password" element={<ForgotPasswordPage />} />
@@ -296,7 +322,6 @@ export default function App() {
                           </RequireAdminPermission>
                         }
                       />
-                      <Route path="kb" element={<AdminKnowledgeBase />} />
                       <Route
                         path="redeem-codes"
                         element={MEMBERSHIP_ENABLED ? (
@@ -324,6 +349,7 @@ export default function App() {
               </RouteErrorBoundary>
               <GlobalBeianFooterGate />
               <GlobalMusicDockGate />
+              <MusicArtistDrawer />
             </BrowserRouter>
           </MusicPlayerProvider>
         </AuthProvider>

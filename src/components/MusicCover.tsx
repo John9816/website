@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react'
 import { Music2 } from 'lucide-react'
-import { normalizeCoverUrl } from '../utils/musicPlayer'
+import { coverUrlForSize, normalizeCoverUrl } from '../utils/musicPlayer'
 
 type MusicCoverProps = {
   src?: string
@@ -19,14 +19,22 @@ export default function MusicCover({
   className,
   crossOrigin,
 }: MusicCoverProps) {
-  const [failed, setFailed] = useState(false)
-  const url = normalizeCoverUrl(src)
+  // Two-level fallback: the sized CDN thumbnail first, then the full webp
+  // original if a template is ever rejected, then the placeholder.
+  const [stage, setStage] = useState<'thumb' | 'original' | 'failed'>('thumb')
+  const thumb = coverUrlForSize(src, size)
+  const original = normalizeCoverUrl(src)
+  const url = stage === 'failed'
+    ? undefined
+    : stage === 'original'
+      ? original
+      : (thumb ?? original)
 
   useEffect(() => {
-    setFailed(false)
-  }, [url])
+    setStage('thumb')
+  }, [src])
 
-  if (!url || failed) {
+  if (!url) {
     return (
       <div
         className={className}
@@ -56,7 +64,11 @@ export default function MusicCover({
       referrerPolicy="no-referrer"
       crossOrigin={crossOrigin}
       className={className}
-      onError={() => setFailed(true)}
+      onError={() => {
+        // Only retry once with the original; avoid an infinite loop when both fail.
+        if (stage === 'thumb' && original && original !== url) setStage('original')
+        else setStage('failed')
+      }}
       style={{
         width: size,
         height: size,

@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState } from 'react'
+import { useEffect, useRef, useState, useSyncExternalStore } from 'react'
 import { App as AntApp, Button, Form, Input, Modal, Popover } from 'antd'
 import {
   CalendarCheck,
@@ -23,6 +23,10 @@ import { MEMBERSHIP_ENABLED } from '../config/features'
 import type { MembershipView } from '../types'
 import { writeClipboardText } from '../utils/clipboard'
 import { ACCOUNT_EMAIL_HINT, ACCOUNT_EMAIL_PATTERN } from '../utils/email'
+// 头像菜单的样式必须跟随组件本身：这句 import 之前只在已废弃的 SiteHeader 里，
+// 而实际渲染菜单的是 AppShell（所有页面外壳），导致按需分包时 topbar.css 未注入，
+// 头像 <img> 失去 44px 尺寸限制而撑满弹窗。放到组件里确保谁用它样式都跟着走。
+import '../styles/topbar.css'
 
 const QQ_GROUP_NUMBER = '775832976'
 const QQ_GROUP_JOIN_URL = `mqqapi://card/show_pslcard?src_type=internal&version=1&uin=${QQ_GROUP_NUMBER}&card_type=group&source=qrcode`
@@ -34,6 +38,9 @@ function getDisplayName(username?: string | null) {
 function getAvatarText(username?: string | null) {
   const displayName = getDisplayName(username)
   const compact = displayName.replace(/\s+/g, '')
+  // 纯数字用户名（多为 QQ 号）取前两位会得到"12"这类无意义数字，
+  // 观感像角标而非头像；这类名字改由 fallback 渲染通用用户图标。
+  if (/^\d+$/.test(compact)) return ''
   return compact.slice(0, Math.min(2, compact.length)).toUpperCase()
 }
 
@@ -71,6 +78,45 @@ function formatMembershipRemaining(membership: MembershipView | null, now: numbe
   return '已过期'
 }
 
+// Several UserAvatar instances render the same URL in one commit (trigger,
+// popover card, profile modal). A missing avatar returns 404 with no-store,
+// so a per-instance failure flag cannot dedupe them: every instance fires its
+// <img> before the first 404 comes back, and 404s are never cached.
+// Probe each URL exactly once at module scope and broadcast the result, so
+// only one network request is ever made for a given avatar URL.
+type AvatarResult = 'ok' | 'fail'
+const avatarProbes = new Map<string, Promise<AvatarResult>>()
+const avatarResults = new Map<string, AvatarResult>()
+const avatarListeners = new Set<() => void>()
+const subscribeAvatar = (listener: () => void) => {
+  avatarListeners.add(listener)
+  return () => { avatarListeners.delete(listener) }
+}
+const emitAvatar = () => { for (const listener of avatarListeners) listener() }
+const clearAvatarProbe = (url: string) => {
+  avatarProbes.delete(url)
+  avatarResults.delete(url)
+  emitAvatar()
+}
+const probeAvatar = (url: string): Promise<AvatarResult> => {
+  let probe = avatarProbes.get(url)
+  if (!probe) {
+    probe = new Promise<AvatarResult>(resolve => {
+      const image = new Image()
+      image.referrerPolicy = 'no-referrer'
+      image.onload = () => resolve('ok')
+      image.onerror = () => resolve('fail')
+      image.src = url
+    }).then(result => {
+      avatarResults.set(url, result)
+      emitAvatar()
+      return result
+    })
+    avatarProbes.set(url, probe)
+  }
+  return probe
+}
+
 function UserAvatar({
   avatarUrl,
   username,
@@ -80,11 +126,24 @@ function UserAvatar({
   username?: string | null
   className: string
 }) {
-  const [failedUrl, setFailedUrl] = useState<string | null>(null)
-  if (avatarUrl && avatarUrl !== failedUrl) {
-    return <img className={className} src={avatarUrl} alt="" referrerPolicy="no-referrer" onError={() => setFailedUrl(avatarUrl)} />
+  const url = avatarUrl || ''
+  const result = useSyncExternalStore(
+    subscribeAvatar,
+    () => avatarResults.get(url),
+    () => undefined,
+  )
+  useEffect(() => {
+    if (url) void probeAvatar(url)
+  }, [url])
+  // A failed (or not-yet-probed) URL never renders an <img>, so no duplicate
+  // 404 requests. Only a confirmed 200 renders the image; the probe response
+  // is already in the browser cache, so this adds no extra transfer.
+  if (!url || result !== 'ok') {
+    const text = getAvatarText(username)
+    // 纯数字用户名无文字可用时，用通用用户图标兜底，避免显示"12"这类数字角标。
+    return text ? <span className={className}>{text}</span> : <UserRound className={className} aria-hidden="true" />
   }
-  return <span className={className}>{getAvatarText(username)}</span>
+  return <img className={className} src={url} alt="" referrerPolicy="no-referrer" />
 }
 
 export default function TopbarUserMenu() {
@@ -188,6 +247,7 @@ export default function TopbarUserMenu() {
     setUploadingAvatar(true)
     try {
       const profile = await uploadUserAvatar(file)
+      if (avatarUrl) clearAvatarProbe(avatarUrl)
       auth.updateProfile(profile)
       message.success('头像已更新')
     } catch (error) {

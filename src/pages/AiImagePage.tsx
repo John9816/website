@@ -1,11 +1,11 @@
 import { type CSSProperties, useEffect, useMemo, useState } from 'react'
 import { App as AntApp } from 'antd'
-import { Copy, ImageIcon, LoaderCircle, LogIn, RefreshCw, Sparkles } from 'lucide-react'
+import { Copy, ImageIcon, LoaderCircle, LogIn, RefreshCw } from 'lucide-react'
 import { Link as RouterLink } from 'react-router-dom'
 import { listSharedImages } from '../api/public'
 import ImageStudio from '../components/ImageStudio'
 import ImagePreviewOverlay from '../components/ImagePreviewOverlay'
-import SiteHeader from '../components/SiteHeader'
+import AppShell from '../components/AppShell'
 import { DEFAULT_PAGE_SIZE } from '../constants/pagination'
 import { useAuth } from '../context/AuthContext'
 import type { GeneratedImageView } from '../types'
@@ -69,20 +69,15 @@ export default function AiImagePage() {
   }, [auth.token])
 
   return (
-    <div className={pageClassName}>
-      <SiteHeader />
-
-      <main className={mainClassName}>
+    <AppShell>
+      <div className={pageClassName}>
+        <main className={mainClassName}>
         {auth.token ? (
           <ImageStudio layout="standalone" />
         ) : (
           <div className="ai-image-page__guest">
             <section className="ai-image-page__hero">
               <div className="ai-image-page__title">
-                <div className="ai-chat__eyebrow">
-                  <Sparkles size={14} />
-                  <span>AI IMAGE</span>
-                </div>
                 <h1>AI 生图</h1>
               </div>
               <div className="ai-chat__guest-actions">
@@ -228,8 +223,9 @@ export default function AiImagePage() {
             )}
           </div>
         )}
-      </main>
-    </div>
+        </main>
+      </div>
+    </AppShell>
   )
 }
 
