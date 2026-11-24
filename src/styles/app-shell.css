@@ -25,6 +25,20 @@
   overscroll-behavior-y: contain;
 }
 
+/* 自管理滚动的全屏页（文档编辑器）：内容区不再自己滚，改为 flex 约束填满,
+   让高度逐层传递到内部 .editor-canvas，由它成为唯一滚动容器。
+   否则外壳内容区会和编辑器内部争抢滚动，导致滚动正文时目录/工具栏一起上移。 */
+.app-shell__content--fill {
+  display: flex;
+  flex-direction: column;
+  overflow-y: hidden;
+}
+.app-shell__content--fill > .app-shell__route-view {
+  flex: 1 1 auto;
+  height: 0;
+  min-height: 0;
+}
+
 /* 路由切换：内容淡入，避免硬切造成的不流畅感。
    注意：这里刻意只用 opacity，不使用 transform —— 任何非 none 的 transform（哪怕是
    translateY(0)）都会让本元素成为 position:fixed 子元素的包含块，导致音乐坞、全屏

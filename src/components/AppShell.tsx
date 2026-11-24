@@ -189,8 +189,13 @@ export default function AppShell({ children }: { children: ReactNode }) {
         </div>
       </header>
 
-      {/* 内容区：按路径 key 触发淡入过渡，让 tab 切换更顺滑 */}
-      <div className="app-shell__content" key={location.pathname}>
+      {/* 内容区：按路径 key 触发淡入过渡，让 tab 切换更顺滑。
+          编辑器（/editor）由内部 .editor-canvas 自管理滚动，需要内容区改成 flex 约束，
+          否则整个 workspace 被正文撑高，滚动落到外壳上，目录和工具栏会跟着文章一起滚。 */}
+      <div
+        className={`app-shell__content${location.pathname.startsWith('/editor') ? ' app-shell__content--fill' : ''}`}
+        key={location.pathname}
+      >
         <div className="app-shell__route-view">{children}</div>
       </div>
 
