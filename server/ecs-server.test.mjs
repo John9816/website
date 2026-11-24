@@ -107,6 +107,171 @@ test('API proxy aborts an active upstream response stream when the client discon
   await withTimeout(upstreamClosed, 1000, 'client disconnect did not close the upstream stream')
 })
 
+// 读取渲染后 HTML 中某个 <meta> 标签的 content，便于精确断言注入结果。
+function readMeta(html, attr, key) {
+  const tagPrefix = `<meta ${attr}="${key}"`
+  const start = html.indexOf(tagPrefix)
+  if (start === -1) return null
+  const end = html.indexOf('>', start)
+  if (end === -1) return null
+  const match = /content="([^"]*)"/.exec(html.slice(start, end))
+  return match ? match[1] : null
+}
+
+const SHARE_PATH = '/music/share/TESTTOKEN123'
+const DEFAULT_SHARE_TITLE = /<title>音乐 - 个人导航<\/title>/
+
+test('音乐分享页成功注入歌名、歌手与封面等动态 meta', async (t) => {
+  const metaRequests = []
+  const upstream = http.createServer((req, res) => {
+    metaRequests.push(req.url)
+    res.writeHead(200, { 'content-type': 'application/json; charset=utf-8' })
+    res.end(JSON.stringify({
+      code: 0,
+      message: 'ok',
+      data: {
+        token: 'TESTTOKEN123',
+        source: 'qq',
+        songId: '123',
+        name: '夜曲',
+        artist: '周杰伦',
+        album: '',
+        coverUrl: 'https://cdn.example.com/covers/night.jpg',
+        durationSec: 258,
+      },
+    }))
+  })
+  const upstreamPort = await listen(upstream)
+  t.after(() => closeServer(upstream))
+
+  const proxy = await startProxy(upstreamPort, 1000)
+  t.after(() => stopProxy(proxy))
+
+  const response = await fetch(`http://127.0.0.1:${proxy.port}${SHARE_PATH}`)
+  assert.equal(response.status, 200)
+  const html = await response.text()
+
+  assert.deepEqual(metaRequests, ['/api/public/music/share/TESTTOKEN123/meta'])
+  assert.match(html, /<title>夜曲 - 周杰伦<\/title>/)
+  assert.equal(readMeta(html, 'property', 'og:title'), '夜曲 - 周杰伦')
+  assert.equal(readMeta(html, 'name', 'twitter:title'), '夜曲 - 周杰伦')
+  assert.equal(readMeta(html, 'property', 'og:image'), 'https://cdn.example.com/covers/night.jpg')
+  assert.equal(readMeta(html, 'name', 'twitter:image'), 'https://cdn.example.com/covers/night.jpg')
+  assert.equal(readMeta(html, 'name', 'twitter:card'), 'summary_large_image')
+  assert.equal(readMeta(html, 'property', 'og:url'), 'https://hi.751152.xyz/music/share/TESTTOKEN123')
+  assert.equal(readMeta(html, 'name', 'robots'), 'noindex,nofollow')
+  for (const [attr, key] of [
+    ['name', 'description'],
+    ['property', 'og:description'],
+    ['name', 'twitter:description'],
+  ]) {
+    const value = readMeta(html, attr, key) || ''
+    assert.ok(value.includes('无需登录，点开即听'), `${key} 缺少固定文案`)
+    assert.ok(value.includes('夜曲') && value.includes('周杰伦'), `${key} 缺少歌名/歌手`)
+  }
+})
+
+test('分享页 meta 接口失败(404/410/500) 时静默回退到默认 meta', async (t) => {
+  const statuses = [404, 410, 500]
+  let call = 0
+  const upstream = http.createServer((_req, res) => {
+    const status = statuses[call++ % statuses.length]
+    res.writeHead(status, { 'content-type': 'application/json; charset=utf-8' })
+    res.end(JSON.stringify({ code: status, message: 'error', data: null }))
+  })
+  const upstreamPort = await listen(upstream)
+  t.after(() => closeServer(upstream))
+
+  const proxy = await startProxy(upstreamPort, 1000)
+  t.after(() => stopProxy(proxy))
+
+  for (let i = 0; i < statuses.length; i += 1) {
+    const response = await fetch(`http://127.0.0.1:${proxy.port}${SHARE_PATH}`)
+    assert.equal(response.status, 200)
+    const html = await response.text()
+    assert.match(html, DEFAULT_SHARE_TITLE)
+    assert.equal(readMeta(html, 'name', 'robots'), 'noindex,nofollow')
+    assert.ok(!html.includes('夜曲'))
+    assert.ok(!html.includes('无需登录，点开即听'))
+    // 默认页已带品牌 twitter:image；回退时只需保证没有注入歌曲封面
+    assert.ok(!(readMeta(html, 'name', 'twitter:image') || '').includes('cdn.example.com'))
+    assert.ok(!(readMeta(html, 'name', 'twitter:title') || '').includes('夜曲'))
+    assert.ok(!(readMeta(html, 'property', 'og:image') || '').includes('cdn.example.com'))
+  }
+})
+
+test('分享页 meta 接口超时时静默回退到默认 meta', async (t) => {
+  // 故意不响应，触发服务端 AbortController 超时
+  const upstream = http.createServer(() => {})
+  const upstreamPort = await listen(upstream)
+  t.after(() => closeServer(upstream))
+
+  const proxy = await startProxy(upstreamPort, 5000, { SHARE_META_TIMEOUT_MS: '120' })
+  t.after(() => stopProxy(proxy))
+
+  const response = await fetch(`http://127.0.0.1:${proxy.port}${SHARE_PATH}`)
+  assert.equal(response.status, 200)
+  const html = await response.text()
+  assert.match(html, DEFAULT_SHARE_TITLE)
+  assert.ok(!html.includes('无需登录，点开即听'))
+  assert.ok(!(readMeta(html, 'name', 'twitter:image') || '').includes('cdn.example.com'))
+})
+
+test('普通路径不请求分享 meta 接口且逐路由 meta 保持不变', async (t) => {
+  const requests = []
+  const upstream = http.createServer((req, res) => {
+    requests.push(req.url)
+    res.writeHead(200, { 'content-type': 'application/json; charset=utf-8' })
+    res.end('{}')
+  })
+  const upstreamPort = await listen(upstream)
+  t.after(() => closeServer(upstream))
+
+  const proxy = await startProxy(upstreamPort, 1000)
+  t.after(() => stopProxy(proxy))
+
+  for (const path of ['/', '/music', '/music/app', '/kb']) {
+    const response = await fetch(`http://127.0.0.1:${proxy.port}${path}`)
+    assert.ok([200, 410].includes(response.status), `${path} 返回异常状态`)
+  }
+  assert.equal(requests.length, 0, '普通路径不应产生任何后端请求')
+  assert.ok(!requests.some((url) => String(url).includes('/api/public/music/share')))
+
+  const home = await (await fetch(`http://127.0.0.1:${proxy.port}/`)).text()
+  assert.match(home, /<title>首页 - 个人导航<\/title>/)
+  const app = await (await fetch(`http://127.0.0.1:${proxy.port}/music/app`)).text()
+  assert.match(app, /<title>柒伍壹壹音乐 App - 个人导航<\/title>/)
+})
+
+test('分享页对注入值做 HTML 转义并拒绝危险封面协议', async (t) => {
+  const upstream = http.createServer((_req, res) => {
+    res.writeHead(200, { 'content-type': 'application/json; charset=utf-8' })
+    res.end(JSON.stringify({
+      code: 0,
+      message: 'ok',
+      data: {
+        name: '月光"<script>&',
+        artist: '歌手A',
+        coverUrl: 'javascript:alert(1)',
+      },
+    }))
+  })
+  const upstreamPort = await listen(upstream)
+  t.after(() => closeServer(upstream))
+
+  const proxy = await startProxy(upstreamPort, 1000)
+  t.after(() => stopProxy(proxy))
+
+  const response = await fetch(`http://127.0.0.1:${proxy.port}${SHARE_PATH}`)
+  assert.equal(response.status, 200)
+  const html = await response.text()
+
+  assert.equal(readMeta(html, 'property', 'og:title'), '月光&quot;&lt;script&gt;&amp; - 歌手A')
+  assert.ok(!html.includes('月光"<script>&'), '标题未做 HTML 转义')
+  assert.equal(readMeta(html, 'property', 'og:image'), 'https://hi.751152.xyz/share-cover.png')
+  assert.equal(readMeta(html, 'name', 'twitter:image'), 'https://hi.751152.xyz/share-cover.png')
+})
+
 async function listen(server) {
   server.listen(0, '127.0.0.1')
   await once(server, 'listening')
@@ -120,7 +285,7 @@ async function closeServer(server) {
   await once(server, 'close')
 }
 
-async function startProxy(upstreamPort, timeoutMs) {
+async function startProxy(upstreamPort, timeoutMs, extraEnv = {}) {
   const port = await reservePort()
   const child = spawn(process.execPath, [serverScript], {
     env: {
@@ -129,6 +294,7 @@ async function startProxy(upstreamPort, timeoutMs) {
       BACKEND_URL: `http://127.0.0.1:${upstreamPort}`,
       HOST: '127.0.0.1',
       PORT: String(port),
+      ...extraEnv,
     },
     stdio: ['ignore', 'pipe', 'pipe'],
   })

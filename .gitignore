@@ -20,3 +20,6 @@ output/
 .agents/
 .codex/
 .cursor/
+
+# Persistent editor data belongs outside release artifacts.
+/data/xuecheng/
